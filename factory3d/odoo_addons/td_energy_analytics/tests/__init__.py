@@ -4,3 +4,4 @@ from . import test_w4_area, test_w4_driver, test_w4_daily, test_w4_ols, test_w4_
 from . import test_w4_enpi, test_w4_budget, test_w4_kpis, test_w4_stack_heatmap, test_w4_cuts  # noqa: F401  (A)
 from . import test_w4_seed, test_w4_security, test_w4_perf  # noqa: F401  (A)
 from . import test_w4_report, test_w4_ui, test_w4_hoot  # noqa: F401  (B)
+from . import test_w6_whatif_tools, test_w6_whatif  # noqa: F401  (вау №6: чисті функції, модель, права, UI)

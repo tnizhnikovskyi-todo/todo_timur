@@ -4,6 +4,9 @@
     <menuitem id="menu_td_energy_analytics" name="Аналітика" parent="td_energy.menu_td_energy" sequence="12"
               action="action_td_energy_analytics" groups="td_energy.group_td_energy_user"/>
 
+    <menuitem id="menu_td_energy_whatif" name="Що якщо" parent="td_energy.menu_td_energy" sequence="13"
+              action="action_td_energy_whatif" groups="td_energy.group_td_energy_cost"/>
+
     <menuitem id="menu_td_energy_analytics_config" name="Аналітика" parent="td_energy.menu_td_energy_config"
               sequence="60" groups="td_energy.group_td_energy_manager"/>
     <menuitem id="menu_td_energy_area" name="Ділянки" parent="menu_td_energy_analytics_config" sequence="10"

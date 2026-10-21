@@ -4,7 +4,7 @@
 
 # td_energy_analytics — специфікація (W4 «Аналітика й мобільний»: модулі `td_energy_analytics` і `td_energy_mobile`)
 
-Версія 0.2 · 19.10.2026 (v0.1 — 18.10.2026) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) (далі ARCH: FR-01…FR-24 і FR-H1…FR-H10, A-01…A-18 і A-H1…A-H6, Q-01…Q-09 і Q-H1…Q-H3) · статус: збудовано (гілка `claude/td-energy-w4`); відхилення збірки — у «Журналі змін документа» в кінці файлу.
+Версія 0.3 · 21.10.2026 (v0.2 — 19.10.2026, v0.1 — 18.10.2026; v0.3 додає вау №6 «Що якщо»: FR-25, M-17/M-18, V-17…V-19, UI-11, R-23, AC-63…AC-74) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) (далі ARCH: FR-01…FR-24 і FR-H1…FR-H10, A-01…A-18 і A-H1…A-H6, Q-01…Q-09 і Q-H1…Q-H3) · статус: збудовано (гілка `claude/td-energy-w4`); відхилення збірки — у «Журналі змін документа» в кінці файлу.
 Вхід: `build/energy/GAP.md` (E-01…E-11, §5 «Аналітика», AN-01…AN-23, MB-08, MB-09), макети `Analytics.dc.html` і `Mobile.dc.html` (вкладки «Стан», «Тривоги», «Схема», **«Обхід»**); контракти W1 (`W1_SPEC.md`: API-05/API-12, R-27, R-32 `actions[]` = C-32, R-33, R-36, реєстр мобільних вкладок C-33, UI-09) і W3 ([../td_energy_resources/SPEC.md](../td_energy_resources/SPEC.md): `td.energy.usage`, `td.energy.opportunity`, `tools/shifts.py`, `td.energy.price._td_price_at`, контракт C-01).
 Спирається на: `docs/ARCHITECTURE.md` §3, §5, D-18; код `td_energy` на гілці `claude/factory3d-build` (`d14d13c`: `td.energy.interval`, `td.energy.alloc`, `td.energy.node`, `tools/{dates,forecast,backfill,bus}.py`, `static/src/mobile/mobile.js`); `td_telemetry` (`td.reading.hour`); `mrp`, `mrp_account`, `stock_account` (`stock.move.value`, Odoo 19).
 Мова: проза — українською (`docs/DOC_STANDARD.md`), рядки інтерфейсу, `string=` і тексти помилок — українські.
@@ -18,13 +18,13 @@
 
 | Тип | `td_energy_analytics` | `td_energy_mobile` |
 |---|---|---|
-| FR | FR-01…FR-24 | FR-H1…FR-H10 |
-| M | M-01…M-16 | M-H1…M-H7 |
-| V | V-01…V-16 | V-H1…V-H6 |
+| FR | FR-01…FR-25 | FR-H1…FR-H10 |
+| M | M-01…M-18 | M-H1…M-H7 |
+| V | V-01…V-19 | V-H1…V-H6 |
 | API | API-01…API-15 | API-H1…API-H6 |
-| R | R-01…R-22 | R-H1…R-H8 |
-| AC | AC-01…AC-62 | AC-H01…AC-H26 |
-| UI | UI-01…UI-10 | UI-H1…UI-H4 |
+| R | R-01…R-23 | R-H1…R-H8 |
+| AC | AC-01…AC-74 | AC-H01…AC-H26 |
+| UI | UI-01…UI-11 | UI-H1…UI-H4 |
 | ТК / ТБ / ТП | ТК-01…ТК-05 / ТБ-01…ТБ-04 / ТП-01…ТП-05 | ТК-H1…ТК-H3 / ТБ-H1…ТБ-H2 / ТП-H1…ТП-H2 |
 | A (рішення автора) | A-01…A-18 | A-H1…A-H6 |
 | Q | Q-01…Q-09 | Q-H1…Q-H3 |
@@ -89,6 +89,8 @@ odoo_addons/td_energy_analytics/
 │   ├── td_energy_enpi.py                  A  M-06 (+ `_cron_enpi`)
 │   ├── td_energy_budget.py                A  M-07
 │   ├── td_energy_alloc.py                 A  M-09 (`td.energy.alloc` + `product_id`)
+│   ├── td_energy_tariff.py                A  M-18 (`_inherit td.energy.tariff`: `capacity_price`, вау №6)
+│   ├── td_energy_whatif.py                A  M-17 (сценарій «Що якщо», вау №6)
 │   ├── td_energy_analytics.py             A  M-12 (AbstractModel: API-01…API-09)
 │   ├── td_energy_dashboard.py             A  M-14 (`_inherit td.energy.dashboard`: гак `_td_report_action`)
 │   └── res_config_settings.py             A  M-15
@@ -102,7 +104,8 @@ odoo_addons/td_energy_analytics/
 │   ├── kpis.py                            A  R-07
 │   ├── stack.py, heatmap.py               A  R-08, R-09
 │   ├── cuts.py                            A  R-10…R-16
-│   ├── seed.py                            A  R-20 (демо-сид)
+│   ├── seed.py                            A  R-20 (демо-сид; + демо-сценарії R-23)
+│   ├── whatif.py                          A  R-23 (чиста, без ORM: тарифна сітка, вікно, перенос, вартість, пік, попередження)
 │   └── fmt.py                             A  R-21, R-22
 ├── wizard/
 │   ├── __init__.py                        (менеджер)
@@ -127,10 +130,13 @@ odoo_addons/td_energy_analytics/
 │   ├── ir.model.access.csv                A  M-01…M-09, M-15
 │   └── ir.model.access-report.csv         B  M-13, M-16 (суфікс після «-» — `odoo/tools/convert.py:722`)
 ├── static/src/analytics/                  B  UI-01…UI-10: analytics.js/.xml/.scss, kpis, stack, heatmap, enpi, cut, opps
+├── static/src/whatif/                     B  UI-11: whatif.js/.xml/.scss (поле-віджет `td_whatif_board`)
 ├── static/tests/analytics.test.js         B  hoot
+├── static/tests/whatif.test.js            B  hoot (UI-11, AC-74)
 ├── views/
 │   ├── td_energy_analytics_views.xml      B  V-01 (client action), V-02…V-09 (форми/списки)
 │   ├── td_energy_budget_views.xml         B  V-07, V-08
+│   ├── td_energy_whatif_views.xml         B  V-17…V-19 (сценарії «Що якщо», плата за потужність у тарифі)
 │   ├── product_template_views.xml         B  V-10
 │   ├── res_config_settings_views.xml      B  V-14
 │   └── menus.xml                          B  V-15
@@ -140,6 +146,7 @@ odoo_addons/td_energy_analytics/
     │   test_w4_enpi.py, test_w4_budget.py, test_w4_kpis.py, test_w4_stack_heatmap.py, test_w4_cuts.py,
     │   test_w4_seed.py, test_w4_security.py, test_w4_perf.py                           A
     ├── test_w4_report.py, test_w4_ui.py, test_w4_hoot.py                              B
+    ├── test_w6_whatif_tools.py, test_w6_whatif.py                                     A  вау №6: AC-63…AC-73 (тести моделі й чистих функцій, браузерний прохід форми)
     └── stand/test_w4_tk.py                                                           A  ТК-01…ТК-05 (pytest проти стенда)
 
 odoo_addons/td_energy_mobile/                  C  (Частина II → [../td_energy_mobile/SPEC.md](../td_energy_mobile/SPEC.md))
@@ -149,7 +156,7 @@ odoo_addons/td_energy_mobile/                  C  (Частина II → [../td_
 
 ## 1. Маніфест
 
-- `name`: «Аналітика енергетики»; `version`: `19.0.1.0.0`; `author`: `ToDo`; `license`: `LGPL-3`; `category`: `Manufacturing/Maintenance`.
+- `name`: «Аналітика енергетики»; `version`: `19.0.1.1.0` (19.0.1.0.0 — збірка W4; 19.0.1.1.0 — вау №6 «Що якщо»); `author`: `ToDo`; `license`: `LGPL-3`; `category`: `Manufacturing/Maintenance`.
 - `depends`: `["td_energy", "td_energy_resources", "mrp_account"]` (транзитивно `mrp`, `stock_account`, `maintenance`).
 - `external_dependencies`: немає Python-залежностей; для PDF потрібен системний `wkhtmltopdf` (штатний для Odoo; перевірка — AC-45).
 - `data` (порядок): `security/td_energy_analytics_security.xml`, `security/ir.model.access.csv`, `security/ir.model.access-report.csv`, `data/td_energy_driver_data.xml`, `data/ir_config_parameter.xml`, `data/ir_cron.xml`, `views/td_energy_analytics_views.xml`, `views/td_energy_budget_views.xml`, `views/product_template_views.xml`, `views/res_config_settings_views.xml`, `report/report_management.xml`, `report/report_management_templates.xml`, `report/report_shift.xml`, `report/report_shift_templates.xml`, `views/menus.xml` (останнім). CSV ділянок і карти вузлів у `data` **не** входять — їх завантажує `hooks._load_areas(env)` (ідемпотентно, після встановлення вузлів).
@@ -336,9 +343,37 @@ Constraints: `_check_lines` (кількість рядків ≤ 3: `ValidationE
 
 `date_from`, `date_to` (Date, req, діапазон ≤ 400 діб), `action_rebuild()` → `td.energy.daily._td_build_days` і `td.energy.enpi.recompute`; `group_td_energy_manager`.
 
+### M-17 `td.energy.whatif` — сценарій «Що якщо» (FR-25, вау №6)
+
+`_name = "td.energy.whatif"`, `_description = "Енергетика: сценарій «Що якщо»"`, `_order = "id desc"`; правила — R-23.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `name` | Char | req |
+| `active`, `company_id`, `note` | Boolean / Many2one `res.company` (req, `env.company`) / Char(256) | `note='демо-сид'` — демо-сценарії (їх видаляє `purge` R-20) |
+| `scope` | Selection `area`/`nodes` | req, «Що переносимо»; за замовчуванням `area` |
+| `area_id` | Many2one `td.energy.area` | `scope='area'`; `ondelete=restrict` |
+| `node_ids` | Many2many `td.energy.node` (`td_energy_whatif_node_rel`) | `scope='nodes'`; домен `kind='consumer'` |
+| `hour_from`, `hour_to` | Float | вікно «з–по», місцевий час; 8,0–16,0; 0…24 з кроком 15 хв; через північ дозволено; `з ≠ по` |
+| `move_mode` | Selection `shift`/`night` | req: «Зсув на N годин» / «У нічну зону тарифу» |
+| `shift_hours` | Float(4,2) | 2,0; `0 < |N| ≤ 12`, крок 15 хв; лише для `shift` |
+| `share_pct` | Float(5,1) | 100; `0 < x ≤ 100` |
+| `days_mode` | Selection `work`/`all` | «Лише робочі дні (пн–пт)» / «Усі дні»; за замовчуванням `work` |
+| `respect_rating` | Boolean | True: ціль вузла не перевищує `p_inst_kw` |
+| `base_days` | Integer | 30; 7…90 |
+| `state` | Selection `draft`/`done` | readonly |
+| результат (readonly, `copy=False`) | `date_from`, `date_to`, `days_used`, `computed_at`; `cost_before`, `cost_after`, `saving_month` (`groups=cost`, ₴/міс); `peak_before_kw`, `peak_after_kw`, `peak_delta_kw`, `limit_kw`, `moved_kwh_month`; `limit_exceeded`, `warning_count`; `result_json` (Text, `groups=cost`) | |
+| `target_text`, `window_text`, `move_text` | Char compute | підписи списку |
+
+Методи: `action_compute()` → `_td_compute()` (SQL-збір рядів, виклик `tools/whatif.run`, запис підсумків і `result_json`); `write()` — зміна будь-якого входу (`INPUTS`) скидає результат у `draft`/нулі; `_td_seed_demo()` — R-23 п. 12. Помилки розрахунку — `UserError` (R-23 п. 10).
+
+### M-18 `td.energy.tariff` — розширення (`_inherit`)
+
+`capacity_price` — Float(10,2), «Плата за потужність, грн/кВт·міс», `default=0`, `groups=group_td_energy_cost`, `≥ 0`: плата за місячний пік 15-хв потужності з мережі; 0 — договір плати за потужність не містить (R-23 п. 2). Поле — у формі тарифу (V-19) після `export_price`.
+
 ## 3. Представлення й меню
 
-### 3.1 Представлення V-01…V-16
+### 3.1 Представлення V-01…V-19
 
 | ID | XML-id (`td_energy_analytics.`) | Тип / модель | Структура |
 |---|---|---|---|
@@ -358,8 +393,11 @@ Constraints: `_check_lines` (кількість рядків ≤ 3: `ValidationE
 | V-14 | `res_config_settings_view_form_td_energy_analytics` (успадковує `td_energy.res_config_settings_view_form_td_energy`) | form | група «Аналітика»: `td_energy_analytics_daily_close_h`, `…_catchup_days`, `…_forecast_weeks`, `…_forecast_min_days`, `…_r2_min`, `…_baseline_min_days`, `…_refresh_s`, `…_top_equipment`, `…_top_mo` |
 | V-15 | `views/menus.xml` | `ir.ui.menu` | таблиця 3.3 |
 | V-16 | `view_td_energy_alloc_search_product` (успадковує пошук `td.energy.alloc`) | search | групування «Продукт» (`product_id`) |
+| V-17 | `view_td_energy_whatif_list` / `_search` / `_graph`, `action_td_energy_whatif` (`list,form,graph`) | `td.energy.whatif` | list (порівняння сценаріїв, `default_order="saving_month desc"`): `name`, `target_text`, `window_text`, `move_text`, `share_pct`, `saving_month` (сума), `peak_before_kw`, `peak_after_kw`, `peak_delta_kw` (червоний > 0, зелений < 0), `warning_count`, `state`; рядок червоний за `limit_exceeded`, сірий для `draft`; search: «Розраховані», «Є економія», «Пік понад ліміт», групування «Куди»/«Що переносимо»; graph: стовпці `saving_month` за сценаріями |
+| V-18 | `view_td_energy_whatif_form` | form | кнопка «Розрахувати» (`action_compute`), статусбар `draft → done`; групи «Що переносимо» (`scope`, `area_id`/`node_ids`, вікно) і «Куди і скільки» (`move_mode`, `shift_hours`, `share_pct`, `days_mode`, `respect_rating`, `base_days`); під ними (за `state='done'`) поле `result_json` з віджетом `td_whatif_board` (UI-11) |
+| V-19 | `view_td_energy_tariff_form_capacity` (успадковує `td_energy.view_td_energy_tariff_form`) | form | `capacity_price` після `export_price` |
 
-### 3.2 Клієнтські компоненти (OWL) UI-01…UI-10
+### 3.2 Клієнтські компоненти (OWL) UI-01…UI-11
 
 Усе — `@odoo/owl`, `registry.category("actions").add("td_energy_analytics.analytics", Analytics)`; дані — `orm.call("td.energy.analytics", "get_dashboard", [], {period, dim, parts})`; шина не потрібна (оновлення раз на `refresh_s` = 300 с і при зміні періоду); тексти — українські; кожен інтерактивний вузол — `<button>` з `aria-label`; стан — не лише кольором.
 
@@ -375,12 +413,14 @@ Constraints: `_check_lines` (кількість рядків ≤ 3: `ValidationE
 | UI-08 | `useAnalytics` | хелпер завантаження частин, форматування (`fmtInt/fmtDec` з `@td_energy/common/format`), nice-ticks на клієнті не рахуються (приходять у `ticks`) |
 | UI-09 | `td_energy_analytics.scss` | токени кольорів ділянок і теплової шкали; адаптив ≥ 360 px (картки й таблиця прокручуються по горизонталі); друкованих стилів не потрібно |
 | UI-10 | `ReportButton` | окремий компонент кнопки звіту з індикатором очікування (звіт ≤ 15 с), блокування повторного кліку, `notify` про помилку (`wkhtmltopdf` недоступний — «Не вдалося сформувати PDF.») |
+| UI-11 | `WhatIfBoard` (`static/src/whatif/`, поле-віджет `td_whatif_board`, тип `text`) | Читає `result_json`: 4 плитки (`[data-tile]`: `saving` «Економія, ₴/міс» із тоном, `peak` «Новий пік потужності» з Δ кВт, `headroom` «Запас до ліміту договору», `moved` «Перенесено енергії»); SVG `viewBox 0 0 880 290`: сітка й вісь Y (`niceStep`, ≤ 5 поділок), вісь X 00…24, смуга вікна переносу (через північ — дві), лінії «було» (сіра) і «стало» (акцент) по 96 точках, пунктирна червона лінія ліміту з підписом, 96 прозорих зон наведення з `title` «HH:MM · було X кВт · стало Y кВт»; таблиця зон (`[data-zone]`: ціна, частка енергії до/після, Δ п.п.: для найдешевшої зони зростання — зелене, для найдорожчої зростання — червоне, для проміжних — без кольору); список попереджень (`[data-warning]`, рівні `danger`/`warning`/`info`; порожній — «Попереджень немає: пік в межах ліміту»); підпис бази (період, діб, тариф). Без `result_json` нічого не малює |
 
 ### 3.3 Меню (`views/menus.xml`)
 
 | XML-id (`td_energy_analytics.`) | Назва | Батько | seq | Групи | Дія |
 |---|---|---|---|---|---|
 | `menu_td_energy_analytics` | Аналітика | `td_energy.menu_td_energy` | 12 | `td_energy.group_td_energy_user` | `action_td_energy_analytics` |
+| `menu_td_energy_whatif` | Що якщо | `td_energy.menu_td_energy` | 13 | `td_energy.group_td_energy_cost` | `action_td_energy_whatif` |
 | `menu_td_energy_analytics_config` | Аналітика | `td_energy.menu_td_energy_config` | 60 | `…group_td_energy_manager` | — (розділ) |
 | `menu_td_energy_area` | Ділянки | `…_config` (цей розділ) | 10 | manager | `action_td_energy_area` |
 | `menu_td_energy_driver` | Драйвери | `…_config` | 20 | manager | `action_td_energy_driver` |
@@ -417,6 +457,8 @@ access_td_energy_enpi_admin,td.energy.enpi admin,model_td_energy_enpi,td_factory
 access_td_energy_budget_cost,td.energy.budget cost,model_td_energy_budget,td_energy.group_td_energy_cost,1,0,0,0
 access_td_energy_budget_manager,td.energy.budget manager,model_td_energy_budget,td_energy.group_td_energy_manager,1,1,1,0
 access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_whatif_cost,td.energy.whatif cost,model_td_energy_whatif,td_energy.group_td_energy_cost,1,0,0,0
+access_td_energy_whatif_manager,td.energy.whatif manager,model_td_energy_whatif,td_energy.group_td_energy_manager,1,1,1,1
 ```
 
 `-report.csv`: `td.energy.report.wizard` і `td.energy.daily.rebuild.wizard`: перша — `group_td_energy_user` (1,1,1,1), друга — `group_td_energy_manager` (1,1,1,1) (Transient, права на створення). `td.energy.analytics` — AbstractModel без ACL (контроль у методах). Бюджет читають `group_td_energy_cost` і вище (без вартості бюджет безглуздий; у `user` без cost читання немає). Наявні права `td.energy.alloc` і `td.energy.node` достатні.
@@ -427,7 +469,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 
 ### 4.3 Record rules
 
-`td_energy_baseline_rule_company`, `td_energy_budget_rule_company` — домен `['|', ('company_id','=',False), ('company_id','in',company_ids)]`, глобальні. `td.energy.daily` ізолюється через вузли (`node_id.company_id`), для `plant`/`resource` — за `td.energy.node` компанії через `sudo()` в API (у таблиці немає `company_id`; мультикомпанія — Q-09).
+`td_energy_baseline_rule_company`, `td_energy_budget_rule_company`, `td_energy_whatif_rule_company` — домен `['|', ('company_id','=',False), ('company_id','in',company_ids)]`, глобальні. `td.energy.daily` ізолюється через вузли (`node_id.company_id`), для `plant`/`resource` — за `td.energy.node` компанії через `sudo()` в API (у таблиці немає `company_id`; мультикомпанія — Q-09).
 
 ### 4.4 Захист даних і дій
 
@@ -735,6 +777,26 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 
 Стовпці — R-08 п. 3; EnPI — R-05 п. 3; теплокарта — R-09; інші графіки — `nice` за W3 R-10 п. 3.
 
+### R-23 Сценарії «Що якщо»: перенос навантаження на інший тарифний період (FR-25, вау №6)
+
+Призначення: показати, скільки ₴ на місяць дасть перенос ділянки чи вузлів на інший тарифний період, яким стане пік потужності проти ліміту договору й як зміниться добовий профіль. Розрахунок — чиста `tools/whatif.run(params)` (без ORM, `odoo` імпортується лише `td_energy.tools.tariff.zone_matches`); модель `td.energy.whatif` збирає дані SQL-запитами й зберігає підсумки (M-17).
+
+1. **База.** Останні `base_days` (30) повних місцевих діб до вчора. З `td_energy_interval`: ввід (`role='incomer'`) → `net[i] = Σ (kwh − kwh_export)` за слот (кВт·год за 15 хв, як у `grid15_kw`, R-15 W1); споживачі сценарію (`role='consumer'`) → `kwh` вузла за слот. Ряд «плаский»: індекс `доба·96 + слот`, слот — місцевий час; дубль слота лічильника в добу переходу на зимовий час відкидається. Доба «повна», якщо ≥ 90 % слотів вводів не `missing`; неповні доби виключаються з усіх підсумків і не беруть участі в переносі (попередження `days_skipped`); повних діб < 5 → `UserError`.
+2. **Вартість.** Тариф — чинний на останню добу бази (`_td_tariff_at`); ціна слота — за зоною для (день тижня, слот) за R-05 п. 2 (перша зона за `sequence`; непокрита чверть — ціна 0). Вартість слота `max(0, net)·ціна − max(0, −net)·export_price`; плата за потужність `capacity_price · пік` (M-18; 0 — без плати). Вартість до й після — **за однією формулою**; підсумок нормується на 30 діб: `cost = Σ слотів · 30 / n_повних_діб + плата`.
+3. **Вікно й дні.** Вікно «з–по» — місцевий час, крок 15 хв; «по» < «з» — через північ; «0–24» — уся доба. Вікно доби `d` починається о «з» цієї доби. Переносяться лише доби `days_mode`: `work` — пн–пт, `all` — усі.
+4. **Куди.** `shift`: зсув `N·4` слотів (±12 год). `night`: зсув вікна доби так, щоб його початок збігся з найближчим (від «з», включно) початком нічної зони за календарем зон тарифу (до 7 діб уперед); нічні зони — зони з кодом `night`, ціна яких нижча за найвищу, інакше зони з найнижчою ціною; усі ціни однакові (зокрема тариф з однією зоною) → `UserError «У тарифі немає нічної зони: ціни всіх зон однакові»`. Ряд замкнений у кільце: ціль за краєм бази потрапляє на її початок (енергія зберігається, краї не спотворюють підсумок); слот-джерело поза рядом (вікно через північ на останній добі) пропускається; пари з неповною добою — пропускаються.
+5. **Перенос.** Частка `share` енергії слота-джерела переходить у слот-ціль (для кожного вузла окремо; енергія зберігається). Номінал (`respect_rating`): після переносу навантаження вузла в слоті-цілі ≤ `p_inst_kw / 4` кВт·год; що не вміщується — лишається в слоті-джерелі (попередження `rating_limit`). Порядок обробки пар: додатний зсув — від кінця ряду, від'ємний — від початку, щоб ціль усередині вікна вже віддала своє (зсув 2 год вікна 08–11 не вважається «подвійним» навантаженням).
+6. **Нова мережа.** `net' = net + Σ вузлів (новий ряд − старий)`; далі п. 2 і п. 8 на `net'`. Вироблення ФЕС/КГУ й акумулятор окремо не моделюються: їхній вплив — через нетто-імпорт слота (перенос у слот, де власна генерація покриває споживання, не збільшує імпорт, віддача оплачується за `export_price`).
+7. **Підсумки (`tiles`).** `saving_month = (cost_before − cost_after)` (₴/міс, включно з платою за потужність); `peak_before_kw`, `peak_after_kw` — найбільша 15-хв потужність імпорту (`max(0, net)·4`) за всі повні доби бази, `peak_delta_kw`; `limit_kw = tariff.contract_kw`; `moved_kwh_month`; `zones[]` — частка імпорту за зонами до/після (зони з однаковими назвою й ціною зливаються; відсотки від сумарного імпорту).
+8. **Графік.** `profile`: `base_kw[96]`, `scenario_kw[96]` — середній імпорт (кВт) за слотом доби по добах, на які діє перенос (за `work` — пн–пт; їх немає — за всіма повними), `limit_kw`.
+9. **Попередження** (`warnings[] {level, code, text}`): `peak_over_limit` (danger) — «Пік перевищує ліміт договору (L кВт) на X кВт о HH:MM (дд.мм).» (час першого слота максимального піку; якщо ліміт перевищено й у базі — доповнення «У базовому періоді ліміт уже перевищувався (пік P кВт).»); `peak_near_limit` (warning) — пік після ≥ `peak_warn_pct`% ліміту й вищий за базовий; `nothing_moved` (warning); `night_shift` (warning) — «Нічна зміна: потрібні люди на ділянці «…» / вузлах: …» — коли ≥ 5 % перенесеної енергії з денних годин потрапляє в 22:00–06:00; `rating_limit` (warning) — неперенесене > 0,5 %; `outside_night` (warning, лише `night`) — > 1 % перенесеної енергії лишається поза нічною зоною (вікно довше за нічну зону); `flat_tariff` (info) — усі ціни зон однакові: економія можлива лише через власну генерацію й плату за потужність; `days_skipped` (info). `limit_exceeded = ∃ peak_over_limit`; `warning_count` — попередження рівнів danger і warning.
+10. **Помилки (`UserError`).** Немає чинного тарифу на останню добу бази / тариф без зон; немає ділянки чи вузлів-споживачів; немає повних діб вводів або їх < 5; немає даних споживання вузлів; `night` без нічної зони.
+11. **Збереження й порівняння.** Сценарій — запис `td.energy.whatif`; підсумки й `result_json` лежать у записі, зміна входів скидає результат (у списку немає застарілих чисел). Список V-17 порівнює сценарії (сортування за економією, сума, `peak_delta_kw`, `warning_count`), graph — економія за сценаріями.
+12. **Демо.** `_td_seed_demo()` (викликається в кінці R-20; відповідь R-20 не змінюється) створює «Розкрій на ніч» (ділянка `CUT`, вікно 16:00–23:00, `night`, робочі дні) і «Компресори зміщення на 2 год» (вузол `COMPRESSOR`, вікно 08:00–11:00, `shift` +2 год, робочі дні) з `note='демо-сид'`, **лише коли чинний тариф має зони з різними цінами** (на плоскому тарифі економії за зонами немає: нічної зони для першого сценарію не існує, у другому вигода — лише з власної генерації, тож сценарії були б беззмістовними, і сид їх не створює; ціни тарифу під сценарії не підганяються). Повтор не дублює (за `name` + `note`); сценарій, який не порахувався (`UserError`), пропускається; `purge` R-20 видаляє `note='демо-сид'`.
+13. **Права.** Читає `group_td_energy_cost` (усе про гроші), створює й розраховує `group_td_energy_manager` (M-17); `capacity_price` і суми ₴ — `groups=group_td_energy_cost`. Меню «Що якщо» — `group_td_energy_cost`.
+
+Припущення й обмеження: один тариф (чинний на останню добу бази) на весь базовий період; календар вихідних/свят не враховується (`work` = пн–пт); нічна зміна визначається за годинами 22:00–06:00; відгук мережі на перенос (зміна роботи ФЕС/КГУ/акумулятора) не моделюється; перенос вузла не змінює завантаження інших вузлів і виробництво.
+
 ## 10. Стани та переходи
 
 | Об'єкт | Стани | Переходи (хто) |
@@ -761,7 +823,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 
 Колонка «Тип»: UT (зокрема HttpCase) / UT-JS / TC / MAN. Усі `odoo`-тести — `post_install`, теги `-at_install`, `td`, `td_w4`. Фікстури — розд. 13.0; числа взято з макета `Analytics.dc.html` там, де арифметика узгоджена.
 
-### 12.1 `td_energy_analytics` — AC-01…AC-62
+### 12.1 `td_energy_analytics` — AC-01…AC-74
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
@@ -827,8 +889,20 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 | AC-60 | FR-05 | Given `tools/ols.py`; Then немає імпорту `numpy`/`scipy`; функція `fit(X, y)` покрита AC-14/15; на 400 діб × 3 драйвери ≤ 100 мс | UT |
 | AC-61 | FR-04 | Given стенд, доба роботи; When крон `_cron_daily`; Then рядок `plant` доби й 49 рядків `node`; `plant.qty` = Σ фідерів; донавантаження після зупинки крона на добу відновлює рядки | TC |
 | AC-62 | FR-19 | Given копія демо-БД з W1 і W3; When встановлення `td_energy_analytics`, сид, відкриття екрана, повторний `-u`; Then кількості за 5.4 (8 ділянок, 49 вузлів, 2 драйвери), екран без помилок, повтор без змін | TC (DEPLOY_TEST) |
+| AC-63 | FR-25 | Given 14 діб (ввід — фон 100 кВт; у робочі доби розкрій SAW-1 8 кВт у 08:00–16:00 і 16:00–23:00, компресорна 32 кВт у 08:00–16:00), тариф «ніч 3 ₴ (23–07) / день 6 ₴», сценарій «ділянка CUT, вікно 08–16, у нічну зону»; When «Розрахувати»; Then `state='done'`, економія = 10 діб × 64 кВт·год × 3 ₴ × 30/14 ≈ 4 114 ₴/міс, `cost_before − cost_after = saving_month`, пік 140 → 132 кВт (Δ −8), ліміт 200, `moved_kwh_month` ≈ 1 371, `result_json` має 96 точок «до» і «після» і лінію ліміту, попередження `night_shift` з «ділянці «Розкрій»»; сценарій «вузли SAW-1, зсув +12 год» дає 20 з 32 слотів у нічній зоні (≈ 2 571 ₴/міс) | UT |
+| AC-64 | FR-25 | Given розрахований сценарій; When змінюється будь-який вхід (вікно, частка, режим, вузли…); Then `state='draft'`, підсумки й `result_json` скинуто; зміна `name` результат не скидає | UT |
+| AC-65 | FR-25 | Given немає чинного тарифу / тариф без нічної зони / сценарій «ділянка» без ділянки / база без повних діб (`f3d_now` на 60 діб уперед); When «Розрахувати»; Then `UserError` із зрозумілим текстом, запис не змінюється; перевірки входів (частка 0 чи 101, вікно «з = по», година 24,5, база < 7 чи > 90, зсув 0 чи 13 год) — `ValidationError` | UT |
+| AC-66 | FR-25 | Given ліміт договору 130 кВт, пік після переносу 132 кВт; When розрахунок; Then попередження `peak_over_limit` «Пік перевищує ліміт договору (130 кВт) на 2 кВт о 08:00 (05.10)» з доповненням про перевищення в базі, `limit_exceeded=True`; за ліміту 135 кВт — немає | UT |
+| AC-67 | FR-25 | Given `capacity_price` 50 ₴/кВт·міс і пік 140 → 132 кВт; Then плата до 7 000, після 6 600 ₴, економія більша на 400 ₴ проти тарифу без плати; без плати (0) вартість — лише енергія | UT |
+| AC-68 | FR-25 | Given два розраховані сценарії; Then `search(order="saving_month desc")` ставить сценарій з економією перед «зсув на 2 год у межах денної зони» (економія 0); список V-17 сумує `saving_month`, показує `peak_delta_kw`, `warning_count` | UT |
+| AC-69 | FR-25 | Given користувачі груп `user`, `cost`, `manager`; Then `user` не бачить моделі (`AccessError`), `cost` читає, але не створює, `manager` створює й розраховує; `capacity_price` тарифу недоступне без `cost` | UT |
+| AC-70 | FR-25 | Given плоский тариф (одна зона) → `_td_seed_demo()` = 0 і сценаріїв `демо-сид` немає; Given зональний тариф й дані → 2 розраховані сценарії «Розкрій на ніч» і «Компресори зміщення на 2 год», економія першого > 0; повторний виклик — 0; `seed.purge` видаляє їх | UT |
+| AC-71 | FR-25 | Given меню й види; Then `menu_td_energy_whatif` (seq 13, батько `td_energy.menu_td_energy`, група `cost`), дія `list,form,graph`, форма містить віджет `td_whatif_board`, список — `saving_month`, форма тарифу — `capacity_price` | UT |
+| AC-72 | FR-25 | Given розрахований сценарій; When відкрити форму в headless Chrome; Then 4 плитки, дві лінії й лінія ліміту, 96 зон наведення, ≥ 2 рядки зон, попередження `night_shift`, економія «4 114», без помилок у консолі | UT (HttpCase) |
+| AC-73 | FR-25 | Given `tools/whatif.py`; Then тест покриває: нічну/плоску тарифну сітку й непокриту чверть, вікно (у т. ч. через північ), зсув у нічну зону, план переносу (дні, кільце, неповні доби), перенос із часткою й номіналом та збереженням енергії, вартість із віддачею, пік, зони, середню добу, повний сценарій (економія ×30/n, частка, усі дні, плоский тариф, нічна зона відсутня, ліміт і поріг, номінал, плата за потужність, неповні доби, помилки); модуль не імпортує `odoo` окрім `td_energy.tools.tariff` | UT |
+| AC-74 | FR-25 | Given hoot: віджет `WhatIfBoard` з фікстурою результату; Then 4 плитки з тонами, 2 лінії, лінія ліміту, 96 зон наведення, смуга вікна (через північ — 2), зони й попередження, порожнє значення нічого не малює; `fmtSigned`, `niceStep` | UT-JS |
 
-**Разом `td_energy_analytics`: AC-01…AC-62 = 62 критерії** (UT 56 — зокрема HttpCase і ТП, UT-JS 1 (AC-48), TC 4 (AC-45, AC-50, AC-61, AC-62 = DEPLOY_TEST), UT + DEPLOY_TEST 1 (AC-52)).
+**Разом `td_energy_analytics`: AC-01…AC-74 = 74 критерії** (UT 67 — зокрема HttpCase і ТП, UT-JS 2 (AC-48, AC-74), TC 4 (AC-45, AC-50, AC-61, AC-62 = DEPLOY_TEST), UT + DEPLOY_TEST 1 (AC-52)).
 
 ## 13. План тестування (для Opus)
 
@@ -960,6 +1034,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 |---|---|---|
 | 18.10.2026 | 0.1 | Перша редакція (`build/energy/W4_SPEC.md`, хвиля W4) |
 | 19.10.2026 | 0.2 | Переклад українською; Частина II (мобільний) винесена в [../td_energy_mobile/SPEC.md](../td_energy_mobile/SPEC.md); рішення й відхилення збірки W4 (нижче) |
+| 21.10.2026 | 0.3 | Вау №6 «Що якщо» (гілка `claude/td-wow-6`): FR-25, M-17 `td.energy.whatif`, M-18 `tariff.capacity_price`, V-17…V-19, UI-11, R-23, AC-63…AC-74, меню «Що якщо», `tools/whatif.py`, демо-сценарії в R-20 (лише за зонального тарифу); версія модуля `19.0.1.1.0` |
 
 ### Рішення й відхилення, прийняті при збірці W4 (`td_energy_analytics`)
 

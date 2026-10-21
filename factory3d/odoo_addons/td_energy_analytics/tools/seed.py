@@ -208,6 +208,7 @@ def purge(env):
     stats["baselines"] = cr.rowcount
     cr.execute("DELETE FROM td_energy_budget WHERE note = %s", (NOTE,))
     stats["budgets"] = cr.rowcount
+    cr.execute("DELETE FROM td_energy_whatif WHERE note = %s", (NOTE,))  # вау №6: демо-сценарії «Що якщо»
     env.invalidate_all()
     return stats
 
@@ -547,6 +548,7 @@ def run(env, days=400, seed=20261018, purge_only=False, with_mo=True, with_basel
     env["td.energy.daily"]._td_build_days(day_list)
     stats["baselines"] = _seed_baselines(env, first, until) if with_baseline else 0
     stats["budgets"] = _seed_budgets(env, today) if with_budget else 0
+    env["td.energy.whatif"]._td_seed_demo()  # вау №6: лише за тарифу з різними цінами зон; у `stats` не входить
     env.invalidate_all()
     stats["seconds"] = round(time.monotonic() - started, 2)
     return stats

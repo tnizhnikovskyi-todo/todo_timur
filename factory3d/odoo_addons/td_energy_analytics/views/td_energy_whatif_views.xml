@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Вау №6 «Що якщо» (V-17…V-19): сценарії переносу навантаження на інший тарифний період; плата за потужність у тарифі.
+     Усе — лише для group_td_energy_cost (гроші) і manager (створення, розрахунок). -->
+<odoo>
+    <record id="view_td_energy_whatif_list" model="ir.ui.view">
+        <field name="name">td.energy.whatif.list</field>
+        <field name="model">td.energy.whatif</field>
+        <field name="arch" type="xml">
+            <list default_order="saving_month desc, id desc" decoration-danger="limit_exceeded"
+                  decoration-muted="state == 'draft'">
+                <field name="name"/>
+                <field name="target_text"/>
+                <field name="window_text"/>
+                <field name="move_text"/>
+                <field name="share_pct" optional="show"/>
+                <field name="days_mode" optional="hide"/>
+                <field name="cost_before" optional="hide"/>
+                <field name="cost_after" optional="hide"/>
+                <field name="saving_month" sum="Разом"/>
+                <field name="peak_before_kw"/>
+                <field name="peak_after_kw"/>
+                <field name="peak_delta_kw" decoration-danger="peak_delta_kw &gt; 0"
+                       decoration-success="peak_delta_kw &lt; 0"/>
+                <field name="moved_kwh_month" optional="hide"/>
+                <field name="warning_count"/>
+                <field name="limit_exceeded" column_invisible="True"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'"
+                       decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_whatif_form" model="ir.ui.view">
+        <field name="name">td.energy.whatif.form</field>
+        <field name="model">td.energy.whatif</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_compute" type="object" string="Розрахувати" class="btn-primary"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва сценарію, напр. «Розкрій на ніч»"/></h1>
+                    </div>
+                    <group>
+                        <group string="Що переносимо">
+                            <field name="scope" widget="radio" options="{'horizontal': true}"/>
+                            <field name="area_id" invisible="scope != 'area'" required="scope == 'area'"
+                                   options="{'no_create': true}"/>
+                            <field name="node_ids" invisible="scope != 'nodes'" required="scope == 'nodes'"
+                                   widget="many2many_tags" options="{'no_create': true}"/>
+                            <field name="hour_from" widget="float_time"/>
+                            <field name="hour_to" widget="float_time"/>
+                        </group>
+                        <group string="Куди і скільки">
+                            <field name="move_mode"/>
+                            <field name="shift_hours" invisible="move_mode != 'shift'"
+                                   required="move_mode == 'shift'"/>
+                            <field name="share_pct"/>
+                            <field name="days_mode"/>
+                            <field name="respect_rating"/>
+                            <field name="base_days"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="status" invisible="state != 'draft'">
+                        Задайте, що і куди переносимо, і натисніть «Розрахувати»: база — останні повні доби
+                        (за замовчуванням 30), ціни — з чинного тарифу, ліміт — з договору.
+                    </div>
+                    <field name="result_json" widget="td_whatif_board" nolabel="1" invisible="state != 'done'"
+                           groups="td_energy.group_td_energy_cost"/>
+                    <group>
+                        <field name="note"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_whatif_search" model="ir.ui.view">
+        <field name="name">td.energy.whatif.search</field>
+        <field name="model">td.energy.whatif</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="area_id"/>
+                <filter name="done" string="Розраховані" domain="[('state', '=', 'done')]"/>
+                <filter name="saving" string="Є економія" domain="[('saving_month', '&gt;', 0)]"/>
+                <filter name="over" string="Пік понад ліміт" domain="[('limit_exceeded', '=', True)]"/>
+                <separator/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="by_mode" string="Куди" context="{'group_by': 'move_mode'}"/>
+                    <filter name="by_scope" string="Що переносимо" context="{'group_by': 'scope'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_td_energy_whatif_graph" model="ir.ui.view">
+        <field name="name">td.energy.whatif.graph</field>
+        <field name="model">td.energy.whatif</field>
+        <field name="arch" type="xml">
+            <graph type="bar" string="Економія за сценаріями, ₴/міс">
+                <field name="name"/>
+                <field name="saving_month" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_td_energy_whatif" model="ir.actions.act_window">
+        <field name="name">Що якщо</field>
+        <field name="res_model">td.energy.whatif</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="search_view_id" ref="view_td_energy_whatif_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Жодного сценарію</p>
+            <p>Перенесіть ділянку чи вузли на інший тарифний період і подивіться економію ₴ на місяць,
+               новий пік потужності та графік «до / після». Збережені сценарії порівнюються в цьому списку.</p>
+        </field>
+    </record>
+
+    <!-- Плата за потужність у договорі (тариф td_energy) -->
+    <record id="view_td_energy_tariff_form_capacity" model="ir.ui.view">
+        <field name="name">td.energy.tariff.form.capacity</field>
+        <field name="model">td.energy.tariff</field>
+        <field name="inherit_id" ref="td_energy.view_td_energy_tariff_form"/>
+        <field name="arch" type="xml">
+            <field name="export_price" position="after">
+                <field name="capacity_price"/>
+            </field>
+        </field>
+    </record>
+</odoo>

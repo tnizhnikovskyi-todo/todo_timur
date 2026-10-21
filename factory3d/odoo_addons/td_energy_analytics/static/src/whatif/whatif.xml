@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.WhatIfBoard">
+        <div class="o_td_wi" t-if="data">
+            <div class="o_td_wi_tiles">
+                <div t-foreach="tiles" t-as="tile" t-key="tile.key"
+                     t-attf-class="o_td_wi_tile o_td_wi_tile--{{tile.tone}}" t-att-data-tile="tile.key">
+                    <div class="o_td_wi_tile_label" t-esc="tile.label"/>
+                    <div class="o_td_wi_tile_value">
+                        <span t-esc="tile.value"/> <small t-esc="tile.unit"/>
+                    </div>
+                    <div class="o_td_wi_tile_sub" t-esc="tile.sub"/>
+                </div>
+            </div>
+
+            <section class="o_td_wi_card o_td_wi_chart" aria-labelledby="o_td_wi_chart_h">
+                <div class="o_td_wi_head">
+                    <h3 id="o_td_wi_chart_h">Середня доба до / після · кВт з мережі, 96 точок по 15 хв</h3>
+                    <div class="o_td_wi_legend">
+                        <span class="o_td_wi_legend_item"><i class="o_td_wi_swatch o_td_wi_swatch--base"/> Було</span>
+                        <span class="o_td_wi_legend_item"><i class="o_td_wi_swatch o_td_wi_swatch--scen"/> Стало</span>
+                        <span class="o_td_wi_legend_item"><i class="o_td_wi_swatch o_td_wi_swatch--limit"/> Ліміт договору</span>
+                        <span class="o_td_wi_legend_item"><i class="o_td_wi_swatch o_td_wi_swatch--band"/> Вікно переносу</span>
+                    </div>
+                </div>
+                <svg viewBox="0 0 880 290" role="img"
+                     aria-label="Графік середньої доби: споживання з мережі до і після переносу, лінія ліміту договору">
+                    <rect t-foreach="chart.bands" t-as="band" t-key="band_index" class="o_td_wi_band"
+                          t-att-x="band.x" t-att-y="18" t-att-width="band.width" t-att-height="228"/>
+                    <g class="o_td_wi_axis">
+                        <t t-foreach="chart.grid" t-as="line" t-key="line_index">
+                            <line class="o_td_wi_grid" t-att-x1="dims.LEFT" t-att-x2="dims.RIGHT" t-att-y1="line.y" t-att-y2="line.y"/>
+                            <text t-att-x="dims.LEFT - 8" t-att-y="line.y + 4" text-anchor="end" t-esc="line.text"/>
+                        </t>
+                        <text t-foreach="chart.hours" t-as="h" t-key="h_index" t-att-x="h.x" t-att-y="dims.BOTTOM + 18"
+                              text-anchor="middle" t-esc="h.text"/>
+                    </g>
+                    <path class="o_td_wi_fill" t-att-d="chart.fill"/>
+                    <path class="o_td_wi_line o_td_wi_line--base" t-att-d="chart.base"/>
+                    <path class="o_td_wi_line o_td_wi_line--scen" t-att-d="chart.scen"/>
+                    <line class="o_td_wi_limit" t-att-x1="dims.LEFT" t-att-x2="dims.RIGHT" t-att-y1="chart.limitY" t-att-y2="chart.limitY"/>
+                    <text class="o_td_wi_limit_text" t-att-x="dims.RIGHT" t-att-y="chart.limitY - 6" text-anchor="end" t-esc="chart.limitText"/>
+                    <rect t-foreach="chart.hits" t-as="hit" t-key="hit_index" class="o_td_wi_hit" t-att-x="hit.x"
+                          t-att-y="18" t-att-width="chart.slotW" t-att-height="228">
+                        <title t-esc="hit.title"/>
+                    </rect>
+                </svg>
+            </section>
+
+            <div class="o_td_wi_row">
+                <section class="o_td_wi_card o_td_wi_zones" aria-labelledby="o_td_wi_zones_h">
+                    <div class="o_td_wi_head"><h3 id="o_td_wi_zones_h">Енергія за зонами тарифу</h3></div>
+                    <table class="o_td_wi_table">
+                        <thead>
+                            <tr><th>Зона</th><th>Ціна</th><th class="o_td_wi_num">Було</th><th class="o_td_wi_num">Стало</th><th class="o_td_wi_num">Δ, п.п.</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="zones" t-as="z" t-key="z.code + z_index" t-att-data-zone="z.code">
+                                <td t-esc="z.name"/>
+                                <td t-esc="z.priceText"/>
+                                <td class="o_td_wi_num"><t t-esc="fmtPct(z.before_pct)"/> %</td>
+                                <td class="o_td_wi_num"><t t-esc="fmtPct(z.after_pct)"/> %</td>
+                                <td class="o_td_wi_num" t-attf-class="o_td_wi_num o_td_wi_delta--{{z.tone}}" t-esc="z.delta"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+                <section class="o_td_wi_card o_td_wi_warnings" aria-labelledby="o_td_wi_warn_h">
+                    <div class="o_td_wi_head"><h3 id="o_td_wi_warn_h">Попередження</h3></div>
+                    <ul t-if="warnings.length" class="o_td_wi_warn_list">
+                        <li t-foreach="warnings" t-as="w" t-key="w.code" t-attf-class="o_td_wi_warn o_td_wi_warn--{{w.level}}"
+                            t-att-data-warning="w.code">
+                            <i t-attf-class="fa {{w.icon}}" aria-hidden="true"/>
+                            <span t-esc="w.text"/>
+                        </li>
+                    </ul>
+                    <div t-else="" class="o_td_wi_empty" role="status">Попереджень немає: пік в межах ліміту.</div>
+                </section>
+            </div>
+            <div class="o_td_wi_foot" t-esc="footnote"/>
+        </div>
+    </t>
+</templates>

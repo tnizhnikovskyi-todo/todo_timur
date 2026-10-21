@@ -15,13 +15,14 @@ Key features
 * Energy budget
 * Breakdowns by section, equipment, order, product and shift; heat map
 * Analytics screen, PDF Management report and Shift report
+* "What if" scenarios: shift a section or nodes to another tariff period; savings, new peak, before/after profile
 
 Requirements and notes
 ----------------------
 
 * PDF reports use the standard Odoo wkhtmltopdf setup.
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -40,6 +41,7 @@ Requirements and notes
         "data/ir_cron.xml",  # W4-A: 4 крони
         "views/td_energy_analytics_views.xml",  # W4-B
         "views/td_energy_budget_views.xml",  # W4-B
+        "views/td_energy_whatif_views.xml",  # вау №6: V-17…V-19
         "views/product_template_views.xml",  # W4-B
         "views/res_config_settings_views.xml",  # W4-B
         "report/report_management.xml",  # W4-B
@@ -52,6 +54,7 @@ Requirements and notes
     "assets": {
         "web.assets_backend": [
             "td_energy_analytics/static/src/analytics/**/*",  # W4-B: UI-01…UI-10
+            "td_energy_analytics/static/src/whatif/**/*",  # вау №6: UI-11
         ],
         "web.assets_unit_tests": [
             "td_energy_analytics/static/tests/**/*.js",

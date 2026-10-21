@@ -38,7 +38,7 @@
 | 11 | `td_fire_safety` | 5 | [v0.3, 551 р.](modules/td_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/td_fire_safety/SPEC.md) |
 | 12 | `td_constructor` («Конструктор»; злито з «Конструктором складу»: ядро `core/constructor`, M-16…M-31, API-11…API-24, AC-70…AC-138; модуль `19.0.1.4.0`) | 6 | [v0.2, 450 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.2, 1 825 р.](modules/td_constructor/SPEC.md) |
 | 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач»; не оновлювався злиттям — Q-22) | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
-| 14 | `td_energy_analytics` (W4, енергетика: аналітика, модель бази ISO 50001, звіти) | 3 | [v0.2, 377 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.2, 978 р.](modules/td_energy_analytics/SPEC.md) |
+| 14 | `td_energy_analytics` (W4, енергетика: аналітика, модель бази ISO 50001, звіти; вау №6 «Що якщо» — R-23) | 3 | [v0.2, 377 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.3, 1054 р.](modules/td_energy_analytics/SPEC.md) |
 | 15 | `td_energy_mobile` (W4, енергетика: вкладка «Обхід» мобільного екрана) | 3 | [v0.2, 377 р. (спільне з № 14)](modules/td_energy_mobile/ARCHITECTURE.md) | [v0.2, 493 р.](modules/td_energy_mobile/SPEC.md) |
 | 16 | `td_energy_control` (W2, енергетика: керування, плагін збирача `td_collector_energy`) | 3 | [v0.2, 336 р.](modules/td_energy_control/ARCHITECTURE.md) | [v0.2, 1 639 р.](modules/td_energy_control/SPEC.md) |
 | 17 | `td_energy_viewer3d` (W2, міст «Енергетика в 3D» → «Переглядач») | 3 | [v0.2, 129 р.](modules/td_energy_viewer3d/ARCHITECTURE.md) | [v0.2, 222 р.](modules/td_energy_viewer3d/SPEC.md) |

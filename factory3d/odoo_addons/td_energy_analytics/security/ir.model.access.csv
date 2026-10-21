@@ -19,3 +19,5 @@ access_td_energy_enpi_admin,td.energy.enpi admin,model_td_energy_enpi,td_factory
 access_td_energy_budget_cost,td.energy.budget cost,model_td_energy_budget,td_energy.group_td_energy_cost,1,0,0,0
 access_td_energy_budget_manager,td.energy.budget manager,model_td_energy_budget,td_energy.group_td_energy_manager,1,1,1,0
 access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_whatif_cost,td.energy.whatif cost,model_td_energy_whatif,td_energy.group_td_energy_cost,1,0,0,0
+access_td_energy_whatif_manager,td.energy.whatif manager,model_td_energy_whatif,td_energy.group_td_energy_manager,1,1,1,1

@@ -11,4 +11,9 @@
         <field name="model_id" ref="model_td_energy_budget"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
+    <record id="td_energy_whatif_rule_company" model="ir.rule">
+        <field name="name">Енергетика: сценарії «Що якщо» — компанія</field>
+        <field name="model_id" ref="model_td_energy_whatif"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
 </odoo>

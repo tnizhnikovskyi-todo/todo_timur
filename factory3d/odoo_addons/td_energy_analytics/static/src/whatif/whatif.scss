@@ -1,0 +1,107 @@
+// UI-11: форма сценарію «Що якщо» (вау №6). Кольори — як на екрані «Аналітика»: акцент #714B67, лінія ліміту — червона.
+$td-wi-accent: #714B67;
+$td-wi-line: #e5e7eb;
+$td-wi-muted: #4b5563;
+$td-wi-good: #065f46;
+$td-wi-bad: #b91c1c;
+$td-wi-warn: #c2410c;
+
+.o_td_wi {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 8px 0 16px;
+    min-width: 0;
+
+    .o_td_wi_tiles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .o_td_wi_tile {
+        flex: 1 1 200px;
+        min-width: 0;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid $td-wi-line;
+        border-radius: 8px;
+        border-left-width: 4px;
+        &.o_td_wi_tile--good { border-left-color: $td-wi-good; .o_td_wi_tile_value { color: $td-wi-good; } }
+        &.o_td_wi_tile--bad { border-left-color: $td-wi-bad; .o_td_wi_tile_value { color: $td-wi-bad; } }
+        &.o_td_wi_tile--neutral { border-left-color: $td-wi-accent; }
+    }
+    .o_td_wi_tile_label { font-size: 12.5px; color: $td-wi-muted; }
+    .o_td_wi_tile_value {
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1.2;
+        small { font-size: 13px; font-weight: 400; color: $td-wi-muted; }
+    }
+    .o_td_wi_tile_sub { font-size: 12.5px; color: $td-wi-muted; overflow-wrap: anywhere; }
+
+    .o_td_wi_card {
+        min-width: 0;
+        background: #fff;
+        border: 1px solid $td-wi-line;
+        border-radius: 8px;
+        svg { display: block; width: 100%; height: auto; max-height: 340px; }
+    }
+    .o_td_wi_head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 16px;
+        padding: 10px 16px;
+        border-bottom: 1px solid $td-wi-line;
+        h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    }
+    .o_td_wi_legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+    .o_td_wi_legend_item { display: inline-flex; align-items: center; gap: 6px; }
+    .o_td_wi_swatch {
+        display: inline-block;
+        width: 18px;
+        height: 3px;
+        &.o_td_wi_swatch--base { background: #9ca3af; height: 4px; }
+        &.o_td_wi_swatch--scen { background: $td-wi-accent; height: 4px; }
+        &.o_td_wi_swatch--limit { background: repeating-linear-gradient(90deg, $td-wi-bad 0 5px, transparent 5px 8px); }
+        &.o_td_wi_swatch--band { height: 10px; background: #f3ecf1; border: 1px solid #d9c3d3; }
+    }
+    .o_td_wi_axis text { font-size: 11px; fill: $td-wi-muted; }
+    .o_td_wi_grid { stroke: $td-wi-line; stroke-width: 1; }
+    .o_td_wi_band { fill: #f3ecf1; }
+    .o_td_wi_line { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+    .o_td_wi_line--base { stroke: #9ca3af; }
+    .o_td_wi_line--scen { stroke: $td-wi-accent; }
+    .o_td_wi_fill { fill: rgba(113, 75, 103, .10); stroke: none; }
+    .o_td_wi_limit { stroke: $td-wi-bad; stroke-width: 1.5; stroke-dasharray: 7 5; }
+    .o_td_wi_limit_text { font-size: 11.5px; fill: $td-wi-bad; font-weight: 600; }
+    .o_td_wi_hit { fill: transparent; &:hover { fill: rgba(113, 75, 103, .08); } }
+
+    .o_td_wi_row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .o_td_wi_zones { flex: 1 1 380px; }
+    .o_td_wi_warnings { flex: 1 1 380px; }
+    .o_td_wi_table {
+        width: 100%;
+        font-size: 13.5px;
+        th { padding: 8px 16px; color: $td-wi-muted; font-weight: 500; text-align: left; }
+        td { padding: 7px 16px; border-top: 1px solid $td-wi-line; }
+        .o_td_wi_num { text-align: right; white-space: nowrap; }
+        .o_td_wi_delta--good { color: $td-wi-good; font-weight: 600; }
+        .o_td_wi_delta--bad { color: $td-wi-bad; font-weight: 600; }
+    }
+    .o_td_wi_warn_list { list-style: none; margin: 0; padding: 4px 0; }
+    .o_td_wi_warn {
+        display: flex;
+        gap: 10px;
+        padding: 8px 16px;
+        font-size: 13.5px;
+        overflow-wrap: anywhere;
+        i { margin-top: 3px; }
+        &.o_td_wi_warn--danger i { color: $td-wi-bad; }
+        &.o_td_wi_warn--warning i { color: $td-wi-warn; }
+        &.o_td_wi_warn--info i { color: $td-wi-muted; }
+    }
+    .o_td_wi_empty { padding: 18px 16px; color: $td-wi-muted; font-size: 13.5px; }
+    .o_td_wi_foot { font-size: 12px; color: $td-wi-muted; }
+}
