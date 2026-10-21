@@ -5,6 +5,9 @@
 // Шар «Замовлення в роботі» ядра не чіпається й не дублюється: стопка живе у власній групі сцени, поза режимами розфарбування.
 // Стопка стоїть на підлозі біля входу верстата ділянки (з боку попередньої ділянки), над нею бейдж із числом і підпис «Вузьке місце · черга N»
 // (стиль підписів верстатів); наведення показує метрики, клік відкриває картку верстата-входу з блоком «Вузьке місце».
+// Усе (коробки, бейдж, підпис) — одна група-власник `st.group`: при кожному оновленні стара група знімається цілком, а її CSS2D-підпис
+// видаляється з DOM явно (`removed` у three спрацьовує лише на самому підписі, а не на групі, що його несе). Підпис один — біля поточного
+// вузького місця; стопка й підпис завжди в межах ділянки (`areaBox`).
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
@@ -92,6 +95,40 @@ export function entrySpot(T, machines, prevCenter) {
     return { code: pick.code, x, y: b.min.y, z, dir: alongX ? new T.Vector3(sign, 0, 0) : new T.Vector3(0, 0, sign) };
 }
 
+/** Півглибини стопки: від межі ділянки стопка стоїть не ближче. */
+const HALF = BOX.d / 2;
+
+/**
+ * Межі ділянки в сцені: зона (`D.zones[..].workcenters`), що містить верстати вузького місця, якщо її об'єкт є в сцені й справді охоплює
+ * ці верстати; інакше об'єднання верстатів ділянки із запасом `GAP + HALF` (стопка стоїть біля входу, а не в проході далеко від них).
+ */
+export function areaBox(T, api, machines, D) {
+    const union = new T.Box3();
+    for (const m of machines) {
+        union.union(m.box);
+    }
+    const codes = new Set(machines.map((m) => m.code));
+    const zones = Array.isArray(D?.zones) ? D.zones.map((z) => [z?.code, z]) : Object.entries(D?.zones || {});
+    for (const [zc, z] of zones) {
+        const root = zc && (z?.workcenters || []).some((c) => codes.has(c)) ? api.items.get(zc) : null;
+        if (!root) {
+            continue;
+        }
+        root.updateWorldMatrix(true, true);
+        const box = new T.Box3().setFromObject(root);
+        if (!box.isEmpty() && box.containsBox(union)) {
+            return box;
+        }
+    }
+    return union.expandByVector(new T.Vector3(GAP + HALF, 0, GAP + HALF));
+}
+
+/** Притиснути точку стопки (x, z) до меж ділянки так, щоб вся стопка (півглибини) лежала всередині. */
+export function clampToArea(box, x, z) {
+    const fit = (v, lo, hi) => (hi - lo < 2 * HALF ? (lo + hi) / 2 : Math.min(Math.max(v, lo + HALF), hi - HALF));
+    return { x: fit(x, box.min.x, box.max.x), z: fit(z, box.min.z, box.max.z) };
+}
+
 const pct = (v) => (typeof v === "number" ? Math.round(v * 100) + " %" : "—");
 const delta = (d) => (!d ? "" : d > 0 ? " (↑ +" + d + ")" : " (↓ −" + -d + ")");
 
@@ -160,20 +197,34 @@ export class BottleneckExtension {
         return st;
     }
 
-    /** Прибрати стопку зі сцени (геометрія й матеріал лишаються для наступної). */
+    /** Знімає групу-власника цілком: підпис — з DOM (і з three), спрайти — з GPU; геометрія й матеріал коробок лишаються для наступної. */
     clear(api) {
         const st = this.stateOf(api);
-        if (st.group) {
-            st.group.traverse((o) => {
-                o.material?.map?.dispose?.();
-                if (o.isSprite) {
+        const group = st.group;
+        if (group) {
+            for (const o of [...group.children]) {
+                if (o.isCSS2DObject) {
+                    group.remove(o); // подія `removed` у three знімає елемент підпису з DOM
+                    o.element?.remove(); // і прямо: на випадок, коли подія не дійшла
+                } else if (o.isSprite) {
+                    o.material?.map?.dispose?.();
                     o.material?.dispose?.();
                 }
-            });
-            st.group.removeFromParent();
+            }
+            group.removeFromParent();
         }
         st.group = null;
         st.sig = null;
+        this._sweep(api, null);
+    }
+
+    /** Прибрати з шару підписів ядра всі підписи вузького місця, крім `keep` (залишки старих груп, перезавантаження модуля). */
+    _sweep(api, keep) {
+        for (const el of api.labelsRoot?.querySelectorAll?.(".o_td_bn_label") || []) {
+            if (el !== keep) {
+                el.remove();
+            }
+        }
     }
 
     _box(T, codes, api) {
@@ -201,7 +252,7 @@ export class BottleneckExtension {
         el.dataset.station = info.key || "";
         el.style.pointerEvents = "auto"; // підпис клікабельний: відкриває картку верстата-входу з метриками вузького місця
         el.style.cursor = "pointer";
-        el.style.translate = "calc(50% + 24px) 0"; // праворуч від бейджа
+        el.style.translate = "0 -10px"; // просто над бейджем, по центру стопки
         el.addEventListener("click", (e) => {
             e.stopPropagation();
             api.select(entry);
@@ -223,10 +274,12 @@ export class BottleneckExtension {
         }
         const machines = codes.map((code) => ({ code, box: this._box(T, [code], api) })).filter((m) => !m.box.isEmpty());
         if (!machines.length) {
+            this.clear(api);
             return;
         }
         const prev = this._box(T, info.prev, api);
-        const spot = entrySpot(T, machines, prev.isEmpty() ? null : prev.getCenter(new T.Vector3()));
+        const raw = entrySpot(T, machines, prev.isEmpty() ? null : prev.getCenter(new T.Vector3()));
+        const spot = { ...raw, ...clampToArea(areaBox(T, api, machines, D), raw.x, raw.z) };
         const sig = [n, info.queue, labelText(info), hoverText(info), spot.code, spot.x.toFixed(2), spot.z.toFixed(2)].join("|");
         if (!force && st.group && st.sig === sig) {
             return;
@@ -247,7 +300,7 @@ export class BottleneckExtension {
             mesh.castShadow = true;
             group.add(mesh);
         }
-        const top = n * (BOX.h + BOX.gap) + 0.7;
+        const top = n * (BOX.h + BOX.gap) + 0.7; // бейдж (діаметр 1 м) стоїть на `top`, підпис — над ним
         const badge = new T.Sprite(new T.SpriteMaterial({ map: numberTexture(T, info.queue), transparent: true, depthTest: false }));
         badge.name = STACK_NAME + "_label";
         badge.scale.set(1.0, 1.0, 1);
@@ -257,13 +310,14 @@ export class BottleneckExtension {
         const label = this._label(api, info, spot.code);
         if (label) {
             label.name = STACK_NAME + "_text";
-            label.position.set(0, top, 0);
+            label.position.set(0, top + 0.6, 0);
             group.add(label);
         }
         group.position.set(spot.x, spot.y, spot.z);
         api.scene.add(group);
         st.group = group;
         st.sig = sig;
+        this._sweep(api, label?.element ?? null);
     }
 
     // розкладка змінилась / модель довантажилась: положення верстатів інше — стопку ставимо заново

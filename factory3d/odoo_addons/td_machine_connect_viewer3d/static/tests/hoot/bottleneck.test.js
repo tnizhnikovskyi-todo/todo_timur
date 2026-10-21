@@ -1,9 +1,11 @@
 /** @odoo-module */
 // HOOT: «Вузьке місце» в 3D (R-30; R-26 VX-03, VX-04) — розширення моста td_machine_connect_viewer3d.
 import { describe, expect, test } from "@odoo/hoot";
+import { advanceTime } from "@odoo/hoot-mock";
 import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import {
-    MAX_BOXES, STACK_NAME, bottleneckExtension, bottleneckOf, boxCount, cardHtml, entrySpot, flowOf, hoverText, labelText,
+    MAX_BOXES, STACK_NAME, areaBox, bottleneckExtension, bottleneckOf, boxCount, cardHtml, clampToArea, entrySpot, flowOf,
+    hoverText, labelText,
 } from "@td_machine_connect_viewer3d/layer/bottleneck_layer";
 
 describe.current.tags("desktop");
@@ -219,7 +221,8 @@ test("BN9 стопка стоїть на підлозі біля входу ве
     const badge = group.getObjectByName(STACK_NAME + "_label");
     expect(badge.position.x).toBe(0);
     expect(badge.position.y > Math.max(...boxes(group).map((m) => m.position.y))).toBe(true);
-    expect(group.getObjectByName(STACK_NAME + "_text").position.y).toBe(badge.position.y);
+    expect(group.getObjectByName(STACK_NAME + "_text").position.x).toBe(0);
+    expect(group.getObjectByName(STACK_NAME + "_text").position.y > badge.position.y).toBe(true); // підпис просто над бейджем
     // чиста функція: без попередньої ділянки — найзахідніший верстат, сторона −X, по центру сторони
     const m = [{ code: "A", box: new T.Box3(new T.Vector3(10, 0, 0), new T.Vector3(14, 2, 4)) }, { code: "B", box: new T.Box3(new T.Vector3(20, 0, 0), new T.Vector3(24, 2, 4)) }];
     const spot = entrySpot(T, m, null);
@@ -240,4 +243,93 @@ test("BN10 наведення показує метрики, клік по пі�
     const card = text(q(el, ".o_f3d_cardbody"));
     expect(card.includes("Вузьке місце · Розкрій")).toBe(true);
     expect(card.includes("Що якщо: +20 % потужності")).toBe(true);
+});
+
+/** Як `CSS2DRenderer` на кадрі: елемент кожного CSS2D-підпису сцени потрапляє в шар підписів ядра. */
+const renderLabels = async (viewer, el) => {
+    const root = q(el, ".o_f3d_labels");
+    viewer.scene.traverse((o) => {
+        if (o.isCSS2DObject && o.element.parentNode !== root) {
+            root.appendChild(o.element);
+        }
+    });
+    await advanceTime(120);
+};
+const domLabels = (el) => [...el.querySelectorAll(".o_td_bn_label")];
+const station = (key, name, codes) => ({ key, station: name, codes });
+const nodes = (stations, current, queues) => {
+    const res = {};
+    for (const st of stations) {
+        for (const code of st.codes) {
+            res[code] = { flow: flow({ ...st, bottleneck: st.key === current, queue: queues[st.key] ?? 0, rank: st.key === current ? 1 : 2, prev: [] }) };
+        }
+    }
+    return res;
+};
+
+test("BN11 п'ять оновлень зі зміною вузького місця: у DOM рівно один підпис «Вузьке місце», у межах ділянки; без вузького місця — жодного", async () => {
+    const stations = [
+        station("area:1", "Розкрій", ["SAW-1", "SAW-2"]),
+        station("area:2", "Присадка", ["CNC-2"]),
+        station("area:3", "Крайкооблицювання", ["EDGE-1"]),
+    ];
+    const first = nodes(stations, "area:1", { "area:1": 6, "area:2": 5, "area:3": 1 });
+    const { viewer, el } = await mountViewer({ model: "core", mutate: withFlow(Object.fromEntries(Object.entries(first).map(([c, n]) => [c, n.flow]))) });
+    const T = bottleneckExtension.THREE;
+    // (поточне вузьке місце, черги) — А, Б, В, А, Б: кожен крок міняє підпис і стопку
+    const steps = [["area:1", { "area:1": 6 }], ["area:2", { "area:2": 5 }], ["area:3", { "area:3": 1 }], ["area:1", { "area:1": 6, "area:3": 1 }], ["area:2", { "area:2": 2 }]];
+    await renderLabels(viewer, el);
+    expect(domLabels(el).length).toBe(1);
+    for (const [current, queues] of steps) {
+        viewer.applyPatch({ workcenters: nodes(stations, current, queues) });
+        await renderLabels(viewer, el);
+        const labels = domLabels(el);
+        expect(labels.length).toBe(1); // старі підписи з DOM знято
+        expect(text(labels[0]).startsWith("Вузьке місце · черга")).toBe(true);
+        const group = stackOf(viewer);
+        expect(viewer.scene.children.filter((c) => c.name === STACK_NAME).length).toBe(1);
+        const label = group.getObjectByName(STACK_NAME + "_text");
+        expect(label.element).toBe(labels[0]); // підпис живе в тій самій групі, що й стопка
+        // світова позиція підпису — над стопкою, на її х/z, усередині межі ділянки (верстати ± запас на вхід)
+        const st = stations.find((s) => s.key === current);
+        const area = new T.Box3();
+        const floors = [];
+        for (const code of st.codes) {
+            const b = new T.Box3().setFromObject(viewer.items.get(code));
+            floors.push(b.min.y);
+            area.union(b);
+        }
+        area.expandByVector(new T.Vector3(1.35, 0, 1.35));
+        const at = label.getWorldPosition(new T.Vector3());
+        expect(at.x >= area.min.x - 1e-6 && at.x <= area.max.x + 1e-6).toBe(true);
+        expect(at.z >= area.min.z - 1e-6 && at.z <= area.max.z + 1e-6).toBe(true);
+        expect(Math.abs(at.x - group.position.x) < 1e-6 && Math.abs(at.z - group.position.z) < 1e-6).toBe(true);
+        expect(floors.some((f) => Math.abs(group.position.y - f) < 1e-6)).toBe(true); // стопка на підлозі верстата ділянки
+        expect(at.y > group.position.y + 0.5).toBe(true); // підпис над стопкою
+    }
+    // вузького місця немає (none): ні стопки, ні підписів
+    viewer.applyPatch({ workcenters: nodes(stations, null, {}) });
+    await renderLabels(viewer, el);
+    expect(domLabels(el).length).toBe(0);
+    expect(stackOf(viewer)).toBe(undefined);
+    let css2d = 0;
+    viewer.scene.traverse((o) => { if (o.isCSS2DObject && o.element.classList.contains("o_td_bn_label")) { css2d++; } });
+    expect(css2d).toBe(0);
+});
+
+test("BN12 стопка й підпис не виходять за межі ділянки: clampToArea і areaBox", async () => {
+    await mountViewer({ model: "core" });
+    const T = bottleneckExtension.THREE;
+    const box = new T.Box3(new T.Vector3(0, 0, 0), new T.Vector3(10, 3, 6));
+    const r = clampToArea(box, -5, 20);
+    expect(r.x).toBeCloseTo(0.45, { digits: 6 });
+    expect(r.z).toBeCloseTo(5.55, { digits: 6 });
+    expect(clampToArea(box, 4, 3)).toEqual({ x: 4, z: 3 });
+    expect(clampToArea(new T.Box3(new T.Vector3(0, 0, 0), new T.Vector3(0.5, 3, 0.5)), 9, 9)).toEqual({ x: 0.25, z: 0.25 }); // тісна ділянка: центр
+    const m = [{ code: "A", box: new T.Box3(new T.Vector3(10, 0, 0), new T.Vector3(14, 2, 4)) }];
+    const area = areaBox(T, { items: new Map() }, m, { zones: {} });
+    expect(area.min.x).toBeCloseTo(8.65, { digits: 6 });
+    expect(area.max.x).toBeCloseTo(15.35, { digits: 6 });
+    expect(area.min.z).toBeCloseTo(-1.35, { digits: 6 });
+    expect(area.max.z).toBeCloseTo(5.35, { digits: 6 });
 });
