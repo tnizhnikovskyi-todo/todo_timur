@@ -140,6 +140,7 @@ def machine_targets(
     shift=None,
     workdays="0123456",
     horizon_min=HORIZON_MIN,
+    calendar=None,
 ):
     """Цілі верстатам для емулятора (C-LP-01) за станом ПІСЛЯ `simulate`: `[{"wc", "state", "reason", "until"}]`.
 
@@ -147,6 +148,12 @@ def machine_targets(
     аварія) із причиною; інакше верстат без роботи → `idle` «Немає завдання», а поза зміною → `idle` «Поза зміною».
     `machines` — усі верстати демо (id РЦ): ціль отримує КОЖЕН, інакше емулятор веде «вільні» верстати сам і майже всі
     вони «працюють», що не збігається з планом. Без `machines` — лише зайняті (старий режим).
+
+    Додатково до `wc/state/reason/until` кожна ціль має `kind` (`work`/`downtime`/`no_task`/`off`) і для простою `dt`
+    (id запланованого простою): за ними диспетчер ставить машинному шару причину простою; емулятору вони не шлються.
+
+    «Поза зміною» визначає календар РЦ (`calendar = {id РЦ: [(початок, кінець)] планового часу}`, той самий, що в
+    `td_machine_connect` для OEE й ₴: обід і вихідні теж «поза зміною»); для РЦ без календаря — зміна `shift`.
 
     `until` = найближча зміна стану за планом + `pad_min` хв запасу (емулятор знімає ціль, коли `until` минув), але не
     пізніше `now + horizon_min`: тик оновлює цілі щохвилини, тож вони не закінчуються.
@@ -161,8 +168,10 @@ def machine_targets(
     for wid, wo in state["wos"].items():
         if wo["state"] == "progress" and wo["start"]:
             end = wo["start"] + timedelta(minutes=actual_minutes(wid, wo["minutes"], pct))
-            by_wc.setdefault(wo["wc"], {"wc": wo["wc"], "state": "working", "reason": None, "until": until(end)})
-    for dt in state["dts"].values():
+            by_wc.setdefault(
+                wo["wc"], {"wc": wo["wc"], "state": "working", "reason": None, "until": until(end), "kind": "work"}
+            )
+    for did, dt in state["dts"].items():
         if dt["state"] == "active" and dt["start"] and dt["wc"] not in by_wc:
             end = dt["start"] + timedelta(minutes=dt["minutes"])
             by_wc[dt["wc"]] = {
@@ -170,37 +179,51 @@ def machine_targets(
                 "state": "down" if dt["kind"] == "fault" else "idle",
                 "reason": dt["reason"],
                 "until": until(end),
+                "kind": "downtime",
+                "dt": did,
             }
     if machines is not None:
-        in_shift = shift is not None and clock.in_shift(now, shift, workdays)
         for wc in machines:
             if wc in by_wc:
                 continue
-            change = _next_change(state, wc, now, shift, workdays, in_shift)
+            known, boundary = _plan_boundary(calendar, wc, now, shift, workdays)
+            off = known and boundary[0] == "off"
             by_wc[wc] = {
                 "wc": wc,
                 "state": "idle",
-                "reason": IDLE_REASON if in_shift or shift is None else OFF_REASON,
-                "until": until(change),
+                "reason": OFF_REASON if off else IDLE_REASON,
+                "until": until(_next_change(state, wc, now, boundary[1], horizon_min)),
+                "kind": "off" if off else "no_task",
             }
     return [by_wc[wc] for wc in sorted(by_wc)]
 
 
-def _next_change(state, wc, now, shift, workdays, in_shift):
-    """Коли за планом зміниться стан вільного верстата: межа зміни, плановий старт його наряду чи простою."""
-    changes = []
-    if shift is not None:
-        if in_shift:
-            changes.append(clock.shift_window(clock.local_date(now), shift)[1])
-        else:
-            changes.append(clock.next_shift_start(now, shift, workdays))
+def _plan_boundary(calendar, wc, now, shift, workdays):
+    """`(відомо, ("in"|"off", найближча межа планового часу або None))`: за календарем РЦ, інакше за зміною."""
+    if calendar is not None and wc in calendar:
+        plan = calendar[wc]
+        cover = [e for s, e in plan if s <= now < e]
+        if cover:
+            return True, ("in", min(cover))
+        later = [s for s, _e in plan if s > now]
+        return True, ("off", min(later) if later else None)
+    if shift is None:
+        return False, ("in", None)
+    if clock.in_shift(now, shift, workdays):
+        return True, ("in", clock.shift_window(clock.local_date(now), shift)[1])
+    return True, ("off", clock.next_shift_start(now, shift, workdays))
+
+
+def _next_change(state, wc, now, boundary, horizon_min):
+    """Коли за планом зміниться стан вільного верстата: межа планового часу, плановий старт його наряду чи простою."""
+    changes = [boundary] if boundary else []
     for wo in state["wos"].values():
         if wo["wc"] == wc and wo["state"] not in ("done", "progress") and wo["plan_start"] and wo["plan_start"] > now:
             changes.append(wo["plan_start"])
     for dt in state["dts"].values():
         if dt["wc"] == wc and dt["state"] == "planned" and dt["plan_start"] > now:
             changes.append(dt["plan_start"])
-    return min(changes) if changes else now + timedelta(minutes=HORIZON_MIN)
+    return min(changes) if changes else now + timedelta(minutes=horizon_min)
 
 
 def catchup_chain(wos, floor=None):

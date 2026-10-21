@@ -38,6 +38,14 @@ class TestLive(TransactionCase):
         }.items():
             icp.set_param(P + key, value)
         tag = env["mrp.workcenter.tag"].create({"name": "Присадка"})
+        attendance = [  # як у демо: 07:00–11:30 і 12:00–15:30 (обід — поза плановим часом)
+            (0, 0, {"name": name, "dayofweek": str(d), "hour_from": a, "hour_to": b, "day_period": period})
+            for d in range(7)
+            for name, a, b, period in (("Ранок", 7.0, 11.5, "morning"), ("День", 12.0, 15.5, "afternoon"))
+        ]
+        cls.cal = env["resource.calendar"].create(
+            {"name": "Зміна 1 (тест)", "tz": "Europe/Kyiv", "attendance_ids": [(5, 0, 0)] + attendance}
+        )
         WC = env["mrp.workcenter"]
 
         def wc(name, code, tags=()):
@@ -47,6 +55,7 @@ class TestLive(TransactionCase):
                     "td_code": code,
                     "time_efficiency": 100,
                     "costs_hour": 600.0,
+                    "resource_calendar_id": cls.cal.id,
                     "tag_ids": [(6, 0, [t.id for t in tags])],
                 }
             )
@@ -600,7 +609,14 @@ class TestLive(TransactionCase):
         env = self.env
         total = env["td.machine"].search_count([("active", "=", True)])
         for i in range(max(0, n - total)):
-            wc = env["mrp.workcenter"].create({"name": "Верстат демо %02d" % i, "td_code": "DEMO-%02d" % i})
+            wc = env["mrp.workcenter"].create(
+                {
+                    "name": "Верстат демо %02d" % i,
+                    "td_code": "DEMO-%02d" % i,
+                    "costs_hour": 600.0,
+                    "resource_calendar_id": self.cal.id,
+                }
+            )
             env["td.machine"].create({"workcenter_id": wc.id, "protocol": "manual"})
         return env["td.machine"].search_count([("active", "=", True)])
 
@@ -647,6 +663,141 @@ class TestLive(TransactionCase):
         with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
             self.at(5).td_dispatch(force=True)  # задачі «Згенерувати»/«Догнати» не гасять верстати до запуску
         fake._td_push_machine_targets.assert_not_called()
+
+    # --- причини простоїв «Немає завдання» / «Поза зміною» ---------------------------------------------------
+    def follow_targets(self, res, minute):
+        """Емулятор + машинний шар: верстат стає в стан цілі (`_td_commit_state` відкриває/закриває простої)."""
+        by_wc = {m.workcenter_id.id: m for m in self.env["td.machine"].search([("active", "=", True)])}
+        states = {"working": "working", "idle": "idle", "down": "fault"}
+        for tg in res["targets"]:
+            machine = by_wc[tg["wc"]]
+            new = states[tg["state"]]
+            if machine.state != new:
+                machine._td_commit_state(new, T0 + mins(minute))
+
+    def tick(self, minute):
+        fake = self.fake_sim()
+        with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
+            res = self.at(minute).td_dispatch()
+        self.follow_targets(res, minute)
+        return res
+
+    def test_idle_downtimes_get_reason_at_once_and_do_not_multiply(self):
+        """3 наряди з 35 верстатів, 30 хв усередині зміни: «Потребує причини» = 0, «Немає завдання» є з тривалістю й ₴,
+        повторні такти нових записів не плодять."""
+        env = self.env
+        self.add_machines(35)
+        env["ir.config_parameter"].sudo().set_param(P + "downtime_pct", "0")  # лише «Немає завдання»
+        day = self.generate()
+        mos = day.production_ids.sorted("id")
+        busy = self.env["mrp.workorder"]
+        for mo, name in ((mos[0], "SAW-T"), (mos[0], "EDGE-T"), (mos[1], "ASM-T")):  # три активні наряди на 2 години
+            wo = mo.workorder_ids.filtered(lambda w, name=name: w.workcenter_id.td_code == name)
+            wo.duration_expected = 120.0
+            self.assertTrue(self.engine._td_wo_start(wo, T0))
+            busy |= wo
+        counts = []
+        for minute in range(0, 31):
+            self.tick(minute)
+            if minute in (5, 20):
+                counts.append(env["td.downtime"].search_count([]))
+        Downtime = env["td.downtime"]
+        self.assertEqual(Downtime.search_count([("reason_state", "=", "to_classify")]), 0)
+        no_task = env.ref("td_live_production.loss_no_task")
+        episodes = Downtime.search([("loss_id", "=", no_task)])
+        idle_machines = env["td.machine"].search([("state", "=", "idle")])
+        self.assertEqual(len(idle_machines), 32)  # 35 верстатів, 3 працюють
+        self.assertEqual(env["td.machine"].search_count([("state", "=", "working")]), 3)
+        self.assertEqual(episodes.machine_id, idle_machines)  # кожен вільний верстат — «Немає завдання»
+        self.assertEqual(len(episodes), 32)  # і рівно один простій на верстат: без дублів
+        self.assertFalse(Downtime.search([("machine_id", "in", busy.workcenter_id.td_machine_ids.ids)]))
+        self.assertEqual(counts[0], counts[1])  # такти 5 і 20: стан не змінився — нових записів немає
+        self.assertEqual({d.reason_state for d in episodes}, {"confirmed"})
+        self.assertEqual({d.reason_source for d in episodes}, {"demo"})
+        self.assertTrue(all(d.date_start == T0 for d in episodes))
+        self.assertEqual(
+            no_task.loss_id, env.ref("mrp.category_availability")
+        )  # втрата доступності, не плановий простій
+        self.assertFalse(no_task.td_planned)
+        # закриття: тривалість і ₴ (ставка 600 ₴/год × 30 хв)
+        machine = idle_machines[0]
+        machine._td_commit_state("working", T0 + mins(30))
+        closed = Downtime.search([("machine_id", "=", machine.id)])
+        self.assertEqual(len(closed), 1)
+        self.assertAlmostEqual(closed.duration_min, 30.0, places=1)
+        self.assertAlmostEqual(closed.cost, 300.0, places=1)
+        self.assertEqual(closed.loss_id, no_task)
+
+    def test_off_shift_idle_is_not_a_downtime(self):
+        """Поза зміною простою з ₴ немає: «Немає завдання» закривається о кінці зміни, новий не відкривається."""
+        env = self.env
+        self.add_machines(35)
+        env["ir.config_parameter"].sudo().set_param(P + "downtime_pct", "0")
+        end = 510  # 15:30 Київ
+        for minute in (0, 60, 500):
+            self.tick(minute)
+        Downtime = env["td.downtime"]
+        self.assertTrue(Downtime.search([("date_end", "=", False)]))
+        res = self.tick(520)  # зміна скінчилась
+        self.assertEqual({t["reason"] for t in res["targets"]}, {"Поза зміною"})
+        machines = env["td.machine"].search([("active", "=", True)])
+        now = T0 + mins(520)
+        for machine in machines:  # штатна межа робочого дня td_machine_connect
+            machine._td_day_boundary(now)
+            machine._td_reopen_after_boundary(now)
+        self.assertFalse(Downtime.search([("date_end", "=", False)]))  # відкритих простоїв (з ₴ наживо) немає
+        self.assertEqual(Downtime.search([("date_end", ">", T0 + mins(end))]), Downtime.browse())
+        self.assertEqual(Downtime.search_count([("date_start", ">=", T0 + mins(end))]), 0)
+        # верстат закінчив роботу після зміни й став `idle`: простій не відкривається
+        machine = machines[0]
+        machine._td_commit_state("working", T0 + mins(530))
+        before = Downtime.search_count([])
+        machine._td_commit_state("idle", T0 + mins(540))
+        self.assertEqual(Downtime.search_count([]), before)
+        self.assertFalse(machine.current_downtime_id)
+
+    def test_lunch_break_is_off_shift_and_idle_resumes_after(self):
+        """Обід (11:30–12:00) — поза плановим часом: «Немає завдання» закривається о 11:30 і відкривається з 12:00."""
+        env = self.env
+        self.add_machines(35)
+        env["ir.config_parameter"].sudo().set_param(P + "downtime_pct", "0")
+        self.tick(0)
+        Downtime = env["td.downtime"]
+        machines = env["td.machine"].search([("active", "=", True)])
+        self.assertEqual(Downtime.search_count([("date_end", "=", False)]), 35)
+        lunch_start, lunch_end = 270, 300  # 11:30 і 12:00 Київ
+        res = self.tick(lunch_start + 10)
+        self.assertEqual({t["reason"] for t in res["targets"]}, {"Поза зміною"})
+        self.assertFalse(Downtime.search([("date_end", "=", False)]))
+        self.assertEqual({d.date_end for d in Downtime.search([])}, {T0 + mins(lunch_start)})
+        res = self.tick(lunch_end + 1)
+        self.assertEqual({t["reason"] for t in res["targets"]}, {"Немає завдання"})
+        for machine in machines:  # штатне повторне відкриття td_machine_connect з початку наступного інтервалу
+            machine._td_reopen_after_boundary(T0 + mins(lunch_end + 1))
+        reopened = Downtime.search([("date_end", "=", False)])
+        self.assertEqual(len(reopened), 35)
+        self.assertEqual({d.date_start for d in reopened}, {T0 + mins(lunch_end)})
+        self.assertEqual({d.reason_state for d in reopened}, {"confirmed"})
+        self.assertEqual({d.loss_id for d in reopened}, {env.ref("td_live_production.loss_no_task")})
+
+    def test_open_downtime_without_label_is_classified_next_tick(self):
+        """Гонка: машинний шар відкрив простій раніше за мітку — наступний такт дає причину, а не «без причини»."""
+        self.add_machines(35)
+        machine = self.env["td.machine"].search([("active", "=", True)], limit=1)
+        machine._td_commit_state("idle", T0)  # мітки ще немає
+        dt = machine.current_downtime_id
+        self.assertEqual(dt.reason_state, "to_classify")
+        self.tick(1)
+        self.assertEqual((dt.reason_state, dt.loss_id), ("confirmed", self.env.ref("td_live_production.loss_no_task")))
+
+    def test_dispatcher_planned_reason_is_label_for_machine_layer(self):
+        """Причина запланованого простою (наладка, поломка) стає міткою верстата: машинний шар запише її одразу."""
+        loss = self.engine._td_loss("fault")
+        target = {"wc": 1, "state": "down", "reason": "Поломка", "until": T0, "kind": "downtime", "dt": 7}
+        got, off = self.engine._td_target_label(target, {7: loss})
+        self.assertEqual((got, off), (loss, False))
+        no_loss, off = self.engine._td_target_label({"wc": 1, "kind": "off"}, {})
+        self.assertEqual((bool(no_loss), off), (False, True))
 
     # --- фонові задачі: кнопки лише ставлять у чергу, виконавець працює порціями ----------------------------
     def test_generate_button_queues_and_runs_in_portions(self):

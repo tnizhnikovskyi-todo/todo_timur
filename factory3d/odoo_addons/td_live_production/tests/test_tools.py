@@ -355,6 +355,26 @@ class TestDispatch(BaseCase):
         self.assertEqual(got[21]["until"], T0 + mins(1 + dispatch.HORIZON_MIN))
         self.assertEqual(got[20]["reason"], dispatch.IDLE_REASON)
 
+    def test_targets_follow_work_center_calendar(self):
+        """«Поза зміною» — за календарем РЦ (обід, вихідні), а не за глобальною зміною; `until` — межа календаря."""
+        state = {"wos": {}, "mos": {}, "sos": {}, "dts": {}}
+        calendar = {1: [(T0, T0 + mins(270)), (T0 + mins(300), T0 + mins(510))], 2: []}  # 2 — вихідний: плану немає
+        got = {
+            t["wc"]: t
+            for t in dispatch.machine_targets(state, T0 + mins(100), machines=[1, 2], shift=SHIFT, calendar=calendar)
+        }
+        self.assertEqual((got[1]["kind"], got[1]["reason"]), ("no_task", dispatch.IDLE_REASON))
+        self.assertEqual(got[1]["until"], T0 + mins(100 + dispatch.HORIZON_MIN))  # межа далеко: до 15 хв
+        self.assertEqual((got[2]["kind"], got[2]["reason"]), ("off", dispatch.OFF_REASON))
+        lunch = {
+            t["wc"]: t
+            for t in dispatch.machine_targets(state, T0 + mins(290), machines=[1], shift=SHIFT, calendar=calendar)
+        }
+        self.assertEqual((lunch[1]["kind"], lunch[1]["reason"]), ("off", dispatch.OFF_REASON))
+        self.assertEqual(lunch[1]["until"], T0 + mins(300 + dispatch.TARGET_PAD_MIN))  # обід закінчується о 12:00
+        near = dispatch.machine_targets(state, T0 + mins(265), machines=[1], shift=SHIFT, calendar=calendar)[0]
+        self.assertEqual(near["until"], T0 + mins(270 + dispatch.TARGET_PAD_MIN))  # до обіду 5 хв
+
     def test_catchup_chain(self):
         wos = [
             {"id": 1, "state": "progress", "start": T0, "plan_start": T0, "plan_end": T0 + mins(60), "minutes": 60},
