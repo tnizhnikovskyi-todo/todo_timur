@@ -111,13 +111,51 @@ class TestW3Detectors(TestW3Common):
         item = found[0]
         self.assertEqual((item["dedup_key"], item["title"]), ("vent_offshift:*", "Вентиляція працює поза змінами"))
         self.assertAlmostEqual(item["est_qty_month"], 7620.8, places=1)
-        self.assertEqual(item["est_saving_month"], 45725.0)
+        self.assertEqual(
+            item["est_saving_month"], 64015.0
+        )  # за зонами тарифу (плоский макет 8,4), не за ціною слота 6,0
         ev = item["evidence"]
         self.assertEqual(
             (ev["day_level_kw"], ev["off_level_kw"], ev["ratio"], ev["off_hours"]), (100.0, 50.0, 0.5, 88.0)
         )
         self.assertIn("RV-ALL", ev["nodes"])
         self.assertLessEqual(len(item["text"]), 400)
+
+    def test_vent_offshift_zone_price(self):  # AC-34: поза змінами (ніч, вихідні) — за зонами поточного тарифу
+        tariff = self.env["td.energy.tariff"]._td_tariff_at(NOW)
+        tariff.zone_ids.unlink()
+        zones = [("Ніч", "night", 23.0, 7.0, 4.2, 10), ("День", "day", 7.0, 23.0, 12.6, 20)]
+        tariff.write(
+            {
+                "zone_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "name": n,
+                            "code": c,
+                            "weekdays": "0123456",
+                            "hour_from": a,
+                            "hour_to": b,
+                            "price": p,
+                            "sequence": s,
+                        },
+                    )
+                    for n, c, a, b, p, s in zones
+                ]
+            }
+        )
+        self.fill_vent()
+        found = self.detect(vent_offshift, "vent_offshift")
+        self.assertEqual(len(found), 1)
+        item = found[0]
+        off = [to_local(ts) for ts in self.slots() if not self.sw.is_shift(to_local(ts))]
+        expect = sum(4.2 if t.hour >= 23 or t.hour < 7 else 12.6 for t in off) / len(
+            off
+        )  # потужність рівна в усі слоти
+        self.assertAlmostEqual(item["evidence"]["off_price"], expect, places=3)
+        self.assertLess(item["evidence"]["off_price"], 8.4)  # ніч дешевша за плоскі 8,4
+        self.assertAlmostEqual(item["est_saving_month"], item["est_qty_month"] * expect, delta=1.0)
 
     def test_vent_offshift_negative(self):  # AC-34
         self.fill_vent(off_kw=30.0)  # ratio 0,30 < 0,35
@@ -133,7 +171,7 @@ class TestW3Detectors(TestW3Common):
         self.assertEqual(self.detect(vent_offshift, "vent_offshift"), [])
 
     # --- AC-35: idle_machines
-    def fill_alloc(self, idle_total=410.0, rc_total=6000.0, price=8.4):
+    def fill_alloc(self, idle_total=600.0, rc_total=6000.0, price=8.4):
         Node, Alloc = self.env["td.energy.node"], self.env["td.energy.alloc"]
         split = {"SAW-1": 0.5, "SAW-2": 0.3, "EDGE-1": 0.12, "CNC-1": 0.08}
         rows = []
@@ -159,14 +197,34 @@ class TestW3Detectors(TestW3Common):
         found = self.detect(idle_machines, "idle_machines")
         self.assertEqual(len(found), 1)
         item = found[0]
-        self.assertAlmostEqual(item["est_qty_month"], 1242.7, places=1)
-        self.assertEqual(item["est_saving_month"], 10439.0)
+        # слотів вузлів немає — частка доби в змінах за календарем (пн–пт 07–23 = 16/24): 600 × 2/3 = 400 кВт·год
+        self.assertAlmostEqual(item["est_qty_month"], 400 * 4.33 * 0.4, places=1)  # recoverable 0,4
+        self.assertEqual(item["est_saving_month"], round(400 * 4.33 * 0.4 * 8.4))
         ev = item["evidence"]
-        self.assertAlmostEqual(ev["share"], 410 / 6000, places=3)
+        self.assertEqual((ev["idle_kwh"], ev["idle_kwh_all_day"]), (400.0, 600.0))
+        self.assertAlmostEqual(ev["share"], 400 / 5800, places=3)
         self.assertEqual(ev["top_nodes"], ["SAW-1", "SAW-2", "EDGE-1"])  # 3 вузли з найбільшим простоєм
         self.assertEqual(item["node_code"], "SAW-1")
-        self.assertIn("410", item["text"].replace(" ", "").replace("\xa0", ""))
+        self.assertIn("400", item["text"].replace(" ", "").replace("\xa0", ""))
         self.assertEqual(item["dedup_key"], "idle_machines:*")
+
+    def test_idle_machines_above_floor_in_shift(self):  # AC-35: простій лише в змінах і лише понад нічний рівень вузла
+        self.fill_el("PM-SAW-1", lambda ts, local, shift: ((30.0 if shift else 10.0) / 4, 0.0, 8.4))
+        node = self.env["td.energy.node"].search([("code", "=", "SAW-1")])
+        rows = []
+        for day in (date(2026, 10, d) for d in range(12, 17)):  # пн–пт: 16 год × 30 кВт + 8 год × 10 кВт = 560 кВт·год
+            rows.append(
+                {"day": day, "kind": "idle", "node_id": node.id, "kwh": 560.0, "cost": 560 * 8.4, "quality": "measured"}
+            )
+            rows.append({"day": day, "kind": "direct", "kwh": 100.0, "cost": 840.0, "quality": "measured"})
+        self.env["td.energy.alloc"].create(rows)
+        found = self.detect(idle_machines, "idle_machines")
+        self.assertEqual(len(found), 1)
+        item = found[0]
+        # рівень стоянки 10 кВт = 2,5 кВт·год/слот; у зміні (64 слоти) понад нього 5 кВт·год/слот = 320 на добу; 5 діб
+        self.assertEqual((item["evidence"]["idle_kwh"], item["evidence"]["idle_kwh_all_day"]), (1600.0, 2800.0))
+        self.assertAlmostEqual(item["est_qty_month"], 1600 * 4.33 * 0.4, places=1)
+        self.assertEqual(item["est_saving_month"], round(1600 * 4.33 * 0.4 * 8.4))
 
     def test_idle_machines_negative(self):  # AC-35
         self.assertEqual(self.detect(idle_machines, "idle_machines"), [])  # немає розподілу
@@ -316,8 +374,8 @@ class TestW3Detectors(TestW3Common):
         found = self.detect(pv_export, "pv_export")
         self.assertEqual(len(found), 1)
         item = found[0]
-        self.assertAlmostEqual(item["est_qty_month"], 510.94, places=1)
-        self.assertEqual(item["est_saving_month"], 3270.0)
+        self.assertAlmostEqual(item["est_qty_month"], 204.38, places=1)  # 118 × 4,33 × capture 0,4
+        self.assertEqual(item["est_saving_month"], 1308.0)  # × (8,4 − 2,0)
         self.assertEqual((item["evidence"]["export_kwh"], item["evidence"]["slots"]), (118.0, 4))
         self.assertEqual(item["dedup_key"], "pv_export:*")
 

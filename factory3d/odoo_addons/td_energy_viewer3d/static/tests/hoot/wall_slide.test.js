@@ -92,14 +92,14 @@ test("AC-299 slideHtml: чотири плитки й топ-3; без варто
     const t = text(html);
     expect(t).toMatch(/640 кВт.*Потужність зараз/);
     expect(t).toMatch(/25 %.*Пік доби 200 кВт з ліміту 800 кВт/);
-    expect(t).toMatch(/6 720 ₴.*Вартість з початку доби · 600 кВт·год/);
+    expect(t).toMatch(/6 720 ₴.*Енергія з мережі з початку доби · 600 кВт·год/);
     expect(t).toMatch(/17 %.*Власна генерація · 120 кВт·год/);
     expect(t).toMatch(/Найбільші споживачі зараз.*Пила <1>.*40 кВт.*Верстат.*20 кВт/);
     expect(html.includes("Пила <1>")).toBe(false); // екрановано
     expect(html.includes("o_f3d_wall-kpi-ok")).toBe(true); // 25 % ліміту — зелений
     const noCost = text(slideHtml(wallEnergy({ energy: { totals: {}, consumers: {} } }, makeSeries({ cost: false }))));
     expect(noCost.includes("₴")).toBe(false);
-    expect(noCost).toMatch(/600 кВт·год.*Енергія з початку доби/);
+    expect(noCost).toMatch(/600 кВт·год.*Енергія з мережі з початку доби/);
     const hot = slideHtml(wallEnergy({ energy: { totals: {}, consumers: {} } }, Object.assign(makeSeries(), { contract_kw: 220 })));
     expect(hot.includes("o_f3d_wall-kpi-warn")).toBe(true); // 200 / 220 = 91 % ≥ 90 %
     const over = slideHtml(wallEnergy({ energy: { totals: {}, consumers: {} } }, Object.assign(makeSeries(), { contract_kw: 190 })));

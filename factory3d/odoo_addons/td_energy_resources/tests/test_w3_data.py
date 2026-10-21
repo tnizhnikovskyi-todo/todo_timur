@@ -42,7 +42,9 @@ class TestW3Data(TestW3Common):
         self.assertEqual(set(res.filtered("in_energy_cost").mapped("code")), {"el", "gas"})
         self.assertEqual(res.filtered(lambda r: r.list_basis == "qty_day").code, "water")
         self.assertEqual(self.resource("heat").source_note, "з BMS")
-        self.assertEqual(self.resource("gas").daily_limit, 1200.0)
+        self.assertEqual(
+            (self.resource("gas").rate_limit, self.resource("gas").daily_limit), (280.0, 6500.0)
+        )  # КГУ ≈ 200 м³/год
         self.assertEqual(self.resource("el").limit_kind, "tariff_contract")
         self.assertFalse(self.resource("heat").show_tab_cost)
 
@@ -77,10 +79,10 @@ class TestW3Data(TestW3Common):
             self.Price.create({"resource_id": gas.id, "date_from": "2026-01-01", "date_to": "2026-12-31", "price": 20})
         with self.assertRaises(ValidationError):
             self.Price.create({"resource_id": gas.id, "date_from": "2024-03-01", "date_to": "2024-02-01", "price": 20})
-        self.assertEqual(self.Price._td_price_at(gas, date(2026, 10, 17)), 19.80)
-        self.assertEqual(self.Price._td_price_at("gas", datetime(2026, 10, 17, 9, 0)), 19.80)
+        self.assertEqual(self.Price._td_price_at(gas, date(2026, 10, 17)), 25.00)
+        self.assertEqual(self.Price._td_price_at("gas", datetime(2026, 10, 17, 9, 0)), 25.00)
         self.assertEqual(self.Price._td_price_at(gas, date(2024, 6, 1)), 0.0)  # поза періодами — 0, не помилка
-        self.assertAlmostEqual(self.Price._td_price_at(self.resource("heat"), date(2026, 10, 17)), 2.0722, places=4)
+        self.assertAlmostEqual(self.Price._td_price_at(self.resource("heat"), date(2026, 10, 17)), 2.6164, places=4)
         for code in ("el", "air"):
             self.assertEqual(self.Price._td_price_at(self.resource(code), date(2026, 10, 17)), 0.0)
         self.assertEqual(self.Price._td_price_at(self.resource("water")), 60.0)
@@ -89,7 +91,7 @@ class TestW3Data(TestW3Common):
         old.write({"date_to": "2026-09-30"})
         self.Price.create({"resource_id": gas.id, "date_from": "2026-10-01", "price": 22.5})
         self.assertEqual(self.Price._td_price_at(gas, date(2026, 10, 17)), 22.5)
-        self.assertEqual(self.Price._td_price_at(gas, date(2026, 9, 1)), 19.80)
+        self.assertEqual(self.Price._td_price_at(gas, date(2026, 9, 1)), 25.00)
 
     def test_point_constraints(self):  # AC-04
         gas, air = self.resource("gas"), self.resource("air")

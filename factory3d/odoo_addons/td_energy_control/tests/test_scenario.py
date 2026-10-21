@@ -77,7 +77,7 @@ class TestScenario(TestControlCommon):
         self.assertEqual(chips["pfc"], ["ціль cos φ 0,95", "крок 35 квар"])
         self.assertEqual(chips["night"], ["23:00–06:30", "RoofVent 30 %", "16 °C"])
         self.assertEqual(chips["backup"], ["АВР → ДГУ", "критичні 180 кВт"])
-        self.assertEqual(chips["chp"], ["мін. робота 2 год", "ціна газу 19,80 ₴/м³"])
+        self.assertEqual(chips["chp"], ["мін. робота 2 год", "ціна газу 25,00 ₴/м³"])
 
     def test_toggle_flow(self):  # AC-163
         peak = self.sc("peak")

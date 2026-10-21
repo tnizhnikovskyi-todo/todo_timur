@@ -37,13 +37,17 @@ export function cumulativeAt(arr, min) {
     return sum + (arr[k] || 0) * (t - k);
 }
 
-/** Енергія з початку доби до хвилини `min`: `{ kwh, cost }` (`cost` — `null`, якщо вартості в серіях немає). */
+/**
+ * Енергія з мережі з початку доби до хвилини `min`: `{ kwh, cost }` — імпорт, нетований за слотом (`grid.net`; старий сервер
+ * без нього — сума імпорту вводів `grid.kwh`), і його вартість (`cost` — `null`, якщо вартості в серіях немає).
+ */
 export function energyAt(series, min) {
     const grid = series?.grid;
     if (!grid) {
         return null;
     }
-    return { kwh: cumulativeAt(grid.kwh, min), cost: Array.isArray(grid.cost) ? cumulativeAt(grid.cost, min) : null };
+    const kwh = Array.isArray(grid.net) ? grid.net : grid.kwh;
+    return { kwh: cumulativeAt(kwh, min), cost: Array.isArray(grid.cost) ? cumulativeAt(grid.cost, min) : null };
 }
 
 /** `{код споживача: кВт}` у слоті хвилини `min` — з тих самих серій; порожньо, якщо споживачів у серіях немає. */

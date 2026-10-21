@@ -36,12 +36,12 @@ class TestW3Cost(TestW3Common):
         heat = self.meter("T-C-HEAT", self.point("T-C-HEAT", "heat", "source"), "flow_integrate", flow=[flow])
         self.build(gas | water | heat, now=now)
         g = self.rows(gas)[-1]  # ts, qty, rate_avg, kwh_eq, price, cost, quality
-        self.assertEqual((g[0], g[1], g[4], g[5]), (T0, 612.0, 19.8, 12117.6))
+        self.assertEqual((g[0], g[1], g[4], g[5]), (T0, 612.0, 25.0, 15300.0))
         self.assertAlmostEqual(g[3], 612 * 10.5, places=3)
         w = self.rows(water)[-1]
         self.assertEqual((w[1], w[4], w[5]), (4.2, 60.0, 252.0))
         h = self.rows(heat)[-1]
-        price_heat = 19.8 / (10.5 * 0.91)
+        price_heat = 25.0 / (10.5 * 0.91)
         self.assertAlmostEqual(h[1], 25.0, places=3)
         self.assertAlmostEqual(h[4], round(price_heat, 4), places=4)
         self.assertEqual(h[5], round(25.0 * price_heat, 2))

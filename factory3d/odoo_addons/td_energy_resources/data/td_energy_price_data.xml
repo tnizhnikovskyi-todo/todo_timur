@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPEC 5.2: демо-ціни (Q-05, до таблиці бухгалтерії): газ 19,80 ₴/м³, вода 60,00 ₴/м³ -->
+<!-- SPEC 5.2: демо-ціни (Q-05, до таблиці бухгалтерії): газ 25,00 ₴/м³, вода 60,00 ₴/м³ (валюта UAH) -->
 <odoo noupdate="1">
     <record id="price_gas_demo" model="td.energy.price">
         <field name="resource_id" ref="resource_gas"/>
         <field name="date_from">2025-01-01</field>
-        <field name="price">19.80</field>
+        <field name="price">25.00</field>
+        <field name="currency_id" ref="base.UAH"/>
         <field name="note">Демо-ціна газу</field>
     </record>
     <record id="price_water_demo" model="td.energy.price">
         <field name="resource_id" ref="resource_water"/>
         <field name="date_from">2025-01-01</field>
         <field name="price">60.00</field>
+        <field name="currency_id" ref="base.UAH"/>
         <field name="note">Демо-ціна води</field>
     </record>
 </odoo>

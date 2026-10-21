@@ -1,5 +1,8 @@
 # Changelog
 
+## 19.0.1.1.4 — економіка енергії
+- `td.energy.tariff.export_price`: за замовчуванням 3,5 ₴/кВт·год (було 0); демо-тариф — у гривнях (`base.UAH`) з ціною віддачі 3,5.
+
 ## 19.0.1.1.0 — W1 «Енергетика»: Пульт, картка вузла, тривоги, планові відключення (W1-A, бекенд)
 - `td.energy.event`: `title/detail/state` (R-24), життєвий цикл `active → acked → resolved` (`action_ack|take|release|resolve`,
   `_td_auto_resolve`: лічильник, поріг, PFC, баланс, trip), події `pfc` (ступінь не вмикається, cos φ секції) і `trip`.

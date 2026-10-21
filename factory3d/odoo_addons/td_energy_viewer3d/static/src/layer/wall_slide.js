@@ -76,8 +76,8 @@ export function slideHtml(d) {
             tone(d.peakShare),
         ),
         d.cost != null
-            ? tile(nf.format(Math.round(d.cost)) + " ₴", "Вартість з початку доби" + (d.kwh != null ? " · " + nf.format(Math.round(d.kwh)) + " кВт·год" : ""))
-            : tile(d.kwh == null ? "—" : nf.format(Math.round(d.kwh)) + " кВт·год", "Енергія з початку доби"),
+            ? tile(nf.format(Math.round(d.cost)) + " ₴", "Енергія з мережі з початку доби" + (d.kwh != null ? " · " + nf.format(Math.round(d.kwh)) + " кВт·год" : ""))
+            : tile(d.kwh == null ? "—" : nf.format(Math.round(d.kwh)) + " кВт·год", "Енергія з мережі з початку доби"),
         tile(
             d.genShare == null ? "—" : Math.round(d.genShare * 100) + " %",
             "Власна генерація" + (d.genKwh ? " · " + nf.format(Math.round(d.genKwh)) + " кВт·год" : ""),

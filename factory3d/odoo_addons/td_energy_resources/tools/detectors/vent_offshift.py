@@ -17,6 +17,7 @@ def detect(env, rule, now):
     if not nodes:
         return []
     win = common.Window(env, rule, now)
+    price_at = common.zone_price_at(env, now)  # ніч дешевша за 8,4: рахуємо за зонами, не за плоскою ціною слота
     rows = common.node_slots(env, nodes.ids, "consumer", win.lo, win.hi)
     if win.sparse(ts for ts, _kwh, _kp in rows):
         return []
@@ -27,7 +28,8 @@ def detect(env, rule, now):
         else:
             off_kw.append(kwh * 4.0)
             off_kwh += kwh
-            off_weighted += kwh_price
+            zone = price_at(ts) if price_at else None
+            off_weighted += kwh_price if zone is None else kwh * zone
     if not day_kw or not off_kw:
         return []
     day_level, off_level = common.mean(day_kw), common.mean(off_kw)
@@ -46,6 +48,6 @@ def detect(env, rule, now):
     )  # fmt: skip
     evidence = {
         "day_level_kw": round(day_level, 2), "off_level_kw": round(off_level, 2), "ratio": round(ratio, 3),
-        "off_hours": round(off_hours, 2), "nodes": sorted(nodes.mapped("code")),
+        "off_hours": round(off_hours, 2), "off_price": round(price, 4), "nodes": sorted(nodes.mapped("code")),
     }  # fmt: skip
     return [common.finding("vent_offshift:*", TITLE, text, qty * price, qty, evidence)]

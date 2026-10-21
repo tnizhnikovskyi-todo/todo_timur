@@ -12,12 +12,12 @@ from .common import NOW, TAGS, TestW3Common
 CORE = {"vent_offshift", "idle_machines", "air_leaks", "air_pressure", "react_section", "pv_export"}
 RULES = {  # код: (ресурс, вікно, мін. економія, пороги, намір керування)
     "vent_offshift": ("el", 7, 1000.0, {"group": "vent", "ratio_min": 0.35, "target_ratio": 0.30}, "vent_night_mode"),
-    "idle_machines": ("el", 7, 1000.0, {"idle_share_min": 0.05, "recoverable": 0.70}, False),
+    "idle_machines": ("el", 7, 1000.0, {"idle_share_min": 0.05, "recoverable": 0.40}, False),
     "air_leaks": ("air", 7, 1000.0, {"ratio_min": 0.10, "min_flow": 0.2, "reducible": 0.65}, False),
     "air_pressure": ("air", 7, 1000.0, {"margin_bar": 0.3, "k_per_bar": 0.07, "min_save_bar": 0.2},
                      "air_pressure_setpoint"),
     "react_section": ("el", 7, 500.0, {"cos_target": 0.92, "min_hours_day": 2.0}, False),
-    "pv_export": ("el", 7, 500.0, {"min_export_kw": 10.0, "capture": 1.0}, "pv_self_consumption"),
+    "pv_export": ("el", 7, 500.0, {"min_export_kw": 10.0, "capture": 0.40}, "pv_self_consumption"),
 }  # fmt: skip
 
 

@@ -69,6 +69,17 @@ class TestAdviceRules(TestControlCommon):
         self.Advice._cron_advice()
         self.assertFalse(self.Advice.search([("dedup_key", "=", "EXPORT-T2"), ("state", "=", "open")]))
 
+    def test_chp_price_headroom(self):  # AC-218: КГУ заміщує закупівлю лише в межах «навантаження − СЕС»
+        self._fresh("energy_control/chp/permit", 1)
+        self._fresh("infra/totals/pv_now", 309.0)
+        self._fresh("energy/totals/p_now", 400.0)  # запас 91 кВт: решта 709 кВт пішла б у мережу за 3,5 ₴ < газ 6,25 ₴
+        self.assertEqual(self.Advice._td_advice_rule_chp_price(NOW), [])
+        self._fresh("energy/totals/p_now", 1200.0)  # запас 891 кВт ≥ потужності КГУ: вигідно
+        chp = self.Advice._td_advice_rule_chp_price(NOW)
+        self.assertEqual(chp[0]["code"], "CHP-PRICE")
+        self.assertIn("891", chp[0]["text"].replace("\xa0", "").replace(" ", ""))
+        self._fresh("energy_control/chp/permit", 0)
+
     def test_done_and_aliases(self):  # AC-220
         self.readings("infra/totals/export_kw", [26.0] * 12)
         self.Advice._cron_advice()

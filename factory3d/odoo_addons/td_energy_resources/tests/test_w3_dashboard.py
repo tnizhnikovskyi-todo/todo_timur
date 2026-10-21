@@ -63,7 +63,7 @@ class TestW3Dashboard(TestW3Common):
             self.fresh("energy/consumers/%s/p_now" % code, kw)
 
     def fx_gas(self):
-        """AC-23: витрата 46, за добу 612 м³ (19,80 ₴), котельня 540 м³; BOILER 41, DRY-1 4, CHP 0, CANTEEN 1 м³/год."""
+        """AC-23: витрата 46, за добу 612 м³ (25,00 ₴), котельня 540 м³; BOILER 41, DRY-1 4, CHP 0, CANTEEN 1 м³/год."""
         for code, value in (
             ("infra/gas/flow_m3h", 46.0),
             ("infra/gas/m3_total", 18400.0),
@@ -75,7 +75,7 @@ class TestW3Dashboard(TestW3Common):
         main = self.mcode("GM-MAIN")
         for k in range(21):
             qty = 30.0 if k < 20 else 12.0
-            self.res_interval(main, T0 + k * SLOT, qty, cost=round(qty * 19.8, 2))
+            self.res_interval(main, T0 + k * SLOT, qty, cost=round(qty * 25.0, 2))
         self.res_interval(self.mcode("GM-BOILER"), T0, 540.0)
         self.res_interval(self.mcode("GM-DRY1"), T0 + 20 * SLOT, 1.0, quality="estimated")
         self.res_interval(self.mcode("GM-CANTEEN"), T0 + 20 * SLOT, 0.25, quality="estimated")
@@ -193,15 +193,15 @@ class TestW3Dashboard(TestW3Common):
         self.fx_heat()
         kpis = self.kpis(self.get("gas"))
         self.assertEqual((kpis["rate"]["value"], kpis["rate"]["note"]), (46, "котельня BOILER · КГУ стоїть"))
-        self.assertEqual((kpis["today"]["value"], kpis["today"]["note"]), (612, "12 118 ₴ · 19,80 ₴/м³"))
-        self.assertEqual((kpis["limit"]["value"], kpis["limit"]["note"]), (1200, "використано 51 %"))
+        self.assertEqual((kpis["today"]["value"], kpis["today"]["note"]), (612, "15 300 ₴ · 25,00 ₴/м³"))
+        self.assertEqual((kpis["limit"]["value"], kpis["limit"]["note"]), (6500, "використано 9 %"))
         self.assertEqual(kpis["limit"]["tone"], "good")
         eff = kpis["eff"]
         self.assertEqual((eff["value"], eff["note"], eff["quality"]), (91.4, "норма ≥ 90 %", "estimated"))
         self.assertEqual(eff["tone"], "good")
         self.fresh("infra/chp/state", 1.0, "running")
         self.assertEqual(self.kpis(self.get("gas"))["rate"]["note"], "котельня BOILER · КГУ працює")
-        self.res_interval(self.mcode("GM-MAIN"), T0 + 21 * SLOT, 600.0)  # ≥ 90 % ліміту — `bad`
+        self.res_interval(self.mcode("GM-MAIN"), T0 + 21 * SLOT, 6000.0)  # ≥ 90 % добового ліміту 6 500 — `bad`
         self.assertEqual(self.kpis(self.get("gas"))["limit"]["tone"], "bad")
 
     def test_gas_eff_without_heat_meter(self):  # R-09: немає теплосчётчика котельні — `null`
@@ -213,7 +213,7 @@ class TestW3Dashboard(TestW3Common):
     def test_gas_partial_slot(self):  # R-08 п. 2: неповний слот [floor15(now), now) додається до «сьогодні»
         self.fx_gas()
         self.env.cr.execute(
-            "UPDATE td_energy_res_interval SET price = 19.8 WHERE ts_start = %s AND meter_id = %s",
+            "UPDATE td_energy_res_interval SET price = 25.0 WHERE ts_start = %s AND meter_id = %s",
             (T0 + 20 * SLOT, self.mcode("GM-MAIN").id),
         )
         self.env["td.energy.res.interval"].invalidate_model()
@@ -222,7 +222,7 @@ class TestW3Dashboard(TestW3Common):
         self.feed(signal, [(self.now.replace(minute=15), 18400.0), (self.now, 18410.0)])
         today = self.kpis(self.get("gas"))["today"]
         self.assertEqual(today["value"], 622)  # 612 + 10
-        self.assertEqual(today["note"], "12 316 ₴ · 19,80 ₴/м³")  # 12 117,6 + 10 × 19,80
+        self.assertEqual(today["note"], "15 550 ₴ · 25,00 ₴/м³")  # 15 300 + 10 × 25,00
 
     # --- AC-24 ------------------------------------------------------------------------------------------------
     def test_kpis_air(self):  # AC-24
@@ -270,14 +270,14 @@ class TestW3Dashboard(TestW3Common):
         tabs = {t["code"]: t for t in data["tabs"]}
         self.assertEqual(list(tabs), ["el", "gas", "heat", "air", "water"])
         self.assertEqual(tabs["el"]["sub"], "358 кВт · 52 786 ₴")
-        self.assertEqual((tabs["gas"]["rate"], tabs["gas"]["cost_uah"]), (46, 12118))
-        self.assertEqual(tabs["gas"]["sub"], "46 м³/год · 12 118 ₴")
+        self.assertEqual((tabs["gas"]["rate"], tabs["gas"]["cost_uah"]), (46, 15300))
+        self.assertEqual(tabs["gas"]["sub"], "46 м³/год · 15 300 ₴")
         self.assertEqual(tabs["heat"]["sub"], "390 кВт · з BMS")
         self.assertNotIn("cost_uah", tabs["heat"])
         self.assertEqual(tabs["air"]["sub"], "9,8 м³/хв · 5 393 ₴")
         self.assertEqual(tabs["water"]["sub"], "0,4 м³/год · 252 ₴")
-        total = "Сьогодні разом: 65 156 ₴ · Електрика, Газ, Вода. Похідні не додаються: Тепло, Стиснене повітря."
-        self.assertEqual(data["meta"]["total"], {"cost_uah": 65156, "text": total})  # air і heat не додаються
+        total = "Сьогодні разом: 68 338 ₴ · Електрика, Газ, Вода. Похідні не додаються: Тепло, Стиснене повітря."
+        self.assertEqual(data["meta"]["total"], {"cost_uah": 68338, "text": total})  # air і heat не додаються
         plain = self.get("gas", self.u_view)
         self.assertEqual(plain["meta"]["total"], {"text": "Сьогодні: 5 ресурсів"})
         self.assertEqual((plain["tabs"][1]["sub"], plain["tabs"][2]["sub"]), ("46 м³/год", "390 кВт · з BMS"))
@@ -316,8 +316,8 @@ class TestW3Dashboard(TestW3Common):
         picks = (series[0], series[25], series[26], series[28], series[45], series[55], series[56])
         self.assertEqual(picks, (22.0, 22.0, None, 46.0, 48.0, 46.0, None))
         self.assertEqual((series[57], series[58:]), (46, [None] * 38))
-        self.assertEqual((chart["limit"], chart["y_max"], chart["ticks"]), (80, 90, [30, 60, 90]))
-        self.assertEqual(chart["note"], "ліміт години — 80 м³/год")
+        self.assertEqual((chart["limit"], chart["y_max"], chart["ticks"]), (280, 450, [150, 300, 450]))
+        self.assertEqual(chart["note"], "ліміт години — 280 м³/год")
         self.assertEqual(chart["foot"], "Нічна витрата 22 м³/год, у зміну 46 м³/год. Пік 48 м³/год о 11:15.")
 
     def test_chart_air_and_leak_branches(self):  # AC-27: `leak_sentence` (> 10 % і норма), y_max 12
@@ -557,7 +557,7 @@ class TestW3Dashboard(TestW3Common):
         el = by["el"]  # електрика — потік `import`
         self.assertEqual((el["qty"], el["kwh_eq"], el["cost"], el["co2_kg"]), (6284.0, 6284.0, 52785.6, 2325.08))
         gas = by["gas"]  # решта — `supply`
-        self.assertEqual((gas["qty"], gas["kwh_eq"], gas["cost"], gas["co2_kg"]), (612.0, 6426.0, 12117.6, 1199.52))
+        self.assertEqual((gas["qty"], gas["kwh_eq"], gas["cost"], gas["co2_kg"]), (612.0, 6426.0, 15300.0, 1199.52))
         self.assertEqual(by["water"]["qty"], 0.0)
         only = self.Dash.with_user(self.u_cost)._td_totals("2026-10-17", "2026-10-17", resource_codes=["gas"])
         self.assertEqual([r["resource"] for r in only], ["gas"])

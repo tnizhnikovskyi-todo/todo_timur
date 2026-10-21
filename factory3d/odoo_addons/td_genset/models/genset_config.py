@@ -150,7 +150,7 @@ class TdGensetConfig(models.Model):
         string="Об'єм каністри за замовчуванням, L", default=20.0, help="Об'єм нової каністри за замовчуванням."
     )
     fuel_price_default = fields.Float(
-        string="Ціна палива за замовчуванням, грн/л", default=0.0, help="Ціна палива за літр для нових надходжень."
+        string="Ціна палива за замовчуванням, грн/л", default=58.0, help="Ціна палива за літр для нових надходжень."
     )
     fuel_partner_id = fields.Many2one(
         "res.partner", string="Постачальник палива", ondelete="set null", help="Постачальник палива за замовчуванням."

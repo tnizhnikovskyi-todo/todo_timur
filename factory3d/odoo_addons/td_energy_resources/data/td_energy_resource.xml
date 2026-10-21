@@ -35,8 +35,8 @@
         <field name="co2_kg_per_unit">1.96</field>
         <field name="price_source">price</field>
         <field name="limit_kind">fixed</field>
-        <field name="rate_limit">80</field>
-        <field name="daily_limit">1200</field>
+        <field name="rate_limit">280</field>
+        <field name="daily_limit">6500</field>
         <field name="list_basis">rate</field>
         <field name="color">#b45309</field>
         <field name="chart_title">Витрата газу, м³/год</field>

@@ -8,7 +8,7 @@
 
 from datetime import timedelta
 
-from odoo.addons.td_energy.tools import dates
+from odoo.addons.td_energy.tools import dates, tariff as tariff_tools
 
 from .. import shifts
 from ..build import rparam_float
@@ -112,6 +112,24 @@ class Window:
     def work_days(self):
         """Доби вікна, у які є хоча б одна зміна."""
         return [day for day in self.days if self.shifts.windows_for(day)]
+
+
+def zone_price_at(env, now):
+    """`ts (UTC naive) → ₴/кВт·год` за зонами тарифу, чинного на `now`; `None`, якщо тарифу чи зон немає або слот поза
+    зонами. Прогноз на місяць рахується за поточним зонним тарифом, а не за плоскою ціною історичних слотів."""
+    tariff = env["td.energy.tariff"].sudo()._td_tariff_at(now)
+    zones = tariff.zone_ids.sorted("sequence") if tariff else None
+    if not zones:
+        return None
+    cache = {}
+
+    def price_at(ts):
+        if ts not in cache:
+            zone = tariff_tools.zone_for(tariff_tools.to_local(ts), zones)
+            cache[ts] = zone.price if zone else None
+        return cache[ts]
+
+    return price_at
 
 
 def node_slots(env, node_ids, role, lo, hi):

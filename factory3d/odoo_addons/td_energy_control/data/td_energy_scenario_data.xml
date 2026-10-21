@@ -47,6 +47,6 @@
         <field name="description">Пуск КГУ, коли газ дешевший за мережу або коли BESS не вистачає для зрізання піку.</field>
         <field name="sequence">60</field>
         <field name="enabled" eval="False"/>
-        <field name="params" eval="{'min_run_h': 2.0, 'min_off_min': 30, 'gas_price_uah_m3': 19.8, 'gas_m3_per_kwh': 0.25, 'price_margin_uah_kwh': 0.5, 'use_slots': True, 'ramp_min': 6}"/>
+        <field name="params" eval="{'min_run_h': 2.0, 'min_off_min': 30, 'gas_price_uah_m3': 25.0, 'gas_m3_per_kwh': 0.25, 'price_margin_uah_kwh': 0.5, 'use_slots': True, 'ramp_min': 6}"/>
     </record>
 </odoo>

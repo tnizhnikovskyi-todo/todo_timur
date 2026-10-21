@@ -25,10 +25,10 @@
         <field name="resource_id" ref="td_energy_resources.resource_el"/>
         <field name="lookback_days">7</field>
         <field name="min_saving_uah">1000</field>
-        <field name="params" eval="{'idle_share_min': 0.05, 'recoverable': 0.70}"/>
+        <field name="params" eval="{'idle_share_min': 0.05, 'recoverable': 0.40}"/>
         <field name="params_schema" eval="[
             {'key': 'idle_share_min', 'label': 'Мінімальна частка простою в роботі РЦ', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.05},
-            {'key': 'recoverable', 'label': 'Частка простою, яку можна зекономити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.70}]"/>
+            {'key': 'recoverable', 'label': 'Частка простою в змінах, яку можна зекономити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.40}]"/>
         <field name="actions" eval="[{'code': 'alloc_report', 'label': 'Звіт по РЦ', 'kind': 'link', 'class': None, 'params': {'xmlid': 'td_energy.action_td_energy_alloc_pivot'}}]"/>
         <field name="requires">td_energy: розподіл витрат по РЦ</field>
     </record>
@@ -85,10 +85,10 @@
         <field name="resource_id" ref="td_energy_resources.resource_el"/>
         <field name="lookback_days">7</field>
         <field name="min_saving_uah">500</field>
-        <field name="params" eval="{'min_export_kw': 10.0, 'capture': 1.0}"/>
+        <field name="params" eval="{'min_export_kw': 10.0, 'capture': 0.40}"/>
         <field name="params_schema" eval="[
             {'key': 'min_export_kw', 'label': 'Мінімальна віддача в мережу', 'type': 'float', 'min': 0.0, 'max': 10000.0, 'unit': 'кВт', 'default': 10.0},
-            {'key': 'capture', 'label': 'Частка експорту, яку можна спожити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 1.0}]"/>
+            {'key': 'capture', 'label': 'Частка експорту, яку можна спожити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.40}]"/>
         <field name="actions" eval="[]"/>
         <field name="fallback_action" eval="{'code': 'open_generation', 'label': 'Відкрити генерацію', 'kind': 'link', 'class': None, 'params': {'xmlid': 'td_energy.action_td_energy_generation'}}"/>
         <field name="control_intent">pv_self_consumption</field>

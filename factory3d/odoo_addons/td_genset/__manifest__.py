@@ -23,7 +23,7 @@ Requirements and notes
 * Requires a SmartGen relay service reachable over HTTP. The relay is operated separately and is not part of this module.
 * The relay address and token are entered by an administrator and removed when the module is uninstalled.
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Generators",
     "author": "ToDo",
     "website": "https://todo.ltd",

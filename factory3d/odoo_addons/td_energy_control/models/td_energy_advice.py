@@ -167,9 +167,20 @@ class TdEnergyAdvice(models.Model):
         enabled, p = self._td_scenario("chp")
         if enabled:
             return []
-        _zone, price = env["td.energy.tariff"].sudo()._td_price_at(now)
+        Tariff = env["td.energy.tariff"].sudo()
+        tariff = Tariff._td_tariff_at(now)
+        _zone, price = Tariff._td_price_at(now, tariff=tariff)
         cost = p["gas_price_uah_m3"] * p["gas_m3_per_kwh"]
-        if not price or price - cost < 2 * p["price_margin_uah_kwh"]:
+        # КГУ заміщує закупівлю лише в межах `load − PV` (запас); решту вона віддала б у мережу за ціною віддачі
+        load = self._td_fresh_value(kinds.INPUTS["p_total"], now)
+        headroom, effective = None, price
+        if load is not None and price:
+            headroom = max(0.0, load - (self._td_fresh_value(kinds.INPUTS["pv_kw"], now) or 0.0))
+            node = env["td.energy.node"].sudo().search([("code", "=", "CHP")], limit=1)
+            p_nom = node.p_inst_kw or 800.0
+            covered = min(headroom, p_nom)
+            effective = (covered * price + (p_nom - covered) * (tariff.export_price if tariff else 0.0)) / p_nom
+        if not price or effective - cost < 2 * p["price_margin_uah_kwh"]:
             return []
         state = self._td_fresh_value("infra/chp/state", now)
         permit = self._td_fresh_value(kinds.SIGNALS["chp_permit"], now)
@@ -186,8 +197,14 @@ class TdEnergyAdvice(models.Model):
                 "node_code": "CHP",
                 "expires_in_min": 60,
                 "title": "КГУ вигідно запустити",
-                "text": "Газ дешевший за мережу: КГУ вигідно запустити (%s ₴ проти %s ₴ за кВт·год)."
-                % (kinds.fmt(price, 2), kinds.fmt(cost, 2)),
+                "text": "Газ дешевший за мережу: КГУ вигідно запустити (%s ₴ проти %s ₴ за кВт·год)%s."
+                % (
+                    kinds.fmt(price, 2),
+                    kinds.fmt(cost, 2),
+                    ""
+                    if headroom is None
+                    else "; навантаження за вирахуванням СЕС %s кВт" % kinds.fmt(round(headroom)),
+                ),
                 "actions": [
                     {
                         "code": "enable_chp",

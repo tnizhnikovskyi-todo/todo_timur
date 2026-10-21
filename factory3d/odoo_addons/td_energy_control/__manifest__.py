@@ -21,7 +21,7 @@ Requirements and notes
 * Scenarios are executed by the Factory 3D collector service, which is not part of this module.
 * The module does not control safety systems (fire automation, emergency lighting, protection of people).
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

@@ -86,7 +86,7 @@ SCENARIO_PARAMS = {
     "chp": [
         P("min_run_h", "Мін. час роботи", "float", 0.5, 24, 2.0, "год"),
         P("min_off_min", "Мін. пауза", "int", 0, 240, 30, "хв"),
-        P("gas_price_uah_m3", "Ціна газу", "float", 0, 200, 19.80, "₴/м³"),
+        P("gas_price_uah_m3", "Ціна газу", "float", 0, 200, 25.00, "₴/м³"),
         P("gas_m3_per_kwh", "Витрата газу", "float", 0.1, 1.0, 0.25, "м³/кВт·год"),
         P("price_margin_uah_kwh", "Мін. вигода", "float", 0, 50, 0.5, "₴/кВт·год"),
         P("use_slots", "Запускати у слотах", "bool", default=True),

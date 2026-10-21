@@ -47,20 +47,25 @@ class TestDaySeries(DayCase):
         self.assertEqual(s["gen"]["kwh"][SLOT_0700], 10.0)
         self.assertEqual(s["consumers"]["SAW-1"][SLOT_0700 + 3], 24.0)  # kw_avg = kwh × 4 (6 кВт·год → 24 кВт)
 
-    def test_cost_is_incomer_kwh_times_zone_price(self):  # AC-294: вартість = Σ вводів × ціна зони
+    def test_cost_is_net_import_times_zone_price(
+        self,
+    ):  # AC-294: «Енергія з мережі»: імпорт, нетований за слотом × ціна зони
         s = self.series()
-        self.assertEqual(s["grid"]["cost"][SLOT_0700], round(75.0 * 8.4, 2))
-        self.assertEqual(s["grid"]["cost"][SLOT_0700 + 4], round(75.0 * 4.2, 2))
-        expect = 4 * 75.0 * 8.4 + 4 * 75.0 * 4.2
+        self.assertEqual(s["grid"]["net"][SLOT_0700], 70.0)  # 75 імпорт − 5 віддача, як на пульті ГРЩ
+        self.assertEqual(s["grid"]["cost"][SLOT_0700], round(70.0 * 8.4, 2))
+        self.assertEqual(s["grid"]["cost"][SLOT_0700 + 4], round(70.0 * 4.2, 2))
+        expect = 4 * 70.0 * 8.4 + 4 * 70.0 * 4.2
         self.assertAlmostEqual(s["totals"]["cost"], expect, places=2)
-        self.assertAlmostEqual(s["totals"]["kwh"], 8 * 75.0, places=3)
+        self.assertAlmostEqual(s["totals"]["kwh"], 8 * 75.0, places=3)  # `grid.kwh` — сума імпорту вводів (потоки в 3D)
+        self.assertAlmostEqual(s["totals"]["net_kwh"], 8 * 70.0, places=3)
         self.assertAlmostEqual(s["totals"]["gen_kwh"], 80.0, places=3)
-        # доба збігається із SQL-сумою, яку рахує td_energy_analytics (`td.energy.daily` plant: Σ cost, Σ kwh вводів)
+        # SQL-сума td_energy_analytics (`td.energy.daily` plant: Σ cost, Σ kwh вводів) — валовий імпорт; різниця
+        # з лічильником — віддача 5 кВт·год × ціна слота (нетування за слотом, як на пульті ГРЩ)
         self.env.cr.execute(
             "SELECT SUM(cost), SUM(kwh) FROM td_energy_interval WHERE day = %s AND role = 'incomer'", (DAY,)
         )
         cost, kwh = self.env.cr.fetchone()
-        self.assertAlmostEqual(s["totals"]["cost"], cost, places=2)
+        self.assertAlmostEqual(cost - s["totals"]["cost"], 5.0 * (4 * 8.4 + 4 * 4.2), places=2)
         self.assertAlmostEqual(s["totals"]["kwh"], kwh, places=3)
 
     def test_zonal_tariff_price_per_slot(self):  # AC-301: зонний тариф (ніч 0,5× / напівпік 1,0× / пік 1,5× від 8,4 ₴)
@@ -100,14 +105,18 @@ class TestDaySeries(DayCase):
             return next(p for _c, _n, p, hrs in spans for a, b in hrs if a <= slot / 4 < b)
 
         for slot in range(96):
-            kwh = s["grid"]["kwh"][slot]
-            self.assertGreater(kwh, 0, slot)
-            self.assertAlmostEqual(s["grid"]["cost"][slot], kwh * zone_price(slot), delta=0.02, msg=slot)
-        by_zone = sum(s["grid"]["kwh"][k] * zone_price(k) for k in range(96))
+            net = s["grid"]["net"][slot]
+            self.assertGreater(s["grid"]["kwh"][slot], 0, slot)
+            self.assertAlmostEqual(s["grid"]["cost"][slot], net * zone_price(slot), delta=0.02, msg=slot)
+        by_zone = sum(s["grid"]["net"][k] * zone_price(k) for k in range(96))
         self.assertAlmostEqual(s["totals"]["cost"], by_zone, delta=1.0)
-        self.assertNotAlmostEqual(s["totals"]["cost"], s["totals"]["kwh"] * 8.4, delta=10.0)  # не плоска ціна
+        self.assertNotAlmostEqual(s["totals"]["cost"], s["totals"]["net_kwh"] * 8.4, delta=10.0)  # не плоска ціна
         for slot, expect in ((4, 4.2), (36, 12.6), (48, 8.4), (84, 12.6)):  # 01:00 ніч, 09:00 пік, 12:00, 21:00 пік
-            self.assertAlmostEqual(s["grid"]["cost"][slot] / s["grid"]["kwh"][slot], expect, delta=0.05)
+            net = s["grid"]["net"][slot]
+            if net > 0:
+                self.assertAlmostEqual(s["grid"]["cost"][slot] / net, expect, delta=0.05)
+            else:  # віддача СЕС покрила імпорт вводів: до оплати з мережі нічого
+                self.assertEqual(s["grid"]["cost"][slot], 0.0)
 
     def test_peak_is_net_import(self):  # AC-294: пік — чистий імпорт вводів, кВт
         s = self.series()
@@ -191,6 +200,6 @@ class TestDaySeriesHttp(HttpCase, DayCase):
             self.assertEqual(self.url_open("/f3d/kiosk/%s/energy/day" % bad, allow_redirects=False).status_code, 404)
         self.env["ir.config_parameter"].sudo().set_param(day_series.KIOSK_COST_PARAM, "True")
         data = self.url_open(base).json()
-        self.assertAlmostEqual(data["totals"]["cost"], 4 * 75.0 * 8.4 + 4 * 75.0 * 4.2, places=2)
+        self.assertAlmostEqual(data["totals"]["cost"], 4 * 70.0 * 8.4 + 4 * 70.0 * 4.2, places=2)
         self.env["ir.config_parameter"].sudo().set_param("td.viewer.kiosk_enabled", "False")
         self.assertEqual(self.url_open(base, allow_redirects=False).status_code, 404)

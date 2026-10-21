@@ -3,10 +3,11 @@
 <odoo noupdate="1">
     <record id="tariff_demo" model="td.energy.tariff">
         <field name="name">Умовний тариф (демо)</field>
+        <field name="currency_id" ref="base.UAH"/>
         <field name="date_from">2026-01-01</field>
         <field name="contract_kw">800</field>
         <field name="peak_warn_pct">90</field>
-        <field name="export_price">0</field>
+        <field name="export_price">3.5</field>
     </record>
     <record id="tariff_demo_zone_flat" model="td.energy.tariff.zone">
         <field name="tariff_id" ref="tariff_demo"/>

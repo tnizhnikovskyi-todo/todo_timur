@@ -27,7 +27,7 @@ class F3dEnergyTariff(models.Model):
     date_to = fields.Date(string="Діє по", tracking=True, help="Порожньо — безстроково")
     zone_ids = fields.One2many("td.energy.tariff.zone", "tariff_id", string="Зони", copy=True)
     export_price = fields.Float(
-        string="Ціна віддачі в мережу, грн/кВт·год", digits=(10, 4), default=0, groups=COST_GROUP
+        string="Ціна віддачі в мережу, грн/кВт·год", digits=(10, 4), default=3.5, groups=COST_GROUP
     )
     contract_kw = fields.Float(
         string="Договірна потужність, кВт", digits=(10, 1), required=True, default=800, tracking=True
