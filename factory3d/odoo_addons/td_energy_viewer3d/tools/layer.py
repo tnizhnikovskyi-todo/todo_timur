@@ -25,6 +25,7 @@ MAX_MARKER_LIMIT = 200
 TITLE_MAX = 80
 EVENT_LIMIT = 500
 CARD_GROUP = "td_energy.group_td_energy_user"
+CHP_GROUP = "td_chp.group_td_chp_user"  # кнопка «Відкрити пульт КГУ» (VX-06): модуль td_chp і його група
 # у киоску тривога без технічних деталей діагностики: лише загальна назва за видом події
 KIOSK_TITLES = {
     "threshold": "Перевищення порогу",
@@ -131,6 +132,11 @@ def scene_states(layer):
 
 
 # --- збирання ---------------------------------------------------------------------------------------------------
+def _has_chp(env):
+    """Модуль `td_chp` встановлений (є модель пульта КГУ); без нього `can_chp_pult = false`."""
+    return "td.chp.pult" in env
+
+
 def _num(value):
     return int(value) if value == int(value) else value
 
@@ -205,6 +211,7 @@ def build(env, ctx=None):
     for event in events:
         by_node.setdefault(event["node_id"][0], []).append(event)
     card_ok = (not kiosk) and env.user.has_group(CARD_GROUP)
+    can_chp_pult = bool(card_ok and _has_chp(env) and env.user.has_group(CHP_GROUP))
     nodes = []
     for row in rows:
         card = node_card.NodeCard(env, snap, row["code"]) if row["kind"] in CARD_KINDS else None
@@ -250,6 +257,7 @@ def build(env, ctx=None):
         "thresholds": {"warn_pct": _num(snap.warn_pct), "alarm_pct": _num(snap.alarm_pct)},
         "show_markers": prm["show_markers"],
         "can_pult": card_ok,  # «Відкрити пульт»: не киоск і група td_energy.group_td_energy_user (або вища)
+        "can_chp_pult": can_chp_pult,  # «Відкрити пульт КГУ»: card_ok, є td_chp і група td_chp.group_td_chp_user
         "nodes": nodes,
         "alarms": alarms,
         "summary": summary,

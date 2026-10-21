@@ -3,6 +3,7 @@
 import json
 import logging
 import time
+from unittest.mock import patch
 
 from odoo.tests import tagged
 
@@ -25,7 +26,10 @@ class TestLayerPayload(LayerCase):
             list(self.node(layer, "BW-2")),
             "code scene kind name state load i_a p_kw rating_a card alarms worst title".split(),
         )
-        self.assertEqual(set(layer), {"schema", "thresholds", "show_markers", "can_pult", "nodes", "alarms", "summary"})
+        self.assertEqual(
+            set(layer),
+            {"schema", "thresholds", "show_markers", "can_pult", "can_chp_pult", "nodes", "alarms", "summary"},
+        )
         self.assertEqual(set(layer["summary"]), {"alarm", "warn", "gen", "off"})
         self.assertEqual(sum(layer["summary"].values()), sum(n["state"] != "ok" for n in layer["nodes"]))
         self.assertLess(len(json.dumps(layer)), 12 * 1024)  # ≤ 12 КБ
@@ -183,3 +187,20 @@ class TestLayerPayload(LayerCase):
         start = time.perf_counter()
         self.layer()
         return time.perf_counter() - start
+
+    def test_can_chp_pult_by_group_and_module(self):  # VX-06: кнопка «Відкрити пульт КГУ» в картці CHP
+        installed = "td.chp.pult" in self.env
+        group = self.env.ref("td_chp.group_td_chp_user", raise_if_not_found=False)
+        if installed and group:
+            self.assertIs(self.layer(self.u_view)["can_chp_pult"], self.u_view.has_group("td_chp.group_td_chp_user"))
+            self.u_view.write({"group_ids": [(4, group.id)]})
+            self.assertIs(self.layer(self.u_view)["can_chp_pult"], True)
+            self.assertIs(self.layer(kiosk=True)["can_chp_pult"], False)  # у киоску кнопок немає
+        self.assertIs(self.layer(self.u_viewer_only)["can_chp_pult"], False)  # без групи td_energy — без кнопки
+        with patch.object(layer_tools, "_has_chp", return_value=False):  # без td_chp ключ false, решта шару як була
+            layer = self.layer(self.u_view)
+        self.assertIs(layer["can_chp_pult"], False)
+        self.assertIs(layer["can_pult"], True)
+        res = self.payload(self.u_viewer, full=True)
+        self.assertIs(res["energy"]["layer"]["can_chp_pult"], False)
+        self.assertEqual(res["meta"]["schema"], "1.1")  # ключ аддитивний: схема не змінилась
