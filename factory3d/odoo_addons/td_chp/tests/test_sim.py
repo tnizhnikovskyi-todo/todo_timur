@@ -30,7 +30,7 @@ class TestSim(ChpCase):
             self.skipTest("td_iot_sim не встановлено")
         Scenario = self.env["td.sim.scenario"]
         have = set(Scenario.search([]).mapped("code"))
-        for code in SIM_CODES:  # додаткові сценарії S-24…S-29 додає W3 — для тесту створюємо відсутні
+        for code in SIM_CODES:  # сценарії S-25…S-30 дає td_iot_sim ≥ 19.0.2.3.0 — для старіших версій створюємо відсутні
             if code not in have:
                 Scenario.create({"code": code, "name": f"КГУ: {code}", "group": "energy", "duration_s": 600})
         res = self.pult(self.u_mgr).sim("list")
