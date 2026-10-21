@@ -24,6 +24,7 @@ X-28 (клієнт: навчальна тривога, стани й прист�
 Зміни: 21.10.2026 — VX-09 (R-26): `api.flowSlot`, `ext.simPower(min, D, api)`, `api.resim()` — лічильник у шапці «Потоку зміни» і розфарбування «Споживання» за часом програвання (19.0.1.1.2).
 Зміни: 21.10.2026 — кнопка «Стеля» (R-28, V-16, AC-72/AC-73): потолочний шар ховається одним перемикачем, клавіша `C`, `localStorage` `f3d.ceiling`, у «стіні» схований за умовчанням, URL-параметр кіоска `ceiling=0|1` (19.0.1.1.3).
 Зміни: 21.10.2026 — шар «Замовлення в роботі» в живому режимі (R-30, AC-78…AC-80): «Маршрути: поточні / усі / сховати», маркер і тонка лінія двох ділянок, ящики замість куль (19.0.1.1.5).
+Зміни: 21.10.2026 — адаптивна якість кадру кіоска й «стіни» (R-31, AC-81): ковзне середнє часу кадру → `pixelRatio` 1,5 → 1,25 → 1 і назад, `?f3d_pr=` фіксує (19.0.1.1.7).
 Зміни: 21.10.2026 — «чистка картинки» (R-29, AC-74…AC-77): пріоритети й перетини підписів, сглажування й якість під рух, мерехтіння заливок зон, маркери замовлень (19.0.1.1.4).
 
 Позначення: UT — юніт-тест (`odoo.tests`), HT — HttpCase/тур, JT — HOOT-тест клієнта, MAN — ручна
@@ -530,7 +531,7 @@ SQL-constraint: `CHECK (size_kb >= 0)`. Методи:
 
 - `default_get` — створює 35 рядків `step_ids` (усі `selected`), `enabled` з параметра.
 - `action_run(self)` — якщо `not enabled` → `UserError("Заливка демо вимкнена на цій базі
-  (td.viewer.demo_enabled). Увімкніть у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
+  (td.viewer.demo_enabled). Увімкніть у 3D Завод → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
   якщо крон уже `active` з `state='running'` → `UserError("Заливка вже виконується")`; записує
   `demo_clock` у параметр; `state='queued'`, зберігає обрані кроки в параметр
   `td.viewer.demo_queue` (JSON: `{wizard_id, steps:[...]}`), вмикає крон «3D: заливка демо»
@@ -660,16 +661,16 @@ V-11 `mrp.workcenter`, V-12 `maintenance.equipment`, V-14 `hr.employee`; вид�
 | XML-id | Назва | Батько | sequence | Дія | Групи |
 |---|---|---|---|---|---|
 | `menu_td_viewer` | Переглядач | `td_factory3d.menu_td_root` | 10 | `action_td_viewer` (client) | `td_factory3d.group_td_user` |
-| `menu_td_journal` | Журнал станів | `td_factory3d.menu_td_root` | 12 | — (контейнер) | `td_factory3d.group_td_manager` |
+| `menu_td_journal` | Журнал станів | `td_factory3d.menu_td_data` | 30 | — (контейнер) | `td_factory3d.group_td_manager` |
 | `menu_td_snapshots` | Знімки | `menu_td_journal` | 1 | `action_td_viewer_snapshot` (list, form) | `group_td_manager` |
 | `menu_td_events` | Події | `menu_td_journal` | 2 | `action_td_viewer_event` (list) | `group_td_manager` |
-| `menu_td_cycle_check` | Перевірка циклу | `td_factory3d.menu_td_root` | 14 | `action_td_cycle_check` (form wizard, target new) | `group_td_manager` |
-| `menu_td_demo` | Демо-дані | `td_factory3d.menu_td_root` | 16 | `action_td_demo_wizard` (form wizard, target new) | `td_factory3d.group_td_admin` |
+| `menu_td_cycle_check` | Перевірка циклу | `td_factory3d.menu_td_data` | 60 | `action_td_cycle_check` (form wizard, target new) | `group_td_manager` |
+| `menu_td_demo` | Демо-дані | `td_factory3d.menu_td_data` | 50 | `action_td_demo_wizard` (form wizard, target new) | `td_factory3d.group_td_admin` |
 | `menu_td_settings` | Налаштування переглядача | `td_factory3d.menu_td_config` | 10 | `action_td_config_settings` (`res.config.settings`, context `{"module": "td_viewer3d"}`) | `group_td_admin` |
 
-Sequence (X-30, base CB-09): пункти viewer у корені `td_factory3d.menu_td_root` займають лише діапазон 10–19
-(резерв viewer; 20 — `menu_td_plant` base); пункт налаштувань — під `td_factory3d.menu_td_config` з sequence 10
-(= резерв viewer, правило X-32), а не другим пунктом «Налаштування» в корені.
+Sequence (X-30, base CB-09; перегруповано td-menu): у корені `td_factory3d.menu_td_root` лишився один пункт viewer — «Переглядач» (sequence 10);
+«Журнал станів» (30), «Демо-дані» (50) і «Перевірка циклу» (60) — у розділі `td_factory3d.menu_td_data` «Дані»;
+пункт налаштувань — під `td_factory3d.menu_td_config` з sequence 10 (= резерв viewer, правило X-32), а не другим пунктом «Налаштування» в корені.
 
 `data/actions.xml`: `action_td_viewer` — `ir.actions.client`, `name="Завод 3D"`, `tag="f3d_viewer.action"`,
 `target="current"`, `params` порожні (параметри підставляє `action_f3d_show`).
@@ -705,7 +706,7 @@ V-08, V-11, V-12, V-14) — viewer другої кнопки в ті самі ф
   `invisible="state in ('queued','running') or not enabled"`, `class="btn-primary"`), «Оновити»
   (`action_refresh`), «Усі кроки»/«Жодного» (`action_select_all`/`action_select_none`, `invisible="state != 'draft'"`);
 - `alert` (`role="alert"`, клас `alert-danger`, `invisible="enabled"`): «Заливка демо вимкнена на цій
-  базі. Увімкніть «Заливка демо дозволена» у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
+  базі. Увімкніть «Заливка демо дозволена» у 3D Завод → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
 - група: `demo_clock`, `progress` (widget `progressbar`), `current_step`, `new_records`;
 - `step_ids` list editable bottom: `sequence` (handle), `selected` (boolean_toggle), `label`, `name`
   (readonly), `state` (badge: `todo` сірий, `running` синій, `done` зелений, `skipped` жовтий, `error`
@@ -1826,6 +1827,22 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 видимість без перебудови (`prodOv.objs`, геометрії ті самі), «усі» → `F`, «сховати» → `M`, вибране — `F`, збереження вибору, «Потік зміни» не змінюється; **AC-80** товщини (0,07 / 0,12 / матеріали < 0,14) і відсутність куль
 (`routes.test.js`).
 
+### R-31 Адаптивна якість кадру кіоска й «стіни» (19.0.1.1.7)
+
+Слабкий телевізор не тягне lite-надвибірку 1,5 (R-29 п. 2): кадр довшає, обертання «стіни» смикається. Тому в кіоску й у «стіні» масштаб буфера кадру сам підлаштовується під час кадру. Чиста логіка — `static/src/viewer/adaptive.js`
+(`createAdaptiveQuality`), застосування — `core.js` (`view.rest`, `setPixelRatio`). У звичайному переглядачі (не кіоск, не `?wall`) і з нульовим рендерером нічого не змінюється.
+
+1. **Вимір.** Час кадру — інтервал між двома сусідніми витками циклу, **обидва** з яких малювали кадр (холості витки рендера за потребою не рахуються). Ковзне середнє — 30 останніх кадрів; рішення — від 10 кадрів. Інтервал > 0,5 с (фонова вкладка, зависання) і перерва між вимірами > 1 с
+   скидають вікно й таймери (це не час кадру).
+2. **Вниз.** Середнє > 33 мс безперервно ≥ 2 с → на сходинку вниз: 1,5 → 1,25 → 1 (стартове значення вище 1,5 — наприклад dpr 2 — це ще одна верхня сходинка). Нижче 1 не йде. Після кроку вікно очищується: наступний крок — не раніше ніж через ≈ 2,4 с.
+3. **Угору.** Середнє < 16 мс (+ 1 мс допуску на vsync: на 60 Гц інтервал кадру 16,7 мс, без допуску умова на 60-герцовому екрані не настала б ніколи) безперервно ≥ 10 с → на сходинку вгору, але не вище стартового значення (`restPixelRatio`,
+   обчислюється при `resize`). Якщо після кроку вгору протягом 15 с знову стало повільно — вище цієї сходинки більше не пробуємо (без гойдалки), доки не змінився розмір вікна.
+4. **Фіксація.** `?f3d_pr=<0,5…3>` або `localStorage["f3d.pr"]` фіксують масштаб і вимикають адаптацію (контролер не створюється). Під рух камери (R-29 п. 2) діє `movePixelRatio(rest)` від поточного `rest`, як раніше.
+5. **Підміна в тестах.** `opts.adaptive` (примусово вкл./викл.; за умовчанням `(kiosk || params.wall) && !нульовий рендерер`) і `opts.frameMs()` (підміна виміряного часу кадру); `getState().quality = { adaptive, pixelRatio, avgFrameMs }`.
+
+AC: **AC-81** сходинки й пороги `createAdaptiveQuality` (вниз після ≈ 2 с при > 33 мс, угору після ≈ 10 с при < 16 мс, не вище стартового, нижче 1 не йде, перерва й «кадр» > 0,5 с скидають вікно, без гойдалки); ядро: кіоск з підміненим часом кадру
+спускається 1,5 → 1,25 → 1 і повертається до 1,5; `?f3d_pr=` фіксує значення; звичайний переглядач не змінюється (`adaptive.test.js`).
+
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи / джерело |
@@ -1876,7 +1893,7 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 
 | ID | FR | Given | When | Then | Тип |
 |---|---|---|---|---|---|
-| AC-01 | FR-01 | модуль встановлено, користувач у `group_td_user` | відкриває меню «Завод 3D → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
+| AC-01 | FR-01 | модуль встановлено, користувач у `group_td_user` | відкриває меню «3D Завод → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
 | AC-02 | FR-02 | дія з `params={"code":"SAW-1","tab":"production","mode":"oee"}` | `applyParams` | `getState()` = `{selected:"SAW-1", tab:"production", mode:"oee"}`; з `code:"NOPE"` — повідомлення `warning`, `selected=null`, дія відкрита | JT |
 | AC-03 | FR-03 | бандл `static/lib/three/three-bundle.esm.js` у модулі | `mount()` | жодного запиту на хост поза `window.location.origin` (перехоплення `fetch`/`import` у HOOT); `THREE.REVISION === "160"` | JT |
 | AC-04 | FR-04 | `GET /td_viewer3d/static/model/parts/core.glb` | перший і повторний запит з `If-None-Match` | 200 з `ETag`, потім 304; `manifest.parts[0].file` містить `?v=` з 12 hex | HT |
@@ -1938,7 +1955,7 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 | AC-61 | FR-41, M-01g, R-13 (X-29) | демо-база з 45 активними `td.zone` (base Додаток C.1 + C.2) | `/data?full=1` | `len(zones)==45`; `zones["Z-YARD-W"]`: `zone_type="outdoor"`, `polygon` == `td.zone.polygon`, `locations=[]`, `workcenters=[]`; `zones["Z-ROOF"].is_roof=true`; у `zones["Z-CUT"]` ключа `is_roof` немає. JT: `D.static.layout.zones` без `Z-YARD-W`; після `load()` контур `Z-YARD-W` побудовано з `polygon`; `Z-ROOF` видимий лише з шаром `roofdeck` | UT, JT |
 | AC-62 | FR-39, §8.2 п. 10 (X-28, fire Q-09) | `D.evacuation.drill_active=null`, `fire.groups["FA-CUT"].state="ok"` | `applyPatch({"evacuation": {"drill_active": {"name": "DRILL/2026/0003", "zone_code": "FA-CNC", "elapsed_s": 40}}, "fire": {"groups": {"FA-CUT": {"state": "alarm"}}, "devices": {"2.CNC.05": {"type": "smoke", "x": 75.0, "y": 20.0, "z": 8.6, "zone": "Z-CNC", "state": "alarm", "dust": 0.12}}}})`, далі `applyPatch({"evacuation": {"drill_active": null}})` | після першого: `startDrill` викликано, `getState().panel="drill"`, час сценарію ≥ 40 с; `FA-CUT` — клас `--bad`, чип «Тривога» (`fault` → «Несправність» червоним, `prealarm` → «Передтривога» жовтим); маркер `2.CNC.05` у шарі `fire`; після другого — `stopDrill` викликано; ручна зупинка при активному навчанні з тим самим `name` — повторного автостарту немає | JT |
 | AC-63 | FR-40, §8.2 п. 11 (X-28, access CA-05) | `D.employees["OP-SAW-1"]` з `present: true`, `zone: "Z-CUT"`, `zone_since: "2026-10-12 07:02"`, `last_event: {"ts": "2026-10-12 06:58", "door": "KPP-IN", "direction": "in", "type": "pass"}`; `D.zones["Z-CUT"].people_now=6` | `select("OP-SAW-1")`, потім `select("Z-CUT")` | картка людини: «На території: так», «Зона: Розкрій з 07:02», «Останній прохід: 06:58 · KPP-IN · вхід»; картка зони: «Людей зараз: 6»; без цих ключів (access не встановлено) — рядків немає | JT |
-| AC-64 | V-01 (X-30) | модуль встановлено | читання `ir.ui.menu` | `menu_td_viewer` (батько `td_factory3d.menu_td_root`) sequence 10, `menu_td_journal` 12, `menu_td_cycle_check` 14, `menu_td_demo` 16 — усі пункти viewer у корені в діапазоні 10–19; `menu_td_settings` — батько `td_factory3d.menu_td_config`, sequence 10, група `group_td_admin`; серед дітей `menu_td_root` рівно один пункт «Налаштування» (`td_factory3d.menu_td_config`) | UT |
+| AC-64 | V-01 (X-30) | модуль встановлено | читання `ir.ui.menu` | `menu_td_viewer` (батько `td_factory3d.menu_td_root`) sequence 10; `menu_td_journal` 30, `menu_td_demo` 50, `menu_td_cycle_check` 60 — батько `td_factory3d.menu_td_data`; `menu_td_settings` — батько `td_factory3d.menu_td_config`, sequence 10, група `group_td_admin`; серед дітей `menu_td_root` рівно один пункт «Налаштування» (`td_factory3d.menu_td_config`) | UT |
 | AC-65 | R-04, M-01a (X-14) | `PLT-04C` з `td_loc_kind='stack'`, `td_capacity=60`; `KIT-01` з порожнім `td_loc_kind` і `td_capacity=0` | `/data` | `locations["PLT-04C"]`: `kind="stack"`, `capacity=60`; після `td_capacity=80` → `capacity=80`, `fill` перераховано; `KIT-01`: `kind`, `capacity` — зі статики (`"kit"`, `null`); grep `td_kind_loc` у `models/`, `tools/` — 0 збігів | UT |
 | AC-66 | M-01f, §4.4 (X-09) | `user_mrp_only` (без `hr.group_hr_user`), співробітник `OP-SAW-1` | `/data` | `employees["OP-SAW-1"]` = `{name, job, department, shift, workcenter, current_workorder}` без `AccessError`; `search_read` провайдера `people` викликано на `hr.employee.public` (`patch.object`), не на `hr.employee`; `sudo` не викликався (AC-14) | UT |
 | AC-67 | M-10, §4.3 (X-19) | модуль встановлено | читання груп | `group_td_kiosk.privilege_id` = `td_viewer3d.privilege_td_viewer`; його `category_id` = `td_factory3d.module_category_factory3d`, `sequence=10`; група кіоска не в `td_factory3d.privilege_td`; `implied_ids` = 4 групи §4.3 | UT |
@@ -1955,6 +1972,7 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 | AC-78 | R-30 п. 1–2 | живий режим, шар замовлень, `routes` за умовчанням | `setProdOverlay(true)` | кожне замовлення `vs="T"`: маркер (`dot`, `ring`, `tag`) видно, `tr.lines` і лінії матеріалів сховані, тонка лінія з прозорістю > 0 лише на індексах `seg…seg + 2` (розмах ≤ 2) | HOOT (`routes.test.js`) |
 | AC-79 | R-30 п. 1, 3, 5 | шар замовлень, `storage` | кнопки «усі» / «сховати» / «поточні», `prodHover`, `showMO`, збережений режим, недійсне й недоступне сховище, «Потік зміни» | «усі» → `F` і лінії матеріалів активних, «сховати» → `M`, «поточні» → `T`; об'єкти й геометрія ті самі; наведене чи вибране замовлення → `F` (навіть у «сховати»); `f3d.routes` зберігається, сміття → `cur`; у «Потоці зміни» активні `F`, решта `off` | HOOT (`routes.test.js`) |
 | AC-80 | R-30 п. 2, 4 | шар замовлень | обхід `prodOv.objs` | тонка лінія r 0,07, повна r 0,12, труби матеріалів < 0,14; частинки й партії — непрозорі `BoxGeometry` < 0,7 м, куль (`SphereGeometry`) немає | HOOT (`routes.test.js`) |
+| AC-81 | R-31 | кіоск, нульовий рендерер, `opts.adaptive`, `opts.frameMs` | кадр 40 мс ≈ 8 с, потім 10 мс ≈ 25 с; окремо `f3d.pr` = 1,25; окремо не-кіоск | 1,5 → 1,25 → 1 (не нижче), потім 1,25 → 1,5 (не вище); з `f3d.pr` — 1,25 незмінно; у звичайному переглядачі 1,5 незмінно | HOOT (`adaptive.test.js`) |
 
 (AC-34 навмисно немає — об'єднано з AC-33.)
 

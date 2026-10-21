@@ -13,6 +13,7 @@ import {
     esc, nf, pct, plural, pill, barW, bar, cx, KIND, MACHINE_STATUS, BIN_STATE, WO_STATE, MO_STATE, PICK_STATE, docPill,
 } from "./format.js";
 import { detectLite, liteSettings, movePixelRatio } from "./lite.js";
+import { createAdaptiveQuality } from "./adaptive.js";
 import { estimateLabelSize, labelClass, labelLimits, layoutLabels, LABEL_PRIO, splitLabel } from "./labels.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
 import { createStockLoad, liveLine } from "./stock_load.js";
@@ -407,6 +408,11 @@ themeObs.observe(document.body, { attributes: true, attributeFilter: ["class"] }
 // Автооблітання «стіни» (`controls.autoRotate`) рухом не вважається: на телевізорі сглаживання лишається повним.
 const coarsePointer = matchMedia("(pointer: coarse)").matches;
 const view = { w: 0, h: 0, rest: 1, moving: false, now: 1, until: 0, drag: false };
+// адаптивна якість (R-31): лише кіоск і «стіна», не нульовий рендерер (`opts.adaptive` — примусово, тести); ручний `?f3d_pr=` фіксує масштаб і вимикає адаптацію.
+// Контролер створюється при першому `resize()`, коли відомий стартовий масштаб (верхня межа): ковзне середнє часу кадру → сходинки 1,5 → 1,25 → 1.
+const adaptiveOn = (opts.adaptive ?? ((kiosk || !!opts.params?.wall) && !nullR)) && perfRatio() == null;
+let adaptive = null;
+let prevLoopAt = 0, prevLoopDrew = false;
 function setPixelRatio() {
   const r = view.moving ? movePixelRatio(view.rest) : view.rest;
   if (r === view.now && renderer.getPixelRatio?.() === r) {return;}
@@ -418,7 +424,9 @@ function setPixelRatio() {
 function resize() {
   const { clientWidth: w, clientHeight: h } = stage;
   view.w = w; view.h = h;
-  view.rest = perfRatio() ?? LS.pixelRatio(window.devicePixelRatio, { w, h, coarse: coarsePointer });
+  const base = perfRatio() ?? LS.pixelRatio(window.devicePixelRatio, { w, h, coarse: coarsePointer });
+  if (adaptiveOn) { view.rest = adaptive ? adaptive.setStart(base) : (adaptive = createAdaptiveQuality({ start: base })).ratio; }
+  else { view.rest = base; }
   renderer.setPixelRatio(view.moving ? movePixelRatio(view.rest) : view.rest);
   view.now = renderer.getPixelRatio?.() ?? view.rest;
   renderer.setSize(w, h);
@@ -3742,7 +3750,14 @@ renderer.setAnimationLoop(() => {
     }
   }
   const since = pace - lastDraw; // < 0 — годинник відкотився: вважаємо, що пора малювати
-  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && since >= AMBIENT_MS) && since >= 0 && since < IDLE_MS) {return;}
+  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && since >= AMBIENT_MS) && since >= 0 && since < IDLE_MS) { prevLoopDrew = false; return; }
+  if (adaptive) { // час кадру міряємо лише в безперервному малюванні (попередній виток теж малював): холості витки не рахуються
+    if (prevLoopDrew) {
+      const r = adaptive.sample(opts.frameMs ? opts.frameMs() : pace - prevLoopAt, pace);
+      if (r != null) { view.rest = r; setPixelRatio(); }
+    }
+    prevLoopAt = pace; prevLoopDrew = true;
+  }
   needDraw = false;
   lastDraw = pace;
   drawn++;
@@ -3780,6 +3795,7 @@ function getState() {
     ui: { side: ui.side, card: ui.card, collapsed: [...ui.secs] },
     ceiling: { shown: !ceil.hidden, nodes: ceil.nodes.size, y: ceil.y },
     routes: routesMode,
+    quality: { adaptive: !!adaptive, pixelRatio: view.rest, avgFrameMs: adaptive ? adaptive.avg : null },
   };
 }
 async function applyParams(p = {}) {

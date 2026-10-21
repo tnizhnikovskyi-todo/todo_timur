@@ -214,7 +214,7 @@ factory3d/build/constructor/proto/*      прототип-артефакт (buil
 Тестові `*.json` фікстури лежать у `web.assets_unit_tests` як статика й читаються HOOT через `fetch` (мок із `@odoo/hoot-mock` дозволяє лише `blob:`/`data:`,
 тож читати нативним `fetch` з чистого iframe, як `static/tests/hoot/helpers.js` переглядача).
 `external_dependencies.python` порожні навмисно: `cascadio`, `ifcopenshell`, `IfcConvert` — **необов'язкові** (R-20, DEC-04), їх відсутність не блокує встановлення.
-`application: False` — пункти меню живуть під «Завод 3D» (`td_factory3d.menu_td_root`, DEC-01).
+`application: False` — пункти меню живуть під «3D Завод» (`td_factory3d.menu_td_root`, DEC-01).
 
 ### 1.1 Доповнення до маніфесту (19.0.1.4.0)
 
@@ -787,8 +787,8 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/td_term_data.xml` (12 запи
 
 | XML-id | Назва | Батько | sequence | Дія |
 |---|---|---|---|---|
-| `menu_td_constructor` | Конструктор | `td_factory3d.menu_td_root` | 12 | `action_td_constructor` (`ir.actions.client`, `tag='f3d_constructor'`, `name='Конструктор'`, `target='current'`, `params={}`) |
-| `menu_td_constructor_plan` | Планування | `td_factory3d.menu_td_root` | 14 | — (папка) |
+| `menu_td_constructor` | Конструктор | `menu_td_constructor_plan` | 1 | `action_td_constructor` (`ir.actions.client`, `tag='f3d_constructor'`, `name='Конструктор'`, `target='current'`, `params={}`) |
+| `menu_td_constructor_plan` | Планування | `td_factory3d.menu_td_root` | 70 | — (папка) |
 | `menu_td_site` | Площадки | `menu_td_constructor_plan` | 10 | `action_td_site` (`list,form`) |
 | `menu_td_layer` | Шари | `menu_td_constructor_plan` | 20 | `action_td_layer` (`list,form`; контекст `search_default_group_site`) |
 | `menu_td_variant` | Каталог варіантів | `menu_td_constructor_plan` | 30 | `action_td_equipment_variant` (`kanban,list,form`) |
@@ -825,7 +825,7 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/td_term_data.xml` (12 запи
 | `menu_td_layout_variant` | Варіанти планування | 80 | `action_td_layout_variant` |
 | `menu_td_comment` | Коментарі | 85 | `action_td_comment` («Коментарі конструктора») |
 | `menu_td_zone_lock` | Блокування зон | 15 | `action_td_zone_lock` (`list`), батько `td_factory3d.menu_td_config`, `groups=group_td_constructor_manager` |
-| `menu_td_constructor_help` | Інструкція конструктора | 16 | `action_td_help` (`ir.actions.act_url`), батько `td_factory3d.menu_td_root` |
+| `menu_td_constructor_help` | Інструкція конструктора | 2 | `action_td_help` (`ir.actions.act_url`) |
 
 ## 4. Права
 
@@ -1563,7 +1563,7 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 | AC | CD / FR | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-01 | FR-01 | Given чиста база з base+viewer; When встановлено модуль; Then є 4 групи й привілей, 12 `td.term`, 8 ключів `td.constructor.*`, меню `menu_td_constructor` (sequence 12) і `menu_td_constructor_plan` (14) під `td_factory3d.menu_td_root`, дія `tag='f3d_constructor'` | UT |
+| AC-01 | FR-01 | Given чиста база з base+viewer; When встановлено модуль; Then є 4 групи й привілей, 12 `td.term`, 8 ключів `td.constructor.*`, меню `menu_td_constructor_plan` (sequence 70) під `td_factory3d.menu_td_root` і `menu_td_constructor` (1) під ним, дія `tag='f3d_constructor'` | UT |
 | AC-02 | CD-24, FR-02 | Given база без площадки; When виконано `post_init_hook`; Then є один `td.site` `seed_key='main_demo'` («Меблеве підприємство», 150×72×9) з кількостями `meta.counts` з `seed_site.json` (шарів, місць, комірок, розміщень, варіантів); повторний запуск не змінює кількостей ні в одній моделі | UT |
 | AC-03 | CD-24 | Given існують `stock.location` `FG-R1-B01-L4` (barcode) і `maintenance.equipment` `SAW-1` (`td_code`); When виконано `link`; Then в них `td_site_id=site`, у відповідного розміщення `equipment_id` заповнено; нових `stock.location`/`maintenance.equipment` не створено; незнайдені коди — у `seed_report.unlinked` | UT |
 | AC-04 | CD-24, CD-05 | Given менеджер; When API-02 `{name:'Склад 2', code:'S2'}`; Then площадка 60×30×8, 5 шарів із відмітками 0,0,0,+6.0,0, 7 `check.config` за R-04, 0 місць, 4 типові варіанти доступні; не-менеджер → `rights` | UT |
@@ -1736,7 +1736,7 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 | ТК | Кроки | Очікування |
 |---|---|---|
-| ТК-01 | Меню «Завод 3D → Планування → Конструктор» | відкривається редактор площадки «Меблеве підприємство»: будівля 150×72, шари, стелажі ГП із комірками, станки |
+| ТК-01 | Меню «3D Завод → Планування → Конструктор» | відкривається редактор площадки «Меблеве підприємство»: будівля 150×72, шари, стелажі ГП із комірками, станки |
 | ТК-02 | Вкладка «Місця» → `pallet_rack` 18×4 → поставити; змінити ярус 4→5 | 72, потім 90 комірок із кодами `…-B01-L1`; ліч. у списку місць |
 | ТК-03 | «Каталог»: перетягнути варіант на «Виробництво»; поставити на прохід | замічання «Прохід перекрито» (за режимом warn/block), при block — повернення |
 | ТК-04 | «Змінити варіант»: завантажити GLB, OBJ+MTL, STL; STEP | превью обертається; габарити з моделі; STEP — «очікує перетворення» |
