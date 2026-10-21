@@ -1120,6 +1120,8 @@ td.gantry.stack.search([('location_id','in', move_line_ids.location_dest_id.ids 
 | `menu_td_mc_root` | Верстати | `td_factory3d.menu_td_root` | 40 | `group_td_user` | — |
 | `menu_td_mc_dashboard` | Огляд верстатів | `menu_td_mc_root` | 10 | `group_td_user` | `action_td_machine_dashboard` (`td.machine`, kanban,list,form) |
 | `menu_td_mc_downtime` | Простої | `menu_td_mc_root` | 20 | `group_td_user` | `action_td_downtime` (list,kanban,form,graph,pivot; `context={'search_default_today': 1}`) |
+| `menu_td_mc_downtime_cost` | Простої в ₴ | `menu_td_mc_root` | 22 | `group_td_manager` | `action_td_downtime_cost` (graph,pivot,list; `search_default_this_month`, `search_default_group_loss`; R-29, V-32) |
+| `menu_td_mc_bottleneck` | Вузьке місце | `menu_td_mc_root` | 25 | `group_td_user` | `action_td_bottleneck` (client, `static/src/bottleneck/*`; R-30, V-34) |
 | `menu_td_mc_downtime_tablet` | Простої без причини | `menu_td_mc_root` | 21 | `mrp.group_mrp_user` | `action_td_downtime_tablet` (kanban,form; `context={'search_default_not_confirmed': 1, 'search_default_today': 1}`) |
 | `menu_td_mc_oee` | OEE | `menu_td_mc_root` | 30 | `group_td_user` | `action_td_oee_shift` (list,pivot,graph,form; `search_default_this_week`) |
 | `menu_td_mc_log` | Журнал станів | `menu_td_mc_root` | 40 | `group_td_user` | `action_td_machine_state_log` (list,graph,pivot) |

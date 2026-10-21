@@ -1192,27 +1192,26 @@ Device instance задається **лише** в `params.device` джерел�
 | V-26 | `res_config_settings_view_form_td_fire` | inherit `base.res_config_settings_view_form` | `//form` inside: `<app data-string="Пожежна безпека" string="Пожежна безпека" name="td_fire_safety" groups="td_factory3d.group_td_manager">`; блоки: «Обробка сигналів» (`td_fire_read_enabled` — `groups=group_td_admin`, `td_fire_comm_stale_after_s`, `td_fire_comm_lost_after_s`, текст «Запис у прилад не налаштовується — рішення D-07»), «Запиленість сповіщувачів» (`td_fire_dust_warn_pct`, `td_fire_dust_alarm_pct`), «Норми» (`td_fire_polymer_panels` з підказкою п. 8.2.11, `td_fire_cover_tol_m`), «Навчальні тривоги» (`td_fire_drill_time_limit_s`, `td_fire_drill_auto_create`, `td_fire_drill_match_window_min`, `td_fire_drill_auto_stop_s`, `td_fire_drill_sim_duration_s`), «Сповіщення й заявки» (`td_fire_alert_group_id`, `td_fire_event_ack_required`, `td_fire_team_id`), «3D» (`td_fire_viewer_devices`) |
 | V-27 | `view_td_fire_bacnet_device_wizard_form` | form `td.fire.bacnet.device.wizard` | `panel_id` (readonly), `source_id` (readonly), `old_instance`, `new_instance`, `signal_count`, `explicit_count`; `alert-warning` «Змінюється device instance у параметрах джерела (і явні адреси сигналів, якщо є); запис у прилад не виконується»; footer `action_apply` («Змінити», `btn-primary`, confirm), «Скасувати» |
 
-Меню й дії (`views/menus.xml`; CB-09: батько `td_factory3d.menu_td_root`, sequence 85). Дії `ir.actions.act_window`
+Меню й дії (`views/menus.xml`; розділи «Пожежна безпека» і «Евакуація» — 2-й рівень у `td_factory3d.menu_td_safety` «Будівля і безпека»: 40 і 50; контейнера «Налаштування» немає — він був би 4-м рівнем, «Шаблони навчань» і «Шлейфи» лежать у «Пожежна безпека»; пункт налаштувань — під `menu_td_config`, sequence 85, CB-09). Дії `ir.actions.act_window`
 мають `context`/`domain`, як у таблиці; xml-id дій — `action_f3d_fire_<що>`.
 
 | XML-id меню | Назва | Батько | seq | Групи | Дія (модель, `view_mode`, контекст) |
 |---|---|---|---|---|---|
-| `menu_td_fire_root` | Пожежна безпека | `td_factory3d.menu_td_root` | 85 | `group_td_user` | — |
+| `menu_td_fire_root` | Пожежна безпека | `td_factory3d.menu_td_safety` | 40 | `group_td_user` | — |
 | `menu_td_fire_overview` | Огляд | `menu_td_fire_root` | 10 | `group_td_user` | `action_td_fire_overview` (`td.fire.panel`, `kanban,form`) |
 | `menu_td_fire_zone` | Зони сигналізації | `menu_td_fire_root` | 20 | `group_td_user` | `action_td_fire_zone` (`td.fire.zone`, `kanban,list,form`; `{'search_default_group_state': 1}`) |
 | `menu_td_fire_device` | Пристрої | `menu_td_fire_root` | 30 | `group_td_user` | `action_td_fire_device` (`list,form`; `{'search_default_group_type': 1}`) |
 | `menu_td_fire_event` | Журнал подій | `menu_td_fire_root` | 40 | `group_td_user` | `action_td_fire_event` (`list,form,graph`; `{'search_default_filter_7d': 1}`) |
 | `menu_td_fire_system` | Системи | `menu_td_fire_root` | 50 | `group_td_user` | `action_td_fire_system` (`list,form`) |
-| `menu_td_fire_evac` | Евакуація | `menu_td_fire_root` | 60 | `group_td_user` | — |
+| `menu_td_fire_evac` | Евакуація | `td_factory3d.menu_td_safety` | 50 | `group_td_user` | — |
 | `menu_td_fire_exit` | Виходи | `menu_td_fire_evac` | 10 | `group_td_user` | `action_td_fire_exit` (`list,form`) |
 | `menu_td_fire_route` | Маршрути | `menu_td_fire_evac` | 20 | `group_td_user` | `action_td_fire_route` (`list,form`) |
 | `menu_td_fire_smoke_zone` | Димові зони | `menu_td_fire_evac` | 30 | `group_td_user` | `action_td_fire_smoke_zone` (`list,form`) |
 | `menu_td_fire_evac_report` | Звіт перевірки | `menu_td_fire_evac` | 40 | `group_td_user` | `action_td_fire_evac_report` (`ir.actions.server`, V-20) |
 | `menu_td_fire_drill` | Навчальні тривоги | `menu_td_fire_root` | 70 | `group_td_user` | `action_td_fire_drill` (`list,form,calendar`; без контексту) |
 | `menu_td_fire_norm` | Норми | `menu_td_fire_root` | 80 | `group_td_user` | `action_td_fire_norm` (`list,form`; `{'search_default_group_group': 1}`) |
-| `menu_td_fire_config` | Налаштування | `menu_td_fire_root` | 90 | `group_td_manager` | — |
-| `menu_td_fire_template` | Шаблони навчань | `menu_td_fire_config` | 10 | `group_td_manager` | `action_td_fire_drill_template` (`list,form`) |
-| `menu_td_fire_loop` | Шлейфи | `menu_td_fire_config` | 20 | `group_td_manager` | `action_td_fire_loop` (`list,form`) |
+| `menu_td_fire_template` | Шаблони навчань | `menu_td_fire_root` | 90 | `group_td_manager` | `action_td_fire_drill_template` (`list,form`) |
+| `menu_td_fire_loop` | Шлейфи | `menu_td_fire_root` | 95 | `group_td_manager` | `action_td_fire_loop` (`list,form`) |
 | `menu_td_fire_settings` | Налаштування пожежної безпеки | `td_factory3d.menu_td_config` | 85 (резерв модуля CB-09; X-32) | `group_td_manager` | `action_td_fire_settings` (`res.config.settings`, `form`, `target='inline'`, `{'module': 'td_fire_safety'}`) |
 
 Додатково: `menu_td_fire_maint_requests` «Заявки пожежної безпеки» під `maintenance.menu_m_request` (seq 50,
@@ -2194,7 +2193,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-60 | §5.5 | `uninstall_hook(env)` → сигнал запиленості існує з `source_id=False`, `address={}`; параметрів `td.fire_safety.*` 0 | UT |
 | AC-61 | FR-19, FR-24 | `neutralize.sql` виконується без помилки; `read_enabled='False'`, крони модуля `active=False`, джерела модуля `read_enabled=False`, `employee_id` людей навчань NULL, `sim_run_ref` NULL, активностей «Пожежна тривога» 0, `comm='off'` | UT |
 | AC-62 | FR-07, §5.4 п. 8 | після установки: `compliance_zones_ok=35`, `compliance_mcp_max_m=26.9`, `compliance_routes_ok=32`, `compliance_exits_ok=True`, `compliance_smoke_ok=8`, `compliance_missing_zones=False`, `compliance_dirty=False` | UT |
-| AC-63 | FR-16 | меню §3: `menu_td_fire_root` (батько `td_factory3d.menu_td_root`, `sequence=85`, група `U`) і 15 дочірніх із sequence/групами таблиці; `menu_td_fire_settings` — батько `td_factory3d.menu_td_config`, `sequence=85`, група `M`, дія `action_td_fire_settings` (X-32); дії відкривають вказані моделі | UT |
+| AC-63 | FR-16 | меню §3: `menu_td_fire_root` (батько `td_factory3d.menu_td_safety`, `sequence=40`, група `U`), `menu_td_fire_evac` (той самий батько, `sequence=50`) і 14 дочірніх із sequence/групами таблиці; `menu_td_fire_settings` — батько `td_factory3d.menu_td_config`, `sequence=85`, група `M`, дія `action_td_fire_settings` (X-32); дії відкривають вказані моделі | UT |
 | AC-64 | FR-17 | матриця §4.1: `U` читає зони, `write` → `AccessError`; `U` `create` навчання → `AccessError`; `D` створює навчання й читає людей; `M` пише норму, `unlink` норми → `AccessError`; `A` — успіх; `H` читає людей; `unlink` події будь-ким → помилка; `M` має групу `D` через `implied_ids` | UT |
 | AC-65 | FR-21 | `res.config.settings`: збереження/читання 16 параметрів; `dust_warn ≥ dust_alarm` → `UserError`; зміна порогів запиленості → `warn_high/alarm_high` сигналів `…/dust`; група сповіщення зберігається як xml-id; полів із `write` у назві немає | UT |
 | AC-66 | FR-04, A-02 | `M`: `2.CUT.01.action_create_signals()` → 2 сигнали `fire/devices/2.CUT.01/state` і `/dust` з адресами `{"object":"LSP","instance":21201,"mode":"poll"}` / `{"object":"PIV","instance":21201,"mode":"poll"}` (без ключа `device`, X-44), `source_id=BAC-200-FACP-1`, `write_enabled=False`, `module='fire_safety'`, `origin='module'`; повтор → створено 0; `U` → `AccessError`; `action_remove_signals` → сигнали `active=False`, `monitor=False` | UT |

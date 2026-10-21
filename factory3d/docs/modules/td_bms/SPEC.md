@@ -787,17 +787,17 @@ telemetry); провайдери модуля замінюють розділи 
 | V-22 | `res_config_settings_view_form_td_bms` | inherit `base.res_config_settings_view_form` | блок «Завод 3D» (як telemetry V-21: `//block[@name='td_base_settings']` або власний `name="td_bms_settings"`): «Будівля»: `td_bms_read_enabled` («Читати освітлення й вентиляцію»), `td_bms_write_enabled` («Дозволити керування», `groups="td_factory3d.group_td_admin"`); «Перевірки»: `td_bms_calendar_id`, `light_check_delay_min`, `light_norm_tolerance_pct`, `hvac_check_delay_min`, `cold_delay_min`, `indoor_min_work_c`, `indoor_min_off_c`, `heat_deficit_kw`, `heat_deficit_delay_min`, `check_heartbeat_min`; «Розрахунок освітлення»: `light_uf`, `light_mf`; «Дані»: `td_bms_install_state`, кнопка «Повторити установку даних» (admin) |
 | V-23 | `action_td_bms_overview` | `ir.actions.client`, `tag="td_bms.overview"`, `name="Будівля"`, `target="current"` | OWL-компонент R-28 |
 
-Меню (CB-09, sequence 80 під `td_factory3d.menu_td_root`):
+Меню (розділ «Будівля» — під `td_factory3d.menu_td_safety` «Будівля і безпека» (верхній рядок «Завод 3D», td-menu): «Будівля» 10, «Вентиляція й опалення» 20, «Освітлення» 30 — плоско, глибше за пункт рядка → розділ → пункт не йдуть; налаштування — `menu_td_config`, sequence 80, CB-09/X-32):
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
-| `menu_td_bms` | Будівля | `td_factory3d.menu_td_root` | 80 | `group_td_user` | — |
+| `menu_td_bms` | Будівля | `td_factory3d.menu_td_safety` | 10 | `group_td_user` | — |
 | `menu_td_bms_overview` | Огляд | `menu_td_bms` | 10 | `group_td_user` | `action_td_bms_overview` |
-| `menu_td_bms_lighting` | Освітлення | `menu_td_bms` | 20 | `group_td_user` | — |
+| `menu_td_bms_lighting` | Освітлення | `td_factory3d.menu_td_safety` | 30 | `group_td_user` | — |
 | `menu_td_bms_light_group` | Групи | `menu_td_bms_lighting` | 10 | `group_td_user` | `action_td_bms_light_group` (kanban,list,form) |
 | `menu_td_bms_light_panel` | Щити | `menu_td_bms_lighting` | 20 | `group_td_user` | `action_td_bms_light_panel` (list,form) |
 | `menu_td_bms_light_norm` | Норми освітленості | `menu_td_bms_lighting` | 30 | `group_td_user` | `action_td_bms_light_norm` (list,form) |
-| `menu_td_bms_hvac` | Вентиляція й опалення | `menu_td_bms` | 30 | `group_td_user` | — |
+| `menu_td_bms_hvac` | Вентиляція й опалення | `td_factory3d.menu_td_safety` | 20 | `group_td_user` | — |
 | `menu_td_bms_hvac_unit` | Установки | `menu_td_bms_hvac` | 10 | `group_td_user` | `action_td_bms_hvac_unit` (list,kanban,form) |
 | `menu_td_bms_heat_balance` | Тепловий баланс | `menu_td_bms_hvac` | 20 | `group_td_user` | `action_td_bms_heat_balance_open` (`ir.actions.server`, `code="action = env['td.bms.heat.balance']._td_bms_get().get_formview_action()"`) |
 | `menu_td_bms_deviation` | Відхилення | `menu_td_bms` | 40 | `group_td_user` | `action_td_bms_deviation` (list,graph,pivot,form; `context={'search_default_open': 1}`) |
@@ -1382,7 +1382,7 @@ class HelvarNetPlugin(SourcePlugin):
 | AC-59 | R-25 | користувач `group_td_user` → `AccessError`; `td.bms.write_enabled=False` → `UserError` «Керування вимкнено: модуль «Будівля» (td.bms.write_enabled).»; telemetry вимкнено → відповідний текст; `HN-LP-3.write_enabled=False` → «Запис вимкнено на: LT-MAINT (джерело HN-LP-3)»; рівень 120 → `ValidationError` | UT |
 | AC-60 | FR-18, M-13 | майстер установок: RV-05 режим `VEL` → команда `text='VEL'`; уставка ніч 12,0 → `value=12.0` на `…/setpoint_night_c`; EF-ELEC у майстрі → домен виключає; `write_enabled=True` на `ventilation/units/EF-ELEC/state`, `equipment/BOILER/return_c` або `ventilation/units/RV-05/heating_valve` → `ValidationError` «…не керується» | UT |
 | AC-61 | FR-17 | `user` (лише `group_td_user`): читає всі моделі, `write` групи → `AccessError`; оператор: `write({'note'})` епізоду — ок, `write({'state'})` → `AccessError`; менеджер: редагує групи/установки/баланс/норми; `unlink` епізоду — лише адмін | UT |
-| AC-62 | FR-16, FR-17 | групи: `group_td_bms_operator.implied_ids ∋ group_td_user`, `group_td_manager.implied_ids ∋ group_td_bms_operator`; меню §3 з xml-id, `sequence` (`menu_td_bms` = 80 під `menu_td_root`, `menu_td_bms_config` = 80 під `menu_td_config` — X-32), групами; `group_td_bms_operator.privilege_id` = `td_bms.privilege_td_bms`, його `category_id` = `td_factory3d.module_category_factory3d`; `group_td_bms_operator` не входить у групи `td_factory3d.privilege_td` (X-19) | UT |
+| AC-62 | FR-16, FR-17 | групи: `group_td_bms_operator.implied_ids ∋ group_td_user`, `group_td_manager.implied_ids ∋ group_td_bms_operator`; меню §3 з xml-id, `sequence` (`menu_td_bms` = 10, `menu_td_bms_hvac` = 20 і `menu_td_bms_lighting` = 30 під `td_factory3d.menu_td_safety`, `menu_td_bms_config` = 80 під `menu_td_config` — X-32), групами; `group_td_bms_operator.privilege_id` = `td_bms.privilege_td_bms`, його `category_id` = `td_factory3d.module_category_factory3d`; `group_td_bms_operator` не входить у групи `td_factory3d.privilege_td` (X-19) | UT |
 | AC-63 | §4.4, §13.3 | `f3d_bms_reinstall_data()` менеджером → `AccessError`; `action_open('res.partner', …)` → `AccessError`; `dali_devices="@1.2.1.1-27;DROP"` → `ValidationError` | UT |
 | AC-64 | R-31 | `build_query(2, 152, address='@1.2.1.5')` == `">V:2,C:152,@1.2.1.5#"`; `build_query(2, 161, group=12)` == `">V:2,C:161,G:12#"`; `build_query(2, 102, address='@1')` == `">V:2,C:102,@1#"`; `build_command(2, 13, 12, level=60, fade_cs=100)` == `">V:2,C:13,G:12,L:60,F:100,A:1#"`; `build_command(2, 11, 12, scene=3, block=1, fade_cs=200)` == `">V:2,C:11,G:12,B:1,S:3,F:200,A:1#"`; `group=0`/`level=101`/адреса `@1.2.1` → `ValueError` | PT |
 | AC-65 | R-31 | `parse_frame("?V:2,C:152,@1.2.1.5=75#")` → `reply`, `cmd=152`, `address='@1.2.1.5'`, `answer='75'`; `"!V:2,C:104,@2.2.1.1=11#"` → `error`, `answer='11'`; `">V:2,C:13,G:12,L:60,F:100#"` → `push`, `params={'G':'12','L':'60','F':'100'}`; `"?V:2,C:164,G:16=@1.2.3.1,@1.2.3.2$"` → `partial`; `"hello#"` → `ProtocolError`; `split_stream(b'xx?V:2,C:191=2#>V:2,C:13,G:1,L:5#?V:2')` → 2 кадри, залишок `b'?V:2'`; кадр 1 600 байт → `ProtocolError` | PT |

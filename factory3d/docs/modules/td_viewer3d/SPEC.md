@@ -660,16 +660,16 @@ V-11 `mrp.workcenter`, V-12 `maintenance.equipment`, V-14 `hr.employee`; вид�
 | XML-id | Назва | Батько | sequence | Дія | Групи |
 |---|---|---|---|---|---|
 | `menu_td_viewer` | Переглядач | `td_factory3d.menu_td_root` | 10 | `action_td_viewer` (client) | `td_factory3d.group_td_user` |
-| `menu_td_journal` | Журнал станів | `td_factory3d.menu_td_root` | 12 | — (контейнер) | `td_factory3d.group_td_manager` |
+| `menu_td_journal` | Журнал станів | `td_factory3d.menu_td_data` | 30 | — (контейнер) | `td_factory3d.group_td_manager` |
 | `menu_td_snapshots` | Знімки | `menu_td_journal` | 1 | `action_td_viewer_snapshot` (list, form) | `group_td_manager` |
 | `menu_td_events` | Події | `menu_td_journal` | 2 | `action_td_viewer_event` (list) | `group_td_manager` |
-| `menu_td_cycle_check` | Перевірка циклу | `td_factory3d.menu_td_root` | 14 | `action_td_cycle_check` (form wizard, target new) | `group_td_manager` |
-| `menu_td_demo` | Демо-дані | `td_factory3d.menu_td_root` | 16 | `action_td_demo_wizard` (form wizard, target new) | `td_factory3d.group_td_admin` |
+| `menu_td_cycle_check` | Перевірка циклу | `td_factory3d.menu_td_data` | 60 | `action_td_cycle_check` (form wizard, target new) | `group_td_manager` |
+| `menu_td_demo` | Демо-дані | `td_factory3d.menu_td_data` | 50 | `action_td_demo_wizard` (form wizard, target new) | `td_factory3d.group_td_admin` |
 | `menu_td_settings` | Налаштування переглядача | `td_factory3d.menu_td_config` | 10 | `action_td_config_settings` (`res.config.settings`, context `{"module": "td_viewer3d"}`) | `group_td_admin` |
 
-Sequence (X-30, base CB-09): пункти viewer у корені `td_factory3d.menu_td_root` займають лише діапазон 10–19
-(резерв viewer; 20 — `menu_td_plant` base); пункт налаштувань — під `td_factory3d.menu_td_config` з sequence 10
-(= резерв viewer, правило X-32), а не другим пунктом «Налаштування» в корені.
+Sequence (X-30, base CB-09; перегруповано td-menu): у корені `td_factory3d.menu_td_root` лишився один пункт viewer — «Переглядач» (sequence 10);
+«Журнал станів» (30), «Демо-дані» (50) і «Перевірка циклу» (60) — у розділі `td_factory3d.menu_td_data` «Дані»;
+пункт налаштувань — під `td_factory3d.menu_td_config` з sequence 10 (= резерв viewer, правило X-32), а не другим пунктом «Налаштування» в корені.
 
 `data/actions.xml`: `action_td_viewer` — `ir.actions.client`, `name="Завод 3D"`, `tag="f3d_viewer.action"`,
 `target="current"`, `params` порожні (параметри підставляє `action_f3d_show`).
@@ -1938,7 +1938,7 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 | AC-61 | FR-41, M-01g, R-13 (X-29) | демо-база з 45 активними `td.zone` (base Додаток C.1 + C.2) | `/data?full=1` | `len(zones)==45`; `zones["Z-YARD-W"]`: `zone_type="outdoor"`, `polygon` == `td.zone.polygon`, `locations=[]`, `workcenters=[]`; `zones["Z-ROOF"].is_roof=true`; у `zones["Z-CUT"]` ключа `is_roof` немає. JT: `D.static.layout.zones` без `Z-YARD-W`; після `load()` контур `Z-YARD-W` побудовано з `polygon`; `Z-ROOF` видимий лише з шаром `roofdeck` | UT, JT |
 | AC-62 | FR-39, §8.2 п. 10 (X-28, fire Q-09) | `D.evacuation.drill_active=null`, `fire.groups["FA-CUT"].state="ok"` | `applyPatch({"evacuation": {"drill_active": {"name": "DRILL/2026/0003", "zone_code": "FA-CNC", "elapsed_s": 40}}, "fire": {"groups": {"FA-CUT": {"state": "alarm"}}, "devices": {"2.CNC.05": {"type": "smoke", "x": 75.0, "y": 20.0, "z": 8.6, "zone": "Z-CNC", "state": "alarm", "dust": 0.12}}}})`, далі `applyPatch({"evacuation": {"drill_active": null}})` | після першого: `startDrill` викликано, `getState().panel="drill"`, час сценарію ≥ 40 с; `FA-CUT` — клас `--bad`, чип «Тривога» (`fault` → «Несправність» червоним, `prealarm` → «Передтривога» жовтим); маркер `2.CNC.05` у шарі `fire`; після другого — `stopDrill` викликано; ручна зупинка при активному навчанні з тим самим `name` — повторного автостарту немає | JT |
 | AC-63 | FR-40, §8.2 п. 11 (X-28, access CA-05) | `D.employees["OP-SAW-1"]` з `present: true`, `zone: "Z-CUT"`, `zone_since: "2026-10-12 07:02"`, `last_event: {"ts": "2026-10-12 06:58", "door": "KPP-IN", "direction": "in", "type": "pass"}`; `D.zones["Z-CUT"].people_now=6` | `select("OP-SAW-1")`, потім `select("Z-CUT")` | картка людини: «На території: так», «Зона: Розкрій з 07:02», «Останній прохід: 06:58 · KPP-IN · вхід»; картка зони: «Людей зараз: 6»; без цих ключів (access не встановлено) — рядків немає | JT |
-| AC-64 | V-01 (X-30) | модуль встановлено | читання `ir.ui.menu` | `menu_td_viewer` (батько `td_factory3d.menu_td_root`) sequence 10, `menu_td_journal` 12, `menu_td_cycle_check` 14, `menu_td_demo` 16 — усі пункти viewer у корені в діапазоні 10–19; `menu_td_settings` — батько `td_factory3d.menu_td_config`, sequence 10, група `group_td_admin`; серед дітей `menu_td_root` рівно один пункт «Налаштування» (`td_factory3d.menu_td_config`) | UT |
+| AC-64 | V-01 (X-30) | модуль встановлено | читання `ir.ui.menu` | `menu_td_viewer` (батько `td_factory3d.menu_td_root`) sequence 10; `menu_td_journal` 30, `menu_td_demo` 50, `menu_td_cycle_check` 60 — батько `td_factory3d.menu_td_data`; `menu_td_settings` — батько `td_factory3d.menu_td_config`, sequence 10, група `group_td_admin`; серед дітей `menu_td_root` рівно один пункт «Налаштування» (`td_factory3d.menu_td_config`) | UT |
 | AC-65 | R-04, M-01a (X-14) | `PLT-04C` з `td_loc_kind='stack'`, `td_capacity=60`; `KIT-01` з порожнім `td_loc_kind` і `td_capacity=0` | `/data` | `locations["PLT-04C"]`: `kind="stack"`, `capacity=60`; після `td_capacity=80` → `capacity=80`, `fill` перераховано; `KIT-01`: `kind`, `capacity` — зі статики (`"kit"`, `null`); grep `td_kind_loc` у `models/`, `tools/` — 0 збігів | UT |
 | AC-66 | M-01f, §4.4 (X-09) | `user_mrp_only` (без `hr.group_hr_user`), співробітник `OP-SAW-1` | `/data` | `employees["OP-SAW-1"]` = `{name, job, department, shift, workcenter, current_workorder}` без `AccessError`; `search_read` провайдера `people` викликано на `hr.employee.public` (`patch.object`), не на `hr.employee`; `sudo` не викликався (AC-14) | UT |
 | AC-67 | M-10, §4.3 (X-19) | модуль встановлено | читання груп | `group_td_kiosk.privilege_id` = `td_viewer3d.privilege_td_viewer`; його `category_id` = `td_factory3d.module_category_factory3d`, `sequence=10`; група кіоска не в `td_factory3d.privilege_td`; `implied_ids` = 4 групи §4.3 | UT |
