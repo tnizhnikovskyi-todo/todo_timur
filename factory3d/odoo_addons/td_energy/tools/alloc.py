@@ -22,6 +22,11 @@ def merge(intervals):
     return out
 
 
+def intersect(a, b):
+    """Перетин двох списків інтервалів `[(s, e), …]` (результат — об'єднаний)."""
+    return merge(piece for s, e in a for x, y in b if (piece := clip(s, e, x, y)))
+
+
 def floor15(dt):
     return dt.replace(minute=dt.minute - dt.minute % 15, second=0, microsecond=0)
 

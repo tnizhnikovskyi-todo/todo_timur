@@ -31,12 +31,13 @@ class TdSaleCost(models.TransientModel):
     forecast_cost = fields.Monetary(string="Прогноз на завершення", readonly=True)
     dev_pct = fields.Float(string="Відхилення факту від плану, %", digits=(6, 1), readonly=True)
     has_dev = fields.Boolean(readonly=True)
+    is_done = fields.Boolean(string="Виконано", readonly=True)
     level = fields.Selection(LEVELS, string="Оцінка", readonly=True)
     margin_plan = fields.Monetary(string="Маржа: план", readonly=True)
-    margin_fact = fields.Monetary(string="Маржа: факт", readonly=True)
-    margin_forecast = fields.Monetary(string="Маржа: прогноз", readonly=True)
+    margin_fact = fields.Monetary(string="Маржа: факт (поки що)", readonly=True)
+    margin_forecast = fields.Monetary(string="Маржа: прогноз на завершення", readonly=True)
     margin_plan_pct = fields.Float(string="Маржа план, %", digits=(6, 1), readonly=True)
-    margin_fact_pct = fields.Float(string="Маржа факт, %", digits=(6, 1), readonly=True)
+    margin_fact_pct = fields.Float(string="Маржа факт (поки що), %", digits=(6, 1), readonly=True)
     margin_forecast_pct = fields.Float(string="Маржа прогноз, %", digits=(6, 1), readonly=True)
     warnings = fields.Text(string="Дані й припущення", readonly=True)
     article_line_ids = fields.One2many(
@@ -90,6 +91,7 @@ class TdSaleCost(models.TransientModel):
             "plan_now_cost": res["plan_now_cost"],
             "fact_cost": res["fact_cost"],
             "forecast_cost": res["forecast_cost"],
+            "is_done": res["is_done"],
             "has_dev": res["dev_pct"] is not None,
             "dev_pct": res["dev_pct"] or 0.0,
             "level": res["level"],
@@ -112,11 +114,13 @@ class TdSaleCost(models.TransientModel):
         for a in cost.ARTICLES:
             if res["articles"][a]["notes"]:
                 out.append("%s: %s" % (ARTICLE_NAMES[a], "; ".join(res["articles"][a]["notes"])))
-        if res["progress"] < 1.0:
+        if not res["is_done"]:
             out.append(
                 _(
                     "Замовлення виконано на %.0f %%: факт неповний, тож його порівнюють із планом на поточний стан "
-                    "(план × виконання операцій; матеріали — за взятими позиціями), а не з повним планом.",
+                    "(план × виконання операцій; матеріали — за взятими позиціями), а не з повним планом. "
+                    "Маржа за фактом — лише «поки що» (витрати до зараз); головна — маржа прогноз: "
+                    "(ціна − факт − решта плану) / ціна.",
                     res["progress"] * 100.0,
                 )
             )

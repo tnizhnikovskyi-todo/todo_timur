@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     tz: str = "Europe/Kyiv"
     start_at: str = ""
     sun_model: Literal["astral", "parabola"] = "astral"
+    pv_weather: bool = True  # хмарність СЕС (детермінована за датою; лише для astral); false — завжди ясне небо
     tick_ms: int = 1000
     catalog_source: Literal["odoo", "local"] = "odoo"
     catalog_dir: str = "./catalog"

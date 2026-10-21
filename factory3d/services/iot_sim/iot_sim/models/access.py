@@ -9,8 +9,12 @@
 * Вхід ``06:40 + det mod 20`` хв: код 4102 (card), якщо ``det % 2 == 0``, інакше 4867 (face), ACR-IN,
   ``tna_key=1``, далі 20480/20992/21248 дверей TURN-1; вихід ``15:30 + det mod 20`` — ``tna_key=2``.
   Події до поточного sim-часу «доганяються» одразу (журнал доби).
+* Бригади за змінами ``world.shift.shifts`` (Odoo: календар із кількома змінами; одна зміна — одна бригада A):
+  вхід ``початок зміни − 20 хв + det mod 20``, вихід ``кінець зміни + det mod 20``. Для 07:00–15:30 і 15:30–23:00:
+  A — 06:40…15:30, B — 15:10…23:00 (+ det mod 20); у будівлі о 15:40 — бригада B і ті з A, хто ще не вийшов.
+  До бригади B потрапляє ``N // k`` працівників з найменшим ``det`` (без чергових ролей, вони завжди в A).
 * Чергові ролі (ASSUMPTION): OP-W1 -> ACR-ELEC 09:51, OP-W2 -> ACR-PAINT 10:20, OP-W3/OP-W5 -> ACR-CHG,
-  OP-W7 -> ACR-SRV (раз на день).
+  OP-W7 -> ACR-SRV (раз на день), бригада A.
 * ``world.post("access", {...})`` (S-09) — довільна подія; ``fire_drill`` (крок ``doors``) — 20480 на всіх
   дверях і 26368.
 """
@@ -39,11 +43,37 @@ ROLE_ROUTES = (
     ("OP-W7", "ACR-SRV", (13, 10)),
 )
 MAX_EVENTS = 20000
+DUTY_CODES = frozenset(who for who, _reader, _at in ROLE_ROUTES)  # чергові ролі лишаються в бригаді A
+ENTRY_LEAD_MIN = 20  # вхід раніше початку зміни
+DEFAULT_WINDOW = (7 * 60, 15 * 60 + 30)  # одна зміна за замовчуванням, хв доби
 
 
 def verify_code(key: str) -> int:
     """4102 (card) якщо ``det(key) % 2 == 0``, інакше 4867 (face)."""
     return EV_CARD if det(key) % 2 == 0 else EV_FACE
+
+
+def shift_windows(world: Any) -> list[tuple[int, int]]:
+    """Вікна змін у хвилинах доби: ``world.shift.shifts`` (кілька змін) або одна зміна ``start``–``end`` календаря."""
+    cal = world.shift
+    wins = [(a.hour * 60 + a.minute, b.hour * 60 + b.minute) for a, b in cal.shifts] or [
+        (cal.start.hour * 60 + cal.start.minute, cal.end.hour * 60 + cal.end.minute)
+    ]
+    return [(a, b) for a, b in wins if b > a] or [DEFAULT_WINDOW]
+
+
+def assign_crews(keys: list[str], n: int) -> dict[str, int]:
+    """Бригада кожного працівника: 0 — A (усі при ``n = 1``, чергові ролі), 1…n−1 — по ``len(keys) // n`` людей з
+    найменшим ``det`` серед решти (детермінований «жереб», склад не залежить від порядку списку)."""
+    crew = dict.fromkeys(keys, 0)
+    if n <= 1:
+        return crew
+    free = sorted((k for k in keys if k not in DUTY_CODES), key=lambda k: (det(k), k))
+    size = len(keys) // n
+    for j in range(1, n):
+        for k in free[(j - 1) * size : j * size]:
+            crew[k] = j
+    return crew
 
 
 class AccessCtl:
@@ -122,16 +152,17 @@ class AccessCtl:
         people = list(w.people)
         by_code = {p.get("code") or p.get("barcode"): p for p in people}
         items: list[tuple[datetime, dict[str, Any]]] = []
+        windows = shift_windows(w)
+        crews = assign_crews([p.get("code") or p["barcode"] for p in people], len(windows))
         for p in people:
             key = p.get("code") or p["barcode"]
             m = det(key) % 20
             code = verify_code(key)
-            items.append(
-                (base + timedelta(hours=6, minutes=40 + m), {"device": "ACR-IN", "user": p, "code": code, "tna": "1"})
-            )
-            items.append(
-                (base + timedelta(hours=15, minutes=30 + m), {"device": "ACR-IN", "user": p, "code": code, "tna": "2"})
-            )
+            start, end = windows[crews[key]]
+            t_in = max(0, start - ENTRY_LEAD_MIN) + m
+            t_out = min(end + m, 24 * 60 - 1)  # вихід не переходить у наступну добу
+            items.append((base + timedelta(minutes=t_in), {"device": "ACR-IN", "user": p, "code": code, "tna": "1"}))
+            items.append((base + timedelta(minutes=t_out), {"device": "ACR-IN", "user": p, "code": code, "tna": "2"}))
         for who, reader, (hh, mm) in ROLE_ROUTES:
             p = by_code.get(who)
             if p is not None:

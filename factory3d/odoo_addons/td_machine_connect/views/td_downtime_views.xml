@@ -199,6 +199,7 @@
                 <field name="workcenter_id" type="row"/>
                 <field name="shift_date" interval="day" type="col"/>
                 <field name="cost" type="measure"/>
+                <field name="planned_cost" type="measure"/>
             </pivot>
         </field>
     </record>
@@ -213,6 +214,7 @@
                 <field name="loss_id"/>
                 <field name="duration_live" sum="Разом" widget="float_time"/>
                 <field name="cost" sum="Разом"/>
+                <field name="planned_cost" sum="Разом" optional="show"/>
                 <field name="reason_state" widget="badge"
                        decoration-danger="reason_state == 'to_classify'"
                        decoration-warning="reason_state == 'to_confirm'"

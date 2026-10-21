@@ -200,9 +200,13 @@ def test_transformer_temp(world):
     assert val(world, "energy/transformers/T1/i_a") == pytest.approx(498.0, abs=0.5)  # макет 498
     assert val(world, "energy/transformers/T1/cos_phi") == 0.97
     zero_loads(world)
+    hold(world, "infra/totals/pv_now", 0.0)  # T2 = ввід Q2: без СЕС/КГУ/BESS це рівно навантаження секції
+    hold(world, "infra/totals/chp_kw", 0.0)
+    world.set_flag("bess_auto_idle", True)
     hold(world, "energy/consumers/SAW-1/p_now", 970.0)  # секція 2 → T2
     world.step(10)
     assert val(world, "energy/transformers/T2/p_kw") == pytest.approx(970.0)
+    assert val(world, "energy/transformers/T2/p_kw") == pytest.approx(val(world, "energy/cells/Q2/p_now"))
     assert val(world, "energy/transformers/T2/temp_c") == pytest.approx(38 + 60 * 1000 / 1000, abs=0.31)
     t1.update(2400 * 0.97)
     assert world.signals["energy/transformers/T1/temp_c"].evaluate() == "alarm"  # > 140 °C
@@ -228,7 +232,8 @@ def _hgm_island(world, *, crit: float, chp_island: bool = False, genset_load_kw=
     a.set_relay_state({"gen_ok": False, "breaker": "mains", "state": "standby"})
     set_blackout(world, "hgm", chp_island=chp_island, genset_load_kw=genset_load_kw)
     world.step(10)
-    assert val(world, "infra/totals/bess_kw") == -min(200.0, crit)  # до переключення (X-67)
+    deficit = max(0.0, crit - val(world, "infra/totals/chp_kw"))  # КГУ в острові покриває своє, BESS — лише решту
+    assert val(world, "infra/totals/bess_kw") == -min(200.0, deficit)  # до переключення (X-67)
     assert val(world, "infra/ats/position") == 2 and val(world, "infra/ats/src1_state") == 0
     a.set_relay_state({"gen_ok": True, "breaker": "gen", "state": "running"})
     world.step(10)
@@ -388,6 +393,7 @@ def test_ats_variant_a_fallback_and_relay_return(world):
 
 def test_genset_test_on_load(world):
     loads(world, crit=200.0)
+    hold(world, "infra/totals/pv_now", 250.0)  # СЕС (250 кВт) покриває критичні 200 кВт
     a = ats(world)
     world.set_flag("genset_test", {"on_load": False, "phase": "running"})
     run(world, 20)
@@ -400,7 +406,7 @@ def test_genset_test_on_load(world):
     world.set_flag("genset_test", {"on_load": True, "phase": "running"})
     run(world, 25)
     assert val(world, "infra/ats/position") == 3
-    assert _loads_sent(a)[-1] == 0.0  # КГУ (≈400 кВт) покриває критичні 200 кВт
+    assert _loads_sent(a)[-1] == 0.0  # генерація (СЕС) покриває критичні 200 кВт
     world.clear_flag("genset_test")
     run(world, 12)
     assert val(world, "infra/ats/position") == 2
@@ -477,9 +483,11 @@ def test_chp_start_and_stop_commands(world):
     assert val(world, "infra/chp/state") == 0
 
 
-def test_normal_working_day_imports_from_grid(world):
+@pytest.mark.parametrize("weather", [False, True])
+def test_normal_working_day_imports_from_grid(world, weather):
     """Робоча доба в штатному стані (КГУ в резерві, СЕС за жовтневим профілем): Q1 + Q2 > 0 щогодини,
     а Q2 може бути від'ємним (невеликий експорт через T2) лише вдень, коли СЕС перекриває секцію 2."""
+    world.settings = SimpleNamespace(pv_weather=weather)  # False — ясне небо (жовтневий профіль), True — з хмарами
     world.clock.set(datetime(2026, 10, 16, 0, 5))  # п'ятниця
     hold(world, "infra/totals/bess_soc", 10.0)  # BESS розряджений: дефіцит покриває мережа (R-13)
     negative_q2 = []
@@ -493,7 +501,8 @@ def test_normal_working_day_imports_from_grid(world):
         if q2 < 0:
             negative_q2.append(hour)
         assert val(world, "infra/totals/grid_kw") == pytest.approx(q1 + q2, abs=1.0)
-    assert negative_q2 and all(9 <= h <= 17 for h in negative_q2), negative_q2
+    assert all(9 <= h <= 17 for h in negative_q2), negative_q2
+    assert negative_q2 or weather  # ясного дня СЕС таки перекриває секцію 2
 
 
 def test_bess_peak_shaving_only_above_threshold(world):

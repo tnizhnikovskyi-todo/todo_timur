@@ -7,6 +7,7 @@ from odoo import Command, fields
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import tagged
 
+from ..tools import alloc as alloc_tools
 from ..tools import dates
 from .common import TAGS, F3DEnergyCase
 from .test_counter import EnergyMixin
@@ -184,6 +185,46 @@ class TestDirect(AllocMixin, F3DEnergyCase):
         row = self.rows("direct", workorder_id=wo.id)
         self.assertAlmostEqual(row.kwh, 6.253, delta=0.005)
         self.assertAlmostEqual(row.minutes, 30.8, places=1)
+
+    def test_live_wo_not_linked_by_state_log(self):
+        """Живе виробництво: РЦ має верстат, але журнал станів не прив'язав до завдання жодного інтервалу
+        (`workorder_id` порожній) — енергія береться з журналу часу завдання в ті хвилини, коли верстат працював."""
+        node = self.mk_direct("SAW-T")
+        mo = self.mk_mo(node.workcenter_id)
+        wo = mo.workorder_ids
+        self.log(wo, self.at(1), self.at(2))  # завдання 01:00–02:00
+        self.profile(node, [(self.at(1), self.at(3), 12.0)])
+        working = [(self.at(1, 30), self.at(2, 30))]  # верстат «working» за журналом станів без завдання
+        with (
+            patch.object(type(self.Alloc), "_td_machine_intervals", return_value={wo.id: []}),
+            patch.object(type(self.Alloc), "_td_machine_wc_working", return_value=working),
+        ):
+            self.run_day()
+        row = self.rows("direct", workorder_id=wo.id)
+        self.assertEqual(len(row), 1, "завдання без прив'язки до журналу станів не лишається без енергії")
+        self.assertAlmostEqual(row.kwh, 6.0, places=3)  # 12 кВт × 30 хв перетину
+        self.assertAlmostEqual(row.minutes, 30.0, places=1)
+        self.assertGreater(row.cost, 0.0)
+        self.assertAlmostEqual(mo.td_energy_direct_kwh, 6.0, places=3)
+
+    def test_live_wo_machine_without_state_log_uses_time_log(self):
+        """Журналу станів РЦ у добі немає (історичні доби) — журнал часу завдання як є."""
+        node = self.mk_direct("SAW-T")
+        mo = self.mk_mo(node.workcenter_id)
+        wo = mo.workorder_ids
+        self.log(wo, self.at(1), self.at(2))
+        self.profile(node, [(self.at(1), self.at(3), 12.0)])
+        with (
+            patch.object(type(self.Alloc), "_td_machine_intervals", return_value={wo.id: []}),
+            patch.object(type(self.Alloc), "_td_machine_wc_working", return_value=None),
+        ):
+            self.run_day()
+        self.assertAlmostEqual(self.rows("direct", workorder_id=wo.id).kwh, 12.0, places=3)
+
+    def test_intersect(self):
+        a, b, c, d = (self.at(h) for h in (1, 2, 3, 4))
+        self.assertEqual(alloc_tools.intersect([(a, c)], [(b, d)]), [(b, c)])
+        self.assertEqual(alloc_tools.intersect([(a, b)], [(c, d)]), [])
 
 
 @tagged(*TAGS)

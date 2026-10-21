@@ -21,7 +21,7 @@ Requirements and notes
 
 * Meter data comes from the Factory 3D collector service, which is not part of this module.
 """,
-    "version": "19.0.1.1.4",
+    "version": "19.0.1.1.5",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
