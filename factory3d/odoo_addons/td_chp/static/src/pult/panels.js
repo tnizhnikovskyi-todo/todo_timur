@@ -86,6 +86,7 @@ export function makePanels({ root, store, dialog, confirmDialog, onError }) {
         setText(q("#hdr-time"), hms(new Date()));
         const unit = store.unit;
         setText(q("#hdr-name"), unit.name || "КГУ");
+        setText(q("#h-model"), "3D-модель " + (String(unit.name || "КГУ").split("·")[0].trim() || "КГУ"));
         const pp = unit.passport || {};
         const pass = q("#passport");
         const pkey = JSON.stringify([unit.assumption, pp]);

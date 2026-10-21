@@ -22,10 +22,12 @@ export function makeCmdPanel({ root, store, onChange }) {
     let ilShow = false;
     let ilReason = "";
     let ilChecks = [];
+    let ilRev = -1;
     let dlg = null; // {type:'B'|'A'|'ES', kind, ref, token, prep, stage:'confirm'|'second', ctl, timer}
     let busy = false;
     let track = null; // {ref, label, t0, timer}
     let msgKey = "";
+    let dragging = ""; // повзунок рухають, діалог ще не відкрито: показуємо проміжне значення
 
     function setMsg(text, kind) {
         const m = q("#cmd-msg");
@@ -154,6 +156,7 @@ export function makeCmdPanel({ root, store, onChange }) {
                     ilShow = true;
                     ilReason = blockedText(prep);
                     ilChecks = prep.checks || [];
+                    ilRev = store.rev;
                     setMsg("Пуск заблоковано: " + blockedText(prep), "warn");
                 } else {
                     setMsg(kind === "stop" ? "Команду «Стоп» не прийнято: " + blockedText(prep) : tx, "warn");
@@ -223,6 +226,7 @@ export function makeCmdPanel({ root, store, onChange }) {
                 ilShow = true;
                 ilReason = reason;
                 ilChecks = d.prep.checks || [];
+                ilRev = store.rev;
             }
             if (d.restore) {
                 d.restore();
@@ -237,13 +241,13 @@ export function makeCmdPanel({ root, store, onChange }) {
             return;
         }
         setMsg(d.prep.title + ": " + (res.message || res.state_label || "команду прийнято") + ".", "");
-        startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s);
+        startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s, d.kind);
     }
 
     /* ---------- відстеження виконання (`get` до фінального стану) ---------- */
-    function startTrack(ref, label, verifyS) {
+    function startTrack(ref, label, verifyS, kind = "") {
         stopTrack();
-        track = { ref, label, t0: Date.now(), max: Math.max(Number(verifyS) || 0, 30) + 30, timer: null };
+        track = { ref, label, kind, t0: Date.now(), max: Math.max(Number(verifyS) || 0, 30) + 30, timer: null };
         notify();
         const tick = async () => {
             const t = track;
@@ -328,10 +332,12 @@ export function makeCmdPanel({ root, store, onChange }) {
         if (!ilShow) {
             return;
         }
-        const list = store.il.list && store.il.list.length ? store.il.list : ilChecks;
+        // до першого оновлення DTO показуємо перевірки з `prepare`, далі — живі `il` (вони свіжіші й однакові за змістом)
+        const fresh = ilChecks.length && store.rev === ilRev;
+        const list = fresh || !(store.il.list && store.il.list.length) ? ilChecks : store.il.list;
         const failed = list.filter((x) => x.state === "fail" || x.state === "unknown");
         const head = q("#il-head");
-        const ok = !failed.length && !ilReason;
+        const ok = !failed.length && !(ilReason && !list.length);
         head.className = "il-head " + (ok ? "good" : "bad");
         const why = failed.length ? failed.map((x) => x.detail || x.label).join("; ") : ilReason;
         setText(head, ok ? "Умови пуску виконані" : "Пуск заблоковано: " + why);
@@ -437,7 +443,7 @@ export function makeCmdPanel({ root, store, onChange }) {
         setc("#rng-cos", dis, ctlWhy);
         setc("#rng-sp", dis || !man, !man ? "Уставка діє лише в режимі «Ручний»" : ctlWhy);
         // значення елементів — із сховища, поки їх не змінює відкритий діалог
-        const touched = dlg && dlg.type === "A" ? dlg.kind : "";
+        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : "";
         const sync = (id, kind, val) => {
             const el = q(id);
             if (touched === kind || document.activeElement === el) {
@@ -564,12 +570,13 @@ export function makeCmdPanel({ root, store, onChange }) {
     function renderFields() {
         const th = store.th;
         const pn = store.unit.p_nom_kw || 800;
-        const open = dlg && dlg.type === "A";
-        const sp = open && dlg.kind === "set_setpoint" ? Number(q("#rng-sp").value) : S.setpoint;
+        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : "";
+        const sp = touched === "set_setpoint" || dragging === "sp" ? Number(q("#rng-sp").value) : S.setpoint;
         setText(q("#out-sp"), fmt(sp, 0) + " % · " + fmt((pn * sp) / 100, 0) + " кВт");
         setText(q("#sp-note"), "Діапазон 50–100 % від " + fmt(pn, 0) + " кВт · діє лише в режимі «Ручний»");
-        const cs = open && dlg.kind === "set_cos" ? Number(q("#rng-cos").value) : S.cosSet;
-        const qv = V.pel > 5 && !(open && dlg.kind === "set_cos") ? V.Q : Number.isFinite(cs) ? pn * 0.775 * Math.tan(Math.acos(cs)) : NaN;
+        const csTouched = touched === "set_cos" || dragging === "cos";
+        const cs = csTouched ? Number(q("#rng-cos").value) : S.cosSet;
+        const qv = V.pel > 5 && !csTouched ? V.Q : Number.isFinite(cs) ? pn * 0.775 * Math.tan(Math.acos(cs)) : NaN;
         setText(q("#out-cos"), fmt(cs, 2) + " · Q " + fmt(qv, 0) + " квар");
         const tg = num01(store.raw["ctl/target_pct"]);
         let mi = "";
@@ -609,7 +616,7 @@ export function makeCmdPanel({ root, store, onChange }) {
             if (!still && store.rev > dlg.revAtSecond) {
                 const d = dlg;
                 clearDlg();
-                startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s);
+                startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s, d.kind);
             }
         }
         syncControls();
@@ -663,10 +670,16 @@ export function makeCmdPanel({ root, store, onChange }) {
         on("#sel-mode", "change", (e) => begin("A", "set_mode", { mode: e.target.value }, ctlFor("#sel-mode", () => (S.modeUnknown ? "" : S.mode))).then(render));
         on("#sel-heat", "change", (e) => begin("A", "set_heat_dir", { dir: e.target.value }, ctlFor("#sel-heat", () => S.heatDir)).then(render));
         on("#sel-byp", "change", (e) => begin("A", "set_bypass", { mode: e.target.value }, ctlFor("#sel-byp", () => S.bypassMode)).then(render));
-        on("#rng-sp", "input", renderFields);
-        on("#rng-sp", "change", (e) => begin("A", "set_setpoint", { sp_pct: Number(e.target.value) }, ctlFor("#rng-sp", () => (Number.isFinite(S.setpoint) ? String(S.setpoint) : null))).then(render));
-        on("#rng-cos", "input", renderFields);
-        on("#rng-cos", "change", (e) => begin("A", "set_cos", { cos: Number(Number(e.target.value).toFixed(2)) }, ctlFor("#rng-cos", () => (Number.isFinite(S.cosSet) ? S.cosSet.toFixed(2) : null))).then(render));
+        on("#rng-sp", "input", () => {
+            dragging = "sp";
+            renderFields();
+        });
+        on("#rng-sp", "change", (e) => (dragging = "") || begin("A", "set_setpoint", { sp_pct: Number(e.target.value) }, ctlFor("#rng-sp", () => (Number.isFinite(S.setpoint) ? String(S.setpoint) : null))).then(render));
+        on("#rng-cos", "input", () => {
+            dragging = "cos";
+            renderFields();
+        });
+        on("#rng-cos", "change", (e) => (dragging = "") || begin("A", "set_cos", { cos: Number(Number(e.target.value).toFixed(2)) }, ctlFor("#rng-cos", () => (Number.isFinite(S.cosSet) ? S.cosSet.toFixed(2) : null))).then(render));
         render();
     }
     function destroy() {

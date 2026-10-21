@@ -42,7 +42,7 @@
 <main class="grid" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
 
 <section class="card c-model" aria-labelledby="h-model">
-  <div class="card-h"><h2 id="h-model">3D-модель КГУ-1</h2><span class="hint">контейнер ≈ 12 × 2,5 × 2,9 м · 37 вузлів · клік по вузлу — параметри</span></div>
+  <div class="card-h"><h2 id="h-model">3D-модель КГУ</h2><span class="hint">контейнер ≈ 12 × 2,5 × 2,9 м · 37 вузлів · клік по вузлу — параметри</span></div>
   <div class="model-body">
     <div class="cv-col">
         <div class="sys-seg" id="sys-seg" role="group" aria-label="Система: підсвітка у 3D і фільтр вузлів"></div>
