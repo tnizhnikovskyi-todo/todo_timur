@@ -800,6 +800,8 @@ function refreshSelection() {
 const extApi = {
   THREE, GLTFLoader, scene, items, labels, stockLoad, opts, kiosk, client, notify, buildLabels, dropLabels, relabel,
   refreshSelection, isShown, paint, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows,
+  invalidate, simMinutes: () => simMinutes(), // VX-08: кадр за потребою; хвилина «Потоку зміни» (null — живий режим)
+  onSimTime(cb) { simListeners.add(cb); return () => simListeners.delete(cb); },
   codeRoot: (x) => (typeof x === "string" ? items.get(x) ?? null : codeRoot(x)),
   select: (o, a) => { const r = typeof o === "string" ? items.get(o) : o; if (r !== undefined) {select(r, a);} },
   focusOn: (o) => { const r = typeof o === "string" ? items.get(o) : o; if (r) {focusOn(r);} },
@@ -807,6 +809,10 @@ const extApi = {
   get canOpenAction() { return !!opts.onOpenAction; },
   openAction(act) { if (!opts.onOpenAction) {return false;} opts.onOpenAction(act); return true; },
 };
+const simListeners = new Set(); // VX-08: підписники `api.onSimTime(cb)` — cb(хвилина | null) після кожної зміни часу «Потоку зміни»
+function emitSimTime(min) {
+  for (const cb of simListeners) {extTry(() => cb(min));}
+}
 function applyLayout(fresh) {
   for (const ext of EXTENSIONS) {
     if (typeof ext.applyLayout !== "function") {continue;}
@@ -3059,6 +3065,7 @@ function applySimTime(min) {
     $(".o_f3d_shift-l").textContent = hhmm(min);
     $(".o_f3d_shift-t").value = min;
     flowUpdate(min);
+    emitSimTime(min);
     return;
   }
   simOverride = min;
@@ -3089,6 +3096,7 @@ function applySimTime(min) {
   // у програванні шар будується раз, далі мітки рухаються щокадру; перебудова — лише при зміні режиму
   if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) {drawProdOverlay();}
   flowUpdate(min);
+  emitSimTime(min);
 }
 $(".o_f3d_shift-t").oninput = (e) => { if (D) {applySimTime(+e.target.value);} };
 $(".o_f3d_shift-now").onclick = () => { if (!D) {return;} stopShift(); applySimTime(null); };

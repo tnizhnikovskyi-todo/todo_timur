@@ -1,6 +1,7 @@
 /** @odoo-module */
 // HOOT: портальний склад плит у 3D (R-31; R-26 VX-03, VX-04, VX-05) — розширення моста td_machine_connect_viewer3d.
-import { describe, expect, test } from "@odoo/hoot";
+import { after, describe, expect, test } from "@odoo/hoot";
+import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import { LAYER_NAME, portalExtension } from "@td_machine_connect_viewer3d/layer/portal_layer";
 import {
@@ -49,13 +50,13 @@ const withPortal = (p = portal(), s = stack()) => (fx) => {
     fx.data.locations["PLT-04C"].portal = s;
 };
 const dataOf = (p = portal(), s = stack()) => ({ equipment: { "GANTRY-1": { portal: p } }, locations: { "PLT-04C": { portal: s } } });
-const api = (viewer) => ({
-    scene: viewer.scene, items: viewer.items, THREE: portalExtension.THREE,
-    get D() { return viewer.D; },
-    get labelsRoot() { return viewer.core ? document.querySelector(".o_f3d_labels") : null; },
-    select: (c) => viewer.select(c),
-    focusOn: (c) => viewer.focusOn(c),
-});
+/** Змонтувати з даними порталу; `api` — справжній `api` розширень ядра (VX-08: `simMinutes`, `onSimTime`, `invalidate`), його ловить розширення-шпигун. */
+async function mountPortal(opts = {}) {
+    const box = {};
+    after(registerViewerExtension({ applyLayout(api) { box.api = api; } }));
+    const m = await mountViewer({ model: "core", mutate: withPortal(), ...opts });
+    return { ...m, api: box.api };
+}
 
 test("PT1 залишок стосу на t: показання порталу ± листи журналів, не менше 0", () => {
     const P = portal();
@@ -189,10 +190,10 @@ test("PT6 блоки картки: ланцюжок лист → карта ро
 });
 
 test("PT7 3D: стоси за кількістю листів (висота × товщина), запечені плити сховано, візок на місці", async () => {
-    const { viewer } = await mountViewer({ model: "core", mutate: withPortal() });
+    const { viewer, api } = await mountPortal();
     const group = viewer.scene.getObjectByName(LAYER_NAME);
     expect(!!group).toBe(true);
-    const st = portalExtension.stateOf(api(viewer));
+    const st = portalExtension.stateOf(api);
     const s = st.stacks.get("PLT-04C");
     expect(!!s).toBe(true);
     expect(Math.abs(s.plates.scale.y - 15 * 0.016) < 1e-6).toBe(true);
@@ -210,12 +211,13 @@ test("PT7 3D: стоси за кількістю листів (висота × �
     expect(st.carriage.sheet.visible).toBe(false); // «зараз» (10:00:00) портал ще не рушив: вікно починається о 09:59:33
 });
 
-test("PT8 3D: час t із повзунка зміни — висота стосу й поза порталу; без телепортів", async () => {
-    const { viewer } = await mountViewer({ model: "core", mutate: withPortal() });
-    const A = api(viewer);
+test("PT8 3D: час t із api.simMinutes — висота стосу й поза порталу; без телепортів", async () => {
+    const { viewer, api } = await mountPortal();
+    const A = api;
     const st = portalExtension.stateOf(A);
-    viewer.setSimTime(580); // 09:40 = 34800 с: усі 4 листи ще в стосі
-    portalExtension.tick(A, performance.now(), "snap");
+    expect(A.simMinutes()).toBe(null); // живий режим: час із годин сервера
+    expect(st.t >= NOW).toBe(true);
+    viewer.setSimTime(580); // 09:40 = 34800 с: усі 4 листи ще в стосі; підписка onSimTime оновила сцену без жодного тіку з тесту
     expect(st.t).toBe(34800);
     expect(Math.abs(st.stacks.get("PLT-04C").plates.scale.y - 19 * 0.016) < 1e-6).toBe(true);
     // точна поза: «до верстата» з листом — візок між стосом і верстатом, лист у вакуумі, стос на 1 лист нижчий
@@ -237,7 +239,37 @@ test("PT8 3D: час t із повзунка зміни — висота сто�
     expect(moved > 0).toBe(true);
     expect(moved < 0.5).toBe(true); // 18 м/с × 16 мс = 0,29 м
     st.override = null;
-    viewer.setSimTime(null);
+    viewer.setSimTime(null); // «Зараз»: знову години сервера
+    expect(A.simMinutes()).toBe(null);
+    expect(st.t >= NOW).toBe(true);
+});
+
+test("PT8b підписка onSimTime: крок повзунка ловиться без опитування DOM, швидкий рух — «прискорений» режим, кадр — через api.invalidate", async () => {
+    const { viewer, api } = await mountPortal();
+    const st = portalExtension.stateOf(api);
+    const orig = api.invalidate;
+    let frames = 0;
+    api.invalidate = () => {
+        frames++;
+        return orig();
+    };
+    viewer.setSimTime(580);
+    viewer.setSimTime(585); // два кроки підряд: понад 8× реального часу
+    expect(st.clock.min).toBe(585);
+    expect(st.clock.rate > 8).toBe(true);
+    expect(portalExtension.readClock(api, st, performance.now()).lapse).toBe(true);
+    const before = frames;
+    viewer.setSimTime(10 * 60 + 30); // 10:30: вікно відкритого завдання — портал рушає, положення змінились
+    portalExtension.setTime(api, { t: 35664 });
+    portalExtension.tick(api, performance.now(), "snap");
+    expect(frames > before).toBe(true); // положення змінились → кадр запрошено через api.invalidate
+    api.invalidate = orig;
+    // після зняття підписки (знесення шару) зміна часу сцену не чіпає
+    portalExtension.clear(api);
+    expect(st.off).toBe(null);
+    const t = st.t;
+    viewer.setSimTime(500);
+    expect(st.t).toBe(t);
 });
 
 test("PT9 дельта: нова кількість листів міняє висоту стосу; без вузла порталу шар зникає, запечені плити повертаються", async () => {
@@ -251,8 +283,8 @@ test("PT9 дельта: нова кількість листів міняє ви
     });
     expect(plate.visible).toBe(true);
     none.viewer.destroy();
-    const { viewer } = await mountViewer({ model: "core", mutate: withPortal() });
-    const st = portalExtension.stateOf(api(viewer));
+    const { viewer, api } = await mountPortal();
+    const st = portalExtension.stateOf(api);
     viewer.applyPatch({ locations: { "PLT-04C": { portal: { qty: 5 } } } });
     expect(Math.abs(st.stacks.get("PLT-04C").plates.scale.y - 5 * 0.016) < 1e-6).toBe(true);
     viewer.applyPatch({ locations: { "PLT-04C": { portal: { qty: 0 } } } });
@@ -261,7 +293,7 @@ test("PT9 дельта: нова кількість листів міняє ви
 });
 
 test("PT10 картки в 3D: портал, стос і верстат-ціль; клік по верстату в ланцюжку вибирає його", async () => {
-    const { viewer, el } = await mountViewer({ model: "core", mutate: withPortal() });
+    const { viewer, el, api } = await mountPortal();
     viewer.select("GANTRY-1");
     const card = text(q(el, ".o_f3d_cardbody"));
     expect(card.includes("Портал · завдання сьогодні")).toBe(true);
@@ -277,6 +309,6 @@ test("PT10 картки в 3D: портал, стос і верстат-ціль
     expect(text(q(el, ".o_f3d_cardbody")).includes("Портал · подача на SAW-3")).toBe(true); // завдання в черзі
     viewer.select("CNC-1");
     expect(text(q(el, ".o_f3d_cardbody")).includes("Портал ·")).toBe(false);
-    portalExtension.onAction(api(viewer), "select", "SAW-1");
+    portalExtension.onAction(api, "select", "SAW-1");
     expect(viewer.getState().selected).toBe("SAW-1");
 });

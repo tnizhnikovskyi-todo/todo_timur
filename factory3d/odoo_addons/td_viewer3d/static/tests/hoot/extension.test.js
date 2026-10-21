@@ -2,6 +2,7 @@
 // HOOT: точка розширення ядра (SPEC R-25): registerViewerExtension → applyLayout(api, D.layout, fresh) — після завантаження
 // моделі, на повній дельті й зміні розкладки, ДО stockLoad.sync; без розширень і без `D.layout` ядро працює як раніше.
 import { after, describe, expect, test } from "@odoo/hoot";
+import { advanceTime } from "@odoo/hoot-mock";
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { mountViewer } from "./helpers";
 
@@ -148,4 +149,43 @@ test("R25h об'єкт прибрано з items розкладкою: вид з
     viewer.applyPatch({ layout: { ...LAYOUT, marker: 1 } });
     expect(viewer.items.has("FG-R1-B01-L4")).toBe(false);
     expect(viewer.stockLoad.info("FG-R1-B01-L4")?.managed ?? false).toBe(false);
+});
+
+test("VX08 api.simMinutes / api.onSimTime / api.invalidate: хвилина «Потоку зміни», підписка на зміну часу, кадр за потребою", async () => {
+    const errors = [];
+    const orig = console.error;
+    console.error = (...a) => errors.push(a);
+    after(() => { console.error = orig; });
+    const box = {};
+    after(registerViewerExtension({ applyLayout(api) { box.api = api; } }));
+    const { viewer } = await mountViewer({ model: "none", viewerOpts: { onDemand: true, now: () => Date.now() } });
+    const api = box.api;
+    expect(typeof api.simMinutes).toBe("function");
+    expect(typeof api.onSimTime).toBe("function");
+    expect(typeof api.invalidate).toBe("function");
+    expect(api.simMinutes()).toBe(null); // живий режим
+    const seen = [];
+    const off = api.onSimTime((m) => seen.push(m));
+    api.onSimTime(() => { throw new Error("subscriber boom"); }); // зламаний підписник не заважає ні ядру, ні сусідам
+    viewer.setSimTime(600);
+    expect(seen).toEqual([600]);
+    expect(api.simMinutes()).toBe(600);
+    expect(viewer.getState().simMinutes).toBe(600);
+    viewer.setSimTime(615);
+    expect(seen).toEqual([600, 615]);
+    expect(errors.some((a) => String(a[0]?.message || a[0]).includes("subscriber boom"))).toBe(true);
+    viewer.setSimTime(null); // «Зараз»
+    expect(seen).toEqual([600, 615, null]);
+    expect(api.simMinutes()).toBe(null);
+    off();
+    viewer.setSimTime(700);
+    expect(seen.length).toBe(3); // після зняття підписки подій немає
+    expect(api.simMinutes()).toBe(700);
+    // invalidate() просить кадр у рендері за потребою
+    viewer.setSimTime(null);
+    await advanceTime(500);
+    const d0 = viewer.core.drawn;
+    api.invalidate();
+    await advanceTime(120);
+    expect(viewer.core.drawn).toBeGreaterThan(d0);
 });

@@ -4,7 +4,8 @@
 // розкрою (рух за часом завдань, без телепортів), блоки в картках стосу, порталу й верстата-цілі.
 // Дані — `equipment["GANTRY-1"].portal` і `locations[PLT-*].portal` (провайдер `td_machine_connect`); без них (старий
 // сервер, портала немає) розширення неактивне й запечена сцена не чіпається. Ядро `core.js` не змінювалось.
-// Час: у «живому» режимі — години сервера (`portal.now`), у «Потоці зміни» — повзунок зміни (див. `replayMinutes`).
+// Час: у «живому» режимі — години сервера (`portal.now`), у «Потоці зміни» — `api.simMinutes()` ядра (VX-08); зміну часу ловить
+// підписка `api.onSimTime`, кадр просимо `api.invalidate()` — без читання DOM повзунка й без подій у корені в'ювера.
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import {
@@ -36,15 +37,9 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const ease = (p) => p * p * (3 - 2 * p);
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
-/** Хвилини повзунка «Потоку зміни» або `null` («зараз»): `api.simMinutes()` ядра, якщо воно є, інакше підпис повзунка. */
+/** Хвилина «Потоку зміни» або `null` («зараз»): `api.simMinutes()` ядра (VX-08); старе ядро без неї — завжди живий режим. */
 export function replayMinutes(api) {
-    if (typeof api.simMinutes === "function") {
-        return api.simMinutes();
-    }
-    const root = api.labelsRoot?.closest?.(".o_f3d_viewer") || document;
-    const label = root.querySelector(".o_f3d_shift-l");
-    const m = /^(\d{1,2}):(\d{2})$/.exec((label?.textContent || "").trim());
-    return m ? +m[1] * 60 + +m[2] : null;
+    return typeof api.simMinutes === "function" ? api.simMinutes() : null;
 }
 
 function boxOf(T, obj) {
@@ -124,7 +119,7 @@ export class PortalExtension {
             st = {
                 group: null, stacks: new Map(), geo: null, carriage: null, hidden: new Set(), cur: null, raf: 0, last: 0, own: [],
                 clock: { anchorSec: 0, anchorMs: 0, P: null, min: null, minMs: 0, rate: 0, changeMs: 0 },
-                t: null, pose: null, lastKick: 0, override: null, texStripe: null, geometry: null,
+                t: null, pose: null, override: null, off: null, texStripe: null, geometry: null,
             };
             this.states.set(api.scene, st);
         }
@@ -134,6 +129,8 @@ export class PortalExtension {
     // ---- життєвий цикл ---------------------------------------------------------------------------------
     clear(api) {
         const st = this.stateOf(api);
+        st.off?.();
+        st.off = null;
         if (st.raf) {
             cancelAnimationFrame(st.raf);
             st.raf = 0;
@@ -187,6 +184,9 @@ export class PortalExtension {
             this.build(api, st, T);
         }
         st.clock.P = P;
+        if (!st.off && typeof api.onSimTime === "function") {
+            st.off = api.onSimTime((min) => this.onSimTime(api, min)); // VX-08: зміна часу «Потоку зміни»
+        }
         this.start(api, st);
         this.tick(api, performance.now(), true);
     }
@@ -392,18 +392,9 @@ export class PortalExtension {
         }
         const min = replayMinutes(api);
         if (min !== null) {
-            if (min !== c.min) {
-                const dtReal = Math.max(1, nowMs - c.minMs) / 1000;
-                c.rate = c.min === null ? 0 : (Math.abs(min - c.min) * 60) / dtReal;
-                c.min = min;
-                c.minMs = nowMs;
-                c.changeMs = nowMs;
-            }
             const lapse = c.rate > LAPSE_RATE && nowMs - c.changeMs < 700;
             return { t: min * 60, replay: true, lapse };
         }
-        c.min = null;
-        c.rate = 0;
         const P = c.P;
         if (!P) {
             return { t: 0, replay: false, lapse: false };
@@ -414,6 +405,32 @@ export class PortalExtension {
             c.anchorMs = nowMs;
         }
         return { t: c.anchorSec + (nowMs - c.anchorMs) / 1000, replay: false, lapse: false };
+    }
+
+    /**
+     * Підписка `api.onSimTime` (VX-08): час «Потоку зміни» змінився (`min` — хвилина або `null`). Швидкість програвання — з кроку
+     * між змінами: понад 8× реального часу — «прискорений» цикл (`poseLapse`); одиночний перескок повзунка (перша зміна
+     * після живого режиму чи пауза) лишає точну позу. Сцену оновлюємо одразу, не чекаючи кадру.
+     */
+    onSimTime(api, min) {
+        const st = this.stateOf(api);
+        const c = st.clock;
+        const now = performance.now();
+        if (min === null) {
+            c.min = null;
+            c.rate = 0;
+        } else {
+            if (c.min !== null && min !== c.min) {
+                c.rate = (Math.abs(min - c.min) * 60000) / Math.max(1, now - c.minMs);
+                c.changeMs = now;
+            } else if (c.min === null) {
+                c.rate = 0;
+                c.changeMs = now;
+            }
+            c.min = min;
+            c.minMs = now;
+        }
+        this.tick(api, now, true);
     }
 
     /** Для тестів і автоматизації: зафіксувати час (`{t, lapse?}`), `null` — знову за повзунком/годинником. */
@@ -466,10 +483,8 @@ export class PortalExtension {
         const dt = Math.min(0.25, Math.max(0, (nowMs - (st.last || nowMs)) / 1000));
         st.last = nowMs;
         const moved = this.updateStacks(api, st, P, clock.t, pose) | this.updateCarriage(api, st, P, pose, dt, force);
-        if (moved && api.labelsRoot && nowMs - st.lastKick > 16) {
-            st.lastKick = nowMs;
-            // ядро малює «за потребою»: будь-яка подія в корені в'ювера скидає прапорець перемальовування (див. core.js, `invalidate`)
-            api.labelsRoot.dispatchEvent(new Event("input", { bubbles: true }));
+        if (moved) {
+            api.invalidate?.(); // ядро малює «за потребою» (VX-08): просимо кадр після зміни положень
         }
     }
 
@@ -606,7 +621,8 @@ export class PortalExtension {
         if (!P) {
             return [];
         }
-        const t = st?.t ?? P.now;
+        const m = api ? replayMinutes(api) : null; // картку малюють до `tick` підписки: час беремо в ядра
+        const t = m !== null ? m * 60 : (st?.t ?? P.now);
         let html = "";
         if (code === GANTRY) {
             html = portalCardHtml(D, t, st?.pose);
