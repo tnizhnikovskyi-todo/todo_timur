@@ -1,6 +1,6 @@
 {
     "name": "Machine Connect 3D",
-    "summary": "Machine Connect in 3D: downtime cost coloring and the plant bottleneck (queue stack and card block)",
+    "summary": "Machine Connect in 3D: downtime cost coloring, the plant bottleneck and the live gantry plate store (stacks, moving portal)",
     "description": """
 Machine Connect 3D
 ==================
@@ -14,8 +14,9 @@ Key features
 * Legend with the largest monthly loss
 * Visible only to Factory 3D managers and hidden on shop-floor kiosk screens
 * Plant bottleneck: a red stack of waiting orders in front of the constraining section (height by queue length) and a metrics block in the machine card
+* Gantry plate store: plate stacks under the portal by the real sheet count (height = sheets x thickness, material label), the portal moving to a stack, picking a sheet and carrying it to the cutting machine by job time (live and in the shift replay), cards with the sheet -> cutting map (waste %) -> order chain
 """,
-    "version": "19.0.1.1.1",
+    "version": "19.0.1.2.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

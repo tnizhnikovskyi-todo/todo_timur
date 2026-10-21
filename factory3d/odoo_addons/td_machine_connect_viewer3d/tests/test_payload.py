@@ -1,8 +1,9 @@
-"""DT-3/DT-5, R-30: `workcenters[code].downtime_cost` і `flow` у повному payload переглядача."""
+"""DT-3/DT-5, R-30, R-31: `workcenters[code].downtime_cost`, `flow` і вузли порталу в повному payload переглядача."""
 
 from datetime import timedelta
 from unittest.mock import patch
 
+from odoo import fields
 from odoo.tests import tagged
 
 from odoo.addons.td_viewer3d.tests.common import F3dViewerBase
@@ -94,3 +95,79 @@ class TestBottleneckFlowPayload(F3dViewerBase):
             data = self.payload(self.user_f3d)
         self.assertIn("TST-DT-1", data["workcenters"])
         self.assertNotIn("flow", data["workcenters"]["TST-DT-1"])
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_mc_viewer3d")
+class TestPortalPayload(F3dViewerBase):
+    """R-31 п. 1–2: `equipment[GANTRY-1].portal` і `locations[PLT-*].portal` є в payload для всіх, у т. ч. кіоску."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        env = cls.env
+        wh = env["stock.warehouse"].search([("company_id", "=", env.company.id)], limit=1)
+        loc = env["stock.location"].search([("td_code", "=", "PLT-04C")], limit=1) or env["stock.location"].create(
+            {
+                "name": "PLT-04C",
+                "location_id": wh.lot_stock_id.id,
+                "td_code": "PLT-04C",
+                "td_loc_kind": "stack",
+                "td_capacity": 60,
+            }
+        )
+        cls.stack = env["td.gantry.stack"].search([("location_id", "=", loc.id)], limit=1) or env[
+            "td.gantry.stack"
+        ].create({"location_id": loc.id})
+        board = env["product.product"].create(
+            {
+                "name": "ДСП 16 мм тест 2800×2070",
+                "default_code": "PLT-BOARD",
+                "td_thickness_mm": 16,
+                "td_sheet_length_mm": 2800,
+                "td_sheet_width_mm": 2070,
+            }
+        )
+        cls.stack.write({"ws_qty": 12, "ws_product": "PLT-BOARD", "ws_seen": fields.Datetime.now()})
+        if not env["maintenance.equipment"].search_f3d("GANTRY-1"):
+            env["maintenance.equipment"].create({"name": "Портальний склад плит (тест)", "td_code": "GANTRY-1"})
+        wc = env["mrp.workcenter"].search_f3d("SAW-1") or env["mrp.workcenter"].create(
+            {"name": "TST SAW-1", "code": "TSTSAW1", "td_code": "SAW-1"}
+        )
+        env["ir.config_parameter"].sudo().set_param("td.viewer.demo_clock", "2026-10-12 10:30")
+        cls.job = env["td.gantry.job"].create(
+            {
+                "state": "active",
+                "sheets": 3,
+                "done": 1,
+                "product_id": board.id,
+                "target_workcenter_id": wc.id,
+                "stack_id": cls.stack.id,
+                "started": cls.env["td.bottleneck"]._td_now() - timedelta(minutes=5),
+            }
+        )
+
+    def _portal(self, data):
+        return data["equipment"]["GANTRY-1"]["portal"]
+
+    def test_user_gets_portal_nodes(self):
+        data = self.payload(self.user_f3d)
+        portal = self._portal(data)
+        self.assertEqual((portal["day"], portal["now"], portal["cycle_s"]), ("2026-10-12", 37800, 27))
+        job = next(j for j in portal["jobs"] if j["id"] == self.job.name)
+        self.assertEqual((job["state"], job["sheets"], job["done"], job["target"]), ("active", 3, 1, "SAW-1"))
+        self.assertEqual(portal["today"]["jobs"], len(portal["jobs"]))
+        node = data["locations"]["PLT-04C"]["portal"]
+        self.assertEqual((node["qty"], node["src"], node["thickness"], node["capacity"]), (12, "portal", 16, 60))
+        self.assertEqual(node["next"]["job"], self.job.name)
+
+    def test_kiosk_gets_portal_nodes(self):
+        data = self.payload(self.user_kiosk, kiosk=True)
+        self.assertIn("portal", data["equipment"]["GANTRY-1"])
+        self.assertEqual(data["locations"]["PLT-04C"]["portal"]["qty"], 12)
+
+    def test_failure_of_portal_does_not_break_payload(self):
+        failing = patch.object(type(self.env["td.portal"]), "_td_equipment_node", side_effect=ValueError("boom"))
+        with failing, self.assertLogs("odoo.addons.td_machine_connect.tools.payload", level="ERROR"):
+            data = self.payload(self.user_f3d)
+        self.assertNotIn("portal", data["equipment"]["GANTRY-1"])
+        self.assertIn("gantry", data["equipment"]["GANTRY-1"])

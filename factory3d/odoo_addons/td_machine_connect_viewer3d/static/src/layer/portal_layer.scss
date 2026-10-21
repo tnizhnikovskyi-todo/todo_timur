@@ -1,0 +1,34 @@
+// R-31: блоки порталу в картках 3D (завдання з ланцюжком лист → карта розкрою → замовлення).
+.o_f3d_viewer {
+    .o_td_pt_job {
+        border: 1px solid var(--f3d-line);
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin: 6px 0;
+        font-size: 12px;
+    }
+
+    .o_td_pt_head b {
+        font-size: 13px;
+    }
+
+    .o_td_pt_step {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 6px;
+        margin-top: 3px;
+
+        > span {
+            color: var(--f3d-muted);
+        }
+
+        a {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    }
+
+    .o_td_pt_state {
+        margin-bottom: 4px;
+    }
+}
