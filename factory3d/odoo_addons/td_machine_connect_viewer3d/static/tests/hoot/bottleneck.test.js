@@ -1,8 +1,9 @@
 /** @odoo-module */
 // HOOT: «Вузьке місце» в 3D (R-30; R-26 VX-03, VX-04) — розширення моста td_machine_connect_viewer3d.
-import { describe, expect, test } from "@odoo/hoot";
+import { after, describe, expect, test } from "@odoo/hoot";
 import { advanceTime } from "@odoo/hoot-mock";
 import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
+import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import {
     MAX_BOXES, STACK_NAME, areaBox, bottleneckExtension, bottleneckOf, boxCount, cardHtml, clampToArea, entrySpot, flowOf,
     hoverText, labelText,
@@ -332,4 +333,97 @@ test("BN12 стопка й підпис не виходять за межі ді
     expect(area.max.x).toBeCloseTo(15.35, { digits: 6 });
     expect(area.min.z).toBeCloseTo(-1.35, { digits: 6 });
     expect(area.max.z).toBeCloseTo(5.35, { digits: 6 });
+});
+
+// ---- BN13…BN15: «один підпис на весь документ» — хай що трапилось зі станом розширення, сценою чи api
+const allLabels = () => [...document.querySelectorAll(".o_td_bn_label")];
+const stackCount = (viewer) => viewer.scene.children.filter((c) => c.name === STACK_NAME).length;
+const STATIONS = [
+    station("area:1", "Розкрій", ["SAW-1", "SAW-2"]),
+    station("area:2", "Присадка", ["CNC-2"]),
+    station("area:3", "Крайкооблицювання", ["EDGE-1"]),
+];
+const initialFlow = () => withFlow(Object.fromEntries(Object.entries(nodes(STATIONS, "area:1", { "area:1": 6, "area:2": 5, "area:3": 1 })).map(([c, n]) => [c, n.flow])));
+/** api ядра видають лише хуки розширень: ловимо його пробним розширенням і порожнім патчем. */
+const captureApi = (viewer) => {
+    let api = null;
+    after(registerViewerExtension({ id: "bn_probe", applyData: (a) => { api = a; } }));
+    viewer.applyPatch({ workcenters: {} });
+    return api;
+};
+
+test("BN13 двадцять чотири оновлення (вузьке місце їздить, черга міняється, примусові перебудови): у документі завжди рівно один підпис", async () => {
+    const { viewer, el } = await mountViewer({ model: "core", mutate: initialFlow() });
+    await viewer.partsReady(); // фонові частини моделі довантажено: пізніше вони не перебудують стопку посеред тесту
+    const api = captureApi(viewer);
+    await renderLabels(viewer, el);
+    expect(allLabels().length).toBe(1);
+    const steps = [["area:1", 6], ["area:1", 3], ["area:1", 6], ["area:2", 5], ["area:3", 1], ["area:2", 5], ["area:1", 6], ["area:1", 4]];
+    for (let i = 0; i < 24; i++) {
+        const [current, queue] = steps[i % steps.length];
+        viewer.applyPatch({ workcenters: nodes(STATIONS, current, { [current]: queue }) });
+        if (i % 3 === 0) {
+            bottleneckExtension.applyLayout(api); // розкладка: примусова перебудова
+        }
+        if (i % 4 === 0) {
+            bottleneckExtension.sync(api, api.D); // той самий склад: підпис не перебудовується
+        }
+        await renderLabels(viewer, el);
+        expect(allLabels().length).toBe(1);
+        expect(stackCount(viewer)).toBe(1);
+        expect(allLabels()[0]).toBe(labelOf(viewer));
+        expect(text(allLabels()[0])).toBe("Вузьке місце · черга " + queue);
+    }
+    viewer.applyPatch({ workcenters: nodes(STATIONS, null, {}) });
+    await renderLabels(viewer, el);
+    expect(allLabels().length).toBe(0);
+    expect(stackCount(viewer)).toBe(0);
+});
+
+test("BN14 стан розширення втрачено, а потім з'явилась друга сцена (інший api): у документі лишається один підпис", async () => {
+    const A = await mountViewer({ model: "core", mutate: initialFlow() });
+    await A.viewer.partsReady();
+    await renderLabels(A.viewer, A.el);
+    expect(allLabels().length).toBe(1);
+    // втрата стану (`states` — нова): стара група лишається в сцені, але розширення її вже не знає
+    bottleneckExtension.states = new WeakMap();
+    A.viewer.applyPatch({ workcenters: nodes(STATIONS, "area:2", { "area:2": 5 }) });
+    await renderLabels(A.viewer, A.el);
+    expect(stackCount(A.viewer)).toBe(1);
+    expect(allLabels().length).toBe(1);
+    expect(allLabels()[0]).toBe(labelOf(A.viewer));
+    // друга сцена з власним api й власним шаром підписів: стопка й підпис лише в тій, що оновилась останньою
+    const B = await mountViewer({ model: "core", mutate: initialFlow() });
+    await B.viewer.partsReady();
+    await renderLabels(A.viewer, A.el);
+    await renderLabels(B.viewer, B.el);
+    expect(allLabels().length).toBe(1);
+    expect(stackCount(A.viewer) + stackCount(B.viewer)).toBe(1);
+    A.viewer.applyPatch({ workcenters: nodes(STATIONS, "area:3", { "area:3": 2 }) });
+    await renderLabels(A.viewer, A.el);
+    await renderLabels(B.viewer, B.el);
+    expect(allLabels().length).toBe(1);
+    expect(allLabels()[0]).toBe(labelOf(A.viewer));
+    expect(stackCount(A.viewer)).toBe(1);
+    expect(stackCount(B.viewer)).toBe(0);
+});
+
+test("BN15 стопку знято зі сцени ззовні, а чужий елемент підпису лежить поза шаром ядра: те саме оновлення відновлює одну стопку й один підпис", async () => {
+    const { viewer, el } = await mountViewer({ model: "core", mutate: initialFlow() });
+    await viewer.partsReady();
+    await renderLabels(viewer, el);
+    const old = stackOf(viewer);
+    expect(allLabels().length).toBe(1);
+    old.removeFromParent(); // як `scene.clear()`: подія `removed` не доходить до підпису всередині групи, елемент лишається в DOM
+    const stray = document.createElement("div");
+    stray.className = "o_f3d_lbl o_td_bn_label";
+    document.body.appendChild(stray);
+    after(() => stray.remove());
+    expect(allLabels().length).toBe(2);
+    viewer.applyPatch({ workcenters: nodes(STATIONS, "area:1", { "area:1": 6 }) }); // склад не змінився: підпис (sig) той самий
+    await renderLabels(viewer, el);
+    expect(stackCount(viewer)).toBe(1);
+    expect(stackOf(viewer)).not.toBe(old);
+    expect(allLabels().length).toBe(1);
+    expect(allLabels()[0]).toBe(labelOf(viewer));
 });

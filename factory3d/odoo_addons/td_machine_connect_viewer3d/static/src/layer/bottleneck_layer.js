@@ -8,6 +8,9 @@
 // Усе (коробки, бейдж, підпис) — одна група-власник `st.group`: при кожному оновленні стара група знімається цілком, а її CSS2D-підпис
 // видаляється з DOM явно (`removed` у three спрацьовує лише на самому підписі, а не на групі, що його несе). Підпис один — біля поточного
 // вузького місця; стопка й підпис завжди в межах ділянки (`areaBox`).
+// Один на весь документ: посилання на живу групу (`LIVE.group`) лежить на `globalThis`, а не в `states` (стан за сценою) — воно не губиться,
+// коли стан розширення втрачено, з'явилась друга сцена з іншим api чи модуль завантажено вдруге; стара група з будь-якої сцени знімається
+// перед новою, а DOM підмітається по всьому документу (не лише в шарі підписів ядра). Групу, знятую зі сцени ззовні, перебудовуємо.
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
@@ -20,6 +23,8 @@ const BOX = { w: 1.3, h: 0.22, d: 0.9, gap: 0.04 };
 const GAP = 0.9; // м від краю верстата-входу до центра стопки (півглибини стопки 0,45 + запас)
 const PROBABLE = new Set(["load", "low"]); // вердикти, коли вузьке місце «імовірне, не виражене»
 const RED = "#e74c3c";
+/** Жива група стопки (одна на документ, з будь-якої сцени): її знімає наступне `clear`, хай яке розширення чи api її створило. */
+const LIVE = (globalThis.__tdBottleneckLive ??= { group: null });
 const VERDICT_TEXT = {
     growing: "черга росте",
     queue: "є черга",
@@ -197,30 +202,39 @@ export class BottleneckExtension {
         return st;
     }
 
-    /** Знімає групу-власника цілком: підпис — з DOM (і з three), спрайти — з GPU; геометрія й матеріал коробок лишаються для наступної. */
+    /** Знімає групу цілком: підпис — з DOM (і з three), спрайти — з GPU; геометрія й матеріал коробок лишаються для наступної. */
+    _drop(group) {
+        if (!group) {
+            return;
+        }
+        for (const o of [...group.children]) {
+            if (o.isCSS2DObject) {
+                group.remove(o); // подія `removed` у three знімає елемент підпису з DOM
+                o.element?.remove(); // і прямо: на випадок, коли подія не дійшла
+            } else if (o.isSprite) {
+                o.material?.map?.dispose?.();
+                o.material?.dispose?.();
+            }
+        }
+        group.removeFromParent();
+    }
+
+    /** Знімає стопку цієї сцени і живу стопку документа (вона може лежати в іншій сцені або лишитись від втраченого стану). */
     clear(api) {
         const st = this.stateOf(api);
-        const group = st.group;
-        if (group) {
-            for (const o of [...group.children]) {
-                if (o.isCSS2DObject) {
-                    group.remove(o); // подія `removed` у three знімає елемент підпису з DOM
-                    o.element?.remove(); // і прямо: на випадок, коли подія не дійшла
-                } else if (o.isSprite) {
-                    o.material?.map?.dispose?.();
-                    o.material?.dispose?.();
-                }
-            }
-            group.removeFromParent();
+        this._drop(st.group);
+        if (LIVE.group !== st.group) {
+            this._drop(LIVE.group);
         }
         st.group = null;
         st.sig = null;
-        this._sweep(api, null);
+        LIVE.group = null;
+        this._sweep(null);
     }
 
-    /** Прибрати з шару підписів ядра всі підписи вузького місця, крім `keep` (залишки старих груп, перезавантаження модуля). */
-    _sweep(api, keep) {
-        for (const el of api.labelsRoot?.querySelectorAll?.(".o_td_bn_label") || []) {
+    /** Прибрати з документа всі підписи вузького місця, крім `keep` (залишки старих груп, чужі сцени, перезавантаження модуля). */
+    _sweep(keep) {
+        for (const el of document.querySelectorAll(".o_td_bn_label")) {
             if (el !== keep) {
                 el.remove();
             }
@@ -281,7 +295,8 @@ export class BottleneckExtension {
         const raw = entrySpot(T, machines, prev.isEmpty() ? null : prev.getCenter(new T.Vector3()));
         const spot = { ...raw, ...clampToArea(areaBox(T, api, machines, D), raw.x, raw.z) };
         const sig = [n, info.queue, labelText(info), hoverText(info), spot.code, spot.x.toFixed(2), spot.z.toFixed(2)].join("|");
-        if (!force && st.group && st.sig === sig) {
+        const alive = st.group && st.group === LIVE.group && st.group.parent === api.scene; // групу могли зняти ззовні або замінити в іншій сцені
+        if (!force && alive && st.sig === sig) {
             return;
         }
         this.clear(api);
@@ -317,7 +332,8 @@ export class BottleneckExtension {
         api.scene.add(group);
         st.group = group;
         st.sig = sig;
-        this._sweep(api, label?.element ?? null);
+        LIVE.group = group;
+        this._sweep(label?.element ?? null);
     }
 
     // розкладка змінилась / модель довантажилась: положення верстатів інше — стопку ставимо заново
