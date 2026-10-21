@@ -222,6 +222,11 @@ class Chp(Model):
         s.update(state=STOPPED, valves=False, qf=False, load=0.0, step_i=-1, starter=False)
         self._ev("info", "КГУ зупинено: стан «Резерв»", state=STOPPED)
 
+    def _drop_run(self) -> None:
+        """Зняти запит «у роботі» (``chp_run``), лише якщо він був: прапор, якого не існувало, не з'являється."""
+        if self.wanted():
+            self.world.set_flag("chp_run", False)
+
     def _raise_alarm(self, code: int, text: str) -> None:
         s = self.s
         if s["state"] == FAULT:
@@ -229,14 +234,14 @@ class Chp(Model):
         s.update(state=FAULT, alarm=code, qf=False, load=0.0, valves=False, step_i=-1, starter=False)
         if code == 116:
             s["estop_loop"] = False
-        self.world.set_flag("chp_run", False)
+        self._drop_run()
         self._ev("alarm", f"КГУ: аварія {code} — {text}", alarm=code, state=FAULT)
 
     def _trip(self, kind: int, text: str, *, clear_run: bool) -> None:
         s = self.s
         s.update(trip=kind, qf=False, load=0.0)
         if clear_run:
-            self.world.set_flag("chp_run", False)
+            self._drop_run()
         self._ev("info", f"КГУ: {text}", trip=kind)
         if s["rpm"] > 50:
             self._begin_cool(text)

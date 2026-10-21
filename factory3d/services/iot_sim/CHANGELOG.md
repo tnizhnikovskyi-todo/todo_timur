@@ -16,7 +16,7 @@
 - Сценарії S-25…S-30 (група `energy`, 600 с): `chp_overheat`, `chp_hot_return`, `chp_gas_leak`, `chp_fire`, `chp_rocof`, `chp_no_permit` — прапори `chp_temp_fault`,
   `chp_ret_fault`, `chp_gas_leak`, `chp_fire`, `chp_rocof`, `chp_permit = 0`; відкат повертає прапори (аварію скидає лише `ctl/cmd = 4`). Реєстр — 30 сценаріїв.
 - Тести: `tests/unit/test_chp_full.py` (AC-25, AC-27, режими, команди), `tests/unit/test_chp_map.py` (AC-24, AC-26 у частині копії карти); лічильники реєстра → 30
-  (`test_scenarios.py`, `test_control_api.py`). `test_catalog.py` і `catalog/signals.csv` без змін.
+  (`test_scenarios.py`, `test_control_api.py`); `tests/protocols/test_chp_modbus.py` — нова карта по Modbus TCP (блоки, команда пуску, уставки, винятки 2/3). `test_catalog.py` і `catalog/signals.csv` без змін.
 
 ## Unreleased: живе виробництво — цілі станів верстатів від Odoo (контракт C-LP-01)
 - `POST /api/v1/machines/targets` (дубль `/sim/v1/machines/targets`; `core/machine_targets.py`, `protocols/machine_targets_api.py`, у `control_api.py` лише рядки реєстрації):
