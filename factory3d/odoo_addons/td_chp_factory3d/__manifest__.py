@@ -16,7 +16,7 @@ Key features
 * Energy groups give access to the CHP console, the menu lives under Energy -> Generation and reserve
 * Link of the unit with the SLD nodes of the CHP and its feeder
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",

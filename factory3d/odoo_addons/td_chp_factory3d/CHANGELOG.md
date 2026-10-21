@@ -1,5 +1,13 @@
 # Changelog — td_chp_factory3d
 
+## 19.0.1.1.0
+
+* Виправлення: «Пуск»/«Стоп» з пульта КГУ не доходили до КГУ. `chp_start`/`chp_stop` мали виконавця `intent` (команда в сигнал `energy_control/intent` збирача
+  енергетики, а той пише у вікно ГРЩ `energy_control/chp/cmd`, u73:230 — сигнал без `write_enabled` і поза картою u72). Тепер, як решта 7 видів, вони йдуть
+  виконавцем `chp`: `td.command` у `chp/ctl/cmd` (1 — пуск, 2 — стоп; Modbus u72, HR 40900), верифікація за `chp/ctl/ack` (R-09, як `estop`/`reset`).
+  Клас B (1/2 + 2/2), `checks` і `remote_gated` td_energy_control збережено. Виконавець підмінюється даними `data/td_energy_command_kind_data.xml`;
+  `uninstall_hook` повертає `intent` (інакше `ondelete='cascade'` видалив би ці види).
+
 ## 19.0.1.0.0
 
 * Перша версія моста «КГУ ↔ завод» (SPEC td_chp_factory3d, W3; рішення D-15).

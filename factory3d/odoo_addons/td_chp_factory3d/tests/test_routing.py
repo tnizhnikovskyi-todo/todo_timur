@@ -51,6 +51,24 @@ class TestRouting(BridgeCase):
         self.assertEqual(res["state"], "queued")
         self.assertTrue(action.command_id)
 
+    def test_start_and_stop_write_chp_ctl_cmd_and_verify_by_ack(self):
+        """Пуск і стоп — не інтент збирача: `td.command` у `chp/ctl/cmd` (1 / 2), верифікація за `chp/ctl/ack`."""
+        start = self.act("start", user=self.e_chief)
+        self.assertEqual((start.kind_id.executor, start.state), ("chp", "queued"))
+        cmd = start.command_id
+        self.assertEqual(
+            (cmd.signal_id.code, cmd.value, cmd.origin, cmd.state), ("chp/ctl/cmd", 1.0, "energy", "queued")
+        )
+        self.assertFalse(cmd.payload)
+        self.command_done(start, ack=1)
+        self.assertEqual((start.state, start.result_text), ("done", "Контролер прийняв команду"))
+        self.put(RUNNING)
+        stop = self.act("stop", user=self.e_chief)
+        self.assertEqual((stop.command_id.signal_id.code, stop.command_id.value), ("chp/ctl/cmd", 2.0))
+        self.command_done(stop, ack=2, reason=12)
+        self.assertEqual(stop.state, "failed")
+        self.assertIn("стан не допускає команду", stop.error)
+
     def test_chief_starts_alone(self):
         prep = self.prepare("start", user=self.e_chief)
         self.assertEqual(self.confirm(prep, self.e_chief)["state"], "queued")
@@ -280,7 +298,8 @@ class TestRouting(BridgeCase):
         self.assertEqual(route.energy_code("estop"), "chp_estop")
         self.assertEqual(route.chp_kind("chp_set_bypass"), "set_bypass")
         self.assertIsNone(route.chp_kind("qs_close"))
-        self.assertEqual(route.expectation("estop", {}, 1.0), {"signal": "chp/ctl/ack", "kind": "ack"})
+        for kind in ("start", "stop", "estop", "reset"):
+            self.assertEqual(route.expectation(kind, {}, 1.0), {"signal": "chp/ctl/ack", "kind": "ack"}, kind)
         self.assertEqual(
             route.expectation("set_cos", {"cos": 0.97}, 0.01),
             {"signal": "chp/ctl/cos_set", "kind": "value", "value": 0.97, "tol": 0.005},

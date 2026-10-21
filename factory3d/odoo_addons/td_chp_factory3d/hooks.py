@@ -12,6 +12,7 @@ _logger = logging.getLogger(__name__)
 TARGET_SOURCE = "MB-U72-CHP"
 OWN_SOURCE_XMLID = "td_chp.source_chp_u72"
 ROOT_MENU_XMLID = "td_chp.menu_td_chp_root"
+CORE_KIND_XMLIDS = ("td_energy_control.kind_chp_start", "td_energy_control.kind_chp_stop")  # executor `chp` ↔ `intent`
 GROUP_LINKS = (
     ("td_energy.group_td_energy_user", "td_chp.group_td_chp_user"),
     ("td_energy.group_td_energy_manager", "td_chp.group_td_chp_operator"),
@@ -56,7 +57,14 @@ def post_init(env):
 
 
 def uninstall_hook(env):
-    """RB-05: сигнали й `unit.source_id` назад на `CHP-U72` (`active=True`), корінь меню знову видно."""
+    """RB-05: сигнали й `unit.source_id` назад на `CHP-U72` (`active=True`), корінь меню знову видно.
+
+    `chp_start`/`chp_stop` td_energy_control повертаються на виконавця `intent`: значення `chp` зникає з вибору, а
+    `ondelete='cascade'` видалив би ці види разом із їхніми діями."""
+    for xmlid in CORE_KIND_XMLIDS:
+        kind = env.ref(xmlid, raise_if_not_found=False)
+        if kind and kind.executor == "chp":
+            kind.sudo().write({"executor": "intent"})
     own = env.ref(OWN_SOURCE_XMLID, raise_if_not_found=False)
     if own:
         own.sudo().write({"active": True})

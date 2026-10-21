@@ -9,7 +9,7 @@
 
 | Частина | Де |
 |---|---|
-| Усі 9 видів команд КГУ йдуть у `td.energy.action` (один механізм і журнал із Пультом енергетика, D-15): `start`/`stop` — наявні `chp_start`/`chp_stop` (клас B), решта — 7 видів моста (клас A, виконавець `chp`) | `models/td_chp_pult.py` (хуки), `models/td_energy_action.py`, `models/td_energy_command_kind.py`, `data/td_energy_command_kind_data.xml` |
+| Усі 9 видів команд КГУ йдуть у `td.energy.action` (один механізм і журнал із Пультом енергетика, D-15): `start`/`stop` — наявні `chp_start`/`chp_stop` td_energy_control (клас B; міст замінює виконавця `intent` на `chp`: запис у `chp/ctl/cmd`), решта — 7 видів моста (клас A, виконавець `chp`) | `models/td_chp_pult.py` (хуки), `models/td_energy_action.py`, `models/td_energy_command_kind.py`, `data/td_energy_command_kind_data.xml` |
 | Блокування R-07 td_chp діють до й після викликів td_energy_control; верифікація за `chp/ctl/ack` / значенням цілі; строк `td.chp.verify_timeout_s` | `tools/energy_route.py`, `models/td_chp_command.py` |
 | Вузли `CHP` і `QF-CHP` у картці агрегата, дозвіл дистанційних перемикань із td_energy_control | `models/td_chp_unit.py`, `views/td_chp_unit_views.xml` |
 | Сигнали `chp/…` переносяться на джерело `MB-U72-CHP`, `CHP-U72` архівується; назад — при видаленні моста | `hooks.py` |

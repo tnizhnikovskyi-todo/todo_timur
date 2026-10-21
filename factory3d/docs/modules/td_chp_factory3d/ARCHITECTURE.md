@@ -8,8 +8,8 @@ FR-B01 Зв'язати агрегат КГУ з вузлами енергети�
 ## 2. Технічна реалізація
 ```
  td_chp ──(хуки M-06)──► td_chp_factory3d ──► td.energy.control.prepare/confirm/…  ──► td.energy.action
-   │  (без мосту: td.chp.command)                   │ (preflight td_chp R-07; _td_close('blocked'))     chp_start|chp_stop  — executor intent (збирач енергетики)
-   │                                                 └ види моста chp_estop|chp_reset|chp_set_* — executor chp → td.command(origin='energy') → chp/ctl/*
+   │  (без мосту: td.chp.command)                   │ (preflight td_chp R-07; _td_close('blocked'))     chp_start|chp_stop  — executor chp (міст підміняє intent)
+   │                                                 └ chp_estop|chp_reset|chp_set_* — executor chp → td.command(origin='energy') → chp/ctl/*
    │                                                                                                    верифікація R-09 (td.chp.command._td_on_ingest → _td_chp_verify)
    └── td.chp.unit ◄── energy_node_id (CHP), energy_qf_node_id (QF-CHP);  signals chp/* ──► source MB-U72-CHP (td_energy)
  td_energy_viewer3d: PULT_BUTTONS["CHP"] → td_chp.action_td_chp_pult  (layer.can_chp_pult)

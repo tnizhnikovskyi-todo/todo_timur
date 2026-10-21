@@ -1,8 +1,10 @@
 """RB-01…RB-04: чиста частина маршрутизації команд КГУ через td_energy_control (D-15) — мапінг видів і тексти.
 
-Усі 9 видів td_chp ідуть у `td.energy.action`: `start`/`stop` — наявні `chp_start`/`chp_stop` (виконавець `intent`,
-збирач енергетики), решта 7 — види моста (`executor='chp'`, `data/td_energy_command_kind_data.xml`): запис у
-`chp/ctl/*` через `td.command` (`origin='energy'`) і верифікація за `chp/ctl/ack` / значенням цілі (R-09).
+Усі 9 видів td_chp ідуть у `td.energy.action` з виконавцем `chp` (`data/td_energy_command_kind_data.xml`):
+`start`/`stop` — наявні `chp_start`/`chp_stop` td_energy_control (клас B), яким міст замінює виконавця `intent`
+на `chp`, решта 7 — види моста. Запис — `td.command` (`origin='energy'`) у `chp/ctl/*` (Modbus u72), верифікація
+за `chp/ctl/ack` / значенням цілі (R-09). Інтент збирача енергетики (`energy_control/intent`) для КГУ не
+використовується: його `chp_cmd` — вікно керування ГРЩ (`energy_control/chp/cmd`, u73:230), а не карта u72.
 """
 
 from odoo.addons.td_chp.tools import command_flow as flow
@@ -21,9 +23,9 @@ KIND_TO_ENERGY = {
 }
 ENERGY_TO_KIND = {v: k for k, v in KIND_TO_ENERGY.items()}
 ENERGY_KINDS = tuple(KIND_TO_ENERGY.values())
-BRIDGE_KINDS = tuple(code for code in ENERGY_KINDS if code not in ("chp_start", "chp_stop"))  # виконавець `chp`
+BRIDGE_KINDS = ENERGY_KINDS  # усі 9 видів — виконавець `chp`
 AUTO_LIKE = "auto\\_%chp%"  # `kind_code ilike` для дій автоматики КГУ (RB-03)
-ACK_KINDS = ("estop", "reset")  # верифікація за `chp/ctl/ack`; `set_*` — за значенням цілі
+ACK_KINDS = ("start", "stop", "estop", "reset")  # команди `ctl/cmd` — за `chp/ctl/ack`; `set_*` — за значенням цілі
 
 
 def energy_code(kind):
