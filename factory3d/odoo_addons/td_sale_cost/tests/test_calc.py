@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from odoo import Command, fields
 from odoo.exceptions import AccessError
 from odoo.tests import TransactionCase, new_test_user, tagged
+from odoo.tools.misc import formatLang
 
 RATE = 600.0  # ₴/год РЦ
 STD = 10.0  # ₴ за одиницю компонента
@@ -252,14 +253,21 @@ class TestSaleCost(TransactionCase):
                     "minutes": 30,
                     "cost": amount,
                 }
-                for kind, kwh, amount in (("direct", 10.0, 45.0), ("idle", 2.0, 9.0))
+                for kind, kwh, amount in (("direct", 10.0, 45.0), ("shared", 40.0, 360.0), ("idle", 2.0, 9.0))
             ]
         )
         res = self.calc()
-        self.assertAlmostEqual(res["articles"]["energy"]["fact"], 54.0)
-        # план енергії: плановий час × історичні ₴/год роботи РЦ (54 ₴ за 60 хв)
-        self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 54.0 / 60 * 60)
+        # прямі рядки входять, спільні (цеховий пул) — накладні, idle — не завдання; спільні — лише в нотатці
+        self.assertAlmostEqual(res["articles"]["energy"]["fact"], 45.0)
+        self.assertIn("не входить", " ".join(res["articles"]["energy"]["notes"]))
+        # план енергії: плановий час × історичні ₴/год роботи РЦ (45 ₴ за 30 хв прямого часу = 90 ₴/год)
+        self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 90.0)
         self.assertGreater(res["fact_cost"], res["articles"]["machine"]["fact"])
+        # параметр td.sale_cost.energy_shared = 1: спільні входять у факт, а хвилини плану лишаються прямими (не ×2)
+        self.env["ir.config_parameter"].set_param("td.sale_cost.energy_shared", "1")
+        res = self.calc()
+        self.assertAlmostEqual(res["articles"]["energy"]["fact"], 405.0)
+        self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 810.0)
 
     def test_state_log_preferred_over_time_log(self):
         if "td.machine.state.log" not in self.env:
@@ -316,9 +324,44 @@ class TestSaleCost(TransactionCase):
         arch = self.env["sale.order"].get_view(self.env.ref("sale.view_order_form").id)["arch"]
         self.assertIn("action_td_sale_cost", arch)
 
+    def test_forecast_margin_is_headline_while_in_progress(self):
+        """Замовлення в роботі: головна — «маржа прогноз» = (ціна − факт − решта плану) / ціна; «факт» лишається."""
+        self._log(30)  # 30 хв із плану: факт ≈ 300 ₴, решта плану ≈ матеріали й решта часу
+        res = self.calc()
+        self.assertFalse(res["is_done"])
+        self.assertEqual(res["margin_main"], "forecast")
+        self.assertAlmostEqual(
+            res["margin_forecast_pct"], (res["price"] - res["forecast_cost"]) / res["price"] * 100.0, places=6
+        )
+        self.assertLess(res["margin_forecast_pct"], res["margin_fact_pct"], "факт «поки що» завищує маржу")
+        so = self.so.with_user(self.manager)
+        so.invalidate_recordset()
+        label = so.td_cost_label
+        fmt = lambda v: formatLang(self.env, v, digits=1)  # noqa: E731
+        self.assertIn("маржа прогноз %s %%" % fmt(res["margin_forecast_pct"]), label)
+        self.assertIn("(факт %s %%)" % fmt(res["margin_fact_pct"]), label)
+        self.assertAlmostEqual(so.td_margin_forecast_pct, res["margin_forecast_pct"])
+        rec = self.env["td.sale.cost"]._td_open(self.so)
+        self.assertFalse(rec.is_done)
+        self.assertAlmostEqual(rec.margin_forecast_pct, res["margin_forecast_pct"])
+        self.assertIn("маржа прогноз", rec.warnings)
+
+    def test_done_order_keeps_fact_margin(self):
+        """Виконане замовлення: у кнопці «маржа факт», без прогнозу в дужках."""
+        self._log(60)
+        self.mo.write({"state": "done"})
+        res = self.calc()
+        self.assertTrue(res["is_done"])
+        self.assertEqual(res["margin_main"], "fact")
+        so = self.so.with_user(self.manager)
+        so.invalidate_recordset()
+        self.assertIn("маржа факт", so.td_cost_label)
+        self.assertNotIn("прогноз", so.td_cost_label)
+
     def test_list_columns_are_optional_and_hidden(self):
         arch = self.env["sale.order"].get_view(self.env.ref("sale.view_order_tree").id)["arch"]
         self.assertRegex(arch, r'name="td_margin_fact_pct"[^>]*optional="hide"')
+        self.assertRegex(arch, r'name="td_margin_forecast_pct"[^>]*optional="hide"')
         self.assertRegex(arch, r'name="td_margin_plan_pct"[^>]*optional="hide"')
 
     def test_unsaved_order_has_no_cost(self):

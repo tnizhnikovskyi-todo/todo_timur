@@ -221,32 +221,54 @@ class TdSaleCostCalc(models.AbstractModel):
         }
 
     @api.model
-    def _td_energy(self, mos):
-        """`{mo.id: (грн, кВт·год)}` — сума `td.energy.alloc` за МО; `None`, якщо модуля енергії немає."""
-        if "td.energy.alloc" not in self.env:
-            return None
-        rows = (
-            self.env["td.energy.alloc"]
-            .sudo()
-            ._read_group([("production_id", "in", mos.ids)], ["production_id"], ["cost:sum", "kwh:sum"])
-        )
-        return {mo.id: (c, k) for mo, c, k in rows}
+    def _td_energy_kinds(self):
+        """Які рядки `td.energy.alloc` входять у собівартість: прямі завжди; спільні (повітря, аспірація, світло,
+        вентиляція) — лише з `td.sale_cost.energy_shared` = 1: пул доби ділиться між завданнями, що йшли в слоті, і на
+        розрідженій добі кілька завдань забирають увесь цеховий пул (тисячі ₴ на завдання), тож це накладні."""
+        shared = self.env["ir.config_parameter"].sudo().get_param(PARAM + "energy_shared", "0")
+        return ("direct", "shared") if str(shared).strip().lower() in ("1", "true", "yes") else ("direct",)
 
     @api.model
-    def _td_energy_rates(self, workcenters):
-        """`{wc.id: грн за годину роботи}` з історії розподілу енергії РЦ — база плану енергії."""
-        if "td.energy.alloc" not in self.env or not workcenters:
-            return {}
+    def _td_energy(self, mos):
+        """`{mo.id: {"cost", "kwh", "shared_cost", "shared_kwh"}}` — Σ `td.energy.alloc` за МО (`cost`/`kwh` — лише
+        враховані види, див. `_td_energy_kinds`; `shared_*` — спільна енергія, що не входить); `None`, якщо модуля
+        енергії немає."""
+        if "td.energy.alloc" not in self.env:
+            return None
+        kinds = self._td_energy_kinds()
         rows = (
             self.env["td.energy.alloc"]
             .sudo()
             ._read_group(
-                [("workcenter_id", "in", workcenters.ids), ("workorder_id", "!=", False)],
-                ["workcenter_id"],
-                ["cost:sum", "minutes:sum"],
+                [("production_id", "in", mos.ids), ("kind", "in", ("direct", "shared"))],
+                ["production_id", "kind"],
+                ["cost:sum", "kwh:sum"],
             )
         )
-        return {wc.id: c / m * 60.0 for wc, c, m in rows if m > 0 and c > 0}
+        res = {}
+        for mo, kind, c, k in rows:
+            d = res.setdefault(mo.id, {"cost": 0.0, "kwh": 0.0, "shared_cost": 0.0, "shared_kwh": 0.0})
+            if kind in kinds:
+                d["cost"] += c
+                d["kwh"] += k
+            if kind == "shared" and "shared" not in kinds:
+                d["shared_cost"] += c
+                d["shared_kwh"] += k
+        return res
+
+    @api.model
+    def _td_energy_rates(self, workcenters):
+        """`{wc.id: грн за годину роботи}` з історії розподілу енергії РЦ — база плану енергії. Вартість — врахованих
+        видів рядків, час — лише хвилини прямих рядків: спільні рядки того самого завдання повторюють його хвилини,
+        тож їхня сума в знаменнику занижувала б ставку в кілька разів."""
+        if "td.energy.alloc" not in self.env or not workcenters:
+            return {}
+        Alloc = self.env["td.energy.alloc"].sudo()
+        base = [("workcenter_id", "in", workcenters.ids), ("workorder_id", "!=", False)]
+        costs = Alloc._read_group(base + [("kind", "in", self._td_energy_kinds())], ["workcenter_id"], ["cost:sum"])
+        minutes = Alloc._read_group(base + [("kind", "=", "direct")], ["workcenter_id"], ["minutes:sum"])
+        mins = {wc.id: m for wc, m in minutes}
+        return {wc.id: c / mins[wc.id] * 60.0 for wc, c in costs if mins.get(wc.id, 0) > 0 and c > 0}
 
     @api.model
     def _td_energy_mo(self, mo, wos, energy, rates, fractions):
@@ -261,10 +283,12 @@ class TdSaleCostCalc(models.AbstractModel):
                 amount = (wo.duration_expected or 0.0) / 60.0 * rate
                 plan = cost.num(plan) + amount
                 plan_now = cost.num(plan_now) + amount * fractions.get(wo.id, 0.0)
-        stats = {"module": True, "kwh": 0.0, "rows": 0}
+        stats = {"module": True, "kwh": 0.0, "rows": 0, "shared_kwh": 0.0, "shared_cost": 0.0}
         fact = None
         if mo.id in energy:
-            fact, stats["kwh"], stats["rows"] = energy[mo.id][0], energy[mo.id][1], 1
+            row = energy[mo.id]
+            fact, stats["kwh"], stats["rows"] = row["cost"], row["kwh"], 1
+            stats["shared_kwh"], stats["shared_cost"] = row["shared_kwh"], row["shared_cost"]
         return {"plan": plan, "plan_now": plan_now, "fact": fact, "stats": stats}
 
     @api.model
@@ -377,6 +401,15 @@ class TdSaleCostCalc(models.AbstractModel):
             n.append(_("%.1f кВт·год за розподілом td.energy.alloc", stats["kwh"]))
             if stats["rows"] < count:
                 n.append(_("МО без розподілу енергії: %s з %s", count - stats["rows"], count))
+            if stats["shared_cost"]:
+                n.append(
+                    _(
+                        "спільна енергія цеху (повітря, аспірація, світло, вентиляція) %(kwh).1f кВт·год ≈ "
+                        "%(cost).0f ₴ у собівартість не входить (накладні; td.sale_cost.energy_shared = 1 — включити)",
+                        kwh=stats["shared_kwh"],
+                        cost=stats["shared_cost"],
+                    )
+                )
         elif article == "material":
             if stats["no_moves"] >= count:
                 return [_("немає даних: у МО немає компонентів")]
@@ -446,4 +479,8 @@ class TdSaleCostCalc(models.AbstractModel):
         for key in ("plan", "plan_now", "fact", "forecast"):
             res["margin_" + key] = price - res[key + "_cost"]
             res["margin_%s_pct" % key] = cost.margin_pct(price, res[key + "_cost"])
+        # Замовлення в роботі: маржа за фактом «поки що» завищена (витрати лише до зараз), тож головна — прогнозна
+        # (ціна − факт − решта плану); виконане замовлення має повні витрати — головна маржа факту.
+        res["is_done"] = all(d["mo"].state == "done" for d in mo_data)
+        res["margin_main"] = "fact" if res["is_done"] else "forecast"
         return res

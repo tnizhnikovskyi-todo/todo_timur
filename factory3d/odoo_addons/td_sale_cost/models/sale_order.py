@@ -1,4 +1,6 @@
-"""Смарт-кнопка «Собівартість» і колонки маржі в замовленні продажу (R-07). Нічого не зберігається."""
+"""Смарт-кнопка «Собівартість» і колонки маржі в замовленні продажу (R-07). Нічого не зберігається.
+
+У роботі головна — «маржа прогноз», виконане — «маржа факт» (див. `_td_cost_label`)."""
 
 from odoo import api, fields, models
 from odoo.tools.misc import formatLang
@@ -28,7 +30,20 @@ class SaleOrder(models.Model):
         string="Маржа план, %", compute="_compute_td_cost", digits=(6, 1), aggregator=None, groups=COST_GROUPS
     )
     td_margin_fact_pct = fields.Float(
-        string="Маржа факт, %", compute="_compute_td_cost", digits=(6, 1), aggregator=None, groups=COST_GROUPS
+        string="Маржа факт (поки що), %",
+        compute="_compute_td_cost",
+        digits=(6, 1),
+        aggregator=None,
+        groups=COST_GROUPS,
+        help="(ціна − витрати до зараз) / ціна: поки замовлення в роботі, це завищена цифра: див. «Маржа прогноз».",
+    )
+    td_margin_forecast_pct = fields.Float(
+        string="Маржа прогноз, %",
+        compute="_compute_td_cost",
+        digits=(6, 1),
+        aggregator=None,
+        groups=COST_GROUPS,
+        help="(ціна − прогноз на завершення) / ціна: факт плюс решта плану. Виконане замовлення — як факт.",
     )
     td_cost_level = fields.Selection(
         [("ok", "У нормі"), ("warn", "Увага"), ("alert", "Перевитрата"), ("none", "—")],
@@ -44,7 +59,8 @@ class SaleOrder(models.Model):
         for order in self:
             res = results.get(order.id)
             if not res:
-                order.td_cost_plan = order.td_cost_fact = order.td_margin_plan_pct = order.td_margin_fact_pct = 0.0
+                order.td_cost_plan = order.td_cost_fact = order.td_margin_plan_pct = 0.0
+                order.td_margin_fact_pct = order.td_margin_forecast_pct = 0.0
                 order.td_cost_level = "none"
                 order.td_cost_label = False
                 continue
@@ -52,19 +68,23 @@ class SaleOrder(models.Model):
             order.td_cost_fact = res["fact_cost"]
             order.td_margin_plan_pct = res["margin_plan_pct"] or 0.0
             order.td_margin_fact_pct = res["margin_fact_pct"] or 0.0
+            order.td_margin_forecast_pct = res["margin_forecast_pct"] or 0.0
             order.td_cost_level = res["level"]
             order.td_cost_label = self._td_cost_label(res)
 
     @api.model
     def _td_cost_label(self, res):
-        """«Собівартість: факт N ₴ · маржа M %»."""
+        """Виконане: «Собівартість: факт N ₴ · маржа факт M %». У роботі: «Собівартість: факт N ₴ · маржа прогноз M %
+        (факт K %)» — маржа за фактом «поки що» не видається за підсумок."""
         symbol = res["currency"].symbol or ""
-        margin = res["margin_fact_pct"]
-        return "Собівартість: факт %s %s · маржа %s" % (
-            formatLang(self.env, res["fact_cost"], digits=0),
-            symbol,
-            "—" if margin is None else "%s %%" % formatLang(self.env, margin, digits=1),
-        )
+
+        def pct(value):
+            return "—" if value is None else "%s %%" % formatLang(self.env, value, digits=1)
+
+        head = "Собівартість: факт %s %s" % (formatLang(self.env, res["fact_cost"], digits=0), symbol)
+        if res["is_done"]:
+            return "%s · маржа факт %s" % (head, pct(res["margin_fact_pct"]))
+        return "%s · маржа прогноз %s (факт %s)" % (head, pct(res["margin_forecast_pct"]), pct(res["margin_fact_pct"]))
 
     def action_td_sale_cost(self):
         """Смарт-кнопка: відкрити форму розбивки (розрахунок заново при кожному відкритті)."""

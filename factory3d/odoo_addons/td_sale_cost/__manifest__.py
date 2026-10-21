@@ -21,7 +21,7 @@ Requirements and notes
 * Machine time comes from the Machine Connect state log when installed, otherwise from the work order time log.
 * Energy comes from the Energy allocation to manufacturing orders when installed.
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

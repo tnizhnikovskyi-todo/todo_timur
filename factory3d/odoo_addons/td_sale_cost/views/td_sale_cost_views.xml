@@ -34,12 +34,15 @@
                                    decoration-warning="level == 'warn'" decoration-danger="level == 'alert'"/>
                         </group>
                         <group string="Маржа до ціни замовлення">
+                            <field name="is_done" invisible="1"/>
                             <field name="margin_plan"/>
                             <field name="margin_plan_pct"/>
-                            <field name="margin_fact" class="fw-bold"/>
-                            <field name="margin_fact_pct" class="fw-bold"/>
-                            <field name="margin_forecast"/>
-                            <field name="margin_forecast_pct"/>
+                            <field name="margin_forecast" class="fw-bold" invisible="is_done"/>
+                            <field name="margin_forecast_pct" class="fw-bold" invisible="is_done"/>
+                            <field name="margin_fact" class="fw-bold" string="Маржа: факт" invisible="not is_done"/>
+                            <field name="margin_fact_pct" class="fw-bold" string="Маржа факт, %" invisible="not is_done"/>
+                            <field name="margin_fact" invisible="is_done"/>
+                            <field name="margin_fact_pct" invisible="is_done"/>
                         </group>
                     </group>
                     <group string="За статтями">
