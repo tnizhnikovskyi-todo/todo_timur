@@ -102,6 +102,21 @@ class TestControllers(HttpCase, F3dViewerBase):
         self.assertIn("ts", res.json())
         self.assertEqual(self._get("/f3d/viewer/delta?since=2026-10-12T07:30:12", user="f3d_nobody").status_code, 403)
 
+    def test_delta_many_codes(self):
+        """Клієнт накопичує коди з повідомлень шини: 201–260 (і до 2000) кодів — 200, а не 400; 2001 — 400."""
+        for n in (200, 201, 260, 2000):
+            with self.subTest(n=n):
+                codes = ",".join("C%d" % i for i in range(n))
+                res = self._get("/f3d/viewer/delta?since=2026-10-12T07:30:12Z&codes=" + codes)
+                self.assertEqual(res.status_code, 200)
+                self.assertIn("ts", res.json())
+        codes = ",".join("C%d" % i for i in range(2001))
+        res = self._get("/f3d/viewer/delta?since=2026-10-12T07:30:12Z&codes=" + codes)
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()["error"]["code"], "bad_request")
+        res = self._get("/f3d/viewer/delta?since=2026-10-12T07:30:12Z&codes=A,../x")
+        self.assertEqual(res.status_code, 400)
+
     # --- API-04 ---
     def test_resolve(self):
         res = self._get("/f3d/viewer/resolve?code=ZZ-WC-1")

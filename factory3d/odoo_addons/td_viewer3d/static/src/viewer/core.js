@@ -3554,11 +3554,11 @@ function flowRender() {
   flow.top = top; flow.bottom = y;
   flowPlace();
 }
+// «Потік зміни» лежить поверх полотна й картинку НЕ зсуває: раніше тут стояв `camera.setViewOffset` (опускав сцену
+// приблизно на висоту панелі), через що модель стрибала вниз при ▶. Тепер зсуву немає ні при відкритті, ні при закритті
+// панелі, ні на вузьких екранах; функція лише знімає зсув, якщо він раптом є.
 function flowViewOffset() {
-  const c = renderer.domElement, W = c.clientWidth, H = c.clientHeight;
-  if ($(".o_f3d_flow").hidden || !W) { camera.clearViewOffset(); return; }
-  const dy = Math.round(($(".o_f3d_flow").getBoundingClientRect().bottom - c.getBoundingClientRect().top) / 2 - 24);
-  camera.setViewOffset(W, H, 0, -Math.max(0, dy), W, H);
+  if (camera.view?.enabled) { camera.clearViewOffset(); invalidate(); }
 }
 function flowCursor(t) {
   if (!flow.X || $(".o_f3d_flow").hidden) {return;}

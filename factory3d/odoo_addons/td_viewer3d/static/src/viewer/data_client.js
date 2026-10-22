@@ -81,6 +81,12 @@ function safeStorage() {
 }
 
 const POLL_OFFLINE_S = 30;
+// один запит /delta несе не більше стільки кодів: сервер приймає до 2000, але старіші збірки — лише 200, а довгий URL
+// ріжуть проксі; решта лишається в `pending` і йде наступним запитом одразу після відповіді
+const DELTA_CHUNK = 200;
+const DELTA_CHUNK_CHARS = 2000;
+// після стількох поспіль помилок /delta клієнт перечитує /data повністю
+const FULL_RELOAD_AFTER = 3;
 
 export class DataClient {
     constructor({
@@ -117,6 +123,8 @@ export class DataClient {
         this.busOff = false;
         this.online = true;
         this.degraded = false; // шина впала або мережі немає: індикатор «немає зв'язку»
+        this._busDown = false;
+        this._offByErr = false; // offline через помилки /delta (а не через navigator.onLine)
     }
 
     get manifestUrl() {
@@ -250,12 +258,16 @@ export class DataClient {
     }
 
     _disconnected() {
+        this._busDown = true;
         this.degraded = true;
         this._setState("polling");
         this._startPoll(POLL_OFFLINE_S);
     }
 
     _reconnected() {
+        this._busDown = false;
+        this._offByErr = false;
+        this.errors = 0;
         this.degraded = false;
         clearInterval(this.poller);
         this.poller = null;
@@ -266,6 +278,7 @@ export class DataClient {
     /** `navigator.onLine` (кіоск): без мережі таймери зупинені, стан `offline`. */
     setOnline(on) {
         this.online = on;
+        this._offByErr = false;
         this.degraded = !on;
         if (!on) {
             clearInterval(this.poller);
@@ -297,8 +310,7 @@ export class DataClient {
             return;
         }
         this.inflight = true;
-        const codes = [...this.pending];
-        this.pending.clear();
+        const codes = this._takeCodes();
         try {
             const query = { since: this.lastTs };
             if (codes.length) {
@@ -306,9 +318,10 @@ export class DataClient {
             }
             const r = await this._json("/delta", { query });
             const d = await r.json();
-            this.errors = 0;
+            this._recovered();
             if (d.full) {
                 const full = await this.loadData();
+                this.pending.clear();
                 this.cb?.({ full });
             } else {
                 this.lastTs = d.ts || this.lastTs;
@@ -318,12 +331,15 @@ export class DataClient {
                 }
                 this.cb?.(patch);
             }
+            if (this.pending.size) {
+                this.again = true; // лишок кодів (їх було більше за один шматок)
+            }
         } catch (err) {
             for (const c of codes) {
                 this.pending.add(c);
             }
             if (!this._ac?.signal.aborted) {
-                this._failed(err);
+                await this._failed(err);
             }
         } finally {
             this.inflight = false;
@@ -334,7 +350,62 @@ export class DataClient {
         }
     }
 
-    _failed(err) {
+    /** Наступний шматок кодів із `pending` (≤ DELTA_CHUNK штук і ≤ DELTA_CHUNK_CHARS символів), вилучений зі списку. */
+    _takeCodes() {
+        const out = [];
+        let len = 0;
+        for (const c of this.pending) {
+            if (out.length >= DELTA_CHUNK || (out.length && len + c.length + 1 > DELTA_CHUNK_CHARS)) {
+                break;
+            }
+            out.push(c);
+            len += c.length + 1;
+        }
+        for (const c of out) {
+            this.pending.delete(c);
+        }
+        return out;
+    }
+
+    /** Запит вдався: лічильник помилок скинуто; якщо перед цим клієнт був «offline» через помилки — прибрати «немає зв'язку». */
+    _recovered() {
+        this.errors = 0;
+        if (!this._offByErr) {
+            return;
+        }
+        this._offByErr = false;
+        this.degraded = this._busDown;
+        clearInterval(this.poller);
+        this.poller = null;
+        if (this.kiosk || this.busOff || !this.bus) {
+            this._startPoll(this.refreshS);
+            this._setState("polling");
+        } else if (this._busDown) {
+            this._startPoll(POLL_OFFLINE_S);
+            this._setState("polling");
+        } else {
+            this._setState("live");
+        }
+    }
+
+    /** Повне перечитування /data замість дельти (після серії помилок): скидає `pending`, оновлює `lastTs`. */
+    async _fullReload() {
+        const snapshot = [...this.pending];
+        let full;
+        try {
+            full = await this.loadData();
+        } catch {
+            return false;
+        }
+        for (const c of snapshot) {
+            this.pending.delete(c);
+        }
+        this._recovered();
+        this.cb?.({ full });
+        return true;
+    }
+
+    async _failed(err) {
         this.errors++;
         if (err.status === 429 && this.kiosk) {
             this.refreshS *= 2;
@@ -345,11 +416,22 @@ export class DataClient {
                 this.reload();
                 return;
             }
-        } else if (this.errors >= 5) {
-            this.degraded = true;
-            this._setState("offline");
-            this._startPoll(POLL_OFFLINE_S);
-            return;
+        } else {
+            // 4xx (крім 429) повтор не лікує — сервер не прийме ті самі коди; повне оновлення їх покриває
+            const refused = err.status >= 400 && err.status < 500 && err.status !== 429;
+            if (refused) {
+                this.pending.clear();
+            }
+            if ((refused || this.errors >= FULL_RELOAD_AFTER) && (await this._fullReload())) {
+                return;
+            }
+            if (this.errors >= 5) {
+                this._offByErr = true;
+                this.degraded = true;
+                this._setState("offline");
+                this._startPoll(POLL_OFFLINE_S);
+                return;
+            }
         }
         const backoff = Math.min(60, 2 ** this.errors);
         clearTimeout(this.timer);

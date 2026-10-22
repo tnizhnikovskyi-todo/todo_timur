@@ -24,6 +24,8 @@ SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
 SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
 MAX_CODES = 200
+# /delta: клієнт у бекенді накопичує коди з повідомлень шини; запас, щоб довгий день не давав 400 (клієнт шле шматками ≤ 200)
+MAX_DELTA_CODES = 2000
 GROUP_USER = "td_factory3d.group_td_user"
 GROUP_STOCK = "stock.group_stock_user"
 GROUP_MANAGER = "td_factory3d.group_td_manager"
@@ -129,7 +131,7 @@ class F3dViewerController(http.Controller):
             since = kw.get("since")
             if not since or not SINCE_RE.match(since):
                 raise BadRequest("since")
-            codes = parse_codes(kw.get("codes"))
+            codes = parse_codes(kw.get("codes"), limit=MAX_DELTA_CODES)
             lite = parse_flag(kw.get("lite"), "lite")
             since_dt = dates.parse_iso_utc(since)
         except (BadRequest, ValueError) as e:
