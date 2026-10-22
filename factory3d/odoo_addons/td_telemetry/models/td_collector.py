@@ -1,12 +1,17 @@
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
+
+from ..tools.locking import CONTENTION_ERRORS, lock_skip_locked
+
+_logger = logging.getLogger(__name__)
 
 GROUP_ADMIN = "td_factory3d.group_td_admin"
 TOUCH_INTERVAL_PARAM = "td.telemetry.touch_interval_s"
@@ -271,13 +276,37 @@ class F3dCollector(models.Model):
 
     @api.model
     def _cron_offline(self):
-        """R-25: онлайн-колектор без контакту > 3·status_interval_s → offline, його джерела й сигнали."""
+        """R-25: онлайн-колектор без контакту > 3·status_interval_s → offline, його джерела й сигнали.
+
+        DEC-20: колектор із його джерелами обробляється в одному savepoint, без очікування (`SKIP LOCKED`). Колектор
+        чи джерело, зайняті паралельною транзакцією (push) або змінені нею після знімка, — не помилка: колектор
+        лишається `online` і потрапить до наступного запуску (хвилина), стан джерел не розходиться зі станом
+        колектора. Сигнали, зайняті іншою транзакцією, пропускаються (їх візьме `_cron_stale` за таймаутом).
+        """
         now = fields.Datetime.now()
-        self.env.cr.execute("DELETE FROM td_collector_push WHERE ts < %s", (now - timedelta(seconds=RATE_KEEP_S),))
-        for col in self.sudo().search([("state", "=", "online"), ("last_seen", "!=", False)]):
-            if col.last_seen < now - timedelta(seconds=3 * col.status_interval_s):
-                col.write({"state": "offline"})
-                sources = col.source_ids.filtered(lambda s: s.state in ("online", "error"))
-                if sources:
-                    sources.write({"state": "offline"})
-                    sources.signal_ids._mark_stale("колектор офлайн")
+        cr = self.env.cr
+        cr.execute("DELETE FROM td_collector_push WHERE ts < %s", (now - timedelta(seconds=RATE_KEEP_S),))
+        cols = self.sudo().search([("state", "=", "online"), ("last_seen", "!=", False)])
+        for col in cols.filtered(lambda c: c.last_seen < now - timedelta(seconds=3 * c.status_interval_s)).sorted("id"):
+            try:
+                with cr.savepoint():
+                    locked = lock_skip_locked(col)
+                    if not locked or locked.state != "online":
+                        continue
+                    sources = col.source_ids.filtered(lambda s: s.state in ("online", "error"))
+                    if sources and len(lock_skip_locked(sources)) < len(sources):
+                        _logger.info("td.collector %s: джерело зайняте, офлайн повторить крон", col.code)
+                        continue
+                    col.write({"state": "offline"})
+                    if sources:
+                        sources.write({"state": "offline"})
+                        signals = sources.signal_ids
+                        signals.with_context(td_skip_locked=True)._mark_stale("колектор офлайн")
+                        if pending := signals.filtered(lambda s: s.status not in ("unknown", "stale")):
+                            _logger.info(
+                                "td.collector %s: сигналів зайнято %d, stale за таймаутом", col.code, len(pending)
+                            )
+            except CONTENTION_ERRORS as exc:
+                _logger.info(
+                    "td.collector %s: паралельне оновлення (%s), офлайн повторить крон", col.code, type(exc).__name__
+                )

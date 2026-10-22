@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -10,8 +11,11 @@ from ..tools import address as address_tools
 from ..tools import sim_catalog
 from ..tools import thresholds
 from ..tools.ingest import STATUS_LABELS, Ingester
+from ..tools.locking import CONTENTION_ERRORS, lock_skip_locked
 from ..tools.titles import fmt_num, render_title
 from .td_source import F3dSource
+
+_logger = logging.getLogger(__name__)
 
 KYIV = ZoneInfo("Europe/Kyiv")
 ETAG_FIELDS = {
@@ -591,16 +595,40 @@ class F3dSignal(models.Model):
         return max(periods * p, min_s)
 
     def _mark_stale(self, reason):
+        """Сигнали → `stale` («Немає даних»); уже `unknown`/`stale` пропускаються (пишуться лише змінені значення).
+
+        DEC-20: з контекстом `td_skip_locked` (його ставить крон) рядки, зайняті паралельною транзакцією (push,
+        інший крон) або змінені нею після знімка, пропускаються без очікування й без помилки; кожен сигнал — у
+        власному savepoint. Пропущений сигнал лишається у попередньому статусі й потрапить до наступного запуску
+        `_cron_stale`. Без контексту (запити API, дії користувача) поведінка незмінна.
+        """
         now = fields.Datetime.now()
-        for rec in self:
+        skip_locked = self.env.context.get("td_skip_locked")
+        for rec in lock_skip_locked(self) if skip_locked else self:
             if rec.status in ("unknown", "stale"):
                 continue
-            rec.sudo().with_context(mail_notrack=True).write({"status": "stale", "status_since": now})
-            rec.message_post(body=_("Немає даних: %s", reason), subtype_xmlid="mail.mt_note")
+            if not skip_locked:
+                rec._td_write_stale(reason, now)
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    rec._td_write_stale(reason, now)
+            except CONTENTION_ERRORS as exc:
+                _logger.info(
+                    "td.signal %s: паралельне оновлення (%s), stale повторить крон", rec.code, type(exc).__name__
+                )
+
+    def _td_write_stale(self, reason, now):
+        self.sudo().with_context(mail_notrack=True).write({"status": "stale", "status_since": now})
+        self.message_post(body=_("Немає даних: %s", reason), subtype_xmlid="mail.mt_note")
 
     @api.model
     def _cron_stale(self):
-        """R-07: сигнали без свіжих показань → stale; далі колектори офлайн (R-25)."""
+        """R-07: сигнали без свіжих показань → stale; далі колектори офлайн (R-25).
+
+        DEC-20: сигнали й колектори, зайняті паралельною транзакцією, пропускаються до наступного запуску
+        (`td_skip_locked`), `SerializationFailure` не валить крон.
+        """
         now = fields.Datetime.now()
         min_s = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.stale_min_s", "60") or 60)
         local = self.env["td.source"]._td_local_types()
@@ -614,7 +642,7 @@ class F3dSignal(models.Model):
             limit=2000,
         )
         stale = cands.filtered(lambda s: s.last_ts < now - timedelta(seconds=s._td_stale_after()))
-        stale._mark_stale("timeout")
+        stale.with_context(td_skip_locked=True)._mark_stale("timeout")
         self.env["td.collector"]._cron_offline()
 
     # --- шина, дії -----------------------------------------------------------------------------------
