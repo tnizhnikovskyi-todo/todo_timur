@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import requests
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -106,6 +106,11 @@ class TdClaudeAgent(models.Model):
     # ------------------------------------------------------------------
     # Створення агента для поточного користувача
     # ------------------------------------------------------------------
+    @api.model
+    def _td_check_agent_user(self):
+        if not self.sudo().with_context(active_test=False).search_count([("agent_user_id", "=", self.env.uid)]):
+            raise AccessError(_("Дія доступна лише користувачам-агентам Claude."))
+
     @api.model
     def _td_unique_login(self, owner):
         base = "claude." + re.sub(r"[^a-z0-9._@+-]", "-", (owner.login or str(owner.id)).lower())

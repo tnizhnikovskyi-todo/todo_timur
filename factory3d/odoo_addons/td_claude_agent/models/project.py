@@ -1,5 +1,7 @@
 import logging
 
+from markupsafe import Markup
+
 from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
@@ -9,6 +11,15 @@ class ProjectProject(models.Model):
     _inherit = "project.project"
 
     td_claude_context = fields.Html(string="Контекст проєкту для Claude")
+
+    def td_claude_append_context(self, text):
+        """Агент дописує пункт у контекст проєкту (без права змінювати сам проєкт)."""
+        self.ensure_one()
+        self.env["td.claude.agent"]._td_check_agent_user()
+        self.check_access("read")
+        entry = Markup("<p>%s — %s</p>") % (fields.Date.context_today(self), text or "")
+        self.sudo().td_claude_context = Markup(self.td_claude_context or "") + entry
+        return True
 
 
 class ProjectTask(models.Model):

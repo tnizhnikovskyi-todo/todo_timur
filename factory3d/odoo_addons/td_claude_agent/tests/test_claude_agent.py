@@ -325,3 +325,18 @@ class TestClaudeAgent(TransactionCase):
         self.assertFalse(self.other.td_claude_has_agent)
         self.other.with_user(self.other).action_td_create_claude_agent()
         self.assertTrue(self.other.td_claude_has_agent)
+
+    def test_agent_post_html_and_context(self):
+        task = self.task.with_user(self.agent_user)
+        msg_id = task.td_claude_post("<p>Готово</p><ul><li>#7</li></ul><script>x</script>", [self.owner.partner_id.id])
+        body = str(self.env["mail.message"].browse(msg_id).body)
+        self.assertIn("<li>#7</li>", body)
+        self.assertNotIn("&lt;p&gt;", body)
+        self.assertNotIn("<script>", body)
+        with self.assertRaises(AccessError):
+            self.task.with_user(self.other).td_claude_post("<p>x</p>")
+        self.project.with_user(self.agent_user).td_claude_append_context("рішення <b>A</b>")
+        ctx = str(self.project.td_claude_context)
+        self.assertIn("рішення &lt;b&gt;A&lt;/b&gt;", ctx)
+        with self.assertRaises(AccessError):
+            self.project.with_user(self.other).td_claude_append_context("x")

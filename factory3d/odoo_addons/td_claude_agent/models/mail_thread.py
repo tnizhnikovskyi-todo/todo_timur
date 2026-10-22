@@ -1,6 +1,10 @@
 import logging
 
-from odoo import models
+from markupsafe import Markup
+
+from odoo import _, models
+from odoo.exceptions import AccessError
+from odoo.tools import html_sanitize
 
 _logger = logging.getLogger(__name__)
 
@@ -30,3 +34,15 @@ class MailThread(models.AbstractModel):
         if not agent or agent.agent_user_id.partner_id not in message.partner_ids:
             return
         self.env["td.claude.request"]._td_create(agent, "mention", record=self, message=message)
+
+    def td_claude_post(self, body, partner_ids=None):
+        """Відповідь агента в чатер (через RPC): HTML після санітизації, а не екранований текст."""
+        self.ensure_one()
+        self.env["td.claude.agent"]._td_check_agent_user()
+        message = self.message_post(
+            body=Markup(html_sanitize(body or "")),
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+            partner_ids=partner_ids or [],
+        )
+        return message.id
