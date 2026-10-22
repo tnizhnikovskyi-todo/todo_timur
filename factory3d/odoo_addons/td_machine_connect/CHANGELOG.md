@@ -1,5 +1,16 @@
 # Changelog
 
+## 19.0.1.4.2
+- Паралельні транзакції (DEC-20): щохвилинні крони (такт верстатів, OEE, диспетчер живого виробництва, stale-крон телеметрії) і push більше не падають
+  на `SerializationFailure`/`LockNotAvailable`/`DeadlockDetected` у `td.machine`. `_td_lock_skip_locked` у REPEATABLE READ, крім зайнятих рядків, пропускає й
+  змінені паралельною транзакцією після знімки (пачка блокується по одному рядку у власних малих savepoint); `_td_mark_nodata` не чекає зайнятого верстата
+  і повертає лише оброблені; `td.signal._mark_stale` для сигналів стану верстатів працює по одному: зайнятий верстат лишає сигнал у попередньому статусі,
+  тож повторить наступний `_cron_stale`. `_td_dispatch`, `_cron_tick`, `_cron_oee` логують конкуренцію одним рядком WARNING без трейсбека, а не `ERROR`
+  (у `_td_dispatch` — ключ `locked` у результаті), SQL блокувань не пише «bad query». Автозавершення за простоєм бере `FOR UPDATE SKIP LOCKED` на завдання
+  (`_td_lock_wo`): зайняте завдання завершить наступний такт. OEE пише `oee_shift_id` лише при зміні посилання (раз на зміну, а не кожні 5 хв).
+- Тести: `TestLockContention`, `TestContentionHandling`, `TestIdleFinishLockedWorkorder` (`tests/test_concurrency.py`). Тести 3D «Простої, ₴»
+  (`td_machine_connect_viewer3d`, `TestDowntimeCostPayload`) приведено до вартості за поточну київську добу (фіксований «зараз», цілодобовий календар РЦ).
+
 ## 19.0.1.4.1
 - 3D «Простої, ₴»: вартість простоїв за сьогодні (`_td_day_start`), узгоджено з «OEE за зміну» в картці; плитка й звіт — як раніше (місяць).
 

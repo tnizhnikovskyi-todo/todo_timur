@@ -1,12 +1,15 @@
-"""DEC-19: порядок блокувань, SKIP LOCKED у кроні такту, кількість UPDATE верстата в push-шляху."""
+"""DEC-19/20: порядок блокувань, SKIP LOCKED у кроні такту, кількість UPDATE верстата в push-шляху,
+паралельна транзакція (зайнятий або змінений після знімка рядок) — пропуск до наступного такту, а не помилка."""
 
 import time
 from unittest.mock import patch
 
-from odoo import SUPERUSER_ID, api, sql_db
+from psycopg2 import errors as pg_errors
+
+from odoo import SUPERUSER_ID, api, fields, sql_db
 from odoo.tests import TransactionCase, tagged
 
-from .common import P, F3DMachineCase
+from .common import P, F3DMachineCase, at
 
 TAGS = ("post_install", "-at_install", "f3d", "f3d_machine_connect")
 MODEL = "odoo.addons.td_machine_connect.models.td_machine"
@@ -115,9 +118,8 @@ class TestTickOrder(F3DMachineCase):
             self.assertIn("order by id for update skip locked", " ".join(q.lower().split()))
 
 
-@tagged(*TAGS)
-class TestTickSkipLocked(TransactionCase):
-    """Крон не чекає рядка верстата, зайнятого іншою транзакцією (push), і обробляє решту.
+class RealDbCase(TransactionCase):
+    """Верстати `LK-0…2`, закомічені через справжнє з'єднання.
 
     Потрібне друге справжнє з'єднання: `registry.cursor()` у тесті — TestCursor на тому самому з'єднанні (блокування
     власної сесії не конфліктують), тому фікстури комітяться через `sql_db.db_connect().cursor()` і прибираються
@@ -147,6 +149,23 @@ class TestTickSkipLocked(TransactionCase):
             env["mrp.workcenter"].browse(self.wc_ids).exists().unlink()
             env["ir.config_parameter"].set_param(P + "read_enabled", self._old_param or False)
             env.ref("td_machine_connect.source_mc_derived").write({"state": self._old_source_state})
+
+    def _snapshot_cursor(self):
+        """Окрема транзакція REPEATABLE READ, що вже взяла знімку (як крон, який щойно почав роботу)."""
+        cr = self.db.cursor()
+        self.addCleanup(cr.close)
+        cr.execute("SELECT count(*) FROM td_machine")
+        return cr
+
+    def _commit_update(self, machine_id):
+        """Інша транзакція (push) змінює верстат і комітить — рядок вільний, але новіший за знімку."""
+        with self.db.cursor() as cr:
+            cr.execute("UPDATE td_machine SET pieces_last = pieces_last + 1 WHERE id = %s", [machine_id])
+
+
+@tagged(*TAGS)
+class TestTickSkipLocked(RealDbCase):
+    """Крон не чекає рядка верстата, зайнятого іншою транзакцією (push), і обробляє решту."""
 
     def _tick(self):
         """`_cron_tick` на окремому з'єднанні; повертає (id оброблених верстатів, тривалість, с)."""
@@ -179,3 +198,158 @@ class TestTickSkipLocked(TransactionCase):
         seen, _elapsed = self._tick()
         self.assertTrue({first, locked, last} <= set(seen))
         self.assertEqual(seen, sorted(seen))  # стабільний порядок
+
+
+@tagged(*TAGS)
+class TestLockContention(RealDbCase):
+    """DEC-20: верстат, змінений паралельною транзакцією після знімки REPEATABLE READ, пропускається (не помилка)."""
+
+    def test_skip_locked_survives_serialization_failure(self):
+        first, changed, last = self.machine_ids
+        cr = self._snapshot_cursor()
+        self._commit_update(changed)
+        machines = api.Environment(cr, SUPERUSER_ID, {})["td.machine"].browse(self.machine_ids)
+        with self.assertRaises(pg_errors.SerializationFailure), cr.savepoint(flush=False):  # без обробки впав би крон
+            cr.execute(
+                "SELECT id FROM td_machine WHERE id IN %s FOR UPDATE SKIP LOCKED",
+                (tuple(self.machine_ids),),
+                log_exceptions=False,
+            )
+        self.assertEqual(machines._td_lock_skip_locked().ids, [first, last])
+        self.assertEqual(machines.browse(changed)._td_lock_skip_locked().ids, [])  # змінений — до наступного такту
+
+    def test_skip_locked_still_skips_locked_rows(self):
+        first, locked, last = self.machine_ids
+        holder = self.db.cursor()
+        self.addCleanup(holder.close)
+        holder.execute("SELECT id FROM td_machine WHERE id = %s FOR UPDATE", [locked])
+        cr = self._snapshot_cursor()
+        machines = api.Environment(cr, SUPERUSER_ID, {})["td.machine"].browse(self.machine_ids)
+        self.assertEqual(machines._td_lock_skip_locked().ids, [first, last])
+
+    def test_mark_nodata_skips_busy_machines(self):
+        """`_td_mark_nodata` (крон stale) не чекає зайнятого й не пробиває змінений рядок: повертає лише оброблені."""
+        first, locked, changed = self.machine_ids
+        holder = self.db.cursor()
+        self.addCleanup(holder.close)
+        holder.execute("SELECT id FROM td_machine WHERE id = %s FOR UPDATE", [locked])
+        cr = self._snapshot_cursor()
+        self._commit_update(changed)
+        cr.execute("SET lock_timeout = '3s'")  # без SKIP LOCKED тест впав би помилкою, а не завис
+        machines = api.Environment(cr, SUPERUSER_ID, {})["td.machine"].browse(self.machine_ids)
+        started = time.monotonic()
+        done = machines._td_mark_nodata(fields.Datetime.now(), "timeout")
+        self.assertLess(time.monotonic() - started, 3)
+        self.assertEqual(done.ids, [first])
+
+
+@tagged(*TAGS)
+class TestContentionHandling(F3DMachineCase):
+    """DEC-20: паралельна транзакція — пропуск з повтором наступним тактом, а не `ERROR` із трейсбеком."""
+
+    def test_dispatch_contention_is_skipped_not_error(self):
+        """Push: верстат, який не вдалось заблокувати (SerializationFailure), пропускається; решта обробляється."""
+        Machine = self.registry["td.machine"]
+        orig = Machine._td_lock
+        busy = self.m_io
+
+        def lock(rec):
+            if rec == busy:
+                raise pg_errors.SerializationFailure("could not serialize access due to concurrent update")
+            return orig(rec)
+
+        readings = self.io(busy, "10:00:00", run=True) + self.ua(self.m_ua, "10:00:00", state="READY")
+        with patch.object(Machine, "_td_lock", lock), self.assertLogs(MODEL, "WARNING") as logs:
+            stats = self.env["td.machine"]._td_dispatch(readings, "collector")
+        self.assertEqual((stats["errors"], stats["locked"], stats["machines"]), ([], [busy.code], 1))
+        self.assertTrue(all(rec.levelname == "WARNING" and not rec.exc_info for rec in logs.records))
+        self.env.invalidate_all()
+        self.assertEqual((self.m_ua.state, busy.state), ("idle", "nodata"))  # пропущений верстат не зачеплений
+
+    def test_tick_contention_skips_machine_and_goes_on(self):
+        """Такт: SerializationFailure в одному верстаті не зупиняє решту й не пишеться як помилка."""
+        Machine = self.registry["td.machine"]
+        busy = self.m_ua
+        seen = []
+        orig = Machine._td_tick_extra
+
+        def tick_extra(rec, now):
+            if rec == busy:
+                raise pg_errors.SerializationFailure("could not serialize access due to concurrent update")
+            seen.extend(rec.ids)
+            return orig(rec, now)
+
+        with patch.object(Machine, "_td_tick_extra", tick_extra), self.assertLogs(MODEL, "WARNING") as logs:
+            self.tick("10:30:30")
+        self.assertIn(self.m_io.id, seen)
+        self.assertNotIn(busy.id, seen)
+        self.assertEqual([rec.levelname for rec in logs.records], ["WARNING"])
+        self.assertFalse(logs.records[0].exc_info)
+
+    def test_mark_stale_busy_machine_retried_by_cron(self):
+        """Верстат зайнятий: сигнал лишається у статусі `ok` (його візьме наступний `_cron_stale`), потім — nodata."""
+        m, sig = self.m_ua, self.sig_ua_state
+        self.feed(self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC"))
+        self.assertEqual((m.state, sig.status), ("working", "ok"))
+        Machine = self.registry["td.machine"]
+        with patch.object(Machine, "_td_lock_skip_locked", lambda rec: rec.browse()):
+            sig._mark_stale("timeout")
+        self.env.invalidate_all()
+        self.assertEqual((m.state, sig.status), ("working", "ok"))
+        sig._mark_stale("timeout")
+        self.env.invalidate_all()
+        self.assertEqual((m.state, sig.status), ("nodata", "stale"))
+
+    def test_oee_cron_writes_machine_link_once(self):
+        """OEE: `oee_shift_id` пишеться лише при зміні посилання; наступний запуск не оновлює рядок верстата."""
+        self.env["td.machine.state.log"].sudo().create(
+            {
+                "machine_id": self.m_saw.id,
+                "state": "working",
+                "date_start": self.kt("07:00"),
+                "date_end": self.kt("10:00"),
+            }
+        )
+        self.oee_tick("10:30")
+        self.assertTrue(self.m_saw.oee_shift_id)
+        with _SqlSpy() as spy:
+            self.oee_tick("10:35")
+        self.assertEqual(spy.like('update "td_machine"'), [])
+
+    def test_oee_cron_skips_locked_machine_row(self):
+        """OEE: зайнятий рядок верстата не блокує крон; посилання на зміну виправить наступний запуск."""
+        Machine = self.registry["td.machine"]
+        self.env["td.machine.state.log"].sudo().create(
+            {
+                "machine_id": self.m_saw.id,
+                "state": "working",
+                "date_start": self.kt("07:00"),
+                "date_end": self.kt("10:00"),
+            }
+        )
+        with patch.object(Machine, "_td_lock_skip_locked", lambda rec: rec.browse()):
+            self.oee_tick("10:30")
+        self.assertFalse(self.m_saw.oee_shift_id)
+        self.oee_tick("10:35")
+        self.assertTrue(self.m_saw.oee_shift_id)
+
+
+@tagged(*TAGS)
+class TestIdleFinishLockedWorkorder(F3DMachineCase):
+    def test_idle_finish_waits_for_busy_workorder(self):
+        """Автозавершення за простоєм: завдання зайняте — крок пропущено, наступний такт завершує."""
+        self.enable_autostart()
+        m = self.m_io
+        wo = self.make_mo(self.wc_io, qty=8).workorder_ids[:1]
+        with at("10:31:05"):
+            self.feed(self.io(m, "10:31:00", run=True, pieces=0))
+        with at("10:35:05"):
+            self.feed(self.io(m, "10:35:00", pieces=8))
+        with at("10:40:00"):
+            self.feed(self.io(m, "10:40:00", run=False))
+        Machine = self.registry["td.machine"]
+        with patch.object(Machine, "_td_lock_wo", lambda rec, wo: False):
+            self.tick("10:41:01")
+        self.assertEqual(wo.state, "progress")
+        self.tick("10:42:01")
+        self.assertEqual((wo.state, wo.qty_produced), ("done", 8))

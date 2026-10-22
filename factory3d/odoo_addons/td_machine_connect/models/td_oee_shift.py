@@ -6,7 +6,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError
 
 from ..tools import oee, ppt
-from .td_machine import param
+from .td_machine import CONTENTION_ERRORS, param
 
 _logger = logging.getLogger(__name__)
 
@@ -159,6 +159,10 @@ class F3dOeeShift(models.Model):
             try:
                 with self.env.cr.savepoint():
                     self._td_cron_machine(machine, today)
+            except CONTENTION_ERRORS as exc:  # DEC-20: наступний запуск (через 5 хв) повторить
+                _logger.warning(
+                    "OEE: верстат %s пропущено, паралельне оновлення (%s)", machine.code, type(exc).__name__
+                )
             except Exception:
                 _logger.exception("OEE: помилка розрахунку верстата %s", machine.code)
         return True
@@ -173,7 +177,9 @@ class F3dOeeShift(models.Model):
         rec = self.sudo().search([("machine_id", "=", machine.id), ("date", "=", today)], limit=1)
         if not rec or rec.state != "closed":
             rec = self._td_compute(machine, today)
-        if rec:
+        # DEC-20: рядок верстата оновлює ще й такт/push — пишемо лише зміну посилання (раз на зміну, не кожні 5 хв)
+        # і не чекаємо зайнятого рядка: посилання виправить наступний запуск.
+        if rec and machine.oee_shift_id != rec and machine._td_lock_skip_locked():
             machine.write({"oee_shift_id": rec.id})
 
     def action_recompute(self):
