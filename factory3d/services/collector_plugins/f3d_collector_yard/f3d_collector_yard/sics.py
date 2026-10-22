@@ -131,7 +131,7 @@ def _schema_errors(schema: dict, inst: Any, prefix: str) -> list[str]:
 
 class SicsPlugin(SourcePlugin):
     type: ClassVar[str] = "sics"
-    version: ClassVar[str] = "0.1.0"
+    version: ClassVar[str] = "0.1.1"
     push_mode: ClassVar[bool] = False
     address_schema: ClassVar[dict] = _load("address.sics.json")
     params_schema: ClassVar[dict] = _load("params.sics.json")
@@ -151,6 +151,9 @@ class SicsPlugin(SourcePlugin):
         self._lock = asyncio.Lock()
         self._stream_task: asyncio.Task | None = None
         self._stream_error: str | None = None
+        self._error_raised = False  # розрив потоку вже віддано планувальнику як PollError
+        self._conn_lock = asyncio.Lock()
+        self._connected_at = 0.0  # time.monotonic() останнього connect() — пільговий період на перший кадр
         self._latest: Frame | None = None
         self._latest_ts: datetime | None = None
         self._returned_ts: datetime | None = None
@@ -221,7 +224,9 @@ class SicsPlugin(SourcePlugin):
         except (OSError, TimeoutError) as exc:
             raise ConnectError("SICS %s:%s: немає з'єднання" % (self.host, self.port)) from exc
         self._connected = True
+        self._connected_at = time.monotonic()
         self._stream_error = None
+        self._error_raised = False
         self._latest = self._latest_ts = self._returned_ts = None
         self._pending.clear()
         try:
@@ -253,6 +258,20 @@ class SicsPlugin(SourcePlugin):
                     return
         except TimeoutError:
             self._warn("reset", "SICS: немає відповіді на @")
+
+    async def _ensure_connected(self) -> None:
+        """R-14: розрив (потік, `SI`, перезапуск емулятора) ядро не бачить — `Registry.connected` лишається, тож
+        `connect()` воно вже не викличе; плагін відновлюється сам на наступному `poll` (як `modbus_tcp`)."""
+        if self._connected:
+            return
+        async with self._conn_lock:
+            if self._connected:
+                return
+            await self.disconnect()
+            try:
+                await self.connect()
+            except ConnectError as exc:
+                raise PollError(str(exc)) from exc
 
     async def disconnect(self) -> None:
         task, self._stream_task = self._stream_task, None
@@ -304,6 +323,10 @@ class SicsPlugin(SourcePlugin):
     # ------------------------------------------------------------------ опитування
     async def poll(self, signals: Any) -> list[Reading]:
         try:
+            if self.mode == "stream" and self._stream_error and not self._error_raised:
+                self._error_raised = True  # першу помилку розриву віддаємо одразу, відновлення — на наступному poll
+                raise PollError(self._stream_error)
+            await self._ensure_connected()
             if self.mode == "stream":
                 frame, ts = self._poll_stream()
             else:
@@ -323,6 +346,8 @@ class SicsPlugin(SourcePlugin):
         if not self._connected:
             raise PollError("SICS: немає з'єднання")
         now = datetime.now(UTC)
+        if self._latest_ts is None and time.monotonic() - self._connected_at <= self.timeout_s:
+            return None, now  # щойно (пере)підключились: перший кадр ще в дорозі
         if self._latest_ts is None or (now - self._latest_ts).total_seconds() > self.timeout_s:
             raise PollError("SICS: немає кадрів %s с" % self.timeout_s)
         if self._latest_ts == self._returned_ts:

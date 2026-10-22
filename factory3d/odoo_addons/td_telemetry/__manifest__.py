@@ -22,7 +22,7 @@ Requirements and notes
 * Readings are delivered by a separate collector service (Modbus TCP, MQTT, HTTP push and BACnet/IP plugins). The collector is not part of this module and runs on the customer site.
 * Reading and writing are controlled by system parameters; writing to devices is disabled by default.
 """,
-    "version": "19.0.1.1.2",
+    "version": "19.0.1.1.3",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
