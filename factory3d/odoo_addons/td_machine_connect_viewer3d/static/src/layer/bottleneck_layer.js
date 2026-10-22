@@ -8,6 +8,8 @@
 // Усе (коробки, бейдж, підпис) — одна група-власник `st.group`: при кожному оновленні стара група знімається цілком, а її CSS2D-підпис
 // видаляється з DOM явно (`removed` у three спрацьовує лише на самому підписі, а не на групі, що його несе). Підпис один — біля поточного
 // вузького місця; стопка й підпис завжди в межах ділянки (`areaBox`).
+// Стопка й підпис — лише для справжнього вузького місця (вердикт `growing`/`queue`); для «імовірного» (`load`/`low`: низьке завантаження)
+// їх немає, картка верстата нейтральна («Найзавантаженіша ділянка зараз»). Підказка «Що якщо» прихована, коли приріст випуску ≤ 0.
 // Один на весь документ: посилання на живу групу (`LIVE.group`) лежить на `globalThis`, а не в `states` (стан за сценою) — воно не губиться,
 // коли стан розширення втрачено, з'явилась друга сцена з іншим api чи модуль завантажено вдруге; стара група з будь-якої сцени знімається
 // перед новою, а DOM підмітається по всьому документу (не лише в шарі підписів ядра). Групу, знятую зі сцени ззовні, перебудовуємо.
@@ -21,7 +23,8 @@ export const STACK_NAME = "td_bottleneck_stack";
 export const MAX_BOXES = 12;
 const BOX = { w: 1.3, h: 0.22, d: 0.9, gap: 0.04 };
 const GAP = 0.9; // м від краю верстата-входу до центра стопки (півглибини стопки 0,45 + запас)
-const PROBABLE = new Set(["load", "low"]); // вердикти, коли вузьке місце «імовірне, не виражене»
+const PROBABLE = new Set(["load", "low"]); // вердикти, коли вузьке місце «імовірне, не виражене»: стопки й підпису немає, картка нейтральна
+const REAL = new Set(["growing", "queue"]); // вердикти справжнього вузького місця: лише для них червона стопка, підпис і «що якщо»
 const RED = "#e74c3c";
 /** Жива група стопки (одна на документ, з будь-якої сцени): її знімає наступне `clear`, хай яке розширення чи api її створило. */
 const LIVE = (globalThis.__tdBottleneckLive ??= { group: null });
@@ -31,6 +34,7 @@ const VERDICT_TEXT = {
     load: "черги немає: не виражене",
     low: "завантаження низьке: імовірне",
 };
+const PROBABLE_TEXT = { load: "черги немає", low: "завантаження низьке" }; // нейтральна позначка картки для невираженого вузького місця
 
 /** Вузол `flow` верстата або `null` (немає ключа: старий сервер, верстат без ділянки). */
 export function flowOf(D, code) {
@@ -54,7 +58,25 @@ export function boxCount(queue) {
     return Math.max(0, Math.min(MAX_BOXES, n));
 }
 
-/** Підпис біля бейджа: «Вузьке місце · черга N»; для невираженого вузького місця (`load`, `low`) — «Ймовірне вузьке місце · черга N». */
+/** Справжнє вузьке місце (`growing`, `queue`): лише воно малюється стопкою й підписом; для `load`/`low` («імовірне») — ні. */
+export function isRealBottleneck(info) {
+    return !!info && REAL.has(info.verdict);
+}
+
+/**
+ * Підказка «що якщо» з payload або `""`: прихована, коли приріст випуску не додатний («→ +0 % випуску» — підказка нічого не обіцяє).
+ * Текст без розпізнаного приросту лишається як є.
+ */
+export function hintOf(info) {
+    const hint = typeof info?.hint === "string" ? info.hint.trim() : "";
+    const m = /→\s*([+\-−]?)\s*(\d+(?:[.,]\d+)?)\s*%\s*випуску/.exec(hint);
+    if (!hint || (m && (m[1] === "-" || m[1] === "−" || !(parseFloat(m[2].replace(",", ".")) > 0)))) {
+        return "";
+    }
+    return hint;
+}
+
+/** Підпис біля бейджа: «Вузьке місце · черга N»; для невираженого вузького місця (`load`, `low`) стопки й підпису немає — функція лишається для сумісності. */
 export function labelText(info) {
     const n = Math.round(Number(info?.queue) || 0);
     return (PROBABLE.has(info?.verdict) ? "Ймовірне вузьке місце" : "Вузьке місце") + " · черга " + n;
@@ -69,7 +91,8 @@ export function hoverText(info) {
         "черга " + nf.format(info.queue || 0) + (info.queue_delta ? " (" + (info.queue_delta > 0 ? "↑ +" : "↓ −") + Math.abs(info.queue_delta) + ")" : ""),
         "очікування " + (typeof info.wait_min === "number" ? nf.format(Math.round(info.wait_min)) + " хв" : "—"),
     ];
-    return parts.join(" · ") + (info.hint ? ". Що якщо: " + info.hint : "");
+    const hint = hintOf(info);
+    return parts.join(" · ") + (hint ? ". Що якщо: " + hint : "");
 }
 
 /**
@@ -137,18 +160,26 @@ export function clampToArea(box, x, z) {
 const pct = (v) => (typeof v === "number" ? Math.round(v * 100) + " %" : "—");
 const delta = (d) => (!d ? "" : d > 0 ? " (↑ +" + d + ")" : " (↓ −" + -d + ")");
 
-/** Блок «Вузьке місце» картки верстата (VX-04): показники ділянки; для вузького місця — підказка «що якщо». */
+/**
+ * Блок картки верстата (VX-04): показники ділянки. Справжнє вузьке місце — «Вузьке місце · …» з червоною позначкою і підказкою «що якщо»
+ * (якщо вона обіцяє приріст); невиражене (`load`, `low`) — нейтральний «Найзавантаженіша ділянка зараз» з тими ж показниками, без підказки.
+ */
 export function cardHtml(code, D) {
     const f = flowOf(D, code);
     if (!f) {
         return "";
     }
     const total = new Set(Object.values(D.workcenters || {}).map((w) => w?.flow?.key).filter(Boolean)).size;
-    let h = "<div class=\"o_f3d_sub\">Вузьке місце · " + esc(f.station) + "</div>";
+    const probable = !!f.bottleneck && PROBABLE.has(f.verdict);
+    let h = "<div class=\"o_f3d_sub\">" + (probable ? "Найзавантаженіша ділянка зараз" : "Вузьке місце") + " · " + esc(f.station) + "</div>";
     h += "<div class=\"o_td_bn_flow\" data-station=\"" + esc(f.key) + "\">";
-    h += f.bottleneck
-        ? "<span class=\"o_f3d_chip o_f3d_bad\">Вузьке місце" + (f.verdict ? " · " + esc(VERDICT_TEXT[f.verdict] || f.verdict) : "") + "</span>"
-        : "<span class=\"o_f3d_chip o_f3d_idle\">Не обмежує випуск</span>";
+    if (probable) {
+        h += "<span class=\"o_f3d_chip o_f3d_idle\">" + esc(PROBABLE_TEXT[f.verdict] || f.verdict) + "</span>";
+    } else {
+        h += f.bottleneck
+            ? "<span class=\"o_f3d_chip o_f3d_bad\">Вузьке місце" + (f.verdict ? " · " + esc(VERDICT_TEXT[f.verdict] || f.verdict) : "") + "</span>"
+            : "<span class=\"o_f3d_chip o_f3d_idle\">Не обмежує випуск</span>";
+    }
     h += "<dl class=\"o_f3d_kv\">" +
         "<dt>Завантаження</dt><dd>" + pct(f.load) + "</dd>" +
         "<dt>Черга</dt><dd>" + nf.format(f.queue || 0) + esc(delta(f.queue_delta)) + "</dd>" +
@@ -156,8 +187,9 @@ export function cardHtml(code, D) {
         "<dt>Випуск</dt><dd>" + nf.format(Math.round(f.output || 0)) + "</dd>" +
         "<dt>Рейтинг</dt><dd>" + nf.format(f.rank || 0) + (total ? " з " + nf.format(total) : "") + "</dd>" +
         "</dl>";
-    if (f.bottleneck && f.hint) {
-        h += "<div class=\"o_f3d_hint o_td_bn_hint\">Що якщо: " + esc(f.hint) + "</div>";
+    const hint = f.bottleneck && !probable ? hintOf(f) : "";
+    if (hint) {
+        h += "<div class=\"o_f3d_hint o_td_bn_hint\">Що якщо: " + esc(hint) + "</div>";
     }
     return h + "</div>";
 }
@@ -282,7 +314,7 @@ export class BottleneckExtension {
         const info = bottleneckOf(D);
         const n = info ? boxCount(info.queue) : 0;
         const codes = info ? (info.codes || [info.code]).filter((c) => api.items.get(c)) : [];
-        if (!info || n === 0 || !codes.length) {
+        if (!info || !isRealBottleneck(info) || n === 0 || !codes.length) { // імовірне вузьке місце (load/low) — без стопки й підпису
             this.clear(api);
             return;
         }

@@ -6,7 +6,7 @@ import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import {
     MAX_BOXES, STACK_NAME, areaBox, bottleneckExtension, bottleneckOf, boxCount, cardHtml, clampToArea, entrySpot, flowOf,
-    hoverText, labelText,
+    hintOf, hoverText, isRealBottleneck, labelText,
 } from "@td_machine_connect_viewer3d/layer/bottleneck_layer";
 
 describe.current.tags("desktop");
@@ -182,7 +182,7 @@ test("BN7 дельта із зведенням flow: вузьке місце п�
 
 const labelOf = (viewer) => stackOf(viewer)?.getObjectByName(STACK_NAME + "_text")?.element;
 
-test("BN8 підпис біля бейджа: «Вузьке місце · черга N», при невираженому вузькому місці — «Ймовірне …»; змінюється з вердиктом у дельті", async () => {
+test("BN8 підпис біля бейджа: «Вузьке місце · черга N»; при імовірному вузькому місці (low/load) підпису й стопки немає; повертається з вердиктом у дельті", async () => {
     const { viewer } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ queue: 4 }) }) });
     const el = labelOf(viewer);
     expect(text(el)).toBe("Вузьке місце · черга 4");
@@ -192,10 +192,75 @@ test("BN8 підпис біля бейджа: «Вузьке місце · че�
     expect(labelText({ queue: 2.4, verdict: "queue" })).toBe("Вузьке місце · черга 2");
     expect(labelText({ queue: 2, verdict: "growing" })).toBe("Вузьке місце · черга 2");
     viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "low" } } } });
-    expect(text(labelOf(viewer))).toBe("Ймовірне вузьке місце · черга 4");
+    expect(stackOf(viewer)).toBe(undefined); // імовірне вузьке місце: ні стопки, ні підпису
+    expect(labelOf(viewer)).toBe(undefined);
+    expect(document.querySelectorAll(".o_td_bn_label").length).toBe(0);
     viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "growing", queue: 7 } } } });
     expect(text(labelOf(viewer))).toBe("Вузьке місце · черга 7");
     expect(viewer.scene.children.filter((c) => c.name === STACK_NAME).length).toBe(1); // підпис старої стопки не лишився
+});
+
+test("BN16 імовірне вузьке місце (load/low): жодної стопки й підпису, картка нейтральна; queue/growing — стопка й підпис", async () => {
+    expect(["growing", "queue", "load", "low", undefined].map((verdict) => isRealBottleneck({ verdict }))).toEqual([true, true, false, false, false]);
+    for (const verdict of ["low", "load"]) {
+        const { viewer, el } = await mountViewer({
+            model: "core",
+            mutate: withFlow({ "SAW-1": flow({ verdict, queue: 2, load: 0.24, hint: "+20 % потужності на Розкрій → +0 % випуску, далі обмежує Пакування" }) }),
+        });
+        expect(stackOf(viewer)).toBe(undefined);
+        expect(labelOf(viewer)).toBe(undefined);
+        expect(document.querySelectorAll(".o_td_bn_label").length).toBe(0);
+        viewer.select("SAW-1");
+        const card = text(q(el, ".o_f3d_cardbody"));
+        expect(card.includes("Найзавантаженіша ділянка зараз · Розкрій")).toBe(true);
+        expect(card.includes("Вузьке місце")).toBe(false);
+        expect(card.includes("Що якщо")).toBe(false);
+        expect(q(el, ".o_f3d_cardbody .o_f3d_bad")).toBe(null); // без червоної позначки
+        for (const part of ["Завантаження", "24 %", "Черга", "Очікування", "34 хв", "Випуск", "Рейтинг"]) {
+            expect(card.includes(part)).toBe(true); // показники лишились
+        }
+        viewer.destroy();
+    }
+    for (const verdict of ["queue", "growing"]) {
+        const { viewer } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ verdict, queue: 3 }) }) });
+        expect(boxes(stackOf(viewer)).length).toBe(3);
+        expect(text(labelOf(viewer))).toBe("Вузьке місце · черга 3");
+        viewer.destroy();
+    }
+    // вердикт міняється в дельті: імовірне → стопка зникає (і DOM чистий), справжнє → з'являється
+    const { viewer, el } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ verdict: "low", queue: 2 }) }) });
+    expect(stackOf(viewer)).toBe(undefined);
+    viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "queue" } } } });
+    await renderLabels(viewer, el);
+    expect(boxes(stackOf(viewer)).length).toBe(2);
+    expect(domLabels(el).length).toBe(1);
+    viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "load" } } } });
+    await renderLabels(viewer, el);
+    expect(stackOf(viewer)).toBe(undefined);
+    expect(domLabels(el).length).toBe(0);
+    expect(document.querySelectorAll(".o_td_bn_label").length).toBe(0);
+});
+
+test("BN17 підказка «Що якщо» прихована, коли приріст випуску +0 %: і в картці, і при наведенні", async () => {
+    const zero = "+20 % потужності на Присадка → +0 % випуску, далі обмежує Пакування";
+    expect(hintOf({ hint: zero })).toBe("");
+    expect(hintOf({ hint: "+20 % потужності на Присадка → +0,0 % випуску, інших обмежень у даних немає" })).toBe("");
+    expect(hintOf({ hint: "+20 % потужності на Розкрій → +14 % випуску, далі обмежує Присадка" })).toBe("+20 % потужності на Розкрій → +14 % випуску, далі обмежує Присадка");
+    expect(hintOf({ hint: "+20 % потужності на Розкрій → +0,5 % випуску, далі обмежує Присадка" }).includes("+0,5 %")).toBe(true);
+    expect(hintOf({ hint: "довільний текст без приросту" })).toBe("довільний текст без приросту");
+    expect(hintOf({})).toBe("");
+    // справжнє вузьке місце, але підказка обіцяє +0 %: картка й наведення без «що якщо»
+    const D = { workcenters: { "SAW-1": { flow: flow({ hint: zero }) } } };
+    expect(text(Object.assign(document.createElement("div"), { innerHTML: cardHtml("SAW-1", D) })).includes("Що якщо")).toBe(false);
+    expect(hoverText(flow({ hint: zero })).includes("Що якщо")).toBe(false);
+    const { viewer, el } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ hint: zero }) }) });
+    expect(labelOf(viewer).title.includes("Що якщо")).toBe(false);
+    viewer.select("SAW-1");
+    expect(text(q(el, ".o_f3d_cardbody")).includes("Що якщо")).toBe(false);
+    expect(q(el, ".o_f3d_cardbody .o_td_bn_hint")).toBe(null);
+    // приріст з'явився в дельті — підказка повертається
+    viewer.applyPatch({ workcenters: { "SAW-1": { flow: { hint: "+20 % потужності на Розкрій → +9 % випуску, далі обмежує Присадка" } } } });
+    expect(labelOf(viewer).title.includes("Що якщо: +20 % потужності на Розкрій → +9 % випуску")).toBe(true);
 });
 
 test("BN9 стопка стоїть на підлозі біля входу верстата ділянки, а не посеред проходу; бейдж над нею", async () => {
