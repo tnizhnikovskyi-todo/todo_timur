@@ -174,7 +174,7 @@ class TestDowntimeCost(CostMixin, F3DMachineCase):
         self.assertTrue(self.env["td.downtime"].with_user(self.user_f3d_manager).td_cost_tile())
 
     def test_payload_downtime_cost(self):
-        """DT-3: `workcenters[code].downtime_cost` — сума за місяць; немає в кіоску й без групи менеджера."""
+        """DT-3: `workcenters[code].downtime_cost` — сума за сьогодні; немає в кіоску й без групи менеджера."""
         self.wc_cnc.costs_hour = 600.0
         with at("12:00"):
             self.down(self.m_cnc, "08:00", "09:00", state="confirmed")

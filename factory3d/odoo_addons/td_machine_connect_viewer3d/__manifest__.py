@@ -16,7 +16,7 @@ Key features
 * Plant bottleneck: a red stack of waiting orders in front of the constraining section (height by queue length) and a metrics block in the machine card
 * Gantry plate store: plate stacks under the portal by the real sheet count (height = sheets x thickness, material label), the portal moving to a stack, picking a sheet and carrying it to the cutting machine by job time (live and in the shift replay), cards with the sheet -> cutting map (waste %) -> order chain
 """,
-    "version": "19.0.1.2.6",
+    "version": "19.0.1.2.7",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

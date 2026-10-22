@@ -151,10 +151,10 @@ def build_machines(env, ctx, payload=None):
         [("active", "=", True), ("code", "in", list(wcs))] if not full else [("active", "=", True)]
     )
     if machines:
-        # DT-3: вартість простоїв — управлінські дані: лише менеджеру «3D Завод» і не в кіоску (як `energy_cost`, X-25)
+        # DT-3: вартість простоїв за сьогодні (як «OEE за зміну» в картці) — управлінські дані: лише менеджеру «3D Завод» і не в кіоску (як `energy_cost`, X-25)
         Downtime = env["td.downtime"]
         costs = (
-            Downtime._td_cost_by_workcenter() if not (ctx or {}).get("kiosk") and Downtime._td_cost_can_see() else None
+            Downtime._td_cost_by_workcenter(since=Downtime._td_day_start()) if not (ctx or {}).get("kiosk") and Downtime._td_cost_can_see() else None
         )
         out["workcenters"] = {m.code: _machine_node(env, m, costs) for m in machines}
     if GANTRY in _nodes(payload.get("equipment"), "code") or full:

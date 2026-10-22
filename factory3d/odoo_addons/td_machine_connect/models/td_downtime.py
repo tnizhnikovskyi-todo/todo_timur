@@ -227,6 +227,13 @@ class F3dDowntime(models.Model):
         return first.astimezone(timezone.utc).replace(tzinfo=None)
 
     @api.model
+    def _td_day_start(self):
+        """Початок поточної доби за київським часом як naive UTC (межа «за сьогодні» для 3D)."""
+        now = fields.Datetime.now().replace(tzinfo=timezone.utc).astimezone(KYIV)
+        first = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return first.astimezone(timezone.utc).replace(tzinfo=None)
+
+    @api.model
     def _td_cost_can_see(self):
         return bool(self.env.su or self.env.user.has_group("td_factory3d.group_td_manager"))
 

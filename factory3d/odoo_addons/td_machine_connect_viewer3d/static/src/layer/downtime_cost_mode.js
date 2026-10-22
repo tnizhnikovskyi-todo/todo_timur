@@ -1,7 +1,7 @@
 /** @odoo-module **/
 // DT-5: розширення «Переглядача» (R-26, VX-01…VX-03) — режим розфарбування «Простої, ₴» поруч з «OEE верстатів».
-// Дані — `workcenters[code].downtime_cost` (сума простоїв за місяць; дає провайдер `td_machine_connect`, лише менеджеру
-// «3D Завод» і не в кіоску). Без цього ключа режим схований. Поріг кольору — частка від найбільшої суми за місяць.
+// Дані — `workcenters[code].downtime_cost` (сума простоїв за сьогодні; дає провайдер `td_machine_connect`, лише менеджеру
+// «3D Завод» і не в кіоску). Без цього ключа режим схований. Поріг кольору — частка від найбільшої суми за сьогодні.
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 
@@ -13,7 +13,7 @@ export const BAND = { WARN: 0.25, BAD: 0.6 };
 const COLORS = { ok: "#27ae60", warn: "#f39c12", bad: "#e74c3c" }; // ті самі, що C_OK/C_WARN/C_BAD ядра
 const nf = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
 
-/** Сума простоїв РЦ за місяць або `null` (немає ключа: кіоск, не менеджер, старий сервер). */
+/** Сума простоїв РЦ за сьогодні або `null` (немає ключа: кіоск, не менеджер, старий сервер). */
 export function costOf(D, code) {
     const v = D?.workcenters?.[code]?.downtime_cost;
     return typeof v === "number" ? v : null;
@@ -46,7 +46,7 @@ export function legendHtml(D) {
         "<span class=\"o_f3d_swatch\" style=\"background:var(--f3d-warn)\"></span><span>" + pct(BAND.WARN) + "–" + pct(BAND.BAD) +
         " %</span>" +
         "<span class=\"o_f3d_swatch\" style=\"background:var(--f3d-ok)\"></span><span>до " + pct(BAND.WARN) + " % · без простоїв</span>" +
-        "<span class=\"o_f3d_muted\" style=\"grid-column:1 / -1\">Простої за місяць у гривнях; найбільша сума — " + nf.format(max) + "\u00a0₴</span>";
+        "<span class=\"o_f3d_muted\" style=\"grid-column:1 / -1\">Простої за сьогодні у гривнях; найбільша сума — " + nf.format(max) + "\u00a0₴</span>";
 }
 
 export class DowntimeCostExtension {
@@ -56,7 +56,7 @@ export class DowntimeCostExtension {
         this.mode = { key: MODE_KEY, label: MODE_LABEL, legend: (D) => legendHtml(D), hidden: true };
         this.colorModes = [this.mode];
         this.colors = null;
-        this.max = 0; // найбільша сума за місяць; перераховується в applyData (після кожного патча)
+        this.max = 0; // найбільша сума за сьогодні; перераховується в applyData (після кожного патча)
     }
 
     _colors(api) {
