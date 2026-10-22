@@ -213,6 +213,7 @@ class TdLiveEngine(models.AbstractModel):
                 }
             )
             mo.action_confirm()
+            self._td_cover_mo(mo, release)  # компоненти доступні одразу, а не лише при закритті МО
             mos |= mo
         return so, mos, sum(c[1] for c in costs), sum(c[0] for c in costs)
 

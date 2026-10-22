@@ -417,6 +417,144 @@ class TestLive(TransactionCase):
         for wo in day.production_ids.workorder_ids.filtered(lambda w: w.state == "done"):
             self.assertLessEqual(wo.date_finished, T0 + mins(180))
 
+    # --- компоненти доступні наперед, а не лише при закритті МО -------------------------------------------------
+    def on_hand(self):
+        """Залишки `[завіси, плита]` (кеш `qty_available` скидаємо: квант змінюється поза залежностями)."""
+        self.env.invalidate_all()
+        return (self.hinge | self.board).mapped("qty_available")
+
+    def unreserve(self, day):
+        """Як було до виправлення: рухи компонентів без резерву й без залишків на складі (МО «Недоступно»)."""
+        day.production_ids.move_raw_ids._do_unreserve()
+        Quant = self.env["stock.quant"].sudo()
+        for quant in Quant.search([("product_id", "in", (self.hinge | self.board).ids), ("quantity", "!=", 0)]):
+            Quant._update_available_quantity(
+                quant.product_id, quant.location_id, -quant.quantity, lot_id=quant.lot_id or None
+            )
+        self.assertTrue(all(m.state == "confirmed" for m in day.production_ids.move_raw_ids))
+        self.assertEqual(self.on_hand(), [0.0, 0.0])
+
+    def test_generated_mo_components_are_available_upfront(self):
+        day = self.generate()
+        self.assertTrue(day.production_ids)
+        for mo in day.production_ids:
+            self.assertEqual(mo.state, "confirmed")
+            self.assertEqual(mo.components_availability_state, "available", mo.name)
+            self.assertEqual(mo.reservation_state, "assigned", mo.name)
+            for move in mo.move_raw_ids:
+                self.assertEqual(move.state, "assigned")
+                self.assertAlmostEqual(sum(move.move_line_ids.mapped("quantity")), move.product_uom_qty)
+                if move.product_id.tracking != "none":  # партія — як у `_td_cover_moves`
+                    self.assertTrue(all(line.lot_id.name.startswith("LIVE-") for line in move.move_line_ids))
+
+    def test_tick_covers_unreserved_open_mo_and_is_idempotent(self):
+        day = self.generate()
+        self.unreserve(day)
+        self.assertTrue(all(mo.components_availability_state == "unavailable" for mo in day.production_ids))
+        res = self.at(-60).td_dispatch()  # до початку зміни: подій немає, лише забезпечення
+        self.assertEqual(res["covered"], day.production_count)
+        for mo in day.production_ids:
+            self.assertEqual(mo.components_availability_state, "available", mo.name)
+            self.assertTrue(all(m.state == "assigned" for m in mo.move_raw_ids))
+        stock = self.on_hand()
+        again = self.at(-60).td_dispatch()
+        self.assertEqual(again["covered"], 0)  # забезпечена МО не потрапляє в добірку
+        self.assertEqual(self.on_hand(), stock)  # і склад не росте
+
+    def test_cover_does_not_restock_what_is_on_hand(self):
+        day = self.generate()
+        self.unreserve(day)
+        self.env["stock.quant"].sudo()._update_available_quantity(
+            self.hinge, self.env["stock.warehouse"].search([], limit=1).lot_stock_id, 1000.0
+        )
+        before = self.on_hand()[0]
+        self.assertEqual(before, 1000.0)
+        self.at(-60).td_dispatch()
+        self.assertEqual(self.on_hand()[0], before)  # вистачило наявного: нічого не оприбутковано
+        self.assertTrue(all(m.state == "assigned" for m in day.production_ids.move_raw_ids))
+
+    def test_tick_does_not_touch_done_and_cancelled_mo(self):
+        day = self.generate()
+        self.at(600).td_dispatch()  # усе закрито
+        self.assertTrue(all(mo.state == "done" for mo in day.production_ids))
+        moves = day.production_ids.move_raw_ids
+        snapshot = [(m.id, m.state, m.quantity, len(m.move_line_ids)) for m in moves]
+        stock = self.on_hand()
+        res = self.at(600).td_dispatch()
+        self.assertEqual(res["covered"], 0)
+        self.assertEqual(self.engine._td_cover_open(T0 + mins(600)), 0)
+        self.assertEqual([(m.id, m.state, m.quantity, len(m.move_line_ids)) for m in moves], snapshot)
+        self.assertEqual(self.on_hand(), stock)
+        # скасована МО без резерву лишається такою: її не забезпечують
+        day2 = self.engine.with_context(td_live_now=T0 - mins(120)).td_generate_day(DAY + timedelta(days=7))
+        self.unreserve(day2)
+        cancelled = day2.production_ids[0]
+        cancelled.action_cancel()
+        self.assertEqual(cancelled.state, "cancel")
+        self.at(-60).td_dispatch()
+        self.assertFalse(cancelled.move_raw_ids.move_line_ids)
+        self.assertEqual(cancelled.state, "cancel")
+        others = (day2.production_ids - cancelled).move_raw_ids
+        self.assertTrue(others)
+        self.assertTrue(all(m.state == "assigned" for m in others))
+
+    def test_cover_per_tick_limit_nearest_start_first(self):
+        day = self.generate()
+        self.unreserve(day)
+        mos = day.production_ids.sorted(lambda mo: (mo.date_start, mo.id))
+        self.assertGreaterEqual(len(mos), 4)
+        mod = "odoo.addons.td_live_production.models.td_live_dispatch.COVER_PER_TICK"
+        with patch(mod, 2):
+            first = self.at(-60).td_dispatch()
+            self.assertEqual(first["covered"], 2)
+            covered = mos.filtered(lambda mo: all(m.state == "assigned" for m in mo.move_raw_ids))
+            self.assertEqual(covered, mos[:2])  # найближчий плановий початок першим
+            self.assertTrue(all(mo.components_availability_state == "unavailable" for mo in mos - covered))
+            second = self.at(-60).td_dispatch()
+            self.assertEqual(second["covered"], 2)
+            for _i in range(5):
+                self.at(-60).td_dispatch()
+        self.assertTrue(all(mo.components_availability_state == "available" for mo in mos))
+        self.assertEqual(self.at(-60).td_dispatch()["covered"], 0)
+        from odoo.addons.td_live_production.models import td_live_dispatch
+
+        self.assertEqual(td_live_dispatch.COVER_PER_TICK, 10)
+
+    def test_close_still_covers_unreserved_mo(self):
+        """Закриття МО без попереднього резерву працює як раніше: партії `LIVE-…`, кількості, вартість рухів."""
+        day = self.generate()
+        self.unreserve(day)
+        res = self.at(600).td_dispatch(budget_s=1000)
+        self.assertEqual(res["closed"], day.production_count)
+        for mo in day.production_ids:
+            self.assertEqual(mo.state, "done")
+        # відстежувана плита оприбутковано рівно стільки, скільки списано; без партії стандартне завершення
+        # «бере» кількість без резерву (так було й до виправлення), тому залишок завіс тут не перевіряємо
+        self.assertAlmostEqual(self.on_hand()[1], 0.0)
+        for move in day.production_ids.move_raw_ids:
+            self.assertEqual(move.state, "done")
+            self.assertAlmostEqual(move.quantity, move.product_uom_qty)
+            if "value" in move._fields and move.product_id == self.hinge:
+                self.assertAlmostEqual(abs(move.value), move.quantity * 140.0)  # як рахує td_sale_cost
+
+    def test_upfront_cover_then_close_keeps_stock_and_cost(self):
+        day = self.generate()
+        self.assertTrue(all(m.state == "assigned" for m in day.production_ids.move_raw_ids))
+        stock = self.on_hand()
+        self.assertTrue(all(q > 0 for q in stock))  # оприбутковано при генерації
+        res = self.at(600).td_dispatch()
+        self.assertEqual(res["closed"], day.production_count)
+        hinge, board = self.on_hand()
+        self.assertAlmostEqual(hinge, 0.0)  # ні подвійного приходу, ні залишку
+        self.assertAlmostEqual(board, 0.0)
+        for move in day.production_ids.move_raw_ids:
+            self.assertEqual(move.state, "done")
+            self.assertAlmostEqual(move.quantity, move.product_uom_qty)
+            if move.product_id.tracking != "none":
+                self.assertTrue(all(line.lot_id.name.startswith("LIVE-") for line in move.move_line_ids))
+            if "value" in move._fields and move.product_id == self.hinge:
+                self.assertAlmostEqual(abs(move.value), move.quantity * 140.0)
+
     # --- LP-06: запуск / зупинка -----------------------------------------------------------------------
     def test_start_stop_switches_clock_and_crons(self):
         icp = self.env["ir.config_parameter"].sudo()

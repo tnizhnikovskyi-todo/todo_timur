@@ -26,6 +26,9 @@ SHIP_STATES = ("done", "cancel")
 CONCURRENCY = (pg_errors.SerializationFailure, pg_errors.LockNotAvailable, pg_errors.DeadlockDetected)
 CATCH_UP_TRIES = 3  # спроб на МО при конкурентному оновленні (крон верстатів пише ті самі рядки)
 WARN_EVERY = timedelta(hours=1)
+COVER_PER_TICK = 10  # МО за такт, яким наперед резервуємо компоненти: такт не стає довгим (ліміт Cloudflare ~100 с)
+COVER_BUDGET_S = 15.0  # секунд за такт на цю роботу, понад час подій
+COVER_STATES = ("confirmed", "partially_available")  # стани рухів компонентів, яким бракує резерву
 LIVE_WINDOW = timedelta(minutes=10)  # подія старша за це — «історія»: стан верстата (td.machine) не чіпаємо
 _LAST_WARN = {}  # база → коли востаннє писали про недоступний емулятор (одне попередження на годину)
 
@@ -115,6 +118,7 @@ class TdLiveEngine(models.AbstractModel):
             "closed": 0,
             "shipped": 0,
             "downtimes": 0,
+            "covered": 0,
             "applied": 0,
             "pending": 0,
             "targets": [],
@@ -149,6 +153,11 @@ class TdLiveEngine(models.AbstractModel):
             if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW):
                 res["applied"] += 1
         res["pending"] = len(events) - processed
+        # відкриті МО без повного резерву забезпечуємо наперед; МО, що закриваються в цьому такті, пропускаємо
+        soon = {ev["id"] for ev in events[processed:] if ev["kind"] == "mo_done"}
+        res["covered"] = self._td_cover_open(
+            now, skip=soon, budget_s=COVER_BUDGET_S if budget_s is None else min(budget_s, COVER_BUDGET_S)
+        )
         if res["pending"]:
             _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний виклик", res["pending"])
             return res
@@ -370,12 +379,21 @@ class TdLiveEngine(models.AbstractModel):
         )
 
     @api.model
-    def _td_cover_moves(self, moves, t):
-        """Зарезервувати рухи; чого бракує на складі — оприбуткувати й зарезервувати знову."""
+    def _td_cover_moves(self, moves, t, upfront=False):
+        """Зарезервувати рухи; чого бракує на складі — оприбуткувати й зарезервувати знову.
+
+        `upfront` — компоненти МО, поки вона не закрита: спершу резервується те, що вже є на складі (оприбутковується
+        лише справжня нестача), рухи, які постачає підпорядкована МО (`move_orig_ids`), не чіпаються, а кількість
+        «взято» не виставляється (це робить закриття). Повторний виклик нічого не змінює: оприбутковується лише нестача.
+        """
         label = clock.local_date(t).strftime("%Y%m%d")
         for move in moves.filtered(lambda m: m.state not in ("done", "cancel")):
+            if upfront and move.move_orig_ids:
+                continue
             product = move.product_id
             if product.is_storable:
+                if upfront:
+                    move._action_assign()
                 if (
                     product.tracking != "none"
                 ):  # стандартне завершення наряду «бере» кількість без партії — партія потрібна
@@ -386,8 +404,49 @@ class TdLiveEngine(models.AbstractModel):
                     qty = move.product_uom._compute_quantity(short, product.uom_id)
                     self._td_restock(product, move.location_id, qty, label)
                     move._action_assign()
-            if move.quantity < move.product_uom_qty:
+            if not upfront and move.quantity < move.product_uom_qty:
                 move.quantity = move.product_uom_qty
+
+    @api.model
+    def _td_cover_mo(self, mo, t):
+        """Наперед забезпечити компоненти відкритої МО (в savepoint). Збій — у лог: його повторить наступний такт."""
+        try:
+            with self.env.cr.savepoint():
+                self._td_cover_moves(mo.sudo().move_raw_ids, t, upfront=True)
+        except CONCURRENCY:
+            raise
+        except Exception as exc:  # noqa: BLE001 — МО без резерву лишається «недоступною» до наступного такту
+            _logger.warning("td_live_production: компоненти МО %s не забезпечено: %s", mo.name, exc)
+            return False
+        return True
+
+    @api.model
+    def _td_cover_open(self, now, skip=(), limit=None, budget_s=None):
+        """Такт: до `limit` відкритих керованих МО з нерезервованими компонентами, найближчий плановий початок першим.
+
+        Закриті й скасовані не чіпаються; уже забезпечена МО не з'являється в добірці, тож повтор безкоштовний.
+        Повертає кількість оброблених МО.
+        """
+        limit = COVER_PER_TICK if limit is None else limit
+        budget_s = COVER_BUDGET_S if budget_s is None else budget_s
+        domain = [
+            ("td_live_day_id.generated", "=", True),
+            ("state", "in", ("confirmed", "progress", "to_close")),
+            (
+                "move_raw_ids",
+                "any",
+                [("state", "in", COVER_STATES), ("product_id.is_storable", "=", True), ("move_orig_ids", "=", False)],
+            ),
+        ]
+        if skip:
+            domain.append(("id", "not in", list(skip)))
+        started = time.monotonic()
+        done = 0
+        for mo in self.env["mrp.production"].search(domain, order="date_start, id", limit=limit):
+            if time.monotonic() - started >= budget_s:
+                break
+            done += bool(self._td_cover_mo(mo, now))
+        return done
 
     @api.model
     def _td_mo_close(self, mo, t):
