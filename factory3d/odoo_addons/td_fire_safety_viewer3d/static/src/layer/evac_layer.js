@@ -161,8 +161,15 @@ export const evacExtension = {
         }
         const T = api.THREE;
         const st = this.stateOf(api);
+        const perf = performance.now();
+        // Годинник сервера тільки вперед: патч інших розділів повертає той самий `live` зі старим `now_ms` —
+        // без цього плашка навчання відкочувалась назад до моменту останнього оновлення розділу.
+        const prev = st.live;
+        if (prev && prev.name === live.name && prev.now_ms != null && live.now_ms != null) {
+            live.now_ms = Math.max(live.now_ms, prev.now_ms + (perf - st.recvPerf));
+        }
         st.live = live;
-        st.recvPerf = performance.now();
+        st.recvPerf = perf;
         const key = [live.name, live.mode, live.zone, Object.keys(D.evacuation.routes || {}).length, (live.smoke || []).map((s) => s.code).join()].join("|");
         if (!st.group || st.key !== key) {
             this.clearScene(api, st);
