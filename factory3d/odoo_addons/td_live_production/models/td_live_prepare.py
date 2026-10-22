@@ -74,7 +74,9 @@ class TdLiveEngine(models.AbstractModel):
         """Валюта компанії — ₴. Замовлення продажу в іншій валюті переводяться на прайс у ₴ без перерахунку сум:
         демо-ціни завжди були гривнями (валюта USD у шаблоні — лише стандартна за замовчуванням)."""
         if company.currency_id == uah:
-            return ""
+            # валюта вже ₴, але замовлення, створені до виправлення генератора, лишились у USD-прайсі: переводимо їх
+            moved = self._td_orders_to_uah(company, uah)
+            return _("Замовлень переведено на прайс у ₴: %s.", moved) if moved else ""
         old = company.currency_id
         if not uah.active:
             uah.active = True
@@ -98,6 +100,17 @@ class TdLiveEngine(models.AbstractModel):
         )
 
     @api.model
+    def _td_company_pricelist(self, company):
+        """Прайс компанії у валюті компанії (порожній, якщо такого немає). Згенеровані замовлення беруть саме його:
+        без явного прайсу Odoo підставляє прайс партнера за замовчуванням («За замовчуванням (USD)»), і замовлення
+        показують $ при ₴ у собівартості."""
+        return self.env["product.pricelist"].search(
+            [("currency_id", "=", company.currency_id.id), ("company_id", "in", [False, company.id])],
+            order="id",
+            limit=1,
+        )
+
+    @api.model
     def _td_uah_pricelist(self, company, uah):
         Pricelist = self.env["product.pricelist"]
         found = Pricelist.search(
@@ -108,10 +121,12 @@ class TdLiveEngine(models.AbstractModel):
         )
 
     @api.model
-    def _td_orders_to_uah(self, company, uah, pricelist):
-        """Замовлення продажу компанії в іншій валюті → прайс у ₴ (суми рядків не змінюються)."""
+    def _td_orders_to_uah(self, company, uah, pricelist=None):
+        """Замовлення продажу компанії в іншій валюті → прайс у ₴ (суми рядків не змінюються). Повертає їх кількість."""
         Order = self.env["sale.order"]
         orders = Order.search([("company_id", "=", company.id), ("currency_id", "!=", uah.id)])
+        if orders and not pricelist:
+            pricelist = self._td_uah_pricelist(company, uah)
         for order in orders:
             keep = {line.id: line.price_unit for line in order.order_line}
             # `sale.order.write` забороняє міняти прайс підтвердженого замовлення; демо-перехід на ₴ — виняток

@@ -21,7 +21,7 @@ Requirements and notes
 * Data comes from the Factory 3D collector service, which is not part of this module.
 * The module is a monitoring and documentation tool; it does not replace certified fire protection equipment.
 """,
-    "version": "19.0.1.1.2",
+    "version": "19.0.1.1.3",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",

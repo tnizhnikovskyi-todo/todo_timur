@@ -18,7 +18,7 @@
                 <field name="indoor_c"/>
                 <field name="heating_valve" widget="percentage"/>
                 <field name="heat_kw"/>
-                <field name="filter_dp_pa" decoration-danger="filter_dp_pa > 250"/>
+                <field name="filter_dp_pa" decoration-danger="filter_dp_pa > 265"/>
                 <field name="filter_extract_dp_pa" optional="hide"/>
                 <field name="p_now_kw"/>
                 <field name="deviation" widget="badge" decoration-success="deviation == 'none'"
@@ -159,7 +159,7 @@
                         <div class="text-muted"><field name="zone_name"/></div>
                         <div><field name="mode_label"/></div>
                         <div><field name="airflow_m3h"/> м³/год</div>
-                        <div t-attf-class="#{record.filter_dp_pa.raw_value > 250 ? 'text-danger' : ''}">Фільтр <field name="filter_dp_pa"/> Па</div>
+                        <div t-attf-class="#{record.filter_dp_pa.raw_value > 265 ? 'text-danger' : ''}">Фільтр <field name="filter_dp_pa"/> Па</div>
                         <div><field name="heat_kw"/> кВт</div>
                         <button name="action_f3d_show" type="object" class="btn btn-link p-0">3D</button>
                     </t>

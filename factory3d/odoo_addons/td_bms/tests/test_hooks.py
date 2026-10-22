@@ -174,6 +174,27 @@ class TestInstall(F3DBmsCase):
         self.assertEqual(len(sigs.filtered(lambda s: s.source_id.code == "BMS-DERIVED")), 59)
         self.assertFalse(sigs.filtered("write_enabled"))
 
+    def test_filter_alarm_needs_meaningful_exceedance(self):
+        """Норма перепаду 250 Па: 250,07 — не тривога (було 25 хибних відхилень); тривога — від допуску 265 Па."""
+        from odoo.addons.td_telemetry.tools import thresholds  # noqa: PLC0415
+
+        for code, norm, alarm_at in (
+            ("ventilation/units/RV-05/filter_dp_pa", 250.0, 265.0),
+            ("ventilation/units/RV-05/filter_extract_dp_pa", 350.0, 370.0),
+        ):
+            sig = self.Signal.search([("code", "=", code)])
+            self.assertEqual(sig.alarm_high, alarm_at)
+            cfg = sig._td_cfg()
+            for value, expected in (
+                (norm - 1, "ok"),
+                (norm + 0.07, "ok"),
+                (norm * 1.04, "ok"),
+                (alarm_at + 1, "alarm"),
+            ):
+                status, _since = thresholds.eval_status({"status": "ok"}, value, None, None, cfg)
+                self.assertEqual(status, expected, (code, value))
+            self.assertIn("норма до %d Па" % norm, sig.alarm_title)
+
     def test_signal_definitions(self):
         sig = self.Signal.search([("code", "=", "ventilation/units/RV-05/filter_dp_pa")])
         self.assertEqual(sig.source_id.code, "BAC-105-RV-05")
@@ -187,7 +208,7 @@ class TestInstall(F3DBmsCase):
                 "doc": "AI:4 RV-05_FreshAirFilterDp",
             },
         )
-        self.assertEqual((sig.period_s, sig.store_period_s, sig.alarm_high, sig.hysteresis), (30, 600, 250.0, 5.0))
+        self.assertEqual((sig.period_s, sig.store_period_s, sig.alarm_high, sig.hysteresis), (30, 600, 265.0, 5.0))
         self.assertTrue(sig.alarm_high_on)
         lvl = self.Signal.search([("code", "=", "lighting/groups/LT-CUT/level")])
         self.assertEqual(lvl.source_id.code, "HN-LP-2")

@@ -23,7 +23,7 @@ Requirements and notes
 * Device data comes from the Factory 3D collector service (HelvarNet and BACnet plugins), which is not part of this module.
 * Writing to building systems is disabled by default.
 """,
-    "version": "19.0.1.0.3",
+    "version": "19.0.1.0.4",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",

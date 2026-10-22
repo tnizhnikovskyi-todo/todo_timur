@@ -1,5 +1,12 @@
 # Changelog
 
+## 19.0.1.1.3 — дублікат навчання не копіює результат
+
+Оновлення: `-u` модуля. Схеми не змінюються.
+
+- «Дублювати» навчання створює чисту чернетку: `copy=False` для `state`, `origin`, `planned_ts`, `start_ts`, `end_ts`, `sim_run_ref`, `real_alarm`, `evac_time_s`, `passage_source`, `result`, `conclusions`, `remarks`, `last_tick_ts`
+  і для відміток кроків (`done`, `done_ts`, `t_fact_s`, `done_by`). Раніше дублікат завершеного навчання ніс «Пройдено», час евакуації 240 с і стару дату. Назва, зона, сповіщувач, режим і кроки копіюються. Тест `test_copy_does_not_carry_result_fields`.
+
 ## 19.0.1.1.2
 - «Евакуація в 3D» більше не показує закрите навчання: `evacuation.live` бере навчання `running`, а після кінця евакуації — лише `evaluating` і не довше 10 хв (`LIVE_KEEP_MAX_MIN`, параметр `drill_3d_keep_min` тепер 10 і не може бути більшим). Навчання `done` і `cancelled` у `live` не потрапляє, тож плашка «завершено · … у будівлі 0 людей» не лишається після закриття навчання і перезавантаження сторінки. Параметр у вже встановлених базах (`noupdate`) лишається 60, але верхня межа 10 хв діє в коді. Тести: `test_evac_report.py::test_live_kept_after_stop_then_dropped`, `test_live_closed_or_cancelled_not_shown`.
 

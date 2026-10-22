@@ -8,7 +8,7 @@
 import logging
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from odoo import _, api, fields, models
@@ -30,8 +30,9 @@ class TdSaleCostCalc(models.AbstractModel):
 
     # --- вхід ---------------------------------------------------------------------------------------
     @api.model
-    def _td_thresholds(self):
-        """R-06: пороги кольору відхилення, % (`td.sale_cost.warn_pct`, `td.sale_cost.alert_pct`)."""
+    def _td_thresholds(self, article=None):
+        """R-06: пороги кольору відхилення, % (`td.sale_cost.warn_pct`, `td.sale_cost.alert_pct`). Для статті
+        «energy» — ширші (`energy_warn_pct`, `energy_alert_pct`), але не вужчі за загальні: план енергії — оцінка."""
         icp = self.env["ir.config_parameter"].sudo()
 
         def get(key, default):
@@ -40,7 +41,11 @@ class TdSaleCostCalc(models.AbstractModel):
             except ValueError:
                 return default
 
-        return get("warn_pct", cost.WARN_PCT), get("alert_pct", cost.ALERT_PCT)
+        warn, alert = get("warn_pct", cost.WARN_PCT), get("alert_pct", cost.ALERT_PCT)
+        if article == "energy":
+            warn = max(warn, get("energy_warn_pct", cost.ENERGY_WARN_PCT))
+            alert = max(alert, get("energy_alert_pct", cost.ENERGY_ALERT_PCT))
+        return warn, alert
 
     @api.model
     def _td_now(self):
@@ -257,23 +262,44 @@ class TdSaleCostCalc(models.AbstractModel):
         return res
 
     @api.model
+    def _td_energy_rate_days(self):
+        """Вікно історії для ₴/год плану енергії, днів (`td.sale_cost.energy_rate_days`; 0 — уся історія)."""
+        value = self.env["ir.config_parameter"].sudo().get_param(PARAM + "energy_rate_days", cost.ENERGY_RATE_DAYS)
+        try:
+            return max(int(float(value)), 0)
+        except ValueError:
+            return cost.ENERGY_RATE_DAYS
+
+    @api.model
     def _td_energy_rates(self, workcenters):
         """`{wc.id: грн за годину роботи}` з історії розподілу енергії РЦ — база плану енергії. Вартість — врахованих
         видів рядків, час — лише хвилини прямих рядків: спільні рядки того самого завдання повторюють його хвилини,
-        тож їхня сума в знаменнику занижувала б ставку в кілька разів."""
+        тож їхня сума в знаменнику занижувала б ставку в кілька разів. Береться вікно останніх днів
+        (`_td_energy_rate_days`): тариф і навантаження змінюються, і середнє за весь час (старий плоский тариф)
+        занижувало б план; РЦ без рядків у вікні — за всю історію."""
         if "td.energy.alloc" not in self.env or not workcenters:
             return {}
         Alloc = self.env["td.energy.alloc"].sudo()
         base = [("workcenter_id", "in", workcenters.ids), ("workorder_id", "!=", False)]
-        costs = Alloc._read_group(base + [("kind", "in", self._td_energy_kinds())], ["workcenter_id"], ["cost:sum"])
-        minutes = Alloc._read_group(base + [("kind", "=", "direct")], ["workcenter_id"], ["minutes:sum"])
+        rates = self._td_energy_rates_for(Alloc, base)
+        days = self._td_energy_rate_days()
+        if days:
+            today = self._td_now().replace(tzinfo=timezone.utc).astimezone(KYIV).date()
+            window = [("day", ">=", today - timedelta(days=days)), ("day", "<=", today)]
+            rates.update(self._td_energy_rates_for(Alloc, base + window))
+        return rates
+
+    @api.model
+    def _td_energy_rates_for(self, Alloc, domain):
+        costs = Alloc._read_group(domain + [("kind", "in", self._td_energy_kinds())], ["workcenter_id"], ["cost:sum"])
+        minutes = Alloc._read_group(domain + [("kind", "=", "direct")], ["workcenter_id"], ["minutes:sum"])
         mins = {wc.id: m for wc, m in minutes}
         return {wc.id: c / mins[wc.id] * 60.0 for wc, c in costs if mins.get(wc.id, 0) > 0 and c > 0}
 
     @api.model
     def _td_energy_mo(self, mo, wos, energy, rates, fractions):
-        """R-03: енергія. Факт — Σ `td.energy.alloc` за МО (нема рядків — «немає даних»); план — плановий час операцій ×
-        ₴/год роботи РЦ за історією розподілу (немає історії — плану немає)."""
+        """R-03: енергія. Факт — Σ прямих рядків `td.energy.alloc` за МО (нема рядків — «немає даних»); план — плановий
+        час операцій × ₴/год роботи РЦ за недавньою історією тих самих прямих рядків (немає історії — плану немає)."""
         if energy is None:
             return {"plan": None, "plan_now": None, "fact": None, "stats": {"module": False}}
         plan = plan_now = None
@@ -395,17 +421,28 @@ class TdSaleCostCalc(models.AbstractModel):
                 n.append(_("ставка РЦ 0 ₴/год, вартість занижена: %s", ", ".join(sorted(stats["no_rate"]))))
         elif article == "energy":
             if not stats["module"]:
-                return [_("модуль td_energy не встановлено")]
+                return [_("модуль «Енергетика» не встановлено")]
             if not stats["rows"]:
-                return [_("немає даних: розподілу td.energy.alloc по МО немає")]
-            n.append(_("%.1f кВт·год за розподілом td.energy.alloc", stats["kwh"]))
+                return [_("немає даних: розподілу енергії по МО немає")]
+            n.append(_("%.1f кВт·год прямої енергії верстатів за розподілом енергії по завданнях", stats["kwh"]))
             if stats["rows"] < count:
                 n.append(_("МО без розподілу енергії: %s з %s", count - stats["rows"], count))
+            days = self._td_energy_rate_days()
+            warn, alert = self._td_thresholds("energy")
+            n.append(
+                _(
+                    "план — за середніми ₴/год верстатів %(basis)s; це оцінка, тож допуск ширший: "
+                    "увага від %(warn).0f %%, перевитрата від %(alert).0f %%",
+                    basis=_("за останні %s дн.", days) if days else _("за всю історію"),
+                    warn=warn,
+                    alert=alert,
+                )
+            )
             if stats["shared_cost"]:
                 n.append(
                     _(
                         "спільна енергія цеху (повітря, аспірація, світло, вентиляція) %(kwh).1f кВт·год ≈ "
-                        "%(cost).0f ₴ у собівартість не входить (накладні; td.sale_cost.energy_shared = 1 — включити)",
+                        "%(cost).0f ₴ у собівартість не входить (це накладні витрати цеху)",
                         kwh=stats["shared_kwh"],
                         cost=stats["shared_cost"],
                     )
@@ -414,15 +451,13 @@ class TdSaleCostCalc(models.AbstractModel):
             if stats["no_moves"] >= count:
                 return [_("немає даних: у МО немає компонентів")]
             if stats["no_price"]:
-                n.append(
-                    _("увага: %s поз. без собівартості (standard_price = 0), матеріали занижені", stats["no_price"])
-                )
+                n.append(_("увага: %s поз. без собівартості в картці товару, матеріали занижені", stats["no_price"]))
             if stats["valued"]:
-                n.append(_("оцінка руху складу (stock.move.value): %s поз.", stats["valued"]))
+                n.append(_("вартість за рухом складу: %s поз.", stats["valued"]))
             if stats["est_std"]:
-                n.append(_("оцінка за standard_price (рух без вартості): %s поз.", stats["est_std"]))
+                n.append(_("оцінка за собівартістю з картки товару (рух без вартості): %s поз.", stats["est_std"]))
             if stats["est_picked"]:
-                n.append(_("взято, не виконано — оцінка за standard_price: %s поз.", stats["est_picked"]))
+                n.append(_("взято, не виконано — оцінка за собівартістю з картки товару: %s поз.", stats["est_picked"]))
             if stats["pending"]:
                 n.append(_("ще не списано: %s поз.", stats["pending"]))
             if stats["semi"]:

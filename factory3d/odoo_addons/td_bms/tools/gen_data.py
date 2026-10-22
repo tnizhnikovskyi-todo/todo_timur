@@ -618,9 +618,9 @@ def unit_rows(u):
             0,
             "sim_data",
             0,
-            alarm_high=250,
+            alarm_high=265,  # норма до 250 Па; тривога — лише від суттєвого перевищення (+6 %), а не 250,07 проти 250
             hysteresis=5,
-            alarm_title="Заміна фільтрів: перепад тиску {value} Па при нормі до {threshold}",
+            alarm_title="Заміна фільтрів: перепад {value} Па, понад допуск {threshold} Па (норма до 250 Па)",
         )
         add(
             "indoor",
@@ -717,9 +717,9 @@ def unit_rows(u):
             0,
             "module",
             1,
-            alarm_high=350,
+            alarm_high=370,  # норма до 350 Па; тривога — від +6 %
             hysteresis=10,
-            alarm_title="Заміна фільтрів витяжки: перепад тиску {value} Па при нормі до {threshold}",
+            alarm_title="Заміна фільтрів витяжки: перепад {value} Па, понад допуск {threshold} Па (норма до 350 Па)",
         )
         add(
             "heat",

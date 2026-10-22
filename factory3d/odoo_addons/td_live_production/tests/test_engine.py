@@ -173,6 +173,22 @@ class TestLive(TransactionCase):
         self.assertEqual(day.hot_section, "Присадка")
         self.assertTrue(day.hot_load_pct > 0)
 
+    def test_generated_orders_use_company_currency_pricelist(self):
+        """Замовлення — у ₴ (прайс у валюті компанії), а не в USD-прайсі партнера за замовчуванням."""
+        uah = self.env.ref("base.UAH")
+        usd_pricelist = self.env["product.pricelist"].create(
+            {"name": "Прайс USD (тест)", "currency_id": self.env.ref("base.USD").id}
+        )
+        self.partner.property_product_pricelist = usd_pricelist  # як на демо: партнери беруть USD-прайс
+        self.engine.td_prepare_company()
+        day = self.generate()
+        self.assertTrue(day.order_ids)
+        for so in day.order_ids:
+            self.assertEqual(so.currency_id, uah)
+            self.assertEqual(so.pricelist_id.currency_id, uah)
+            self.assertNotEqual(so.pricelist_id, usd_pricelist)
+            self.assertTrue(all(line.price_unit > 0 for line in so.order_line))
+
     def test_generate_is_idempotent(self):
         first = self.generate()
         n_so = self.env["sale.order"].search_count([("td_live_day_id", "=", first.id)])
@@ -994,6 +1010,30 @@ class TestLive(TransactionCase):
         self.assertEqual(self.hinge.with_company(company).standard_price, 140.0)  # задану не чіпаємо
         self.assertIn("Меблеве підприємство", report)
         self.assertEqual(self.engine.td_prepare_company(), "")  # ідемпотентно: нічого не змінилось
+
+    def test_prepare_company_moves_stale_usd_orders_when_currency_already_uah(self):
+        """Валюта компанії вже ₴, а старі замовлення в USD-прайсі: повторна підготовка переводить їх без зміни сум."""
+        uah = self.env.ref("base.UAH")
+        self.engine.td_prepare_company()
+        usd_pricelist = self.env["product.pricelist"].create(
+            {"name": "Прайс USD (тест)", "currency_id": self.env.ref("base.USD").id}
+        )
+        stale = self.env["sale.order"].create(
+            {
+                "partner_id": self.partner.id,
+                "pricelist_id": usd_pricelist.id,
+                "order_line": [(0, 0, {"product_id": self.fg.id, "product_uom_qty": 3, "price_unit": 1234.5})],
+            }
+        )
+        stale.action_confirm()
+        self.assertNotEqual(stale.currency_id, uah)
+        report = self.engine.td_prepare_company()
+        self.assertIn("Замовлень переведено на прайс у ₴: 1", report)
+        self.assertEqual(stale.state, "sale")
+        self.assertEqual((stale.currency_id, stale.pricelist_id.currency_id), (uah, uah))
+        self.assertEqual(stale.order_line.price_unit, 1234.5)
+        self.assertEqual(stale.amount_untaxed, 3 * 1234.5)
+        self.assertEqual(self.engine.td_prepare_company(), "")  # ідемпотентно
 
     def test_prepare_company_blocked_currency_explains(self):
         company = self.env.company

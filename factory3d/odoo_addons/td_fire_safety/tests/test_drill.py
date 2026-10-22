@@ -88,6 +88,54 @@ class TestDrill(FireCase):
         self.assertEqual(d2.state, "draft")
         d2.unlink()
 
+    def test_copy_does_not_carry_result_fields(self):
+        """Дублікат навчання — чиста чернетка: без результату, висновків, часу, стану, запуску емулятора, відміток."""
+        src = self.drill(mode="tabletop")
+        src.step_ids[:2].write({"done": True, "done_ts": "2026-09-30 07:01:00", "t_fact_s": 30, "done_by": "manual"})
+        src.write(
+            {
+                "state": "done",
+                "planned_ts": "2026-09-30 07:00:00",
+                "start_ts": "2026-09-30 07:00:00",
+                "end_ts": "2026-09-30 07:05:00",
+                "evac_time_s": 240,
+                "passage_source": "demo",
+                "sim_run_ref": "RUN/2026/0001",
+                "real_alarm": True,
+                "last_tick_ts": "2026-09-30 07:05:00",
+                "result": "ok",
+                "conclusions": "Усе гаразд",
+                "remarks": "Зауваження",
+            }
+        )
+        dup = src.copy()
+        self.assertEqual(dup.state, "draft")
+        self.assertEqual(dup.origin, "manual")
+        self.assertNotEqual(dup.name, src.name)
+        for fname in (
+            "planned_ts",
+            "start_ts",
+            "end_ts",
+            "sim_run_ref",
+            "passage_source",
+            "result",
+            "conclusions",
+            "remarks",
+            "last_tick_ts",
+        ):
+            self.assertFalse(dup[fname], fname)
+        self.assertEqual(dup.evac_time_s, 0)
+        self.assertFalse(dup.real_alarm)
+        # те, що задає користувач, копіюється: назва, зона, сповіщувач, режим і кроки (без відміток виконання)
+        self.assertEqual(
+            (dup.title, dup.zone_id, dup.device_id, dup.mode), (src.title, src.zone_id, src.device_id, "tabletop")
+        )
+        self.assertEqual(len(dup.step_ids), len(src.step_ids))
+        self.assertFalse(any(dup.step_ids.mapped("done")))
+        self.assertFalse(any(dup.step_ids.mapped("done_ts")))
+        self.assertEqual(sum(dup.step_ids.mapped("t_fact_s")), 0)
+        self.assertFalse(any(dup.step_ids.mapped("done_by")))
+
     # --- AC-43 -------------------------------------------------------------------------------------------
     def test_start_people(self):
         e = [self.make_employee("Людина %d" % i) for i in range(5)]

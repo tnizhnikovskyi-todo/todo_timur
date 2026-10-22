@@ -139,7 +139,7 @@ class TdSaleCost(models.TransientModel):
             "has_plan": art["plan"] is not None,
             "has_fact": has_fact,
             "note": "; ".join(art["notes"]),
-            **self._td_dev_vals(art["fact"], art["plan_now"]),
+            **self._td_dev_vals(art["fact"], art["plan_now"], article),
         }
 
     @api.model
@@ -169,8 +169,8 @@ class TdSaleCost(models.TransientModel):
         }
 
     @api.model
-    def _td_dev_vals(self, fact, plan_now):
-        warn, alert = self.env["td.sale.cost.calc"]._td_thresholds()
+    def _td_dev_vals(self, fact, plan_now, article=None):
+        warn, alert = self.env["td.sale.cost.calc"]._td_thresholds(article)
         dev = cost.deviation_pct(fact, plan_now)
         return {
             "deviation": cost.num(fact) - cost.num(plan_now),

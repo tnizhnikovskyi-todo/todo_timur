@@ -185,15 +185,17 @@ class TdLiveEngine(models.AbstractModel):
             price = pricing.order_price(product.lst_price, unit_cost, "%s:%s:%s" % (day_rec.date, n, i))
             lines.append((0, 0, {"product_id": product.id, "product_uom_qty": ln["qty"], "price_unit": price}))
             costs.append((ln["qty"] * unit_cost, ln["qty"] * price))
-        so = env["sale.order"].create(
-            {
-                "partner_id": order["partner_id"],
-                "date_order": release - timedelta(hours=2 + n % 4),
-                "commitment_date": release + timedelta(days=1),
-                "order_line": lines,
-                "td_live_day_id": day_rec.id,
-            }
-        )
+        vals = {
+            "partner_id": order["partner_id"],
+            "date_order": release - timedelta(hours=2 + n % 4),
+            "commitment_date": release + timedelta(days=1),
+            "order_line": lines,
+            "td_live_day_id": day_rec.id,
+        }
+        pricelist = self._td_company_pricelist(env.company)
+        if pricelist:  # прайс у валюті компанії (₴), а не USD-прайс партнера за замовчуванням
+            vals["pricelist_id"] = pricelist.id
+        so = env["sale.order"].create(vals)
         so.action_confirm()
         mos = env["mrp.production"]
         for ln in order["lines"]:

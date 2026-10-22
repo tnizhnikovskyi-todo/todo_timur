@@ -63,6 +63,7 @@ class F3dFireDrill(models.Model):
         required=True,
         index=True,
         tracking=True,
+        copy=False,
     )
     origin = fields.Selection(
         [("manual", "Вручну"), ("panel", "З приладу (тест)"), ("demo", "Демо")],
@@ -70,6 +71,7 @@ class F3dFireDrill(models.Model):
         default="manual",
         required=True,
         readonly=True,
+        copy=False,
     )
     mode = fields.Selection(
         [("sim", "Емулятор"), ("panel_test", "Тест приладу"), ("tabletop", "Настільне")],
@@ -78,7 +80,7 @@ class F3dFireDrill(models.Model):
         default="panel_test",
         tracking=True,
     )
-    planned_ts = fields.Datetime(string="Заплановано на", tracking=True)
+    planned_ts = fields.Datetime(string="Заплановано на", tracking=True, copy=False)
     zone_id = fields.Many2one("td.fire.zone", string="Зона пожежі", required=True, ondelete="restrict", tracking=True)
     device_id = fields.Many2one(
         "td.fire.device",
@@ -90,13 +92,13 @@ class F3dFireDrill(models.Model):
         "td.fire.drill.template", string="Шаблон", ondelete="set null", default=lambda self: self._default_template()
     )
     responsible_id = fields.Many2one("res.users", string="Відповідальний", default=lambda self: self.env.user)
-    start_ts = fields.Datetime(string="Початок", readonly=True)
-    end_ts = fields.Datetime(string="Завершення", readonly=True)
+    start_ts = fields.Datetime(string="Початок", readonly=True, copy=False)
+    end_ts = fields.Datetime(string="Завершення", readonly=True, copy=False)
     duration_s = fields.Integer(string="Тривалість, с", compute="_compute_duration", store=True)
     elapsed_s = fields.Integer(string="Минуло, с", compute="_compute_elapsed")
-    sim_run_ref = fields.Char(string="Запуск емулятора", size=32, readonly=True)
+    sim_run_ref = fields.Char(string="Запуск емулятора", size=32, readonly=True, copy=False)
     sim_available = fields.Boolean(compute="_compute_sim_available")
-    real_alarm = fields.Boolean(string="Справжня тривога під час навчання", readonly=True)
+    real_alarm = fields.Boolean(string="Справжня тривога під час навчання", readonly=True, copy=False)
     step_ids = fields.One2many("td.fire.drill.step", "drill_id", string="Кроки", copy=True)
     person_ids = fields.One2many(
         "td.fire.drill.person",
@@ -131,7 +133,7 @@ class F3dFireDrill(models.Model):
     wrong_exit_count = fields.Integer(
         string="Вийшли не своїм виходом", compute="_compute_people", store=True, compute_sudo=True
     )
-    evac_time_s = fields.Integer(string="Час евакуації, с", readonly=True)
+    evac_time_s = fields.Integer(string="Час евакуації, с", readonly=True, copy=False)
     evac_in_norm = fields.Boolean(string="У межах нормативу", compute="_compute_evac_in_norm", store=True)
     evac_pct = fields.Float(
         string="Евакуовано, %", compute="_compute_people", store=True, compute_sudo=True, digits=(5, 1)
@@ -144,15 +146,15 @@ class F3dFireDrill(models.Model):
         store=True,
         compute_sudo=True,
     )
-    passage_source = fields.Char(string="Джерело проходів", size=32, readonly=True)
+    passage_source = fields.Char(string="Джерело проходів", size=32, readonly=True, copy=False)
     result_suggested = fields.Selection(
         RESULTS, string="Запропонований результат", compute="_compute_result_suggested", store=True
     )
-    result = fields.Selection(RESULTS, string="Результат", tracking=True)
-    conclusions = fields.Text(string="Висновки")
-    remarks = fields.Text(string="Зауваження й заходи")
+    result = fields.Selection(RESULTS, string="Результат", tracking=True, copy=False)
+    conclusions = fields.Text(string="Висновки", copy=False)
+    remarks = fields.Text(string="Зауваження й заходи", copy=False)
     print_names = fields.Boolean(string="Друкувати прізвища у протоколі", default=False)
-    last_tick_ts = fields.Datetime(string="Останній такт")
+    last_tick_ts = fields.Datetime(string="Останній такт", copy=False)
     color = fields.Integer(compute="_compute_color")
 
     # --- значення за замовчуванням -----------------------------------------------------------------------
@@ -815,11 +817,11 @@ class F3dFireDrillStep(models.Model):
     who = fields.Char(string="Хто", size=64, required=True)
     text = fields.Char(string="Дія", size=256, required=True)
     auto_key = fields.Selection(AUTO_KEYS, string="Автовідмітка", required=True, default="none")
-    done = fields.Boolean(string="Виконано", default=False)
-    done_ts = fields.Datetime(string="Час виконання")
-    t_fact_s = fields.Integer(string="Факт, с")
+    done = fields.Boolean(string="Виконано", default=False, copy=False)
+    done_ts = fields.Datetime(string="Час виконання", copy=False)
+    t_fact_s = fields.Integer(string="Факт, с", copy=False)
     delay_s = fields.Integer(string="Затримка, с", compute="_compute_delay", store=True)
-    done_by = fields.Selection([("auto", "Автоматично"), ("manual", "Вручну")], string="Хто відмітив")
+    done_by = fields.Selection([("auto", "Автоматично"), ("manual", "Вручну")], string="Хто відмітив", copy=False)
     note = fields.Char(size=256)
 
     @api.depends("done", "t_fact_s", "t_plan_s")

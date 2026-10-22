@@ -197,7 +197,7 @@ class TestSaleCost(TransactionCase):
         move.write({"quantity": 3, "picked": True})
         res = self.calc()
         self.assertAlmostEqual(res["articles"]["material"]["fact"], 3 * STD)
-        self.assertIn("standard_price", " ".join(res["articles"]["material"]["notes"]))
+        self.assertIn("картки товару", " ".join(res["articles"]["material"]["notes"]))
 
     def test_materials_done_uses_move_value(self):
         self.mo.move_raw_ids.write({"quantity": QTY * PER + 2, "picked": True})  # перевитрата на 2 од.
@@ -268,6 +268,67 @@ class TestSaleCost(TransactionCase):
         res = self.calc()
         self.assertAlmostEqual(res["articles"]["energy"]["fact"], 405.0)
         self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 810.0)
+
+    def _alloc(self, kind, kwh, minutes, amount, days_ago=0):
+        return self.env["td.energy.alloc"].create(
+            {
+                "day": fields.Date.today() - timedelta(days=days_ago),
+                "kind": kind,
+                "workorder_id": self.wo.id,
+                "workcenter_id": self.wc.id,
+                "kwh": kwh,
+                "minutes": minutes,
+                "cost": amount,
+            }
+        )
+
+    def test_energy_plan_rate_uses_recent_window_with_fallback(self):
+        """План енергії — за ₴/год останніх днів (поточний тариф), а не за всю історію; без рядків — уся історія."""
+        if "td.energy.alloc" not in self.env:
+            self.skipTest("td_energy не встановлено")
+        self._alloc("direct", 5.0, 60, 40.0, days_ago=40)  # старий плоский тариф: 40 ₴/год
+        res = self.calc()
+        self.assertAlmostEqual(
+            res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 40.0
+        )  # лише стара історія
+        self._alloc("direct", 10.0, 60, 100.0, days_ago=1)  # недавно: 100 ₴/год
+        self._alloc("shared", 30.0, 60, 900.0, days_ago=1)  # спільні рядки в ставку не входять
+        res = self.calc()
+        self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * 100.0)
+        self.env["ir.config_parameter"].set_param("td.sale_cost.energy_rate_days", "0")  # 0 — уся історія
+        res = self.calc()
+        self.assertAlmostEqual(res["articles"]["energy"]["plan"], self.wo.duration_expected / 60 * (140.0 / 2))
+
+    def test_energy_has_wider_tolerance_than_other_articles(self):
+        """Енергія — оцінка за історією: +20 % до плану на поточний стан — «У нормі», решта статей — «Перевитрата»."""
+        Cost = self.env["td.sale.cost"]
+        self.assertEqual(Cost._td_dev_vals(120.0, 100.0)["level"], "alert")
+        self.assertEqual(Cost._td_dev_vals(120.0, 100.0, "energy")["level"], "ok")
+        self.assertEqual(Cost._td_dev_vals(140.0, 100.0, "energy")["level"], "warn")
+        self.assertEqual(Cost._td_dev_vals(160.0, 100.0, "energy")["level"], "alert")
+        self.env["ir.config_parameter"].set_param("td.sale_cost.energy_alert_pct", "30")
+        self.assertEqual(Cost._td_dev_vals(140.0, 100.0, "energy")["level"], "alert")
+        # допуск енергії не вужчий за загальний: загальні пороги 40/80 розширюють і його
+        self.env["ir.config_parameter"].set_param("td.sale_cost.warn_pct", "40")
+        self.env["ir.config_parameter"].set_param("td.sale_cost.alert_pct", "80")
+        self.assertEqual(Cost._td_dev_vals(170.0, 100.0, "energy")["level"], "warn")
+
+    def test_notes_have_no_technical_names(self):
+        """У картці — людські назви, без `td.energy.alloc`, `td.sale_cost.*`, `standard_price`, `stock.move.value`."""
+        if "td.energy.alloc" not in self.env:
+            self.skipTest("td_energy не встановлено")
+        self._alloc("direct", 10.0, 30, 45.0)
+        self._alloc("shared", 40.0, 30, 360.0)
+        self.mo.move_raw_ids.write({"quantity": 3, "picked": True})
+        res = self.calc()
+        text = " ".join(" ".join(a["notes"]) for a in res["articles"].values())
+        self.assertIn("не входить", text)
+        self.assertIn("допуск", text)
+        for technical in ("td.energy", "td.sale_cost", "td_energy", "standard_price", "stock.move", "energy_shared"):
+            self.assertNotIn(technical, text)
+        rec = self.env["td.sale.cost"]._td_open(self.so)
+        for technical in ("td.energy", "td.sale_cost", "standard_price"):
+            self.assertNotIn(technical, rec.warnings)
 
     def test_state_log_preferred_over_time_log(self):
         if "td.machine.state.log" not in self.env:
