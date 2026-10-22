@@ -227,6 +227,19 @@ class TestDispatch(BaseCase):
         # нульова дельта на рівному місці: наступний тик нічого не змінює
         self.assertEqual(self.run_sim(after, T0 + mins(600))[0], [])
 
+    def test_mo_with_all_work_orders_done_gets_mo_done_and_ship(self):
+        """Порція такту скінчилась між останнім `wo_finish` і `mo_done`: МО «до закриття» не лишається назавжди."""
+        state = chain_state()
+        state["wos"][1].update(state="done", start=T0, end=T0 + mins(60))
+        state["wos"][2].update(state="done", start=T0 + mins(60), end=T0 + mins(120))
+        events, after = self.run_sim(state, T0 + mins(300))
+        self.assertEqual((events[0]["kind"], events[0]["id"], events[0]["t"]), ("mo_done", 1, T0 + mins(120)))
+        self.assertEqual([e["kind"] for e in events].count("mo_done"), 2)  # друга МО добігає за звичайним ланцюгом
+        self.assertIn(("ship", 1), [(e["kind"], e["id"]) for e in events])
+        self.assertEqual(self.run_sim(after, T0 + mins(300))[0], [])  # повтор нічого не додає
+        events, _ = self.run_sim(state, T0 + mins(100))  # час закриття ще не настав
+        self.assertNotIn(("mo_done", 1), [(e["kind"], e["id"]) for e in events])
+
     def test_actual_duration_within_noise(self):
         _e, after = self.run_sim(chain_state(100.0), T0 + mins(1000))
         for wo in after["wos"].values():

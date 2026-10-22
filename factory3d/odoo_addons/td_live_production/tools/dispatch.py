@@ -62,6 +62,17 @@ def simulate(state, now, shift, workdays="0123456", pct=NOISE_PCT, ship_delay=SH
         elif dt["state"] == "done" and dt["end"]:
             free_at[dt["wc"]] = max(free_at.get(dt["wc"], dt["end"]), dt["end"])
     events = []
+    # МО, чиї наряди вже виконано, а сама МО ще ні: порція попереднього такту скінчилась (ліміт подій, бюджет часу)
+    # між останнім `wo_finish` і `mo_done`, або закриття не вдалось. `mo_done` тоді вже не народиться з `wo_finish`
+    # (наряд виконано раніше): без цього МО лишалась би «до закриття», а її замовлення — без відвантаження.
+    for mid, mo in sorted(mos.items()):
+        if mo["done_at"] is not None or not mo["wos"] or any(wos[w]["state"] != "done" for w in mo["wos"]):
+            continue
+        ends = [wos[w]["end"] for w in mo["wos"] if wos[w]["end"]]
+        t = max(ends) if ends else now
+        if t <= now:
+            mo["done_at"] = t
+            events.append({"t": t, "kind": "mo_done", "id": mid})
     for _ in range(MAX_EVENTS):
         best = None
 

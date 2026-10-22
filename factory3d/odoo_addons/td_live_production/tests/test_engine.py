@@ -1,10 +1,12 @@
 """Інтеграційні тести двигуна: генерація доби, диспетчер у «віртуальному» часі, догнати минуле, підготовка компанії."""
 
+import time
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 from psycopg2 import errors as pg_errors
 
+from odoo import fields
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
@@ -14,6 +16,8 @@ DAY = date(2026, 11, 2)  # понеділок, після переведення
 SHIFT = (7.0, 15.5)
 T0 = clock.shift_window(DAY, SHIFT)[0]  # 07:00 Київ = 05:00 UTC
 P = "td.live_production."
+ENGINE = "odoo.addons.td_live_production.models.td_live_engine."
+NIGHT = "td_live_production.cron_td_live_nightly"
 
 
 def mins(n):
@@ -1101,6 +1105,147 @@ class TestLive(TransactionCase):
         done = self.at(600).td_dispatch()
         self.assertEqual(done["pending"], 0)
         self.assertEqual(day.state, "done")
+
+    # --- крон такту: порції з commit і звіт про залишок (`ir.cron._commit_progress`) ----------------------------
+    def run_tick_cron(self, minutes, left=100.0, in_cron=True, **patches):
+        """Один запуск `_cron_td_live_tick`; `_commit_progress` підмінено записом викликів `(оброблено, залишок)`:
+        у тестах не комітимо. `left` — скільки секунд лишилось у воркера (від'ємне — час запуску вичерпано)."""
+        calls = []
+
+        def fake_commit(this, processed=0, *, remaining=None, deactivate=False):
+            calls.append((processed, remaining))
+            return left
+
+        ctx = {"ir_cron_progress_id": 1, "cron_id": 0, "cron_end_time": time.monotonic() + left} if in_cron else {}
+        with patch.object(type(self.env["ir.cron"]), "_commit_progress", fake_commit):
+            self.at(minutes).with_context(**ctx)._cron_td_live_tick()
+        return calls
+
+    def test_tick_cron_works_in_batches_and_pushes_targets_when_caught_up(self):
+        """Довга пауза: порції по кілька подій, у кожній — звіт `remaining > 0`; забезпечення МО і цілі верстатам —
+        лише в останній, коли черга порожня."""
+        day = self.generate()
+        cover = patch.object(type(self.engine), "_td_cover_open", return_value=0)
+        push = patch.object(type(self.engine), "_td_push_targets", return_value={"ok": 1, "unknown": []})
+        partial = caught_up = 0
+        with patch(ENGINE + "TICK_EVENTS", 3), cover as cover_mock, push as push_mock:
+            for _i in range(200):
+                before = (cover_mock.call_count, push_mock.call_count)
+                calls = self.run_tick_cron(600)
+                after = (cover_mock.call_count, push_mock.call_count)
+                remaining = calls[-1][1]
+                if remaining:  # черга не порожня: порція дала прогрес, забезпечення й цілі не чіпались
+                    self.assertGreater(sum(p for p, _r in calls), 0)
+                    self.assertEqual(after, before)
+                    partial += 1
+                else:  # наздогнали: забезпечення і цілі — по разу
+                    self.assertEqual(after, (before[0] + 1, before[1] + 1))
+                    caught_up += 1
+                if caught_up and day.state == "done":
+                    break
+        self.assertGreater(partial, 1)
+        self.assertGreaterEqual(caught_up, 1)
+        self.assertEqual(day.state, "done")
+
+    def test_tick_cron_reports_zero_remaining_when_nothing_applies(self):
+        """Усі події падають: `remaining = 0` (крон не крутиться вхолосту), а не «лишилось N»."""
+        self.generate()
+        with patch.object(type(self.engine), "_td_wo_start", side_effect=UserError("x")):
+            calls = self.run_tick_cron(600)
+        self.assertTrue(calls)
+        self.assertTrue(all(remaining == 0 for _p, remaining in calls))
+
+    def test_tick_cron_yields_when_worker_time_is_up(self):
+        """Повторний виклик в одному запуску воркера після 10 с нічого не робить, лише звітує «ще є що робити»."""
+        day = self.generate()
+        with patch.object(type(self.engine), "td_dispatch") as dispatch:
+            calls = self.run_tick_cron(600, left=-1.0)
+        self.assertEqual(calls, [(0, 1)])
+        self.assertFalse(dispatch.called)
+        self.assertFalse(day.production_ids.workorder_ids.filtered(lambda w: w.state in ("progress", "done")))
+
+    def test_tick_cron_outside_cron_makes_one_batch_without_commit(self):
+        """Ручний запуск і тести: без контексту крона `_commit_progress` (а отже й commit) не викликається."""
+        self.generate()
+        with patch(ENGINE + "TICK_EVENTS", 3):
+            calls = self.run_tick_cron(600, in_cron=False)
+        self.assertEqual(calls, [])
+        self.assertGreater(len(self.env["mrp.workorder"].search([("state", "in", ("progress", "done"))])), 0)
+
+    def test_tick_cron_retries_concurrent_update_once_in_cron_only(self):
+        res = {"applied": 0, "covered": 0, "pending": 0}
+        conflict = pg_errors.SerializationFailure("x")
+        with patch(ENGINE + "time.sleep"), patch.object(self.env.cr, "rollback") as rollback:
+            with patch.object(type(self.engine), "td_dispatch", side_effect=[conflict, res]) as dispatch:
+                self.run_tick_cron(5)
+            self.assertEqual((dispatch.call_count, rollback.call_count), (2, 1))
+            with patch.object(type(self.engine), "td_dispatch", side_effect=[conflict, conflict]) as dispatch:
+                with self.assertRaises(pg_errors.SerializationFailure):
+                    self.run_tick_cron(5)
+            self.assertEqual(dispatch.call_count, 2)
+            with patch.object(type(self.engine), "td_dispatch", side_effect=[conflict, res]) as dispatch:
+                with self.assertRaises(pg_errors.SerializationFailure):  # поза кроном повтор не робимо (як і раніше)
+                    self.run_tick_cron(5, in_cron=False)
+            self.assertEqual(dispatch.call_count, 1)
+
+    def test_dispatch_cover_s_covers_only_when_caught_up(self):
+        day = self.generate()
+        self.unreserve(day)
+        partial = self.at(600).td_dispatch(limit=3, cover_s=10.0)
+        self.assertGreater(partial["pending"], 0)
+        self.assertEqual(partial["covered"], 0)  # черга подій не порожня: забезпечення відкладено
+        day2 = self.engine.with_context(td_live_now=T0 - mins(120)).td_generate_day(DAY + timedelta(days=7))
+        self.unreserve(day2)
+        self.assertEqual(self.at(-60).td_dispatch(cover_s=0)["covered"], 0)  # 0 — забезпечення вимкнено
+        res = self.at(-60).td_dispatch(cover_s=10.0)
+        self.assertEqual(res["pending"], 0)
+        self.assertGreater(res["covered"], 0)
+
+    def test_dispatch_checkpoint_runs_after_events_before_cover(self):
+        self.generate()
+        seen = []
+        self.at(600).td_dispatch(limit=3, checkpoint=lambda res: seen.append(dict(res)))
+        self.assertEqual(len(seen), 1)
+        self.assertGreater(seen[0]["applied"], 0)
+        self.assertGreater(seen[0]["pending"], 0)
+        self.assertEqual((seen[0]["covered"], seen[0]["pushed"]), (0, {}))  # ще до забезпечення й цілей
+
+    # --- нічний крон: запис крона, що виконується, не чіпаємо ------------------------------------------------------
+    def test_nightly_does_not_write_the_running_cron(self):
+        """Odoo не дозволяє міняти крон під час його виконання (`write` → UserError), тому наступний запуск —
+        тригером; повтор нових тригерів не плодить, `nextcall` не змінюється."""
+        night = self.env.ref(NIGHT)
+        Trigger = self.env["ir.cron.trigger"].sudo()
+        Trigger.search([("cron_id", "=", night.id)]).unlink()
+        nextcall = night.nextcall
+
+        def running_write(this, vals):
+            raise UserError("Record cannot be modified right now: This cron task is currently being executed")
+
+        with patch.object(type(night), "write", running_write), patch.object(type(self.env["td.live.job"]), "_td_wake"):
+            self.at(-300)._cron_td_live_nightly()
+            self.at(-300)._cron_td_live_nightly()
+        triggers = Trigger.search([("cron_id", "=", night.id)])
+        self.assertEqual(len(triggers), 1)
+        local = clock.to_local(triggers.call_at)
+        self.assertEqual((local.hour, local.minute), (2, 0))  # найближчі 02:00 Київ
+        self.assertGreater(triggers.call_at, fields.Datetime.now())
+        self.assertEqual(night.nextcall, nextcall)
+        jobs = self.env["td.live.job"].search([("kind", "=", "generate_day")])
+        self.assertEqual(sorted(jobs.mapped("day_date")), [DAY, DAY + timedelta(days=1)])  # свою роботу крон зробив
+
+    def test_schedule_night_uses_trigger_when_cron_is_running(self):
+        night = self.env.ref(NIGHT)
+        Trigger = self.env["ir.cron.trigger"].sudo()
+        Trigger.search([("cron_id", "=", night.id)]).unlink()
+        nextcall = night.nextcall
+        with patch.object(type(night), "try_lock_for_update", lambda this, **kw: this.browse()):  # рядок зайнятий
+            self.engine._td_schedule_night()
+        self.assertEqual(night.nextcall, nextcall)
+        self.assertEqual(len(Trigger.search([("cron_id", "=", night.id)])), 1)
+        self.engine._td_schedule_night()  # вільний крон — як і раніше `nextcall` (запуск з кнопки)
+        local = clock.to_local(night.nextcall)
+        self.assertEqual((local.hour, local.minute), (2, 0))
 
     def test_catch_up_does_not_touch_live_machine_rows(self):
         """Історія не чіпає стан верстата: менше блокувань і конфліктів із кроном верстатів."""
