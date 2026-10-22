@@ -252,8 +252,8 @@ def parse_sim_address(protocol, text, dtype=None, scale=None, unit=None):
         field = re.match(r"\s*([A-Za-z_]\w*)", m.group(2))
         return {"route": m.group(1), "path": "$." + field.group(1)} if field else None
     if text.startswith("SICS"):
-        # рядок каталогу емулятора для `stable`: «SICS статус «S» (стабільно) / «D» (динамічно)» — першими в лапках стоять
-        # літери статусу, а не команда, тож перевіряємо слово «стабіл»/«stable» до розбору «<команда>»
+        # рядок каталогу емулятора для `stable`: «SICS статус «S» (стабільно) / «D» (динамічно)» — першими в лапках
+        # стоять літери статусу, а не команда, тож перевіряємо слово «стабіл»/«stable» до розбору «<команда>»
         if "stable" in text or "стабіл" in text:
             return {"cmd": "SI", "field": "stable"}
         m = RE_SICS.match(text)
