@@ -64,6 +64,28 @@ test("R4 «Потік зміни»: смуги операцій і клік по
     expect(qa(el, ".o_f3d_flow-feed li").length).toBeGreaterThan(0);
 });
 
+test("▶ «Потік зміни» не зсуває картинку: проєкція камери й розмір полотна не змінюються при відкритті й закритті панелі", async () => {
+    const { viewer, el } = await mountViewer({ model: "none" });
+    const { camera, renderer } = viewer.core;
+    const canvas = renderer.domElement;
+    Object.defineProperty(canvas, "clientWidth", { value: 1200, configurable: true }); // у тестах полотно без розміру
+    Object.defineProperty(canvas, "clientHeight", { value: 700, configurable: true });
+    const proj = () => [...camera.projectionMatrix.elements];
+    const before = proj();
+    q(el, ".o_f3d_shift-play").click();
+    expect(q(el, ".o_f3d_flow").hidden).toBe(false);
+    expect(camera.view?.enabled ?? false).toBe(false);
+    expect(proj()).toEqual(before);
+    window.dispatchEvent(new Event("resize")); // вузький екран / зміна розкладки теж не зсуває
+    expect(camera.view?.enabled ?? false).toBe(false);
+    expect(proj()).toEqual(before);
+    q(el, ".o_f3d_shift-play").click(); // пауза
+    q(el, ".o_f3d_shift-now").click(); // «Зараз» закриває панель
+    expect(q(el, ".o_f3d_flow").hidden).toBe(true);
+    expect(camera.view?.enabled ?? false).toBe(false);
+    expect(proj()).toEqual(before);
+});
+
 test("R5 види: 13 кнопок, «Дах і СЕС» вмикає roofdeck, решта ховає", async () => {
     const { viewer, el } = await mountViewer({ model: "none" });
     expect(qa(el, ".o_f3d_view").length).toBe(13);

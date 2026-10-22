@@ -185,7 +185,7 @@ test("kiosk: 429 подвоює інтервал опитування", async ()
 
 test("backoff 2…60 с після помилки /delta у бекенді, після 5 — offline і 30 с", async () => {
     const { client, subscribe, calls } = setup({
-        routes: { "/delta": () => new Response("", { status: 500 }) },
+        routes: { "/delta": () => new Response("", { status: 500 }), "/data": () => new Response("", { status: 500 }) },
     });
     subscribe();
     await client._delta();
@@ -241,4 +241,105 @@ test("snapshot: кеш ≤ 20 записів", async () => {
     const before = calls.length;
     await client.snapshot(22);
     expect(calls.length).toBe(before);
+});
+
+test("delta_chunks: 450 накопичених кодів йдуть шматками ≤ 200, жоден код не губиться, 400 немає", async () => {
+    const { client, bus, calls, patches, subscribe } = setup();
+    subscribe();
+    const all = Array.from({ length: 450 }, (_, i) => `CELL-${i}`);
+    bus.emit("f3d_viewer", { codes: all });
+    await advanceTime(1600);
+    await tick();
+    await tick();
+    const d = deltaCalls(calls).map((u) => new URL(u, window.location.href).searchParams.get("codes").split(","));
+    expect(d.length).toBe(3);
+    expect(d.every((c) => c.length <= 200)).toBe(true);
+    expect(d.flat().sort()).toEqual([...all].sort());
+    expect(client.pending.size).toBe(0);
+    expect(patches.length).toBe(3);
+    expect(client.errors).toBe(0);
+});
+
+test("delta_400_recovery: 400 на /delta → без повторів тих самих кодів повне перечитування /data, pending порожній, «немає зв'язку» не з'являється", async () => {
+    let bad = true;
+    const { client, bus, calls, patches, subscribe } = setup({
+        routes: {
+            "/delta": (url) => (bad ? new Response("", { status: 400 }) : json({ ts: "2026-10-12T08:50:00Z", full: false, events: 0, patch: {}, removed: {} })),
+        },
+    });
+    const states = [];
+    client.onState((s) => states.push(s));
+    subscribe();
+    bus.emit("f3d_viewer", { codes: ["A", "B"] });
+    await advanceTime(1600);
+    await tick();
+    await tick();
+    expect(deltaCalls(calls).length).toBe(1);
+    expect(calls.filter((u) => u.includes("/data")).length).toBe(1);
+    expect(patches.length).toBe(1);
+    expect(patches[0].full.meta.ts_utc).toBe("2026-10-12T08:40:00Z");
+    expect(client.lastTs).toBe("2026-10-12T08:40:00Z");
+    expect(client.pending.size).toBe(0);
+    expect(client.errors).toBe(0);
+    expect(client.state).toBe("live");
+    expect(client.degraded).toBe(false);
+    expect(states.includes("offline")).toBe(false);
+    bad = false;
+    bus.emit("f3d_viewer", { codes: ["C"] });
+    await advanceTime(1600);
+    await tick();
+    expect(deltaCalls(calls).length).toBe(2);
+    expect(client.lastTs).toBe("2026-10-12T08:50:00Z");
+});
+
+test("offline_recovers: після серії збоїв /delta й /data — offline; щойно сервер ожив, поллер знімає offline сам", async () => {
+    let down = true;
+    const fail = () => new Response("", { status: 500 });
+    const { client, calls, patches, subscribe } = setup({
+        routes: {
+            "/delta": () => (down ? fail() : json({ ts: "2026-10-12T08:50:00Z", full: false, events: 0, patch: {}, removed: {} })),
+            "/data": () => (down ? fail() : json({ meta: { ts_utc: "2026-10-12T08:45:00Z" } })),
+        },
+    });
+    subscribe();
+    await client._delta();
+    for (let i = 0; i < 4; i++) {
+        await advanceTime(61000);
+        await tick();
+    }
+    expect(client.state).toBe("offline");
+    expect(client.degraded).toBe(true);
+    down = false;
+    await advanceTime(31000); // поллер раз на 30 с
+    await tick();
+    await tick();
+    expect(client.state).toBe("live");
+    expect(client.degraded).toBe(false);
+    expect(client.errors).toBe(0);
+    expect(patches.length).toBeGreaterThan(0);
+    const n = deltaCalls(calls).length;
+    await advanceTime(61000);
+    expect(deltaCalls(calls).length).toBe(n); // поллер зупинено: знову живий режим через шину
+});
+
+test("full_reload_after_3: 3 збої /delta (500) → повне перечитування /data замість дельти", async () => {
+    let down = true;
+    const { client, calls, patches, subscribe } = setup({
+        routes: {
+            "/delta": () => (down ? new Response("", { status: 500 }) : json({ ts: "2026-10-12T08:50:00Z", full: false, events: 0, patch: {}, removed: {} })),
+        },
+    });
+    subscribe();
+    await client._delta();
+    await advanceTime(2100);
+    await tick();
+    expect(client.errors).toBe(2);
+    expect(calls.some((u) => u.includes("/data"))).toBe(false);
+    await advanceTime(4100);
+    await tick();
+    await tick();
+    expect(calls.filter((u) => u.includes("/data")).length).toBe(1);
+    expect(patches.some((p) => p.full)).toBe(true);
+    expect(client.errors).toBe(0);
+    expect(down).toBe(true);
 });
