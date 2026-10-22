@@ -1914,7 +1914,11 @@ function applyPatch(patch) {
     }
     names.forEach((c) => changed.add(c));
   }
-  if (patch.meta?.now) { simBase = Date.parse(D.meta.now.replace(" ", "T")); simStart = Date.now(); }
+  // meta.now — з точністю до хвилини: патч лише посуває годинник уперед (інакше «синхр.» відкочувався до :00 щоразу)
+  if (patch.meta?.now) {
+    const base = Date.parse(D.meta.now.replace(" ", "T"));
+    if (base > simNow().getTime()) { simBase = base; simStart = Date.now(); }
+  }
   indexData();
   if (lists.has("locations") || lists.has("pickings") || lists.has("productions") || lists.has("quality_checks")) {staleLocHist();}
   if ((lists.has("workorders") || lists.has("productions")) && simOverride == null) {
