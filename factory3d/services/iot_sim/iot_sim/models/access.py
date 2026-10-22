@@ -85,6 +85,8 @@ class AccessCtl:
         self.schedule: list[tuple[float, dict[str, Any]]] = []
         self.ptr = 0
         self.on_site = 0
+        self.people_key: tuple[tuple[str, str], ...] | None = None  # склад людей, з якого побудовано розклад
+        self.last_ts: float | None = None  # мітка останньої виданої події розкладу (для догону без дублів)
         self.epoch_key: tuple[float, int] | None = None
         self.drill_id: float | None = None
 
@@ -143,9 +145,14 @@ class AccessCtl:
             self.add(when + timedelta(seconds=off), device, code)
 
     # --- розклад доби -------------------------------------------------------------------
+    def _people_key(self) -> tuple[tuple[str, str], ...]:
+        return tuple(
+            sorted((p.get("code") or p.get("barcode") or "", p.get("barcode") or "") for p in self.world.people)
+        )
+
     def _build_day(self, now: datetime) -> None:
         w = self.world
-        self.schedule, self.ptr, self.on_site = [], 0, 0
+        self.schedule, self.ptr, self.people_key = [], 0, self._people_key()
         if now.weekday() not in w.shift.workdays:
             return
         base = datetime.combine(now.date(), datetime.min.time(), tzinfo=now.tzinfo)
@@ -188,11 +195,15 @@ class AccessCtl:
             return
         self.epoch_key = key
         now = w.now()
-        if self.day != now.date():
+        if self.day != now.date() or self.people_key != self._people_key():  # нова доба або склад людей змінився
+            if self.day != now.date():
+                self.last_ts, self.on_site = None, 0
             self.day = now.date()
             self._build_day(now)
+            # уже видані події не дублюємо; нічого не видано — ptr 0 (минулі входи доганяються одразу)
+            self.ptr = sum(1 for t, _ in self.schedule if self.last_ts is not None and t <= self.last_ts)
         while self.ptr < len(self.schedule) and self.schedule[self.ptr][0] <= epoch:
-            it = self.schedule[self.ptr][1]
+            self.last_ts, it = self.schedule[self.ptr]
             self.ptr += 1
             self.add(it["when"], it["device"], it["code"], it["user"], it["tna"])
         for cmd in w.drain("access"):
@@ -283,6 +294,7 @@ class Access(Model):
             "seq": c.seq,
             "on_site": c.on_site,
             "ptr": c.ptr,
+            "last_ts": c.last_ts,
             "day": c.day.isoformat() if c.day else None,
             "events": [dict(e, datetime=e["datetime"].isoformat()) for e in c.events],
         }
@@ -297,4 +309,5 @@ class Access(Model):
         if c.day:
             c._build_day(self.world.now())
             c.ptr = d.get("ptr", 0)
+            c.last_ts = d.get("last_ts", c.schedule[c.ptr - 1][0] if 0 < c.ptr <= len(c.schedule) else None)
         c.on_site = d.get("on_site", 0)

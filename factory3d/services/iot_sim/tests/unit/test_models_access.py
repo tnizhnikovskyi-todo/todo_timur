@@ -298,3 +298,86 @@ def test_one_shift_unchanged(world, people):
             assert len(inside) == n
         else:  # 15:40: частина вже вийшла (det mod 20 ≤ 10), решта ще в будівлі
             assert 0 < len(inside) < 35
+
+
+# --- люди з'являються пізніше за старт емулятора (follow_odoo / відновлення знімка) ----------------------------
+def _per_user(ctl, tna: str) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for e in ctl.events:
+        if e["device"] == "ACR-IN" and e["user_id"] and e["tna_key"] == tna:
+            out[e["user_id"]] = out.get(e["user_id"], 0) + 1
+    return out
+
+
+def _two_shifts_no_people(world) -> None:
+    from datetime import time
+
+    world.shift.shifts = ((time(7, 0), time(15, 30)), (time(15, 30), time(23, 0)))
+    world.shift.end = time(23, 0)
+    world.clock.set(datetime(2026, 10, 12, 5, 0))
+    world.step(1)
+    assert world.people == [] and world.devices["ACCESS"].model.ctl.events == []
+
+
+def test_people_arrive_after_start_build_full_day(world, people):
+    _two_shifts_no_people(world)
+    ctl = world.devices["ACCESS"].model.ctl
+    world.people = people  # як follow_odoo: список людей приходить після старту емулятора
+    _set_time(world, 12, 0)
+    times = _crew_times(ctl, people)
+    crew_b = {b for b, (t_in, _o) in times.items() if t_in >= 15 * 60}
+    assert len(times) == 35 and crew_b
+    inside = _inside(ctl)
+    assert inside and inside == set(times) - crew_b and ctl.on_site == len(inside)  # бригада A вже всередині
+    first = min(e["datetime"] for e in entries(ctl)).astimezone(KYIV)
+    assert (first.hour, first.minute) >= (6, 40) and first.hour < 7  # доганяння з оригінальними мітками часу
+    _set_time(world, 15, 40)
+    assert crew_b <= _inside(ctl)  # бригада B увійшла о 15:10–15:30
+    for e in entries(ctl):
+        if e["user_id"] in crew_b:
+            assert (
+                datetime(2026, 10, 12, 15, 10, tzinfo=KYIV)
+                <= e["datetime"]
+                < datetime(2026, 10, 12, 15, 30, tzinfo=KYIV)
+            )
+    assert ctl.on_site == len(_inside(ctl))
+    assert set(_per_user(ctl, "1").values()) == {1}
+
+
+def test_unchanged_or_grown_people_no_duplicates(world, people):
+    _two_shifts_no_people(world)
+    ctl = world.devices["ACCESS"].model.ctl
+    world.people = people[:30]
+    _set_time(world, 12, 0)
+    n = len(ctl.events)
+    world.people = [dict(p) for p in people[:30]]  # той самий склад новими об'єктами (оновлення з Odoo)
+    world.advance(60)
+    assert len(ctl.events) == n and set(_per_user(ctl, "1").values()) == {1}
+    on_site = ctl.on_site
+    world.people = people  # склад змінився: розклад перебудовано, видані події не повторюються
+    world.advance(60)
+    assert set(_per_user(ctl, "1").values()) == {1} and set(_per_user(ctl, "2").values()) <= {1}
+    assert ctl.on_site >= on_site and ctl.on_site == len(_inside(ctl))
+
+
+def test_restore_snapshot_with_people_builds_full_schedule(registry, world, people):
+    import json
+
+    from iot_sim.core.world import World
+
+    world.people = people
+    world.clock.set(datetime(2026, 10, 12, 12, 0))
+    world.advance(10)
+    a = world.devices["ACCESS"].model.ctl
+    assert a.events and a.on_site > 0
+    data = json.loads(json.dumps(world.snapshot()))
+    b_world = World(registry, seed=world.seed, clock=type(world.clock)("2026-10-12T05:00:00"))
+    assert b_world.people == []  # на сервері люди з'являються пізніше за пристрої
+    b_world.restore(data)
+    b = b_world.devices["ACCESS"].model.ctl
+    assert len(b.schedule) == len(a.schedule) > 0 and b.ptr == a.ptr and len(b.events) == len(a.events)
+    assert b.on_site == a.on_site
+    b_world.advance(10)
+    assert len(b.events) == len(a.events)  # знімок не дублює видані події
+    _set_time(b_world, 15, 40)
+    assert len(_per_user(b, "1")) == 35 and set(_per_user(b, "1").values()) == {1}

@@ -73,23 +73,23 @@ def restore(world: World, data: dict[str, Any]) -> None:
         if sig is None:  # сигнал зник з каталогу — ігноруємо
             continue
         sig.value, sig.ts, sig.status, sig.held_until = value, _dt(ts), status, _dt(held)  # type: ignore[assignment]
-    for code, d in data["devices"].items():
-        dev = world.devices.get(code)
-        if dev is not None:
-            dev.model.from_dict(d)
-    world.minute0 = data.get("minute0", world.minute0)
-    world._rngs = {}
-    for code, d in data.get("rng", {}).items():
-        rng = Rng(world.seed, code)
-        rng.from_dict(d)
-        world._rngs[code] = rng
-    w = data["world"]
+    w = data["world"]  # стан світу (люди тощо) — ДО моделей: AccessCtl.set_state будує розклад доби з world.people
     world.mode = w["mode"]
     world.flags = w["flags"]
     world.workcenters, world.jobs = w["workcenters"], w["jobs"]
     world.trucks, world.people, world.balance = w["trucks"], w["people"], w["balance"]
     world.maintenance_closed = set(w["maintenance_closed"])
     world.tick_count = w.get("tick_count", 0)
+    world.minute0 = data.get("minute0", world.minute0)
+    for code, d in data["devices"].items():
+        dev = world.devices.get(code)
+        if dev is not None:
+            dev.model.from_dict(d)
+    world._rngs = {}
+    for code, d in data.get("rng", {}).items():
+        rng = Rng(world.seed, code)
+        rng.from_dict(d)
+        world._rngs[code] = rng
 
 
 def save(world: World, state_dir: str | Path) -> Path:
