@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_claude_agent_user,td.claude.agent user,model_td_claude_agent,base.group_user,1,1,1,1
+access_td_claude_request_user,td.claude.request user,model_td_claude_request,base.group_user,1,0,0,0
+access_td_claude_session_user,td.claude.session user,model_td_claude_session,base.group_user,1,1,1,1

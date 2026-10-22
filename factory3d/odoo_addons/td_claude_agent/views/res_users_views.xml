@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_users_form_simple_modif_td_claude" model="ir.ui.view">
+        <field name="name">res.users.preferences.form.td.claude</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form_simple_modif"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="before">
+                <field name="td_claude_has_agent" invisible="1"/>
+                <div class="mb-3" invisible="td_claude_has_agent">
+                    <button name="action_td_create_claude_agent" type="object" class="btn btn-secondary"
+                            string="Створити мого агента Claude" icon="fa-magic"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

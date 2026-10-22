@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_agent_wizard_form" model="ir.ui.view">
+        <field name="name">td.claude.agent.wizard.form</field>
+        <field name="model">td.claude.agent.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Агент Claude створено" create="0">
+                <div class="alert alert-warning" role="alert">
+                    Ключ показується лише один раз: скопіюйте його зараз і додайте ключ у odoo-mcp як нове з'єднання
+                    (логін агента — нижче). Потім вкажіть Fire URL і токен вашої Routine в картці агента.
+                </div>
+                <group>
+                    <field name="agent_id"/>
+                    <field name="agent_login"/>
+                    <field name="api_key" readonly="1"/>
+                    <field name="api_key_expires"/>
+                </group>
+                <footer>
+                    <button string="Закрити" special="cancel" class="btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

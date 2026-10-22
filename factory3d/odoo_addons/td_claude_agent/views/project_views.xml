@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="edit_project_td_claude" model="ir.ui.view">
+        <field name="name">project.project.form.td.claude</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="td_claude" string="Claude">
+                    <field name="td_claude_context" placeholder="Контекст проєкту для Claude: цілі, правила, терміни..."/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_task_form2_td_claude" model="ir.ui.view">
+        <field name="name">project.task.form.td.claude</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="project.view_task_form2"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_td_open_claude_session" type="object" class="oe_stat_button"
+                        icon="fa-external-link" invisible="not td_claude_session_url">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Claude-сесія</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="after">
+                <div class="mb-2" invisible="not td_claude_session_url">
+                    <label for="td_claude_session_url" string="Claude-сесія" class="me-2"/>
+                    <field name="td_claude_session_url" widget="url" readonly="1" class="d-inline"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

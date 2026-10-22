@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_td_claude_agent_owner" model="ir.rule">
+        <field name="name">Claude-агент: лише власник</field>
+        <field name="model_id" ref="model_td_claude_agent"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">[('owner_id', '=', user.id)]</field>
+    </record>
+    <record id="rule_td_claude_request_participant" model="ir.rule">
+        <field name="name">Запит Claude: власник і агент</field>
+        <field name="model_id" ref="model_td_claude_request"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('owner_id', '=', user.id), ('agent_user_id', '=', user.id)]</field>
+    </record>
+    <record id="rule_td_claude_session_participant" model="ir.rule">
+        <field name="name">Сесія Claude: власник і агент</field>
+        <field name="model_id" ref="model_td_claude_session"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">['|', ('owner_id', '=', user.id), ('agent_user_id', '=', user.id)]</field>
+    </record>
+</odoo>

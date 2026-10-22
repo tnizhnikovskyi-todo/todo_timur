@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_request_list" model="ir.ui.view">
+        <field name="name">td.claude.request.list</field>
+        <field name="model">td.claude.request</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" decoration-danger="state == 'failed'" decoration-muted="state == 'pending'">
+                <field name="create_date"/>
+                <field name="agent_id"/>
+                <field name="kind"/>
+                <field name="record_name"/>
+                <field name="state" widget="badge" decoration-success="state == 'sent'" decoration-danger="state == 'failed'"/>
+                <field name="http_status"/>
+                <field name="session_url" widget="url"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_claude_request_form" model="ir.ui.view">
+        <field name="name">td.claude.request.form</field>
+        <field name="model">td.claude.request</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0">
+                <header>
+                    <button name="action_retry" type="object" string="Повторити" class="btn-primary"
+                            invisible="state == 'sent'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,sent"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="agent_id"/>
+                            <field name="kind"/>
+                            <field name="res_model"/>
+                            <field name="res_id"/>
+                            <field name="record_name"/>
+                            <field name="message_id"/>
+                        </group>
+                        <group>
+                            <field name="http_status"/>
+                            <field name="session_url" widget="url"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Payload" name="payload"><field name="payload"/></page>
+                        <page string="Відповідь" name="response"><field name="response"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_claude_request_search" model="ir.ui.view">
+        <field name="name">td.claude.request.search</field>
+        <field name="model">td.claude.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="record_name"/>
+                <field name="agent_id"/>
+                <filter name="failed" string="Помилки" domain="[('state', '=', 'failed')]"/>
+                <filter name="pending" string="Очікують" domain="[('state', '=', 'pending')]"/>
+                <group>
+                    <filter name="group_kind" string="Тип" context="{'group_by': 'kind'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_claude_request" model="ir.actions.act_window">
+        <field name="name">Журнал запитів Claude</field>
+        <field name="res_model">td.claude.request</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

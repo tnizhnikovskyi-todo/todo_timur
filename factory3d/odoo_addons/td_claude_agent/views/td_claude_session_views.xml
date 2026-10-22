@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_session_list" model="ir.ui.view">
+        <field name="name">td.claude.session.list</field>
+        <field name="model">td.claude.session</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="agent_id"/>
+                <field name="record_name"/>
+                <field name="res_model"/>
+                <field name="session_url" widget="url"/>
+                <field name="state"/>
+                <field name="last_message_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_claude_session_form" model="ir.ui.view">
+        <field name="name">td.claude.session.form</field>
+        <field name="model">td.claude.session</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open_session" type="object" string="Відкрити сесію" class="btn-primary"
+                            invisible="not session_url"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="agent_id"/>
+                            <field name="res_model"/>
+                            <field name="res_id"/>
+                            <field name="record_name"/>
+                        </group>
+                        <group>
+                            <field name="session_id"/>
+                            <field name="session_url" widget="url"/>
+                            <field name="last_message_at"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_claude_session" model="ir.actions.act_window">
+        <field name="name">Сесії Claude</field>
+        <field name="res_model">td.claude.session</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

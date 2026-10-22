@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_agent_list" model="ir.ui.view">
+        <field name="name">td.claude.agent.list</field>
+        <field name="model">td.claude.agent</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="action_create_my_agent" type="object" string="Створити мого агента Claude"
+                            display="always" class="btn-primary"/>
+                </header>
+                <field name="name"/>
+                <field name="owner_id"/>
+                <field name="fire_url"/>
+                <field name="last_fire_at"/>
+                <field name="last_fire_status"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_claude_agent_form" model="ir.ui.view">
+        <field name="name">td.claude.agent.form</field>
+        <field name="model">td.claude.agent</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_ping" type="object" string="Перевірити з'єднання" class="btn-primary"
+                            invisible="not id"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-list"
+                                invisible="not id">
+                            <field name="request_count" widget="statinfo" string="Запити"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group string="Агент">
+                            <field name="active" invisible="1"/>
+                            <field name="owner_id" options="{'no_create': True}"/>
+                            <field name="agent_user_id" options="{'no_create': True}"/>
+                            <field name="name"/>
+                        </group>
+                        <group string="Claude Code Routine">
+                            <field name="fire_url" placeholder="https://api.anthropic.com/..."/>
+                            <field name="fire_token" password="True" widget="password"/>
+                            <field name="last_fire_at"/>
+                            <field name="last_fire_status"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_claude_agent" model="ir.actions.act_window">
+        <field name="name">Агенти Claude</field>
+        <field name="res_model">td.claude.agent</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_td_claude_create_my_agent" model="ir.actions.server">
+        <field name="name">Створити мого агента Claude</field>
+        <field name="model_id" ref="model_td_claude_agent"/>
+        <field name="binding_model_id" ref="model_td_claude_agent"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.action_create_my_agent()</field>
+    </record>
+</odoo>
