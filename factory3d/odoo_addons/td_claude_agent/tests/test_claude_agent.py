@@ -301,6 +301,16 @@ class TestClaudeAgent(TransactionCase):
         with self.assertRaises(UserError):
             self.env["td.claude.agent"].with_user(self.other).action_create_my_agent()
         self.assertTrue(self.other.with_user(self.other).td_claude_has_agent)
+        # діалог із ключем відкривається звичайним користувачем (права на wizard)
+        wizard = self.env["td.claude.agent.wizard"].with_user(self.other).with_context(ctx).create({})
+        self.assertEqual(wizard.api_key, key)
+        # новий ключ: старий відкликано, новий діє; чужий агент — заборонено
+        with self.assertRaises(UserError):
+            agent.with_user(self.owner).action_new_api_key()
+        new_key = agent.with_user(self.other).action_new_api_key()["context"]["default_api_key"]
+        Keys = self.env["res.users.apikeys"]
+        self.assertEqual(Keys._check_credentials(scope="rpc", key=new_key), user.id)
+        self.assertFalse(Keys._check_credentials(scope="rpc", key=key))
 
     def test_create_my_agent_login_collision(self):
         self.env["res.users"].with_context(no_reset_password=True).create(

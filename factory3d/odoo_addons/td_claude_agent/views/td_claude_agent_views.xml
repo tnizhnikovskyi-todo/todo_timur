@@ -27,6 +27,8 @@
                 <header>
                     <button name="action_ping" type="object" string="Перевірити з'єднання" class="btn-primary"
                             invisible="not id"/>
+                    <button name="action_new_api_key" type="object" string="Новий API-ключ"
+                            invisible="not id"/>
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>

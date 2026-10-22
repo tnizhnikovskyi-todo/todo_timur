@@ -141,12 +141,27 @@ class TdClaudeAgent(models.Model):
         )
         self._td_create_agent_employee(owner, agent_user)
         agent = self.sudo().create({"owner_id": owner.id, "agent_user_id": agent_user.id})
+        return agent._td_issue_api_key(_("Агент Claude створено"))
+
+    def action_new_api_key(self):
+        """Відкликає ключі odoo-mcp агента і видає новий (лише власник)."""
+        self.ensure_one()
+        if self.owner_id != self.env.user:
+            raise UserError(_("Новий ключ може отримати лише власник агента."))
+        self.env["res.users.apikeys"].sudo().search(
+            [("user_id", "=", self.agent_user_id.id), ("name", "=", "odoo-mcp")]
+        )._remove()
+        return self._td_issue_api_key(_("Новий API-ключ агента"))
+
+    def _td_issue_api_key(self, title):
+        agent, agent_user = self, self.agent_user_id
+        login = agent_user.login
         max_days = max(agent_user.all_group_ids.mapped("api_key_duration") or [0.0]) or 1.0
         expiration = datetime.now() + timedelta(days=max_days) - timedelta(minutes=1)
         key = self.env["res.users.apikeys"].with_user(agent_user).sudo()._generate("rpc", "odoo-mcp", expiration)
         return {
             "type": "ir.actions.act_window",
-            "name": _("Агент Claude створено"),
+            "name": title,
             "res_model": "td.claude.agent.wizard",
             "view_mode": "form",
             "target": "new",
