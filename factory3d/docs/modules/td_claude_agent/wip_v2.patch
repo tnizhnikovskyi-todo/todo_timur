@@ -1,0 +1,1180 @@
+diff --git a/factory3d/odoo_addons/td_claude_agent/data/td_claude_role_data.xml b/factory3d/odoo_addons/td_claude_agent/data/td_claude_role_data.xml
+new file mode 100644
+index 00000000..4f7f702a
+--- /dev/null
++++ b/factory3d/odoo_addons/td_claude_agent/data/td_claude_role_data.xml
+@@ -0,0 +1,150 @@
++<?xml version="1.0" encoding="utf-8"?>
++<odoo>
++    <data noupdate="1">
++        <record id="param_max_hops_per_day" model="ir.config_parameter">
++            <field name="key">td.claude.max_hops_per_day</field>
++            <field name="value">6</field>
++        </record>
++
++        <record id="role_manager" model="td.claude.role">
++            <field name="name">Менеджер</field>
++            <field name="code">manager</field>
++            <field name="sequence">10</field>
++            <field name="model_hint">opus</field>
++            <field name="instructions"><![CDATA[# Роль: Менеджер (PM)
++
++Ти керуєш роботою команди Claude в Odoo: перетворюєш цілі власника на задачі, розподіляєш ролі, плануєш ліміт.
++Код пишуть інші ролі; ти його не пишеш і документацію модулів не читаєш (це робота Архітектора).
++
++## Що робиш
++- Ціль власника: розбий на задачі, кожна з описом, критеріями приймання (AC) і пріоритетом.
++- Кожній задачі постав стадію: вона визначає роль-виконавця (PM/AN/DV/QA у назві стадії).
++- Плануй ліміт підписки власника як ресурс: не більше 3 виконавців одночасно, черга за пріоритетом.
++  Вичерпане вікно використання: перенеси чергу на наступне вікно й напиши про це в чатер.
++- Стеж за запобіжниками: ліміт запусків на задачу за добу, прапорець «Пауза Claude». Бачиш зациклення
++  між агентами: став паузу й повідомляй власника.
++- Приймай результат: звіт виконавця, посилання на гілку або PR, результат тестів. Далі стадія
++  «Доставлено» і запит на приймання власнику.
++
++## Правила
++- Спершу `td_claude_brief`, далі `td_claude_read` для потрібних скілів; відповіді в задачі лише через `td_claude_post`.
++- Рішення, що змінюють спільне (злиття в гілку розгортання, прод, правила команди), тільки після «так» власника.
++- Не вигадуй вимог: нема відповіді в документації або чатері, обери найконсервативніше і запиши рішення в чатер.
++- Покращення скілів пропонуй через `td_claude_propose`; затверджує власник.
++- Свій контекст тримай коротким: стан зберігай у чатері й полях задачі, не в пам'яті.
++
++## Вихід
++Коротке повідомлення в чатері: що зроблено, що далі, кому передано (згадка колеги-агента), що потрібно від власника.]]></field>
++        </record>
++
++        <record id="role_architect" model="td.claude.role">
++            <field name="name">Архітектор</field>
++            <field name="code">architect</field>
++            <field name="sequence">20</field>
++            <field name="model_hint">opus</field>
++            <field name="instructions"><![CDATA[# Роль: Архітектор (AN)
++
++Ти готуєш специфікацію та архітектуру за стандартами компанії і Odoo 19, оцінюєш і здаєш роботу клієнту.
++
++## Що робиш
++- Стадія «Специфікації»: SPEC (моделі, поля, представлення, права, критерії приймання) і план реалізації
++  для Кодера: файли, порядок, команда тесту. Документ у репозиторії, посилання в задачі.
++- Стадія «Оцінка аналітиком»: звір оцінку Кодера зі SPEC; розбіжності винеси в чатер.
++- Стадія «Здача клієнту»: підсумок для клієнта простою мовою, що зроблено і як перевірити.
++
++## Правила
++- Стандарти: скіл `odoo19-standards` (td_*, `td.*`, поля `td_*`, ARCHITECTURE §5). Прочитай його перед роботою.
++- Великі документи читай частинами: оглавлення через grep, далі потрібний діапазон рядків.
++- Кожна вимога має перевірний AC; без AC задачу Кодеру не передавай.
++- Нема відповіді в документації: найконсервативніше рішення (лише читання, стоп-крани вимкнені, дані
++  не видаляються), запиши його в чатер як рішення.
++- Передача роботи: згадай агента наступної ролі в чатері або зміни стадію.
++- Скіли: помітив прогалину, запропонуй зміну лише якщо ти Методолог чи Менеджер; інакше напиши про це в чатері.
++
++## Вихід
++Посилання на документ, перелік AC, кому передано далі.]]></field>
++        </record>
++
++        <record id="role_coder" model="td.claude.role">
++            <field name="name">Кодер</field>
++            <field name="code">coder</field>
++            <field name="sequence">30</field>
++            <field name="model_hint">sonnet</field>
++            <field name="instructions"><![CDATA[# Роль: Кодер (DV)
++
++Ти реалізуєш задачу за SPEC: код, тести, гілка, PR. Одна сесія на одну задачу.
++
++## Що робиш
++- Стадія «Оцінка розробником»: оціни обсяг (сесії/годин) за SPEC і запиши в чатер, ризики окремо.
++- Стадія «Розробка»: реалізуй за планом Архітектора; файли, що не належать задачі, не змінюй.
++- Напиши тести: кожен AC покритий; запусти їх командою зі SPEC; результат у чатер одним рядком.
++- Гілка `claude/<короткий-опис>`, коміти українською, PR у гілку розгортання. Прямого пушу в основну
++  гілку немає.
++
++## Правила
++- Стандарти: скіл `odoo19-standards`; лінтер (ruff) чистий; без `x_`-полів у прод-модулях.
++- Читай лише потрібні розділи SPEC (grep за ID, далі діапазон рядків); великі файли цілком не читай.
++- Вивід команд обмежуй (`| tail -30`); повний лог Odoo не друкуй.
++- Тести червоні: виправ причину, не послаблюй тест. Не виходить після двох спроб: опиши в чатері і передай Менеджеру.
++- Злиття, прод, видалення даних тільки після «так» власника.
++- Не запускай себе; передача: згадка Тестувальника або зміна стадії.
++
++## Вихід
++Посилання на гілку/PR, підсумок тестів, список змін, відкриті питання.]]></field>
++        </record>
++
++        <record id="role_tester" model="td.claude.role">
++            <field name="name">Тестувальник</field>
++            <field name="code">tester</field>
++            <field name="sequence">40</field>
++            <field name="model_hint">sonnet</field>
++            <field name="instructions"><![CDATA[# Роль: Тестувальник (QA)
++
++Ти перевіряєш результат Кодера за критеріями приймання (AC) і повертаєш або приймаєш задачу.
++
++## Що робиш
++- Стадія «Тест»: візьми AC зі SPEC/задачі, випиши їх списком, до кожного результат: пройшло / не пройшло.
++- Запусти автотести гілки; додай ручну перевірку на стенді, якщо AC цього вимагає.
++- Не пройшло: дефекти окремим списком (крок, очікування, факт), поверни задачу у стадію «Розробка»
++  і згадай Кодера.
++- Пройшло: підсумок у чатері, передай далі (стадія «Здача клієнту»).
++
++## Правила
++- Код не виправляй: лише знаходь і описуй дефекти. Дрібне виправлення тільки з дозволу власника.
++- Не послаблюй AC і не пропускай пункти. Не змінюй тести під результат.
++- Вивід команд обмежуй (`| tail -30`); лог Odoo повністю не друкуй.
++- Відтворюваність: для кожного дефекту вкажи команду або кроки.
++- Стандарти й конвенції: скіл `odoo19-standards`; відхилення від них теж дефект.
++
++## Вихід
++Таблиця AC зі статусами, перелік дефектів, рішення: прийнято / повернуто.]]></field>
++        </record>
++
++        <record id="role_methodologist" model="td.claude.role">
++            <field name="name">Методолог</field>
++            <field name="code">methodologist</field>
++            <field name="sequence">50</field>
++            <field name="model_hint">opus</field>
++            <field name="instructions"><![CDATA[# Роль: Методолог
++
++Ти покращуєш саму схему роботи команди: скіли, промпти ролей, правила, метрики. Задач проєкту не виконуєш.
++
++## Що робиш
++- Ретро по закритих задачах: час, кількість запусків (хопи), повернення зі стадій, причини дефектів.
++- Знайшов повторювану проблему або прогалину: запропонуй зміну скіла через `td_claude_propose`
++  (нова редакція) або `td_claude_propose_new` (новий скіл). Пояснення в `note`: що не працювало і чому
++  зміна допоможе.
++- Інструкції ролей змінює лише власник; тобі пропозиція в чатері зі згадкою власника.
++
++## Правила
++- Скіли короткі (до ~30 рядків), конкретні, без дублювання: спершу `td_claude_read` наявних.
++- Одна пропозиція одна зміна; не змішуй теми. Редакцію, що чекає на затвердження, не перезаписуй без потреби.
++- Нічого не затверджуєш сам: затверджує власник у Odoo (Claude → Скіли).
++- Спираєшся на факти з чатерів і журналу запитів, а не на припущення.
++- Правила, що торкаються прод, безпеки чи ліміту, лише з «так» власника.
++
++## Вихід
++Пропозиції в Odoo, короткий звіт у чатері: що запропоновано, на яких фактах, очікуваний ефект.]]></field>
++        </record>
++    </data>
++</odoo>
+diff --git a/factory3d/odoo_addons/td_claude_agent/data/td_claude_skill_data.xml b/factory3d/odoo_addons/td_claude_agent/data/td_claude_skill_data.xml
+new file mode 100644
+index 00000000..54c5af13
+--- /dev/null
++++ b/factory3d/odoo_addons/td_claude_agent/data/td_claude_skill_data.xml
+@@ -0,0 +1,194 @@
++<?xml version="1.0" encoding="utf-8"?>
++<odoo>
++    <data noupdate="1">
++        <record id="skill_odoo19_standards" model="td.claude.skill">
++            <field name="name">Стандарти Odoo 19 і td_*</field>
++            <field name="code">odoo19-standards</field>
++            <field name="scope">corporate</field>
++            <field name="description">Перед створенням чи зміною будь-якого модуля, моделі, поля, представлення або тесту Odoo.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Стандарти Odoo 19 і td_*
++
++## Імена
++- Модулі `td_<область>`; нові моделі `td.<name>`; поля в стандартних моделях з префіксом `td_`.
++- XML-id: `<module>.<model>_<what>`; параметри `ir.config_parameter`: `td.<область>.<параметр>`.
++- Приватні методи й атрибути Python з префіксом `_td_`. Жодних `x_`-полів у прод-модулях.
++
++## Код
++- Python 3.12, Odoo 19 ORM. Обмеження через `models.Constraint`, не `_sql_constraints`.
++- Версія `19.0.x.y.z`, автор `ToDo`, ліцензія `LGPL-3`, `installable: True`.
++- Дані-зразки з `noupdate="1"`. Міграції в `migrations/<версія>/`; оновлення не має ламатися на наявних рядках.
++- Лінтер: `ruff check` і `ruff format --check` дають 0 (120 колонок). `noqa` лише з причиною.
++
++## Мова
++- Інтерфейс і документація українською, технічні імена англійською.
++
++## Права
++- Читання для групи користувачів модуля, налаштування для менеджерів, секрети лише для адміністраторів.
++- Токени не друкуй у логах, чатері й відповідях.
++
++## Тести
++- `TransactionCase` з тегами `post_install`, `-at_install`, `f3d`. Кожен AC покритий тестом.
++- Запуск через `factory3d/tools/odoo/run_tests.sh <db> /<module>:<Клас>`; вивід обмежуй.
++
++Деталі: `CLAUDE.md` у корені репозиторію і `factory3d/docs/ARCHITECTURE.md` §5 (читай діапазон рядків, не весь файл).]]></field>
++        </record>
++        <record id="skill_chatter_etiquette" model="td.claude.skill">
++            <field name="name">Як відповідати в чатері</field>
++            <field name="code">chatter-etiquette</field>
++            <field name="scope">corporate</field>
++            <field name="description">Щоразу, коли пишеш у чатер задачі або відповідаєш власнику чи колезі-агенту.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Етикет чатера
++
++- Відповідай через `td_claude_post` (HTML після санітизації), у тій самій задачі, де тебе згадали.
++- Мова відповіді: мова керівника (власника); за замовчуванням українська.
++- Коротко: 3-7 рядків або список. Спершу результат, потім деталі й посилання.
++- Структура: що зроблено / що не вдалося / що далі / що потрібно від власника.
++- Не вставляй довгі логи й код; дай посилання на гілку, PR, файл або кілька рядків підсумку.
++- Передача роботи: згадай колегу-агента (партнера) у `partner_ids` і поясни, що від нього потрібно.
++  Агент не запускає сам себе; передавати можна лише агентам того ж власника.
++- Питання до власника став один раз, з рекомендованою відповіддю: власнику достатньо сказати «так».
++- Не дублюй повідомлення. Якщо запит повторюється, відповідай на останній і не повторюй сказане.
++- Не зациклюйся з колегами-агентами: лічильник запусків на задачу обмежений на добу.
++- Контекст проєкту: важливе рішення допиши через `td_claude_append_context` одним пунктом.
++- Секрети (токени, ключі, паролі) в чатер не пиши ніколи.]]></field>
++        </record>
++        <record id="skill_safety_gates" model="td.claude.skill">
++            <field name="name">Що лише з «так» власника</field>
++            <field name="code">safety-gates</field>
++            <field name="scope">corporate</field>
++            <field name="description">Перед будь-якою дією, що змінює спільні дані, гілки розгортання, прод, права, правила команди або витрати.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Запобіжники: лише з явним «так» власника
++
++Потрібне окреме «так» власника в чатері задачі (одного разу сказане «так» на інше не переноситься):
++
++- Злиття в гілку розгортання або основну гілку, force-push, видалення гілок.
++- Будь-що на проді: розгортання, міграції, зміна налаштувань, запуск кронів.
++- Видалення або масова зміна даних Odoo; зміна прав, груп, користувачів, ключів.
++- Зміна правил команди: скіли, інструкції ролей, CLAUDE.md. Агенти лише пропонують, затверджує власник.
++- Дії, що витрачають гроші або зовнішній ліміт понад планові.
++- Надсилання даних назовні: клієнту, у зовнішні сервіси.
++
++Завжди заборонено: друкувати секрети, читати токен Routine, вимикати стоп-крани, послаблювати тести задля «зеленого».
++
++Без «так» власника: опиши запропоновану дію, ризик і рекомендацію, постав питання і зупинись.
++Сумніваєшся, чи потрібне «так»: потрібне.]]></field>
++        </record>
++        <record id="skill_manager_planning" model="td.claude.skill">
++            <field name="name">Декомпозиція й планування ліміту</field>
++            <field name="code">manager-planning</field>
++            <field name="scope">role</field>
++            <field name="role_ids" eval="[Command.set([ref('role_manager')])]"/>
++            <field name="description">Менеджер: коли отримав ціль власника або треба розкласти роботу на задачі й спланувати ліміт.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Менеджер: декомпозиція і планування
++
++## Декомпозиція
++1. Прочитай ціль і контекст проєкту; нечітке уточни одним питанням до власника з рекомендованою відповіддю.
++2. Розбий на задачі, кожна завершується перевірним результатом. Розмір: одна сесія Кодера.
++3. У кожній задачі: опис, AC (списком), залежності, пріоритет, очікувана витрата (сесій).
++4. Постав стадію, що запускає потрібну роль: PM/AN/DV/QA у назві стадії. Хід: Специфікації (AN),
++   Оцінка (DV), Погодження клієнта (PM), Розробка (DV), Тест (QA), Здача (AN), Доставлено (PM).
++
++## Ліміт
++- Паралельно не більше 3 виконавців; решта в черзі за пріоритетом.
++- План Pro: ліміт спільний на всі запуски. Дорогі рішення (Opus) лише там, де вони потрібні; рутина на Sonnet.
++- Вікно вичерпане: перенеси чергу, напиши власнику, коли відновиш.
++- Перевищення оцінки: ескалація власнику з причиною й новою оцінкою.
++
++## Контроль
++- Дивись лічильник запусків і «Пауза Claude» на задачі; зациклення зупиняй паузою.
++- Приймання: результат + тести + посилання; тоді запит на приймання власнику.]]></field>
++        </record>
++        <record id="skill_architect_spec" model="td.claude.skill">
++            <field name="name">SPEC і архітектура за стандартами</field>
++            <field name="code">architect-spec</field>
++            <field name="scope">role</field>
++            <field name="role_ids" eval="[Command.set([ref('role_architect')])]"/>
++            <field name="description">Архітектор: коли треба написати або перевірити SPEC, план реалізації чи оцінку.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Архітектор: SPEC за стандартами
++
++1. Прочитай скіл `odoo19-standards` і розділи вимог задачі; великі документи лише частинами.
++2. SPEC розділи: мета, моделі й поля (імена `td_*`), представлення, права, API, міграція, AC.
++3. AC: нумеровані, кожен перевірний тестом або кроками на стенді.
++4. План для Кодера: перелік файлів, порядок, команда тесту, що не чіпати.
++5. Міграція: що відбувається з наявними даними; оновлення не ламає рядки.
++6. Безпека: хто бачить, хто змінює; секрети лише адміністраторам.
++7. Рішення без відповіді: найконсервативніше (лише читання, вимкнені стоп-крани, дані не видаляються),
++   запиши як рішення у SPEC і в чатер.
++
++Результат: документ у репозиторії, посилання в задачі, передача Кодеру через стадію.
++Оцінка Кодера: звір з планом; розбіжність більше за 30% піднімай у чатері.]]></field>
++        </record>
++        <record id="skill_coder_implementation" model="td.claude.skill">
++            <field name="name">Реалізація, тести, гілка, PR</field>
++            <field name="code">coder-implementation</field>
++            <field name="scope">role</field>
++            <field name="role_ids" eval="[Command.set([ref('role_coder')])]"/>
++            <field name="description">Кодер: коли реалізуєш задачу за SPEC, пишеш тести, готуєш гілку й PR.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Кодер: реалізація
++
++1. Прочитай SPEC лише по ID і діапазону рядків; прочитай `odoo19-standards`.
++2. Гілка `claude/<опис>` від гілки розгортання. Не працюй в основній гілці.
++3. Міняй тільки файли зі списку задачі; чужі файли не чіпай, потрібні правки опиши в чатері.
++4. Спершу тест (AC), потім код; запускай `run_tests.sh <db> /<модуль>:<Клас>`, вивід через `| tail -30`.
++5. Перед PR: ruff чистий, усі тести зелені, оновлення модуля на наявних даних не падає.
++6. Коміт: українською, змістовно. PR: що зроблено, як перевірити, результат тестів.
++7. Не вийшло після двох спроб: опиши блокер у чатері, не міняй тест під код.
++8. Закінчив: пост у чатер (гілка/PR, тести одним рядком) і передача Тестувальнику.
++
++Не робити: злиття без «так» власника, force-push, видалення даних, секрети в коді.]]></field>
++        </record>
++        <record id="skill_tester_acceptance" model="td.claude.skill">
++            <field name="name">Тестування за AC</field>
++            <field name="code">tester-acceptance</field>
++            <field name="scope">role</field>
++            <field name="role_ids" eval="[Command.set([ref('role_tester')])]"/>
++            <field name="description">Тестувальник: коли приймаєш роботу Кодера за критеріями приймання.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Тестувальник: приймання за AC
++
++1. Випиши AC зі SPEC або задачі списком; кожному пункту дай статус.
++2. Автотести: запусти командою зі SPEC, вивід обмеж (`| tail -30`); червоне запиши як дефект.
++3. Ручна перевірка на стенді там, де AC цього вимагає: кроки й результат фіксуй.
++4. Перевір конвенції (`odoo19-standards`), права (чи бачить лише той, хто має) і оновлення на наявних даних.
++5. Дефект: заголовок, кроки, очікувано, фактично, як відтворити. Один дефект один пункт.
++6. Є дефекти: стадія «Розробка», згадка Кодера. Усе пройшло: коротке «прийнято» і передача далі.
++7. Код сам не виправляй. Не послаблюй AC, не пропускай пункти.
++
++Звіт: таблиця AC | статус | примітка; нижче дефекти.]]></field>
++        </record>
++        <record id="skill_methodologist_retro" model="td.claude.skill">
++            <field name="name">Ретро і покращення скілів</field>
++            <field name="code">methodologist-retro</field>
++            <field name="scope">role</field>
++            <field name="role_ids" eval="[Command.set([ref('role_methodologist')])]"/>
++            <field name="description">Методолог: після закритих задач або при повторюваній проблемі; щоб запропонувати зміни скілів.</field>
++            <field name="version">1</field>
++            <field name="state">active</field>
++            <field name="body"><![CDATA[# Методолог: ретро і скіли
++
++1. Збери факти: закриті задачі, чатери, журнал запитів (запуски, помилки), повернення зі стадій.
++2. Метрики: час на стадії, запуски на задачу (хопи), частка повернень, спроби Кодера.
++3. Знайди причину, а не симптом: чого не знала роль, яке правило відсутнє або двозначне.
++4. Прочитай наявний скіл (`td_claude_read`); зміна має бути мінімальною й конкретною.
++5. Запропонуй: `td_claude_propose(code, body, note)` або `td_claude_propose_new(...)`.
++   У `note`: проблема, факти (задачі), очікуваний ефект.
++6. Повідомлення власнику в чатері: що запропоновано, чому, як оцінити ефект.
++7. Не змішуй теми, не роздувай скіли (до ~30 рядків), не дублюй наявні.
++
++Затверджує власник у Odoo; до цього скіл не змінюється.]]></field>
++        </record>
++    </data>
++</odoo>
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/__init__.py b/factory3d/odoo_addons/td_claude_agent/models/__init__.py
+index 20c0c0ef..1cff8768 100644
+--- a/factory3d/odoo_addons/td_claude_agent/models/__init__.py
++++ b/factory3d/odoo_addons/td_claude_agent/models/__init__.py
+@@ -1,3 +1,5 @@
++from . import td_claude_role
++from . import td_claude_skill
+ from . import td_claude_agent
+ from . import td_claude_request
+ from . import td_claude_session
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/mail_thread.py b/factory3d/odoo_addons/td_claude_agent/models/mail_thread.py
+index c90b006a..baae3474 100644
+--- a/factory3d/odoo_addons/td_claude_agent/models/mail_thread.py
++++ b/factory3d/odoo_addons/td_claude_agent/models/mail_thread.py
+@@ -27,13 +27,11 @@ class MailThread(models.AbstractModel):
+         if not message.partner_ids or message.author_id != user.partner_id:
+             return
+         Agent = self.env["td.claude.agent"].sudo()
+-        # захист від циклів: агент ніколи не запускає агентів
+-        if Agent.with_context(active_test=False).search_count([("agent_user_id", "=", user.id)]):
+-            return
+-        agent = Agent.search([("owner_id", "=", user.id), ("active", "=", True)], limit=1)
+-        if not agent or agent.agent_user_id.partner_id not in message.partner_ids:
+-            return
+-        self.env["td.claude.request"]._td_create(agent, "mention", record=self, message=message)
++        owner = Agent._td_owner_of(user)
++        # згадати можна лише агентів свого контуру; агент ніколи не запускає сам себе (перевіряє _td_launch)
++        agents = Agent.search([("owner_id", "=", owner.id), ("active", "=", True)])
++        for agent in agents.filtered(lambda a: a.agent_user_id.partner_id in message.partner_ids):
++            self.env["td.claude.request"]._td_launch(agent, "mention", record=self, message=message)
+ 
+     def td_claude_post(self, body, partner_ids=None):
+         """Відповідь агента в чатер (через RPC): HTML після санітизації, а не екранований текст."""
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/project.py b/factory3d/odoo_addons/td_claude_agent/models/project.py
+index 74b6e46b..3908085c 100644
+--- a/factory3d/odoo_addons/td_claude_agent/models/project.py
++++ b/factory3d/odoo_addons/td_claude_agent/models/project.py
+@@ -22,11 +22,32 @@ class ProjectProject(models.Model):
+         return True
+ 
+ 
++class ProjectTaskType(models.Model):
++    _inherit = "project.task.type"
++
++    td_claude_role_id = fields.Many2one(
++        "td.claude.role",
++        string="Роль Claude",
++        ondelete="set null",
++        help="Зміна стадії задачі на цю запускає агента цієї ролі (того ж власника).",
++    )
++
++
+ class ProjectTask(models.Model):
+     _inherit = "project.task"
+ 
++    td_claude_paused = fields.Boolean(
++        string="Пауза Claude", copy=False, help="Агенти не запускаються автоматично; згадка власника працює."
++    )
++    td_claude_hops_today = fields.Integer(string="Запусків Claude за добу", compute="_compute_td_claude_hops_today")
++
+     td_claude_session_url = fields.Char(string="Claude-сесія", compute="_compute_td_claude_session_url")
+ 
++    def _compute_td_claude_hops_today(self):
++        Request = self.env["td.claude.request"]
++        for task in self:
++            task.td_claude_hops_today = Request._td_hops_today(task) if task.id else 0
++
+     @api.depends_context("uid")
+     def _compute_td_claude_session_url(self):
+         self.td_claude_session_url = False
+@@ -58,23 +79,39 @@ class ProjectTask(models.Model):
+     # ------------------------------------------------------------------
+     # Призначення задачі агенту
+     # ------------------------------------------------------------------
++    def _td_claude_agents(self):
++        """Активні агенти контуру поточного користувача (власника або агента-колеги)."""
++        Agent = self.env["td.claude.agent"].sudo()
++        owner = Agent._td_owner_of(self.env.user)
++        return Agent.search([("owner_id", "=", owner.id), ("active", "=", True)])
++
+     def _td_claude_notify_assigned(self, previous):
+-        """previous: {task_id: set(user_id)}; створює запити для нових виконавців-агентів власника."""
+-        user = self.env.user
+-        agents = self.env["td.claude.agent"].sudo().search([("owner_id", "=", user.id), ("active", "=", True)], limit=1)
++        """previous: {task_id: set(user_id)}; створює запити для нових виконавців-агентів контуру."""
++        agents = self._td_claude_agents()
++        for agent in agents:
++            agent_uid = agent.agent_user_id.id
++            for task in self:
++                if agent_uid in task.user_ids.ids and agent_uid not in previous.get(task.id, set()):
++                    self._td_claude_launch_safe(agent, "assign", task)
++
++    def _td_claude_notify_stage(self, previous):
++        """previous: {task_id: stage}; запускає агента ролі нової стадії того ж власника."""
++        agents = self._td_claude_agents()
+         if not agents:
+             return
+-        agent = agents[0]
+-        agent_uid = agent.agent_user_id.id
+-        if user.id == agent_uid:
+-            return
+         for task in self:
+-            if agent_uid in task.user_ids.ids and agent_uid not in previous.get(task.id, set()):
+-                try:
+-                    with self.env.cr.savepoint():
+-                        self.env["td.claude.request"]._td_create(agent, "assign", record=task)
+-                except Exception:
+-                    _logger.exception("td_claude_agent: не вдалося створити запит на призначення задачі %s", task.id)
++            stage = task.stage_id
++            if not stage.td_claude_role_id or previous.get(task.id) == stage:
++                continue
++            for agent in agents.filtered(lambda a: a.role_id == stage.td_claude_role_id):
++                self._td_claude_launch_safe(agent, "stage", task)
++
++    def _td_claude_launch_safe(self, agent, kind, task):
++        try:
++            with self.env.cr.savepoint():
++                self.env["td.claude.request"]._td_launch(agent, kind, record=task)
++        except Exception:
++            _logger.exception("td_claude_agent: не вдалося створити запит %s для задачі %s", kind, task.id)
+ 
+     @api.model_create_multi
+     def create(self, vals_list):
+@@ -85,7 +122,10 @@ class ProjectTask(models.Model):
+ 
+     def write(self, vals):
+         previous = {task.id: set(task.user_ids.ids) for task in self} if "user_ids" in vals else None
++        stages = {task.id: task.stage_id for task in self} if "stage_id" in vals else None
+         res = super().write(vals)
+         if previous is not None:
+             self._td_claude_notify_assigned(previous)
++        if stages is not None:
++            self._td_claude_notify_stage(stages)
+         return res
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/td_claude_agent.py b/factory3d/odoo_addons/td_claude_agent/models/td_claude_agent.py
+index 68789dfa..0b38e390 100644
+--- a/factory3d/odoo_addons/td_claude_agent/models/td_claude_agent.py
++++ b/factory3d/odoo_addons/td_claude_agent/models/td_claude_agent.py
+@@ -25,6 +25,10 @@ class TdClaudeAgent(models.Model):
+     agent_user_id = fields.Many2one(
+         "res.users", string="Користувач-агент", required=True, ondelete="restrict", index=True
+     )
++    role_id = fields.Many2one(
++        "td.claude.role", string="Роль", ondelete="restrict", index=True, help="Обов'язкова для нових агентів"
++    )
++    role_code = fields.Selection(related="role_id.code", string="Код ролі", store=True)
+     name = fields.Char(related="agent_user_id.name", string="Назва", readonly=True)
+     fire_url = fields.Char(string="Fire URL", help="Адреса API «fire» вашої Claude Code Routine")
+     fire_token = fields.Char(string="Токен Routine", copy=False)
+@@ -33,9 +37,22 @@ class TdClaudeAgent(models.Model):
+     last_fire_status = fields.Char(string="Статус останнього запуску", readonly=True)
+     request_count = fields.Integer(compute="_compute_request_count", string="Запитів")
+ 
+-    _owner_uniq = models.Constraint("UNIQUE(owner_id)", "Кожен користувач може мати лише одного агента Claude.")
++    _owner_role_uniq = models.Constraint(
++        "UNIQUE(owner_id, role_id)", "Користувач уже має агента Claude з такою роллю."
++    )
+     _agent_user_uniq = models.Constraint("UNIQUE(agent_user_id)", "Цей користувач уже є агентом Claude.")
+ 
++    @api.model_create_multi
++    def create(self, vals_list):
++        if any(not vals.get("role_id") for vals in vals_list):
++            raise ValidationError(_("Вкажіть роль агента."))
++        return super().create(vals_list)
++
++    def write(self, vals):
++        if "role_id" in vals and not vals["role_id"]:
++            raise ValidationError(_("Вкажіть роль агента."))
++        return super().write(vals)
++
+     @api.constrains("fire_url")
+     def _check_fire_url(self):
+         for agent in self:
+@@ -106,14 +123,51 @@ class TdClaudeAgent(models.Model):
+     # ------------------------------------------------------------------
+     # Створення агента для поточного користувача
+     # ------------------------------------------------------------------
++    @api.model
++    def _td_is_agent_user(self, uid):
++        return bool(self.sudo().with_context(active_test=False).search_count([("agent_user_id", "=", uid)]))
++
+     @api.model
+     def _td_check_agent_user(self):
+-        if not self.sudo().with_context(active_test=False).search_count([("agent_user_id", "=", self.env.uid)]):
++        if not self._td_is_agent_user(self.env.uid):
+             raise AccessError(_("Дія доступна лише користувачам-агентам Claude."))
+ 
+     @api.model
+-    def _td_unique_login(self, owner):
++    def _td_current_agent(self):
++        """Запис агента поточного користувача-агента (sudo; токен агенту не віддається)."""
++        self._td_check_agent_user()
++        return self.sudo().with_context(active_test=False).search([("agent_user_id", "=", self.env.uid)], limit=1)
++
++    @api.model
++    def _td_owner_of(self, user):
++        """Власник контуру: для агента — його власник, для людини — вона сама."""
++        agent = self.sudo().with_context(active_test=False).search([("agent_user_id", "=", user.id)], limit=1)
++        return agent.owner_id if agent else user
++
++    @api.model
++    def td_claude_brief(self):
++        """Бриф для агента на старті: роль з інструкцією та перелік скілів (без тіл — економія контексту)."""
++        agent = self._td_current_agent()
++        role = agent.role_id
++        skills = self.env["td.claude.skill"].sudo().search(self.env["td.claude.skill"]._td_agent_domain(agent))
++        return {
++            "role": {
++                "code": role.code,
++                "name": role.name,
++                "model_hint": role.model_hint or None,
++                "instructions": role.instructions or "",
++            },
++            "skills": [
++                {"code": s.code, "name": s.name, "description": s.description or "", "version": s.version}
++                for s in skills
++            ],
++        }
++
++    @api.model
++    def _td_unique_login(self, owner, role=None):
+         base = "claude." + re.sub(r"[^a-z0-9._@+-]", "-", (owner.login or str(owner.id)).lower())
++        if role and role.code != "manager":
++            base += "." + role.code
+         Users = self.env["res.users"].sudo().with_context(active_test=False)
+         login, n = base, 1
+         while Users.search_count([("login", "=", login)]):
+@@ -122,21 +176,24 @@ class TdClaudeAgent(models.Model):
+         return login
+ 
+     @api.model
+-    def action_create_my_agent(self):
+-        """Створює агента для поточного користувача (лише для себе). Повертає діалог із одноразовим API-ключем."""
+-        owner = self.env.user
+-        if owner.share or owner._is_public():
+-            raise UserError(_("Агента можуть створити лише внутрішні користувачі."))
+-        existing = self.sudo().with_context(active_test=False).search_count([("owner_id", "=", owner.id)])
+-        if existing:
+-            raise UserError(_("У вас уже є агент Claude."))
++    def _td_agent_user_name(self, owner, role):
++        name = f"Claude · {role.name}"
++        taken = self.env["res.users"].sudo().with_context(active_test=False).search_count([("name", "=", name)])
++        return f"{name} · {owner.name}" if taken else name
++
++    @api.model
++    def _td_create_agent(self, owner, role):
++        """Створює користувача-агента, працівника й запис агента (ключ видається окремо)."""
++        if self.sudo().with_context(active_test=False).search_count(
++            [("owner_id", "=", owner.id), ("role_id", "=", role.id)]
++        ):
++            raise UserError(_("У вас уже є агент Claude з роллю «%s».", role.name))
+         Users = self.env["res.users"].sudo()
+         groups = self.env.ref("base.group_user") | self.env.ref("project.group_project_user")
+-        login = self._td_unique_login(owner)
+         agent_user = Users.create(
+             {
+-                "name": f"Claude · {owner.name}",
+-                "login": login,
++                "name": self._td_agent_user_name(owner, role),
++                "login": self._td_unique_login(owner, role),
+                 "company_id": owner.company_id.id,
+                 "company_ids": [(6, 0, owner.company_ids.ids)],
+                 "group_ids": [(6, 0, groups.ids)],
+@@ -145,8 +202,37 @@ class TdClaudeAgent(models.Model):
+             }
+         )
+         self._td_create_agent_employee(owner, agent_user)
+-        agent = self.sudo().create({"owner_id": owner.id, "agent_user_id": agent_user.id})
+-        return agent._td_issue_api_key(_("Агент Claude створено"))
++        return self.sudo().create({"owner_id": owner.id, "agent_user_id": agent_user.id, "role_id": role.id})
++
++    @api.model
++    def _td_check_can_create(self):
++        owner = self.env.user
++        if owner.share or owner._is_public():
++            raise UserError(_("Агента можуть створити лише внутрішні користувачі."))
++        if self._td_is_agent_user(owner.id):
++            raise UserError(_("Агент Claude не може створювати агентів."))
++        return owner
++
++    @api.model
++    def action_create_my_agent(self):
++        """Створює агента-Менеджера для поточного користувача. Повертає діалог із одноразовим API-ключем."""
++        owner = self._td_check_can_create()
++        role = self.env["td.claude.role"].sudo().search([("code", "=", "manager")], limit=1)
++        if not role:
++            raise UserError(_("Немає ролі «Менеджер»."))
++        return self._td_create_agent(owner, role)._td_issue_api_key(_("Агент Claude створено"))
++
++    @api.model
++    def action_create_team(self):
++        """Відкриває майстер «Створити команду Claude»."""
++        self._td_check_can_create()
++        return {
++            "type": "ir.actions.act_window",
++            "name": _("Створити команду Claude"),
++            "res_model": "td.claude.team.wizard",
++            "view_mode": "form",
++            "target": "new",
++        }
+ 
+     def action_new_api_key(self):
+         """Відкликає ключі odoo-mcp агента і видає новий (лише власник)."""
+@@ -158,12 +244,19 @@ class TdClaudeAgent(models.Model):
+         )._remove()
+         return self._td_issue_api_key(_("Новий API-ключ агента"))
+ 
+-    def _td_issue_api_key(self, title):
+-        agent, agent_user = self, self.agent_user_id
+-        login = agent_user.login
++    def _td_generate_key(self):
++        """Видає новий ключ odoo-mcp агента. Повертає (ключ, дата завершення)."""
++        self.ensure_one()
++        agent_user = self.agent_user_id
+         max_days = max(agent_user.all_group_ids.mapped("api_key_duration") or [0.0]) or 1.0
+         expiration = datetime.now() + timedelta(days=max_days) - timedelta(minutes=1)
+         key = self.env["res.users.apikeys"].with_user(agent_user).sudo()._generate("rpc", "odoo-mcp", expiration)
++        return key, expiration
++
++    def _td_issue_api_key(self, title):
++        agent, agent_user = self, self.agent_user_id
++        login = agent_user.login
++        key, expiration = self._td_generate_key()
+         return {
+             "type": "ir.actions.act_window",
+             "name": title,
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/td_claude_request.py b/factory3d/odoo_addons/td_claude_agent/models/td_claude_request.py
+index 13984c30..81cc7dc5 100644
+--- a/factory3d/odoo_addons/td_claude_agent/models/td_claude_request.py
++++ b/factory3d/odoo_addons/td_claude_agent/models/td_claude_request.py
+@@ -1,6 +1,10 @@
+ import json
+ import logging
+ 
++from datetime import timedelta
++
++from markupsafe import Markup
++
+ from odoo import SUPERUSER_ID, _, api, fields, models
+ from odoo.modules.registry import Registry
+ from odoo.tools import html2plaintext
+@@ -8,6 +12,9 @@ from odoo.tools import html2plaintext
+ _logger = logging.getLogger(__name__)
+ 
+ RESPONSE_LIMIT = 2000
++DEDUP_SECONDS = 60
++DEFAULT_MAX_HOPS = 6
++HOPS_PARAM = "td.claude.max_hops_per_day"
+ 
+ 
+ class TdClaudeRequest(models.Model):
+@@ -19,7 +26,13 @@ class TdClaudeRequest(models.Model):
+     owner_id = fields.Many2one(related="agent_id.owner_id", store=True, index=True)
+     agent_user_id = fields.Many2one(related="agent_id.agent_user_id", store=True, index=True)
+     kind = fields.Selection(
+-        [("mention", "Згадка"), ("assign", "Призначення"), ("ping", "Перевірка"), ("manual", "Вручну")],
++        [
++            ("mention", "Згадка"),
++            ("assign", "Призначення"),
++            ("stage", "Зміна стадії"),
++            ("ping", "Перевірка"),
++            ("manual", "Вручну"),
++        ],
+         string="Тип",
+         required=True,
+         default="manual",
+@@ -46,6 +59,78 @@ class TdClaudeRequest(models.Model):
+         for rec in self:
+             rec.display_name = f"{labels.get(rec.kind, '')} · {rec.record_name or ''}".strip(" ·") or str(rec.id)
+ 
++    # ------------------------------------------------------------------
++    # Запуски: правила й запобіжники
++    # ------------------------------------------------------------------
++    @api.model
++    def _td_max_hops(self):
++        value = self.env["ir.config_parameter"].sudo().get_param(HOPS_PARAM)
++        try:
++            return int(value) if value else DEFAULT_MAX_HOPS
++        except ValueError:
++            return DEFAULT_MAX_HOPS
++
++    @api.model
++    def _td_hops_today(self, record):
++        """Кількість запусків (крім ping) для запису за останню добу."""
++        if not record:
++            return 0
++        return self.sudo().search_count(
++            [
++                ("res_model", "=", record._name),
++                ("res_id", "=", record.id),
++                ("kind", "!=", "ping"),
++                ("create_date", ">=", fields.Datetime.now() - timedelta(days=1)),
++            ]
++        )
++
++    @api.model
++    def _td_recent_duplicate(self, agent, record):
++        return self.sudo().search_count(
++            [
++                ("agent_id", "=", agent.id),
++                ("res_model", "=", record._name),
++                ("res_id", "=", record.id),
++                ("kind", "!=", "ping"),
++                ("state", "in", ("pending", "sent")),
++                ("create_date", ">=", fields.Datetime.now() - timedelta(seconds=DEDUP_SECONDS)),
++            ]
++        )
++
++    @api.model
++    def _td_launch(self, agent, kind, record=None, message=None):
++        """Створює запит із запобіжниками. Повертає запит або порожній набір.
++
++        Запускати може власник агента або інший агент того ж власника; агент не запускає сам себе.
++        Згадка власника відправляється завжди; решта запусків задач — з паузою, лімітом на добу і склеюванням.
++        """
++        agent = agent.sudo()
++        user = self.env.user
++        empty = self.browse()
++        if agent.agent_user_id == user:
++            return empty
++        if self.env["td.claude.agent"]._td_owner_of(user) != agent.owner_id:
++            return empty
++        owner_mention = kind == "mention" and user == agent.owner_id
++        if not owner_mention and record is not None and record._name == "project.task":
++            if record.td_claude_paused:
++                return empty
++            if self._td_hops_today(record) >= self._td_max_hops():
++                record.sudo().message_post(
++                    body=Markup("<p>%s</p>")
++                    % _(
++                        "Claude: ліміт запусків на задачу за добу (%(n)s) вичерпано, запит до «%(agent)s» не надіслано.",
++                        n=self._td_max_hops(),
++                        agent=agent.name,
++                    ),
++                    message_type="notification",
++                    subtype_xmlid="mail.mt_note",
++                )
++                return empty
++        if kind in ("assign", "stage") and record is not None and self._td_recent_duplicate(agent, record):
++            return empty
++        return self._td_create(agent, kind, record=record, message=message)
++
+     # ------------------------------------------------------------------
+     # Створення і payload
+     # ------------------------------------------------------------------
+@@ -95,6 +180,8 @@ class TdClaudeRequest(models.Model):
+                 "text": html2plaintext(message.body or "").strip(),
+                 "date": fields.Datetime.to_string(message.date) if message.date else None,
+             }
++        role = agent.role_id
++        hops = self._td_hops_today(record) if record else 0
+         return {
+             "v": 1,
+             "kind": self.kind,
+@@ -108,6 +195,8 @@ class TdClaudeRequest(models.Model):
+             "project": project,
+             "author": {"user_id": env.user.id, "name": env.user.name},
+             "agent": {"user_id": agent_user.id, "login": agent_user.login, "partner_id": agent_user.partner_id.id},
++            "role": {"code": role.code, "name": role.name} if role else None,
++            "hops_today": hops,
+             "message": msg,
+             "session": session,
+         }
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/td_claude_role.py b/factory3d/odoo_addons/td_claude_agent/models/td_claude_role.py
+new file mode 100644
+index 00000000..058a145b
+--- /dev/null
++++ b/factory3d/odoo_addons/td_claude_agent/models/td_claude_role.py
+@@ -0,0 +1,46 @@
++from odoo import _, api, fields, models
++from odoo.exceptions import AccessError
++
++ROLE_CODES = [
++    ("manager", "Менеджер (PM)"),
++    ("architect", "Архітектор (AN)"),
++    ("coder", "Кодер (DV)"),
++    ("tester", "Тестувальник (QA)"),
++    ("methodologist", "Методолог"),
++]
++
++
++class TdClaudeRole(models.Model):
++    _name = "td.claude.role"
++    _description = "Роль Claude-агента"
++    _order = "sequence, id"
++
++    name = fields.Char(string="Назва", required=True, translate=False)
++    code = fields.Selection(ROLE_CODES, string="Код", required=True)
++    sequence = fields.Integer(default=10)
++    instructions = fields.Text(string="Інструкція ролі", help="Базовий промпт ролі (Markdown)")
++    model_hint = fields.Selection(
++        [("opus", "Opus"), ("sonnet", "Sonnet")], string="Модель", help="Підказка, яку модель використати Routine"
++    )
++    active = fields.Boolean(default=True)
++
++    _code_uniq = models.Constraint("UNIQUE(code)", "Роль з таким кодом уже існує.")
++
++    @api.model
++    def _td_check_human_editor(self):
++        """Роль і скіл змінює лише людина: користувачі-агенти заборонені (виняток — sudo в API агента)."""
++        if not self.env.su and self.env["td.claude.agent"]._td_is_agent_user(self.env.uid):
++            raise AccessError(_("Користувачі-агенти Claude не можуть змінювати ролі й скіли напряму."))
++
++    @api.model_create_multi
++    def create(self, vals_list):
++        self._td_check_human_editor()
++        return super().create(vals_list)
++
++    def write(self, vals):
++        self._td_check_human_editor()
++        return super().write(vals)
++
++    def unlink(self):
++        self._td_check_human_editor()
++        return super().unlink()
+diff --git a/factory3d/odoo_addons/td_claude_agent/models/td_claude_skill.py b/factory3d/odoo_addons/td_claude_agent/models/td_claude_skill.py
+new file mode 100644
+index 00000000..9f2bcc14
+--- /dev/null
++++ b/factory3d/odoo_addons/td_claude_agent/models/td_claude_skill.py
+@@ -0,0 +1,253 @@
++import re
++
++from odoo import _, api, fields, models
++from odoo.exceptions import AccessError, UserError, ValidationError
++
++CODE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
++PROPOSER_ROLES = ("methodologist", "manager")
++
++
++class TdClaudeSkill(models.Model):
++    _name = "td.claude.skill"
++    _description = "Скіл Claude (інструкція, що зберігається в Odoo)"
++    _inherit = ["mail.thread"]
++    _order = "scope, code"
++
++    name = fields.Char(string="Назва", required=True, tracking=True)
++    code = fields.Char(string="Код (slug)", required=True, copy=False, tracking=True)
++    scope = fields.Selection(
++        [("corporate", "Корпоративний"), ("role", "Рольовий")], string="Охоплення", required=True, default="corporate"
++    )
++    role_ids = fields.Many2many("td.claude.role", string="Ролі", help="Для рольового скіла")
++    description = fields.Text(string="Коли застосовувати", help="1-2 речення, як frontmatter SKILL.md")
++    body = fields.Text(string="Інструкція (Markdown)")
++    version = fields.Integer(string="Версія", default=0, readonly=True, copy=False, tracking=True)
++    state = fields.Selection(
++        [("proposed", "Пропозиція"), ("active", "Активний"), ("archived", "Архівний")],
++        string="Стан",
++        required=True,
++        default="active",
++        tracking=True,
++    )
++    proposal_body = fields.Text(string="Запропонований текст", copy=False)
++    proposal_note = fields.Char(string="Пояснення пропозиції", copy=False)
++    proposal_author_id = fields.Many2one("res.users", string="Автор пропозиції", copy=False)
++    proposal_date = fields.Datetime(string="Дата пропозиції", copy=False)
++    has_proposal = fields.Boolean(string="Є пропозиція", compute="_compute_has_proposal", store=True)
++    version_ids = fields.One2many("td.claude.skill.version", "skill_id", string="Історія")
++
++    _code_uniq = models.Constraint("UNIQUE(code)", "Скіл з таким кодом уже існує.")
++
++    @api.depends("proposal_body")
++    def _compute_has_proposal(self):
++        for skill in self:
++            skill.has_proposal = bool(skill.proposal_body)
++
++    @api.constrains("code")
++    def _check_code(self):
++        for skill in self:
++            if not CODE_RE.match(skill.code or ""):
++                raise ValidationError(_("Код скіла: латинські малі літери, цифри й дефіс (slug)."))
++
++    # ------------------------------------------------------------------
++    # Права: змінює лише людина
++    # ------------------------------------------------------------------
++    @api.model
++    def _td_is_human(self, uid=None):
++        user = self.env["res.users"].sudo().browse(uid or self.env.uid)
++        return bool(user.has_group("base.group_user")) and not self.env["td.claude.agent"]._td_is_agent_user(user.id)
++
++    def _td_check_human(self):
++        if not self._td_is_human():
++            raise AccessError(_("Затверджувати й змінювати скіли можуть лише люди (не користувачі-агенти)."))
++
++    @api.model_create_multi
++    def create(self, vals_list):
++        if not self.env.su:
++            self._td_check_human()
++        skills = super().create(vals_list)
++        for skill in skills.filtered(lambda s: s.version >= 1 and s.body):
++            skill._td_add_version(skill.body, _("Початкова версія"), self.env.user)
++        return skills
++
++    def write(self, vals):
++        if not self.env.su:
++            self._td_check_human()
++        if "body" in vals and "version" not in vals:
++            # пряма правка людиною = нова версія з записом в історію
++            res = True
++            for skill in self:
++                if skill.version >= 1 and (vals["body"] or "") != (skill.body or ""):
++                    res &= super(TdClaudeSkill, skill).write(dict(vals, version=skill.version + 1))
++                    skill._td_add_version(vals["body"] or "", _("Редагування"), self.env.user)
++                else:
++                    res &= super(TdClaudeSkill, skill).write(vals)
++            return res
++        return super().write(vals)
++
++    def _td_add_version(self, body, note, author, version=None):
++        self.ensure_one()
++        return (
++            self.env["td.claude.skill.version"]
++            .sudo()
++            .create(
++                {
++                    "skill_id": self.id,
++                    "version": version or self.version,
++                    "body": body,
++                    "note": note,
++                    "author_id": author.id,
++                    "date": fields.Datetime.now(),
++                }
++            )
++        )
++
++    # ------------------------------------------------------------------
++    # Дії власника
++    # ------------------------------------------------------------------
++    def action_approve_proposal(self):
++        self._td_check_human()
++        for skill in self:
++            if not skill.proposal_body:
++                raise UserError(_("У скіла «%s» немає пропозиції.", skill.name))
++            version = skill.version + 1
++            author = skill.proposal_author_id or self.env.user
++            note = skill.proposal_note or ""
++            skill.sudo().write(
++                {
++                    "body": skill.proposal_body,
++                    "version": version,
++                    "state": "active" if skill.state == "proposed" else skill.state,
++                    "proposal_body": False,
++                    "proposal_note": False,
++                    "proposal_author_id": False,
++                    "proposal_date": False,
++                }
++            )
++            skill._td_add_version(skill.body, note, author, version=version)
++            skill.message_post(body=_("Пропозицію затверджено: версія %s.", version))
++        return True
++
++    def action_reject_proposal(self):
++        self._td_check_human()
++        for skill in self:
++            if not skill.proposal_body:
++                continue
++            skill.sudo().write(
++                {
++                    "proposal_body": False,
++                    "proposal_note": False,
++                    "proposal_author_id": False,
++                    "proposal_date": False,
++                    "state": "archived" if skill.state == "proposed" else skill.state,
++                }
++            )
++            skill.message_post(body=_("Пропозицію відхилено."))
++        return True
++
++    def action_archive_skill(self):
++        self._td_check_human()
++        self.sudo().write({"state": "archived"})
++        return True
++
++    def action_activate_skill(self):
++        self._td_check_human()
++        self.filtered("version").sudo().write({"state": "active"})
++        return True
++
++    # ------------------------------------------------------------------
++    # API для агентів (RPC)
++    # ------------------------------------------------------------------
++    @api.model
++    def _td_agent_domain(self, agent):
++        return [
++            ("state", "=", "active"),
++            "|",
++            ("scope", "=", "corporate"),
++            ("role_ids", "in", agent.role_id.ids),
++        ]
++
++    @api.model
++    def td_claude_read(self, codes):
++        """Тіла скілів за кодами (лише агент). Повертає [{code, version, body}] для активних скілів."""
++        self.env["td.claude.agent"]._td_check_agent_user()
++        if isinstance(codes, str):
++            codes = [codes]
++        skills = self.search([("code", "in", list(codes or [])), ("state", "=", "active")])
++        by_code = {s.code: s for s in skills}
++        return [
++            {"code": c, "version": by_code[c].version, "body": by_code[c].body or ""} for c in codes if c in by_code
++        ]
++
++    @api.model
++    def _td_check_proposer(self):
++        agent = self.env["td.claude.agent"]._td_current_agent()
++        if agent.role_id.code not in PROPOSER_ROLES:
++            raise AccessError(_("Пропонувати зміни скілів можуть лише ролі Методолог і Менеджер."))
++        return agent
++
++    def _td_notify_owner(self, agent, text):
++        self.message_post(body=text, partner_ids=agent.owner_id.partner_id.ids, subtype_xmlid="mail.mt_note")
++
++    @api.model
++    def td_claude_propose(self, code, body, note=None):
++        """Агент (Методолог/Менеджер) пропонує нову редакцію скіла; власник затверджує в Odoo."""
++        agent = self._td_check_proposer()
++        skill = self.sudo().search([("code", "=", code), ("state", "!=", "archived")], limit=1)
++        if not skill:
++            raise UserError(_("Скіл «%s» не знайдено.", code))
++        if not (body or "").strip():
++            raise UserError(_("Порожня пропозиція."))
++        skill.write(
++            {
++                "proposal_body": body,
++                "proposal_note": note or False,
++                "proposal_author_id": self.env.uid,
++                "proposal_date": fields.Datetime.now(),
++            }
++        )
++        skill._td_notify_owner(agent, _("%s пропонує нову редакцію скіла: %s", self.env.user.name, note or "—"))
++        return skill.id
++
++    @api.model
++    def td_claude_propose_new(self, code, name, scope, role_codes, description, body, note=None):
++        """Агент пропонує новий скіл (стан «Пропозиція», версія 0 до затвердження)."""
++        agent = self._td_check_proposer()
++        if scope not in ("corporate", "role"):
++            raise UserError(_("Охоплення: corporate або role."))
++        if not (body or "").strip():
++            raise UserError(_("Порожня пропозиція."))
++        roles = self.env["td.claude.role"].sudo().search([("code", "in", list(role_codes or []))])
++        if scope == "role" and not roles:
++            raise UserError(_("Для рольового скіла вкажіть існуючі ролі."))
++        if self.sudo().with_context(active_test=False).search_count([("code", "=", code)]):
++            raise UserError(_("Скіл із кодом «%s» уже існує.", code))
++        skill = self.sudo().create(
++            {
++                "name": name,
++                "code": code,
++                "scope": scope,
++                "role_ids": [(6, 0, roles.ids if scope == "role" else [])],
++                "description": description,
++                "state": "proposed",
++                "proposal_body": body,
++                "proposal_note": note or False,
++                "proposal_author_id": self.env.uid,
++                "proposal_date": fields.Datetime.now(),
++            }
++        )
++        skill._td_notify_owner(agent, _("%s пропонує новий скіл «%s»: %s", self.env.user.name, name, note or "—"))
++        return skill.id
++
++
++class TdClaudeSkillVersion(models.Model):
++    _name = "td.claude.skill.version"
++    _description = "Версія скіла Claude"
++    _order = "skill_id, version desc"
++
++    skill_id = fields.Many2one("td.claude.skill", string="Скіл", required=True, ondelete="cascade", index=True)
++    version = fields.Integer(string="Версія", required=True)
++    body = fields.Text(string="Текст")
++    note = fields.Char(string="Примітка")
++    author_id = fields.Many2one("res.users", string="Автор")
++    date = fields.Datetime(string="Дата")
+diff --git a/factory3d/odoo_addons/td_claude_agent/wizard/__init__.py b/factory3d/odoo_addons/td_claude_agent/wizard/__init__.py
+index 3f44bc8f..59a0f564 100644
+--- a/factory3d/odoo_addons/td_claude_agent/wizard/__init__.py
++++ b/factory3d/odoo_addons/td_claude_agent/wizard/__init__.py
+@@ -1 +1,2 @@
+ from . import td_claude_agent_wizard
++from . import td_claude_team_wizard
+diff --git a/factory3d/odoo_addons/td_claude_agent/wizard/td_claude_team_wizard.py b/factory3d/odoo_addons/td_claude_agent/wizard/td_claude_team_wizard.py
+new file mode 100644
+index 00000000..684c334f
+--- /dev/null
++++ b/factory3d/odoo_addons/td_claude_agent/wizard/td_claude_team_wizard.py
+@@ -0,0 +1,37 @@
++from odoo import _, api, fields, models
++from odoo.exceptions import UserError
++
++
++class TdClaudeTeamWizard(models.TransientModel):
++    _name = "td.claude.team.wizard"
++    _description = "Створити команду Claude"
++
++    role_ids = fields.Many2many("td.claude.role", string="Ролі", default=lambda self: self._default_role_ids())
++    state = fields.Selection([("draft", "Вибір"), ("done", "Готово")], default="draft")
++    result = fields.Text(string="Логіни й ключі", readonly=True)
++
++    @api.model
++    def _default_role_ids(self):
++        Agent = self.env["td.claude.agent"].sudo().with_context(active_test=False)
++        existing = Agent.search([("owner_id", "=", self.env.user.id)]).role_id
++        return self.env["td.claude.role"].search([("id", "not in", existing.ids)])
++
++    def action_create(self):
++        self.ensure_one()
++        if not self.role_ids:
++            raise UserError(_("Оберіть хоча б одну роль."))
++        Agent = self.env["td.claude.agent"]
++        owner = Agent._td_check_can_create()
++        lines = []
++        for role in self.role_ids.sorted("sequence"):
++            agent = Agent._td_create_agent(owner, role)
++            key, expires = agent._td_generate_key()
++            lines.append(f"{role.name}: логін {agent.agent_user_id.login}, ключ {key} (діє до {expires:%Y-%m-%d})")
++        self.write({"state": "done", "result": "\n".join(lines)})
++        return {
++            "type": "ir.actions.act_window",
++            "res_model": self._name,
++            "res_id": self.id,
++            "view_mode": "form",
++            "target": "new",
++        }
