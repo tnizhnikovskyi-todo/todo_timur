@@ -1750,7 +1750,12 @@ let D = null;
 let Dlive = null;      // останній живий D (R-17: «Зараз»)
 let staticD = null;
 const idx = {};
-let simStart = 0, simBase = 0;
+let simStart = 0, simBase = 0, simFrac = 0; // simFrac — секунди «зараз» (мс < 60000): simBase лишається хвилинним для розкладу, годинник «синхр.» додає simFrac
+// meta.now — до хвилини; meta.now_ms (epoch UTC, мс) дає секунди. Київ зсунутий на цілі хвилини, тож now_ms % 60000 — секунди в тій самій шкалі, що й Date.parse(meta.now)
+const metaNow = (m) => {
+  const base = Date.parse(m.now.replace(" ", "T")), ms = Number(m.now_ms);
+  return { base, frac: Number.isFinite(ms) ? ((ms % 60000) + 60000) % 60000 : 0 };
+};
 let playbackMode = "plan", userPlan = false, snapChecked = false, snapList = [], soLabel = null;
 function indexData() {
   idx.mo = new Map(D.productions.map((m) => [m.name, m]));
@@ -1786,7 +1791,7 @@ function setData(d, first) {
   syncShiftEnabled();
   indexData();
   applyLayout(); // R-25: розкладка конструктора — до syncMachineLabels і stockLoad.sync
-  simBase = Date.parse(D.meta.now.replace(" ", "T"));
+  ({ base: simBase, frac: simFrac } = metaNow(D.meta));
   scheduleWOs();
   simStart = Date.now();
   for (const mo of D.productions) {mo._st0 = mo.state;}
@@ -1914,10 +1919,10 @@ function applyPatch(patch) {
     }
     names.forEach((c) => changed.add(c));
   }
-  // meta.now — з точністю до хвилини: патч лише посуває годинник уперед (інакше «синхр.» відкочувався до :00 щоразу)
+  // патч лише посуває годинник уперед (інакше «синхр.» відкочувався б до :00 щоразу, якщо немає meta.now_ms із секундами)
   if (patch.meta?.now) {
-    const base = Date.parse(D.meta.now.replace(" ", "T"));
-    if (base > simNow().getTime()) { simBase = base; simStart = Date.now(); }
+    const { base, frac } = metaNow(D.meta);
+    if (base + frac > simNow().getTime()) { simBase = base; simFrac = frac; simStart = Date.now(); }
   }
   indexData();
   if (lists.has("locations") || lists.has("pickings") || lists.has("productions") || lists.has("quality_checks")) {staleLocHist();}
@@ -2079,7 +2084,7 @@ function applySnapshot(payload) {
   const keepSim = simOverride;
   D = mergeData(staticD, payload);
   indexData();
-  simBase = Date.parse(D.meta.now.replace(" ", "T"));
+  ({ base: simBase, frac: simFrac } = metaNow(D.meta)); // знімок несе власний час (build у _take), now_ms — його секунди
   simStart = Date.now();
   scheduleWOs();
   simOverride = keepSim;
@@ -2110,7 +2115,7 @@ function snapshotTime(min) {
 
 const P = (code) => D.products[code] || { name: code, uom: "" };
 const qtyU = (q, code) => `${nf.format(q)} ${esc(P(code).uom)}`;
-const simNow = () => new Date(simBase + (Date.now() - simStart));
+const simNow = () => new Date(simBase + simFrac + (Date.now() - simStart));
 const hm = (s) => (s ? s.slice(11, 16) : "");
 const dayHm = (s) => {
   if (!s) {return "";}

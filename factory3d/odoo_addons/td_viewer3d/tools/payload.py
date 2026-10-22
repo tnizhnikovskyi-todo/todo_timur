@@ -253,6 +253,7 @@ class PayloadBuilder(_Base):
             "company": env.company.name,
             "warehouse": warehouse,
             "now": dates.local(now),
+            "now_ms": dates.epoch_ms(now),
             "live": True,
             "pulled_at": dates.local(dates.real_now()),
             "schema": SCHEMA,
@@ -363,7 +364,7 @@ class DeltaBuilder(_Base):
         if not codes and not changes:
             return {"ts": ts, "patch": {}, "removed": {}, "events": 0}
 
-        patch = {"meta": {"now": dates.local(now), "errors": []}}
+        patch = {"meta": {"now": dates.local(now), "now_ms": dates.epoch_ms(now), "errors": []}}
         errors = patch["meta"]["errors"]
         ctx = self._ctx(now, {}, codes=codes, changes=changes, delta=True)
         failed = set()

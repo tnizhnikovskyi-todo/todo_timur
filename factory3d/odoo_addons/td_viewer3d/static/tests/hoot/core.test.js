@@ -41,6 +41,20 @@ test("R2 індикатор Odoo: стан, джерело, клік веде в
     expect(viewer.getState().tab).toBe("overview");
 });
 
+test("R2 годинник «синхр.»: секунди з meta.now_ms; патч лише посуває вперед", async () => {
+    const { viewer, el } = await mountViewer({ model: "none" });
+    const hm = viewer.D.meta.now.slice(11, 16);
+    const now = viewer.D.meta.now;
+    // now_ms % 60000 — секунди «зараз» (Київ зсунутий на цілі хвилини): годинник = hh:mm:45
+    viewer.applyPatch({ meta: { now, now_ms: Date.parse("2026-01-01T00:00:00Z") + 45000 } });
+    expect(txt(el, ".o_f3d_odoo-time").endsWith(`${hm}:45`)).toBe(true);
+    // патч без секунд (старий сервер) або з меншими секундами не відкочує годинник назад
+    viewer.applyPatch({ meta: { now } });
+    expect(txt(el, ".o_f3d_odoo-time").endsWith(`${hm}:45`)).toBe(true);
+    viewer.applyPatch({ meta: { now, now_ms: Date.parse("2026-01-01T00:00:00Z") + 10000 } });
+    expect(txt(el, ".o_f3d_odoo-time").endsWith(`${hm}:45`)).toBe(true);
+});
+
 test("R3 програвання зміни: повзунок, мітка, «Зараз»", async () => {
     const { viewer, el } = await mountViewer({ model: "none" });
     viewer.setSimTime(600);

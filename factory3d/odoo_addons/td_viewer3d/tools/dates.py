@@ -1,6 +1,7 @@
 """R-02: час і часовий пояс. Усі обчислення в UTC (naive), рендер — за Києвом."""
 
 import logging
+import calendar
 import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -16,6 +17,12 @@ PARAM_CLOCK = "td.viewer.demo_clock"
 def local(dt_utc):
     """datetime (UTC, naive) -> "YYYY-MM-DD HH:MM" за Києвом."""
     return dt_utc.replace(tzinfo=timezone.utc).astimezone(TZ).strftime(FMT)
+
+
+def epoch_ms(dt_utc):
+    """datetime (UTC, naive) -> epoch у мілісекундах (UTC): `meta.now_ms` — «зараз» із точністю до секунди,
+    бо `local()` обрізає до хвилини (годинник «синхр.» у клієнті бере з нього секунди)."""
+    return calendar.timegm(dt_utc.timetuple()) * 1000 + dt_utc.microsecond // 1000
 
 
 def utc(s_local):
