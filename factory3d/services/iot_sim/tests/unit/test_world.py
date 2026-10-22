@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from iot_sim.core import snapshot
-from iot_sim.core.clock import FakeClock
+from iot_sim.core.clock import FakeClock, FakeRealTime, SimClock
 from iot_sim.core.events import RING_SIZE, CursorGone, EventBus, ulid
 from iot_sim.core.world import World
 from iot_sim.models import MODELS
@@ -260,6 +260,59 @@ def test_snapshot_rejects_bad_and_old(registry, tmp_path, caplog, world):
     data["signals"]["no/such/signal"] = [1, None, "ok", None]
     data["devices"]["NOSUCH"] = {}
     world.restore(data)  # невідомі коди ігноруються
+
+
+def _live_world(registry, factor: float = 1.0) -> tuple[World, FakeRealTime]:
+    """Світ із «живим» (не ручним) годинником: sim-час іде разом із ``FakeRealTime``."""
+    fake = FakeRealTime()
+    clock = SimClock(factor=factor, sim_t0=datetime(2026, 10, 12, 10, 30, tzinfo=KYIV), real_time=fake)
+    return World(registry, seed=SEED, clock=clock), fake
+
+
+def test_restore_continues_clock_at_real_time(registry, monkeypatch):
+    """Після рестарту sim-час не відстає на (рестарт − знімок): наздоганяє реальний час (баг рестарту)."""
+    a, _ = _live_world(registry)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 5000.0)
+    data = json.loads(json.dumps(a.snapshot()))
+    assert data["saved_at"] == 5000.0
+    b, fake_b = _live_world(registry)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 5000.0 + 75)  # рестарт через 75 с
+    b.restore(data)
+    assert b.now() == a.now() + timedelta(seconds=75)
+    # свій годинник b далі йде штатно (real-time, factor 1)
+    fake_b.advance(10)
+    assert b.now() == a.now() + timedelta(seconds=85)
+
+
+def test_restore_keeps_demo_offset_and_factor(registry, monkeypatch):
+    """Demo-зсув (sim ≠ реальний час) зберігається; при factor 10 поправка — реальні секунди × factor."""
+    a, _ = _live_world(registry, factor=10.0)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 5000.0)
+    data = a.snapshot()
+    b, _ = _live_world(registry, factor=10.0)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 5030.0)
+    b.restore(data)
+    assert b.now() == a.now() + timedelta(seconds=300)
+    # зсув відносно реального часу лишився тим самим (знімок був у 10:30 sim, а не «зараз»)
+    assert b.now().date() == datetime(2026, 10, 12).date()
+
+
+def test_restore_clock_edge_cases(registry, monkeypatch):
+    a, _ = _live_world(registry)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 5000.0)
+    data = a.snapshot()
+    b, _ = _live_world(registry)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 4000.0)  # реальний час «назад» — не відкочуємо
+    b.restore(data)
+    assert b.now() == a.now()
+    old = {k: v for k, v in data.items() if k != "saved_at"}  # знімок без saved_at — як раніше (sim_now знімка)
+    monkeypatch.setattr("iot_sim.core.snapshot.time.time", lambda: 9000.0)
+    c, _ = _live_world(registry)
+    c.restore(old)
+    assert c.now() == a.now()
+    m = World(registry, seed=SEED, clock=FakeClock("2026-01-01T00:00:00"))  # ручний годинник не рухається сам
+    m.restore(data)
+    assert m.now() == a.now()
 
 
 def test_models_module_registry_untouched():

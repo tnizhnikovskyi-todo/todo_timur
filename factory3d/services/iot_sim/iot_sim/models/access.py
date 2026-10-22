@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -43,6 +44,17 @@ ROLE_ROUTES = (
     ("OP-W7", "ACR-SRV", (13, 10)),
 )
 MAX_EVENTS = 20000
+
+
+def event_id_seed() -> int:
+    """Початок нумерації подій: реальні мілісекунди епохи (НЕ sim-час, demo-зсув не береться до уваги).
+
+    Id подій мусять зростати і не збігатися з уже виданими після рестарту емулятора навіть без збереженого
+    стану: Odoo тримає ``UNIQUE(server_id, biostar_id)`` і мовчки відкидає «дублікати». Новий старт завжди
+    не менший за попередній (реальний час іде вперед), а темп подій на порядки нижчий за 1000/с."""
+    return int(time.time() * 1000)
+
+
 DUTY_CODES = frozenset(who for who, _reader, _at in ROLE_ROUTES)  # чергові ролі лишаються в бригаді A
 ENTRY_LEAD_MIN = 20  # вхід раніше початку зміни
 DEFAULT_WINDOW = (7 * 60, 15 * 60 + 30)  # одна зміна за замовчуванням, хв доби
@@ -80,7 +92,7 @@ class AccessCtl:
     def __init__(self, world: Any) -> None:
         self.world = world
         self.events: list[dict[str, Any]] = []
-        self.seq = 0
+        self.seq = event_id_seed()  # див. event_id_seed: id не стартують з 1 після рестарту
         self.day: Any = None
         self.schedule: list[tuple[float, dict[str, Any]]] = []
         self.ptr = 0
@@ -323,7 +335,7 @@ class Access(Model):
         if self.device.code != "ACCESS" or not d:
             return
         c = self.ctl
-        c.seq = d.get("seq", 0)
+        c.seq = max(d.get("seq", 0), c.seq)  # c.seq — вже seed поточного старту: id лише зростають
         c.events = [dict(e, datetime=datetime.fromisoformat(e["datetime"])) for e in d.get("events", [])]
         c.day = datetime.fromisoformat(d["day"]).date() if d.get("day") else None
         if c.day:

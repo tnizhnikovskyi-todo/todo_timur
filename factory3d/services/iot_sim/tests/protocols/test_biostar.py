@@ -1,10 +1,12 @@
 """P-10: BioStar 2 REST (SPEC §8.12, API-40…API-46; X-50)."""
 
 import datetime as dt
+import time
 
 import httpx
 import pytest
-from iot_sim.protocols.biostar_api import BioStarApi
+from iot_sim.models.access import event_id_seed
+from iot_sim.protocols.biostar_api import BioStarApi, BioStarStore
 
 PWD = "bio-pass"
 DAY = dt.datetime(2026, 10, 14, 3, 0, tzinfo=dt.UTC)
@@ -21,6 +23,7 @@ async def bs(world, port, tmp_path):
         r = await c.post("/api/login", json={"User": {"login_id": "admin", "password": PWD}})
         c.headers["bs-session-id"] = r.headers["bs-session-id"]
         c.srv = srv
+        srv.store._next_id = 1  # наявні тести звіряють id «1…7»; seed — у test_event_ids_not_restart_at_1
         yield c
     await srv.stop()
 
@@ -136,6 +139,18 @@ async def search(bs, **q):
     r = await bs.post("/api/events/search", json={"Query": q})
     assert r.status_code == 200, r.text
     return r.json()["EventCollection"]
+
+
+async def test_event_ids_not_restart_at_1(bs, world, monkeypatch):
+    """Після рестарту журнал у пам'яті порожній, але id не повторюють видані раніше (UNIQUE в Odoo)."""
+    bs.srv.store._next_id = event_id_seed()
+    row = bs.srv.store.add_event("OPSAW1", "ACR-IN", 4102, tna_key="1", ts=DAY)
+    assert row["id"] > 10**9
+    col = await search(bs, conditions=[{"column": "id", "operator": 5, "values": ["500"]}])  # курсор id > N
+    assert [r["id"] for r in col["rows"]] == [str(row["id"])]
+    now = time.time()
+    monkeypatch.setattr("iot_sim.models.access.time.time", lambda: now + 60)  # «рестарт» через хвилину
+    assert BioStarStore(world)._next_id > row["id"]  # новий (порожній) стор продовжує нумерацію, а не з 1
 
 
 async def test_event_row_format(bs):

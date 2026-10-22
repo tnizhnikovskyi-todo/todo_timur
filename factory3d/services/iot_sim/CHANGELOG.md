@@ -1,5 +1,14 @@
 # Changelog — iot_sim
 
+## Unreleased: рестарт емулятора — годинник не відкочується, id подій СКУД не повторюються
+- **Виправлення: годинник відставав після рестарту.** `snapshot.restore` ставив `sim_now` зі знімка (до ~60 с тому), тож усі події (СКУД, телеметрія)
+  мали мітку в минулому, і Odoo ігнорував виходи евакуації (ts раніше за початок навчань). Тепер `sim_now` = знімок + (реальний час − `saved_at`) × factor:
+  real-time годинник (factor 1, без demo-зсуву) продовжує рівно з реального часу, свідомий demo-зсув зберігається. Ручний `FakeClock` (тести) — без поправки.
+- **Виправлення: id подій BioStar починались з 1 після рестарту** і збігались з уже імпортованими в Odoo (`UNIQUE(server_id, biostar_id)` — нові події мовчки
+  відкидались як дублікати). `BioStarStore._next_id` і `AccessCtl.seq` стартують від `event_id_seed()` (реальні мс епохи), `AccessCtl.set_state` бере
+  `max(збережений seq, seed)`. Id тепер ~1,8·10¹², `biostar_id` в Odoo — `Char(64)`, курсор — `Char`, тож розмір id не заважає.
+- Тести: `test_world.py` (`test_restore_*`), `test_models_access.py` (`test_event_ids_unique_across_restart`), `test_biostar.py` (`test_event_ids_not_restart_at_1`).
+
 ## Unreleased: баланс ГРЩ бачить КГУ/СЕС; бригади СКУД за змінами Odoo
 - **Виправлення: імпорт з мережі не реагував на КГУ й СЕС.** У каталозі два сигнали стояли на одному регістрі PM5560 u1/u2 PDU 3059 (і 3009):
   `energy/transformers/T1|T2/p_kw`, `i_a` (старий «макет», лише навантаження секції) і `energy/cells/Q1|Q2/p_now`, `i_now` (баланс вводу

@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import time as dtime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -73,7 +73,15 @@ def dump(world: World) -> dict[str, Any]:
 def restore(world: World, data: dict[str, Any]) -> None:
     from iot_sim.core.rng import Rng
 
-    world.clock.set(datetime.fromisoformat(data["sim_now"]))
+    sim_now = datetime.fromisoformat(data["sim_now"])
+    # Годинник не відкочується після рестарту: за час, що сервіс стояв (реальний час від ``saved_at`` — він же
+    # «real_at» знімка, пишеться в ``dump``), sim-час іде далі з поточним factor. Для real-time годинника
+    # (factor 1, без demo-зсуву) це рівно реальний час, а свідомий demo-зсув зберігається. Знімок без
+    # ``saved_at`` (не трапляється: ``load`` його вимагає) — як раніше, sim_now знімка. Ручний FakeClock
+    # (тести) не рухається сам, тому для нього без поправки.
+    if not world.clock.manual and (saved_at := data.get("saved_at")) is not None:
+        sim_now += timedelta(seconds=max(0.0, time.time() - float(saved_at)) * world.clock.factor)
+    world.clock.set(sim_now)
     for code, (value, ts, status, held) in data["signals"].items():
         sig = world.signals.get(code)
         if sig is None:  # сигнал зник з каталогу — ігноруємо

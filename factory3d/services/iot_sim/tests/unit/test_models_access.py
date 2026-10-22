@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from iot_sim.core.rng import det
-from iot_sim.models.access import DEVICE_ID, EV_CARD, EV_DENIED, EV_FACE, verify_code
+from iot_sim.models.access import DEVICE_ID, EV_CARD, EV_DENIED, EV_FACE, AccessCtl, verify_code
 
 pytestmark = pytest.mark.unit
 
@@ -176,6 +176,31 @@ def test_snapshot_roundtrip(world, ctl):
     assert ctl.events[0]["datetime"].tzinfo is not None
     world.step(10)
     assert len(ctl.events) == n  # розклад не дублюється
+
+
+def test_event_ids_unique_across_restart(world, ctl, monkeypatch):
+    """Id подій не стартують з 1: після рестарту (зі станом чи без) вони більші за вже видані Odoo."""
+    import time
+
+    assert min(e["id"] for e in ctl.events) > 10**9  # seed від реального часу, не 1
+    old_ids = {e["id"] for e in ctl.events}
+    acc = world.devices["ACCESS"].model
+    state = acc.get_state()
+    # а) старт без збереженого стану (стерли state/): новий контролер, але реальний час пішов уперед
+    now = time.time()
+    monkeypatch.setattr("iot_sim.models.access.time.time", lambda: now + 60)
+    fresh = AccessCtl(world)
+    fresh.add(world.now(), "ACR-IN", EV_CARD)
+    assert fresh.events[0]["id"] > max(old_ids) and fresh.events[0]["hint"] == f"h{fresh.events[0]['id']}"
+    # б) стан зі старим малим seq (знімок до фіксу) не опускає лічильник нижче seed поточного старту
+    before = ctl.seq
+    acc.set_state(dict(state, seq=40))
+    assert ctl.seq == before > 10**9
+    # в) стан із більшим seq зберігається: id лишаються монотонними
+    big = before + 5000
+    acc.set_state(dict(state, seq=big))
+    ctl.add(world.now(), "ACR-IN", EV_CARD)
+    assert ctl.events[-1]["id"] == big + 1
 
 
 def test_fire_drill_doors_once(world, ctl):

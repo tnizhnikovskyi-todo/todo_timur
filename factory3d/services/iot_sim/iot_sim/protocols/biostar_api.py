@@ -27,6 +27,7 @@ from fastapi.responses import JSONResponse
 
 from iot_sim.core.events import Event
 from iot_sim.core.world import World
+from iot_sim.models.access import event_id_seed
 from iot_sim.protocols.base import ProtocolServer
 from iot_sim.protocols.woodstore_api import UvicornRunner
 
@@ -114,7 +115,7 @@ class BioStarStore:
         self.world, self.login, self.password, self._clock = world, login, password, clock
         self.sessions: dict[str, float] = {}
         self.events: list[dict[str, Any]] = []
-        self._next_id = 1
+        self._next_id = event_id_seed()  # журнал у пам'яті: після рестарту id не повторюють видані Odoo (UNIQUE)
         self.requests = 0
         self._by_code = {d[1]: d for d in DEVICES}
         world.events.subscribe(self._on_event)
