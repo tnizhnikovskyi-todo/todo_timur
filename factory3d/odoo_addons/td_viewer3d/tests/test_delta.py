@@ -1,18 +1,28 @@
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from odoo import fields
 from odoo.tests import BaseCase, tagged
 
 from odoo.addons.td_viewer3d.hooks import is_demo_db
 
-from odoo.addons.td_viewer3d.tools import payload as payload_tools
+from odoo.addons.td_viewer3d.tools import dates, payload as payload_tools
 from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, deep_merge, default_delta
 
 from .common import F3dViewerBase
 
 ZZ = "td.viewer.provider.zz_"
 LOGGER = "odoo.addons.td_viewer3d.tools.payload"
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_viewer")
+class TestEpochMs(BaseCase):
+    def test_epoch_ms(self):
+        """meta.now_ms: epoch UTC у мс із секундами; dates.local лишається хвилинним."""
+        dt = datetime(2026, 10, 12, 7, 30, 45, 250000)
+        self.assertEqual(dates.epoch_ms(dt), 1791790245250)
+        self.assertEqual(dates.epoch_ms(dt) % 60000, 45250)
+        self.assertEqual(dates.local(dt), "2026-10-12 10:30")
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -73,6 +83,10 @@ class TestDelta(F3dViewerBase):
         self.assertEqual(res["events"], 1)
         self.assertIn("ZZ-DUCK", res["patch"]["infra"]["cards"])
         self.assertIn("now", res["patch"]["meta"])
+        # секунди «зараз» для годинника клієнта: meta.now — до хвилини, now_ms — epoch UTC (мс) того самого моменту
+        meta = res["patch"]["meta"]
+        self.assertIsInstance(meta["now_ms"], int)
+        self.assertEqual(meta["now_ms"] // 60000, dates.utc(meta["now"]).replace(tzinfo=timezone.utc).timestamp() // 60)
         self.assertRegex(res["ts"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 
     def test_empty_delta(self):

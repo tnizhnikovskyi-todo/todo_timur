@@ -241,6 +241,7 @@ class TestProduction(F3dViewerCase):
     def test_progress_demo_clock(self):
         data = self._data()
         self.assertEqual(data["meta"]["now"], "2026-10-12 10:30")
+        self.assertEqual(data["meta"]["now_ms"], 1791790200000)  # 07:30 UTC = 10:30 Київ
         prog = [w for w in data["workorders"].values() if w["state"] == "progress"]
         self.assertEqual(len(prog), 30)
         self.assertTrue(all(w["duration"] >= 0 and w["date_planned_finished"] for w in prog))
