@@ -12,6 +12,7 @@ import logging
 import os
 import time
 from datetime import datetime
+from datetime import time as dtime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -59,6 +60,11 @@ def dump(world: World) -> dict[str, Any]:
             "balance": world.balance,
             "maintenance_closed": sorted(world.maintenance_closed),
             "tick_count": world.tick_count,
+            "shift": {
+                "shifts": [[a.isoformat(), b.isoformat()] for a, b in world.shift.shifts],
+                "start": world.shift.start.isoformat(),
+                "end": world.shift.end.isoformat(),
+            },
         },
         "runs": runs,
     }
@@ -81,6 +87,9 @@ def restore(world: World, data: dict[str, Any]) -> None:
     world.maintenance_closed = set(w["maintenance_closed"])
     world.tick_count = w.get("tick_count", 0)
     world.minute0 = data.get("minute0", world.minute0)
+    if sh := w.get("shift"):  # вікна змін — ДО моделей: розклад СКУД ділить людей на бригади за ними
+        world.shift.shifts = tuple((dtime.fromisoformat(a), dtime.fromisoformat(b)) for a, b in sh["shifts"])
+        world.shift.start, world.shift.end = dtime.fromisoformat(sh["start"]), dtime.fromisoformat(sh["end"])
     for code, d in data["devices"].items():
         dev = world.devices.get(code)
         if dev is not None:

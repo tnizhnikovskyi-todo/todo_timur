@@ -2,12 +2,29 @@
 
 from __future__ import annotations
 
+from datetime import time
 from typing import Any, Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MIN_TOKEN_LEN = 32
+
+
+def parse_shift_windows(raw: str) -> tuple[tuple[time, time], ...]:
+    """``"07:00-15:30,15:30-23:00"`` -> пари ``time``; порожньо — ``()``; невірне — ``ValueError``."""
+    out: list[tuple[time, time]] = []
+    for part in (raw or "").split(","):
+        if not part.strip():
+            continue
+        try:
+            a, b = (time.fromisoformat(x.strip()) for x in part.split("-"))
+        except ValueError as exc:
+            raise ValueError(f"SIM_SHIFT_WINDOWS: очікується HH:MM-HH:MM, отримано {part.strip()!r}") from exc
+        if b <= a:
+            raise ValueError(f"SIM_SHIFT_WINDOWS: кінець зміни не пізніше початку: {part.strip()!r}")
+        out.append((a, b))
+    return tuple(out)
 
 
 class Settings(BaseSettings):
@@ -58,6 +75,7 @@ class Settings(BaseSettings):
     opcua_user: str = "collector"
     opcua_pass: str = ""
     yard_autogate: bool = True
+    shift_windows: str = ""  # SIM_SHIFT_WINDOWS: вікна змін для СКУД у scenario, напр. "07:00-15:30,15:30-23:00"
     write_accept: bool = True  # SIM_WRITE_ACCEPT: приймати команди запису (Modbus DO/FC06, BACnet, SICS TA)
     log_level: str = "INFO"
     log_json: bool = True

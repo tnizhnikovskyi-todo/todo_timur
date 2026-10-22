@@ -381,3 +381,82 @@ def test_restore_snapshot_with_people_builds_full_schedule(registry, world, peop
     assert len(b.events) == len(a.events)  # знімок не дублює видані події
     _set_time(b_world, 15, 40)
     assert len(_per_user(b, "1")) == 35 and set(_per_user(b, "1").values()) == {1}
+
+
+# --- SIM_SHIFT_WINDOWS: вікна змін у scenario (без follow_odoo) ----------------------------------------------------
+def test_shift_windows_env_parsing(monkeypatch):
+    from datetime import time
+
+    from iot_sim.config import Settings, parse_shift_windows
+
+    assert parse_shift_windows("") == ()
+    assert parse_shift_windows("07:00-15:30, 15:30-23:00") == ((time(7, 0), time(15, 30)), (time(15, 30), time(23, 0)))
+    for bad in ("07:00", "7-15", "15:30-07:00", "abc-def"):
+        with pytest.raises(ValueError, match="SIM_SHIFT_WINDOWS"):
+            parse_shift_windows(bad)
+    monkeypatch.setenv("SIM_SHIFT_WINDOWS", "07:00-15:30,15:30-23:00")
+    assert parse_shift_windows(Settings(_env_file=None).shift_windows) == parse_shift_windows("07:00-15:30,15:30-23:00")
+
+
+def test_app_applies_windows_and_ignores_bad(world, caplog):
+    from types import SimpleNamespace
+
+    from iot_sim.__main__ import Service
+
+    fake = SimpleNamespace(world=world, settings=SimpleNamespace(shift_windows="xx"))
+    Service._apply_shift_windows(fake)  # type: ignore[arg-type]
+    assert world.shift.shifts == () and "SIM_SHIFT_WINDOWS" in caplog.text
+    fake.settings.shift_windows = "07:00-15:30,15:30-23:00"
+    Service._apply_shift_windows(fake)  # type: ignore[arg-type]
+    assert len(world.shift.shifts) == 2 and (world.shift.start.hour, world.shift.end.hour) == (7, 23)
+
+
+def test_windows_change_midday_keeps_crew_b_inside_without_duplicates(world, people):
+    from datetime import time
+
+    world.people = people
+    world.clock.set(datetime(2026, 10, 12, 5, 0))
+    world.step(1)
+    ctl = world.devices["ACCESS"].model.ctl
+    assert world.shift.shifts == ()  # scenario: одна зміна 07:00–15:30, усі в бригаді A
+    _set_time(world, 12, 30)
+    assert len(_inside(ctl)) == 35 == ctl.on_site and set(_per_user(ctl, "1").values()) == {1}
+    n_events = len(ctl.events)
+    world.shift.set_windows(((time(7, 0), time(15, 30)), (time(15, 30), time(23, 0))))  # як SIM_SHIFT_WINDOWS
+    world.advance(10)
+    assert len(ctl.events) == n_events and ctl.on_site == 35  # минулі події не повторюються
+    times = _crew_times(ctl, people)
+    crew_b = {b for b, (t_in, _o) in times.items() if t_in >= 15 * 60}
+    assert len(crew_b) == 35 // 2
+    _set_time(world, 15, 50)
+    assert _inside(ctl) == crew_b and ctl.on_site == len(crew_b) <= 35  # бригада A вийшла, B лишилась
+    assert set(_per_user(ctl, "1").values()) == {1}  # дублікатів входу немає
+    assert set(_per_user(ctl, "2").values()) == {1} and len(_per_user(ctl, "2")) == 35 - len(crew_b)
+    from iot_sim.core.scenarios_evac import people_on_site
+
+    assert {p["barcode"] for p in people_on_site(world)} == crew_b  # евакуація о 15:50 бачить бригаду B
+    _set_time(world, 23, 30)
+    assert _inside(ctl) == set() and ctl.on_site == 0  # B вийшла о 23:00+
+
+
+def test_shifts_snapshot_roundtrip(registry, world, people):
+    import json
+    from datetime import time
+
+    from iot_sim.core.world import World
+
+    world.shift.set_windows(((time(7, 0), time(15, 30)), (time(15, 30), time(23, 0))))
+    world.people = people
+    world.clock.set(datetime(2026, 10, 12, 12, 0))
+    world.advance(10)
+    a = world.devices["ACCESS"].model.ctl
+    data = json.loads(json.dumps(world.snapshot()))
+    b_world = World(registry, seed=world.seed, clock=type(world.clock)("2026-10-12T05:00:00"))
+    assert b_world.shift.shifts == ()
+    b_world.restore(data)  # без env: вікна відновлено ДО пристроїв, розклад перебудовано з бригадами
+    assert b_world.shift.shifts == world.shift.shifts and b_world.shift.end == time(23, 0)
+    b = b_world.devices["ACCESS"].model.ctl
+    assert b.schedule and b.inside == a.inside and b.on_site == a.on_site
+    assert len(_crew_times(b, people)) == 35 and any(t_in >= 15 * 60 for t_in, _o in _crew_times(b, people).values())
+    b_world.advance(10)
+    assert len(b.events) == len(a.events) and b.people_key == b._rebuild_key()  # нової перебудови/подій немає

@@ -345,6 +345,17 @@ async def test_two_shift_calendar_gives_two_windows(follow, world):
     assert (cal.start.hour, cal.end.hour) == (7, 23) and cal.workdays == (0, 1, 2, 3, 4)
 
 
+async def test_follow_overrides_env_shift_windows(follow, world):
+    """SIM_SHIFT_WINDOWS задає вікна на старті; календар Odoo (follow) перекриває їх."""
+    from datetime import time
+
+    world.shift.set_windows(((time(6, 0), time(14, 0)), (time(14, 0), time(22, 0))))
+    follow._apply_shift(
+        [{"dayofweek": d, "hour_from": a, "hour_to": b} for d in range(5) for a, b in ((7.0, 15.5), (15.5, 23.0))]
+    )
+    assert [(a.hour, b.hour) for a, b in world.shift.shifts] == [(7, 15), (15, 23)]
+
+
 async def test_lunch_break_is_one_shift(follow, world):
     """08–12 і 13–17 (обід) — одна зміна, а не дві."""
     follow._apply_shift(

@@ -176,6 +176,19 @@ class Service:
         self._stop = asyncio.Event()
         self._started: list[Any] = []
 
+    def _apply_shift_windows(self) -> None:
+        """SIM_SHIFT_WINDOWS (scenario: бригади СКУД без Odoo) перекриває знімок; follow_odoo перекриє календарем."""
+        from iot_sim.config import parse_shift_windows
+
+        try:
+            wins = parse_shift_windows(self.settings.shift_windows)
+        except ValueError as exc:
+            log.warning("%s — ігнорую", exc)
+            return
+        if wins:
+            self.world.shift.set_windows(wins)
+            log.info("shift windows from SIM_SHIFT_WINDOWS: %s", self.settings.shift_windows)
+
     # --- життєвий цикл ---------------------------------------------------------------------
     async def start(self) -> None:
         from iot_sim.core import snapshot
@@ -191,6 +204,7 @@ class Service:
                 log.exception("не вдалося відновити знімок, старт від каталогу")
         else:
             log.info("fresh start from catalog")
+        self._apply_shift_windows()
         if w.mode == "follow_odoo":
             w.clock.set_factor(1.0)
         if self.devices_client.configured:

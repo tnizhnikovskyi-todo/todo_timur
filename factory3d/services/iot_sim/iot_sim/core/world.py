@@ -142,6 +142,12 @@ class ShiftCalendar:
     # вікна окремих змін (Odoo: кілька змін у календарі); порожньо — одна зміна ``start``–``end`` (СКУД: бригади)
     shifts: tuple[tuple[time, time], ...] = ()
 
+    def set_windows(self, windows: tuple[tuple[time, time], ...]) -> None:
+        """Задає вікна змін; ``start``/``end`` — межі першої й останньої (як ``follow._apply_shift``)."""
+        self.shifts = tuple(windows)
+        if self.shifts:
+            self.start, self.end = self.shifts[0][0], self.shifts[-1][1]
+
     def in_shift(self, dt: datetime) -> bool:
         return dt.weekday() in self.workdays and self.start <= dt.time() < self.end
 
