@@ -98,6 +98,56 @@ async def test_stream_drop_raises_and_reconnect_recovers(fake_sics):
         await plugin.disconnect()
 
 
+async def test_stream_drop_recovers_on_next_polls_without_core(fake_sics):
+    """Ядро не перепідключає джерело, яке лишилось у `Registry.connected`: плагін відновлюється сам (R-14)."""
+    server = await fake_sics(drop_after=3, rate_hz=50)
+    plugin = await _plugin(server)
+    try:
+        await asyncio.sleep(0.3)
+        with pytest.raises(PollError):  # розрив віддано планувальнику
+            await plugin.poll([W])
+        server.drop_after = None
+        values = []
+        for _ in range(100):  # далі — лише poll, без ручних disconnect()/connect()
+            await asyncio.sleep(0.02)
+            values = [r.value for r in await plugin.poll([W])]
+            if values:
+                break
+        assert values == [21380.0]
+        assert plugin.reconnects == 1
+        assert plugin.health().state == "online"
+    finally:
+        await plugin.disconnect()
+
+
+async def test_poll_mode_recovers_after_lost_connection(fake_sics):
+    server = await fake_sics()
+    plugin = await _plugin(server, mode="poll")
+    try:
+        assert (await plugin.poll([W]))[0].value == 21380.0
+        plugin._close_transport()  # обрив з'єднання без участі ядра
+        readings = await plugin.poll([W, S])
+        assert [(r.value, r.q) for r in readings] == [(21380.0, "good"), (1.0, "good")]
+        assert plugin.reconnects == 1
+    finally:
+        await plugin.disconnect()
+
+
+async def test_reconnect_failure_is_poll_error_and_retries(fake_sics):
+    server = await fake_sics()
+    plugin = await _plugin(server, mode="poll", timeout_s=0.5)
+    try:
+        await server.stop()
+        plugin._close_transport()
+        for _ in range(2):  # емулятор лежить: кожен poll — PollError, а не зависання чи тиха відсутність даних
+            with pytest.raises(PollError):
+                await plugin.poll([W])
+        plugin.port = (await fake_sics()).port  # «емулятор піднявся» (новий вільний порт)
+        assert (await plugin.poll([W]))[0].value == 21380.0
+    finally:
+        await plugin.disconnect()
+
+
 async def test_allowlist_denied_before_connect(fake_sics):
     server = await fake_sics()
     plugin = SicsPlugin(make_source(server.port), make_ctx(deny=True))

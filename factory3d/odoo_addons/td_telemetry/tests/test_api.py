@@ -148,7 +148,7 @@ class TestAuth(ApiCase):
             status, body, _h = self.get("health", token=token)
             self.assertEqual(status, 200)
             self.assertEqual(set(body), {"ok", "module", "version", "server_time"})
-            self.assertEqual(body["version"], "19.0.1.1.1")
+            self.assertEqual(body["version"], "19.0.1.1.3")
 
     def test_health_with_token(self):
         status, body, _h = self.get("health")
@@ -523,7 +523,7 @@ class TestCommandPayload(CommandCase):
             self.assertEqual((status, res["error"]["code"]), (400, "bad_schema"))
         self.reload()
         self.assertEqual(cmd.state, "sent")
-        self.assertEqual(Manifest.for_addon("td_telemetry")["version"], "19.0.1.1.1")
+        self.assertEqual(Manifest.for_addon("td_telemetry")["version"], "19.0.1.1.3")
 
 
 @tagged(*TAGS, "f3d_perf")

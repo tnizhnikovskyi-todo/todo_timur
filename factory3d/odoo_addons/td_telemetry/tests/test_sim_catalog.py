@@ -87,6 +87,8 @@ class TestParse(BaseCase):
             p("sics", "SICS TCP :4001 «SI» → «S S  21380 kg» / «SIR» потік"), {"cmd": "SI", "field": "weight"}
         )
         self.assertEqual(p("sics", "SICS TCP :4001 «SI» → stable (S S / S D)"), {"cmd": "SI", "field": "stable"})
+        # справжній рядок каталогу емулятора (signals.csv, yard/scale/TRUCK-SCALE/stable): раніше давав None
+        self.assertEqual(p("sics", "SICS статус «S» (стабільно) / «D» (динамічно)"), {"cmd": "SI", "field": "stable"})
         self.assertIsNone(p("sics", "SICS TCP :4001 «Z» → ok"))
         self.assertEqual(
             p("rest", "GET /api/v1/status → $.vacuum_kpa"),
