@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__odoo-mcp__odoo_search_read",
+      "Bash(git ls-tree *)"
+    ]
+  }
+}
