@@ -5,8 +5,11 @@
 """
 
 import logging
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+
+from psycopg2 import errors as pg_errors
 
 from odoo import _, api, fields, models
 
@@ -21,8 +24,12 @@ NOW_KEY = "td_live_now"  # ключ контексту: «зараз» (naive UT
 HOT_DEFAULT = "Присадка"
 BACKLOG_FREE_DAYS = 1.5  # доба-черга на верстатах, до якої замовлень не зменшуємо
 BACKLOG_SPAN_DAYS = 3.0  # на скільки діб понад це кількість замовлень падає до чверті
-TICK_BUDGET_S = 40.0  # секунд на такт: ліміт крона на сервері ~120 с, подія закриття МО — кілька секунд
-TICK_EVENTS = 150  # подій на такт крона: довга пауза доганяється за кілька тактів
+TICK_BUDGET_S = 20.0  # секунд на події однієї порції крона (≈ 2 с на подію); далі порція фіксується (commit)
+TICK_EVENTS = 150  # подій у порції крона: довга пауза доганяється порціями, а не одним довгим тактом
+TICK_COVER_S = 10.0  # секунд на забезпечення компонентів у порції; лише коли черга подій порожня
+TICK_TRIES = 2  # спроб порції при конкурентному оновленні (крон верстатів пише ті самі рядки)
+CONCURRENCY = (pg_errors.SerializationFailure, pg_errors.LockNotAvailable, pg_errors.DeadlockDetected)
+NIGHT_TRIGGER_TOLERANCE = timedelta(minutes=1)  # тригер нічного крона в межах цього від 02:00 вважається наявним
 LINES_RANGE = (2, 3)  # рядків (МО) у замовленні
 OVERLOAD = 1.5  # гарячі верстати вважаються «повними» на 150 % зміни (див. `planner.plan_orders`)
 CRON_TICK = "td_live_production.cron_td_live_tick"
@@ -360,22 +367,58 @@ class TdLiveEngine(models.AbstractModel):
         return _("Генерацію доби %s запущено у фоні. Прогрес і підсумок — у блоці «Фонові задачі» цього екрана.", day)
 
     @api.model
-    def _td_schedule_night(self):
-        """Наступний запуск нічного крона — найближчі 02:00 за Києвом (інтервал в UTC зсунувся б із літнім часом)."""
-        cron = self.env.ref(CRON_NIGHT, raise_if_not_found=False)
-        if not cron:
-            return
+    def _td_night_target(self):
+        """Найближчі 02:00 за Києвом (naive UTC): інтервал крона в UTC зсунувся б із літнім часом."""
         now = clock.to_local(fields.Datetime.now())
         target = datetime.combine(now.date(), datetime.min.time(), tzinfo=clock.KYIV).replace(hour=2)
         if target <= now:
             target = datetime.combine(now.date() + timedelta(days=1), datetime.min.time(), tzinfo=clock.KYIV).replace(
                 hour=2
             )
-        cron.sudo().nextcall = clock.to_utc(target)
+        return clock.to_utc(target)
+
+    @api.model
+    def _td_schedule_night(self):
+        """Наступний запуск нічного крона — найближчі 02:00 за Києвом.
+
+        Крон, що виконується просто зараз, Odoo змінювати не дозволяє (`write` → «currently being executed»), та й
+        після запуску воркер сам переписує `nextcall`; тому тоді ставиться тригер (`ir.cron._trigger`), а не `nextcall`.
+        """
+        cron = self.env.ref(CRON_NIGHT, raise_if_not_found=False)
+        if not cron:
+            return
+        cron = cron.sudo()
+        target = self._td_night_target()
+        if cron.try_lock_for_update(allow_referencing=True):
+            cron.nextcall = target
+        else:
+            self._td_trigger_night(cron, target)
+
+    @api.model
+    def _td_trigger_night(self, cron, target):
+        """Тригер нічного крона на `target`, не чіпаючи самого запису крона. Повторний виклик нових тригерів не плодить.
+
+        Звичайний `nextcall` (+1 доба) збігається з 02:00 Київ, поки не змінився літній час: тоді тригер вирівнює
+        запуск, а зайвий запуск о зсунутій годині нічого не робить — генерація доби ідемпотентна.
+        """
+        exists = (
+            self.env["ir.cron.trigger"]
+            .sudo()
+            .search_count(
+                [
+                    ("cron_id", "=", cron.id),
+                    ("call_at", ">=", target - NIGHT_TRIGGER_TOLERANCE),
+                    ("call_at", "<=", target + NIGHT_TRIGGER_TOLERANCE),
+                ]
+            )
+        )
+        if not exists:
+            cron._trigger(at=target)
 
     @api.model
     def _cron_td_live_nightly(self):
-        """Крон 02:00: ставить у фон генерацію доби на сьогодні (якщо стенд стояв) і на завтра, переставляє себе."""
+        """Крон 02:00: ставить у фон генерацію доби на сьогодні (якщо стенд стояв) і на завтра, наступний запуск —
+        тригером (запис самого крона, що виконується, Odoo забороняє)."""
         try:
             if self._td_params()["enabled"]:
                 today = self._td_today()
@@ -383,10 +426,46 @@ class TdLiveEngine(models.AbstractModel):
                 Job.td_enqueue("generate_day", day=today)
                 Job.td_enqueue("generate_day", day=today + timedelta(days=1))
         finally:
-            self._td_schedule_night()
+            cron = self.env.ref(CRON_NIGHT, raise_if_not_found=False)
+            if cron:
+                self._td_trigger_night(cron.sudo(), self._td_night_target())
 
     @api.model
     def _cron_td_live_tick(self):
-        """Крон щохвилини: такт диспетчера в межах часу й кількості подій."""
-        if self._td_params()["enabled"]:
-            self.td_dispatch(limit=TICK_EVENTS, budget_s=TICK_BUDGET_S)
+        """Крон щохвилини: порція такту диспетчера, що фіксується (commit) і звітує про залишок через
+        `ir.cron._commit_progress`. Воркер сам повторює порції (до 10 за запуск, поки не вийшов його час) і, якщо події
+        ще лишились, ставить крон на негайний повтор; тож черга подій після паузи зменшується незалежно від того, чи
+        встигла б вона за один запуск. Цілі верстатам шлються, лише коли черга порожня. Поза кроном (ручний запуск,
+        тести) — одна порція без commit."""
+        if not self._td_params()["enabled"]:
+            return
+        Cron = self.env["ir.cron"]
+        in_cron = bool(self.env.context.get("ir_cron_progress_id"))
+        end = self.env.context.get("cron_end_time")
+        if in_cron and end and time.monotonic() >= end:
+            Cron._commit_progress(remaining=1)  # час запуску вичерпано: нова порція — вже наступним запуском крона
+            return
+        reported = [0]
+
+        def checkpoint(res):
+            """Зафіксувати події порції; `remaining` — лише якщо щось виконано (інакше цикл не крутиться вхолосту)."""
+            if not in_cron:
+                return
+            done = res["applied"] + res["covered"]
+            Cron._commit_progress(max(done - reported[0], 0), remaining=res["pending"] if res["applied"] else 0)
+            reported[0] = done
+
+        for attempt in range(TICK_TRIES):
+            reported[0] = 0  # лічильник порції: події попередньої спроби вже зафіксовані й враховані
+            try:
+                res = self.td_dispatch(
+                    limit=TICK_EVENTS, budget_s=TICK_BUDGET_S, cover_s=TICK_COVER_S, checkpoint=checkpoint
+                )
+                break
+            except CONCURRENCY as exc:
+                if not in_cron or attempt + 1 >= TICK_TRIES:
+                    raise
+                _logger.info("td_live_production: такт у конфлікті з іншим кроном (%s), повтор", exc.__class__.__name__)
+                self.env.cr.rollback()  # подій, зафіксованих checkpoint-ом, це не відкочує
+                time.sleep(attempt + 1)
+        checkpoint(res)

@@ -104,12 +104,17 @@ class TdLiveEngine(models.AbstractModel):
 
     # --- такт -----------------------------------------------------------------------------------------
     @api.model
-    def td_dispatch(self, now=None, force=False, limit=None, budget_s=None):
+    def td_dispatch(self, now=None, force=False, limit=None, budget_s=None, cover_s=None, checkpoint=None):
         """Такт диспетчера: події до `now`, цілі верстатам. Повертає лічильники, `applied` (виконано подій), `pending`
         (подій лишилось) і цілі.
 
         `limit` і `budget_s` (секунди) обмежують порцію: крон і фонова задача доганяють довгу паузу частинами, не
         вичерпуючи ліміт часу; решту подасть наступний виклик, бо стан береться з бази. Тоді цілі верстатам не шлються.
+
+        `cover_s` (секунди) — режим крона: забезпечення компонентів відкритих МО лише коли подій не лишилось і не довше
+        за `cover_s` (`0` — не робити); за замовчуванням (`None`) воно йде після подій завжди, до `COVER_BUDGET_S`.
+        `checkpoint(res)` викликається один раз після подій, до забезпечення й цілей: крон тут фіксує зроблене
+        (`ir.cron._commit_progress`), щоб довга решта такту не відкотила події.
         """
         self = self.sudo()
         res = {
@@ -153,11 +158,16 @@ class TdLiveEngine(models.AbstractModel):
             if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW):
                 res["applied"] += 1
         res["pending"] = len(events) - processed
+        if checkpoint:
+            checkpoint(res)
         # відкриті МО без повного резерву забезпечуємо наперед; МО, що закриваються в цьому такті, пропускаємо
-        soon = {ev["id"] for ev in events[processed:] if ev["kind"] == "mo_done"}
-        res["covered"] = self._td_cover_open(
-            now, skip=soon, budget_s=COVER_BUDGET_S if budget_s is None else min(budget_s, COVER_BUDGET_S)
-        )
+        if cover_s is None:
+            soon = {ev["id"] for ev in events[processed:] if ev["kind"] == "mo_done"}
+            res["covered"] = self._td_cover_open(
+                now, skip=soon, budget_s=COVER_BUDGET_S if budget_s is None else min(budget_s, COVER_BUDGET_S)
+            )
+        elif cover_s > 0 and not res["pending"]:
+            res["covered"] = self._td_cover_open(now, budget_s=cover_s)
         if res["pending"]:
             _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний виклик", res["pending"])
             return res
