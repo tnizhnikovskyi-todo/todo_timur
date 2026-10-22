@@ -1,7 +1,9 @@
 """DT-3/DT-5, R-30, R-31: `workcenters[code].downtime_cost`, `flow` і вузли порталу в повному payload переглядача."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
+
+from freezegun import freeze_time
 
 from odoo import fields
 from odoo.tests import tagged
@@ -9,32 +11,76 @@ from odoo.tests import tagged
 from odoo.addons.td_viewer3d.tests.common import F3dViewerBase
 
 
+NOW = datetime(2026, 10, 12, 9, 0)  # 12:00 за Києвом (EEST, UTC+3), понеділок
+DAY_START = datetime(2026, 10, 11, 21, 0)  # 00:00 цієї доби за Києвом, naive UTC
+
+
 @tagged("post_install", "-at_install", "f3d", "f3d_mc_viewer3d")
 class TestDowntimeCostPayload(F3dViewerBase):
+    """DT-3: 3D «Простої, ₴» = вартість за поточну київську добу (а не за місяць чи весь час)."""
+
+    @classmethod
+    def _downtime(cls, start, hours):
+        return cls.env["td.downtime"].create(
+            {
+                "machine_id": cls.machine.id,
+                "date_start": start,
+                "date_end": start + timedelta(hours=hours),
+                "state_kind": "fault",
+                "loss_id": cls.env.ref("mrp.block_reason1").id,
+            }
+        )
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        cls.wc = env["mrp.workcenter"].create(
-            {"name": "TST DT", "code": "TSTDT", "td_code": "TST-DT-1", "costs_hour": 600.0}
+        # цілодобовий календар (Київ): вартість рахується лише в плановому часі РЦ (DT-1), тут перевіряється межа доби
+        attendance = [
+            (0, 0, {"name": name, "dayofweek": str(dow), "hour_from": lo, "hour_to": hi, "day_period": period})
+            for dow in range(7)
+            for name, lo, hi, period in (("Ніч-ранок", 0.0, 12.0, "morning"), ("День-вечір", 12.0, 24.0, "afternoon"))
+        ]
+        cal = env["resource.calendar"].create(
+            {"name": "TST 24/7", "tz": "Europe/Kyiv", "attendance_ids": [(5, 0, 0)] + attendance}
         )
-        cls.machine = env["td.machine"].create({"workcenter_id": cls.wc.id, "protocol": "manual"})
-        start = env["td.downtime"]._td_month_start() + timedelta(hours=1)  # завжди в поточному місяці
-        env["td.downtime"].create(
+        cls.wc = env["mrp.workcenter"].create(
             {
-                "machine_id": cls.machine.id,
-                "date_start": start,
-                "date_end": start + timedelta(hours=2),
-                "state_kind": "fault",
-                "loss_id": env.ref("mrp.block_reason1").id,
+                "name": "TST DT",
+                "code": "TSTDT",
+                "td_code": "TST-DT-1",
+                "costs_hour": 600.0,
+                "resource_calendar_id": cal.id,
             }
         )
+        cls.machine = env["td.machine"].create({"workcenter_id": cls.wc.id, "protocol": "manual"})
+        cls._downtime(DAY_START + timedelta(hours=9), 2)  # сьогодні 09:00–11:00 за Києвом: 2 год = 1200
+        cls._downtime(DAY_START - timedelta(hours=15), 1)  # вчора 09:00–10:00: у «сьогодні» не входить
         groups = ["base.group_user", "mrp.group_mrp_user", "stock.group_stock_user", "td_factory3d.group_td_manager"]
         cls.user_cost = cls._make_user("f3d_cost_manager", groups)
 
+    def setUp(self):
+        super().setUp()
+        frozen = freeze_time(NOW)  # «зараз» фіксований: тест не залежить від дня запуску
+        frozen.start()
+        self.addCleanup(frozen.stop)
+
+    def _cost(self):
+        return self.payload(self.user_cost)["workcenters"]["TST-DT-1"]["downtime_cost"]
+
     def test_manager_gets_cost(self):
-        data = self.payload(self.user_cost)
-        self.assertEqual(data["workcenters"]["TST-DT-1"]["downtime_cost"], 1200.0)
+        """Лише сьогоднішній простій (1200); учорашній (600) і решта місяця не рахуються."""
+        self.assertEqual(self._cost(), 1200.0)
+
+    def test_kyiv_day_boundary(self):
+        """Межа доби — північ за Києвом: 00:30 Києва (21:30 UTC) — сьогодні, 23:30 Києва (20:30 UTC) — вчора."""
+        self._downtime(DAY_START + timedelta(minutes=30), 1)  # сьогодні, 1 год = 600
+        self._downtime(DAY_START - timedelta(minutes=30), 1)  # вчора 23:30 → закінчується сьогодні, але почався вчора
+        self.assertEqual(self._cost(), 1800.0)
+
+    def test_no_downtime_today_zero(self):
+        with freeze_time(NOW + timedelta(days=1)):  # наступна доба: простоїв ще не було
+            self.assertEqual(self._cost(), 0.0)
 
     def test_user_without_manager_group_gets_no_cost(self):
         data = self.payload(self.user_f3d)
@@ -47,7 +93,7 @@ class TestDowntimeCostPayload(F3dViewerBase):
 
     def test_cost_follows_rate_change(self):
         self.wc.costs_hour = 900.0
-        self.assertEqual(self.payload(self.user_cost)["workcenters"]["TST-DT-1"]["downtime_cost"], 1800.0)
+        self.assertEqual(self._cost(), 1800.0)
 
 
 FLOW = {

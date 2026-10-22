@@ -2,7 +2,7 @@ import logging
 
 from odoo import api, fields, models
 
-from .td_machine import env_default, param_bool
+from .td_machine import CONTENTION_ERRORS, env_default, param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -26,8 +26,29 @@ class F3dSignal(models.Model):
         return res
 
     def _mark_stale(self, reason):
-        res = super()._mark_stale(reason)
+        """Сигнал → `stale` (super), а верстат його стану → `nodata`.
+
+        DEC-20: сигнали стану підключених верстатів — по одному, у власному savepoint: верстат, зайнятий паралельною
+        транзакцією (push, такт) або змінений нею після знімка, не валить крон. Його сигнал лишається у попередньому
+        статусі й потрапить до наступного запуску `_cron_stale` (повтор через хвилину).
+        """
         code_map = self.env["td.machine"]._td_code_map()
-        for sig in self.filtered(lambda s: code_map.get(s.code, (0, ""))[1] == "state"):
-            self.env["td.machine"].sudo().browse(code_map[sig.code][0])._td_mark_nodata(fields.Datetime.now(), reason)
+        of_machine = self.filtered(lambda s: code_map.get(s.code, (0, ""))[1] == "state")
+        res = super(F3dSignal, self - of_machine)._mark_stale(reason)
+        Machine = self.env["td.machine"].sudo()
+        enabled = param_bool(self.env, "read_enabled", env_default(self.env))
+        for sig in of_machine.sorted(lambda s: code_map[s.code][0]):
+            machine = Machine.browse(code_map[sig.code][0]).exists().filtered(lambda m: m.active and m.read_enabled)
+            machine = machine if enabled else Machine  # читання вимкнено — `_td_mark_nodata` нічого не робить
+            try:
+                with self.env.cr.savepoint() as savepoint:
+                    if machine and not machine._td_lock_skip_locked():
+                        savepoint.close(rollback=True)
+                        _logger.info("td.signal %s: верстат зайнятий, stale повторить крон", sig.code)
+                        continue
+                    super(F3dSignal, sig)._mark_stale(reason)
+                    if machine and not machine._td_mark_nodata(fields.Datetime.now(), reason):
+                        savepoint.close(rollback=True)  # nodata не вдалось — сигнал лишається, повторить крон
+            except CONTENTION_ERRORS as exc:
+                _logger.info("td.signal %s: паралельне оновлення (%s), повтор кроном", sig.code, type(exc).__name__)
         return res

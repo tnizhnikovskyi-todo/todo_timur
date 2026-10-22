@@ -3,6 +3,8 @@ import time
 from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from psycopg2 import errors as pg_errors
+
 from odoo import _, api, fields, models, modules, tools
 from odoo.exceptions import AccessError, ValidationError
 
@@ -16,6 +18,9 @@ TICK_BUDGET_S = 10
 HEARTBEAT_S = 30  # DEC-19: `raw_ts`/`pieces_ts` без інших змін пишуться не частіше за раз на стільки секунд
 TICK_BATCH = 10  # DEC-19: верстатів на транзакцію такту (після пачки — commit, нова знімка, блокування знято)
 PENDING_SLACK_S = 30
+# DEC-20: паралельна транзакція — не помилка коду: рядок зайнятий (`NOWAIT`), змінений після знімка REPEATABLE READ
+# (`SerializationFailure`) або взаємне блокування. Такий верстат/завдання пропускається до наступного такту/опитування.
+CONTENTION_ERRORS = (pg_errors.SerializationFailure, pg_errors.LockNotAvailable, pg_errors.DeadlockDetected)
 
 STATES = [
     ("working", "В роботі"),
@@ -280,7 +285,7 @@ class F3dMachine(models.Model):
     @api.model
     def _td_dispatch(self, readings, src):
         """Вхід із M-18: показання → верстати → `_td_apply`. Синхронний; помилка верстата не поширюється."""
-        stats = {"machines": 0, "transitions": 0, "autostarts": 0, "finished": 0, "errors": []}
+        stats = {"machines": 0, "transitions": 0, "autostarts": 0, "finished": 0, "errors": [], "locked": []}
         code_map = self._td_code_map()
         groups = {}
         for r in readings:
@@ -307,6 +312,11 @@ class F3dMachine(models.Model):
                     machine._td_lock()
                     machine._td_apply(groups[machine.id])
                 stats["machines"] += 1
+            except CONTENTION_ERRORS as exc:  # DEC-20: не помилка, показання прийдуть наступним опитуванням
+                _logger.warning(
+                    "td.machine %s: паралельне оновлення (%s), показання пропущено", machine.code, type(exc).__name__
+                )
+                stats["locked"].append(machine.code)
             except Exception:
                 _logger.exception("td.machine %s: помилка обробки показань", machine.code)
                 stats["errors"].append(machine.code)
@@ -315,19 +325,38 @@ class F3dMachine(models.Model):
     def _td_lock(self):
         """Блокування рядків верстатів до зміни стану (R-04 п. 0, R-09 п. 7) і свіжий стан після блокування."""
         if self.ids:
-            self.env.cr.execute("SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE", (tuple(self.ids),))
+            self.env.cr.execute(
+                "SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE",
+                (tuple(self.ids),),
+                log_exceptions=False,  # DEC-20: конкуренцію обробляє викликач, «bad query» в лог не потрібен
+            )
             self.invalidate_recordset()
 
     def _td_lock_skip_locked(self):
-        """DEC-19: як `_td_lock`, але без очікування: рядки, зайняті іншою транзакцією (push), пропускаються.
+        """DEC-19/20: як `_td_lock`, але без очікування: рядки, зайняті іншою транзакцією (push), пропускаються.
 
         Повертає підмножину `self`, яку вдалося заблокувати (за зростанням id), зі свіжим станом із бази.
+        У REPEATABLE READ `FOR UPDATE` кидає `SerializationFailure` і на вільному рядку, який інша транзакція встигла
+        змінити й закомітити після знімка поточної, — тоді пачка блокується по одному рядку (кожен у власному
+        savepoint), а змінені пропускаються: їх опрацює наступний такт з новою знімкою.
         """
         if not self.ids:
             return self
         cr = self.env.cr
-        cr.execute("SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE SKIP LOCKED", (tuple(self.ids),))
-        locked = [row[0] for row in cr.fetchall()]
+        query = "SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE SKIP LOCKED"
+        try:
+            with cr.savepoint(flush=False):
+                cr.execute(query, (tuple(self.ids),), log_exceptions=False)
+                locked = [row[0] for row in cr.fetchall()]
+        except CONTENTION_ERRORS:
+            locked = []
+            for rec_id in sorted(self.ids):
+                try:
+                    with cr.savepoint(flush=False):
+                        cr.execute(query, ((rec_id,),), log_exceptions=False)
+                        locked.extend(row[0] for row in cr.fetchall())
+                except CONTENTION_ERRORS:
+                    _logger.debug("td.machine #%s: змінено паралельно, блокування пропущено", rec_id)
         self.invalidate_recordset()
         return self.browse(locked)
 
@@ -470,14 +499,26 @@ class F3dMachine(models.Model):
         return True
 
     def _td_mark_nodata(self, ts, reason):
-        """R-03: сигнал стану `stale` → `nodata` (причина — у лог)."""
+        """R-03: сигнал стану `stale` → `nodata` (причина — у лог).
+
+        DEC-20: верстат, зайнятий паралельною транзакцією (push, такт) або змінений нею після знімка, пропускається
+        (без помилки й без очікування); повертає верстати, яким стан справді змінено.
+        """
+        done = self.browse()
         for rec in self.sudo().exists().filtered(lambda m: m.active and m.read_enabled).sorted("id"):
             if not param_bool(rec.env, "read_enabled", env_default(rec.env)):
                 continue
-            with rec.env.cr.savepoint():
-                rec._td_lock()
-                _logger.info("td.machine %s: nodata (%s)", rec.code, reason)
-                rec._td_commit_state("nodata", ts, cause="system")
+            try:
+                with rec.env.cr.savepoint():
+                    if not rec._td_lock_skip_locked():
+                        _logger.info("td.machine %s: зайнятий паралельною транзакцією, nodata пізніше", rec.code)
+                        continue
+                    _logger.info("td.machine %s: nodata (%s)", rec.code, reason)
+                    rec._td_commit_state("nodata", ts, cause="system")
+                done |= rec
+            except CONTENTION_ERRORS as exc:
+                _logger.info("td.machine %s: паралельне оновлення (%s), nodata пізніше", rec.code, type(exc).__name__)
+        return done
 
     def _td_emit_state(self, ts):
         """Обчислений стан → сигнал `machine_state` (CT-10)."""
@@ -619,13 +660,19 @@ class F3dMachine(models.Model):
                             if now >= limit:
                                 machine._td_commit_state(machine.pending_state, machine.pending_since)
                         machine._td_tick_extra(now)
+                except CONTENTION_ERRORS as exc:  # DEC-20: наступний такт повторить з новою знімкою
+                    _logger.warning(
+                        "td.machine %s: такт пропущено — паралельне оновлення (%s)", machine.code, type(exc).__name__
+                    )
+                    skipped += 1
                 except Exception:
                     _logger.exception("td.machine %s: помилка такту", machine.code)
             if not modules.module.current_test:  # у тестах commit курсора заборонено
                 self.env["ir.cron"]._commit_progress(len(batch), remaining=len(ids) - pos - len(batch))
         if skipped:
             _logger.info(
-                "td.machine: такт пропустив %s верстатів, зайнятих push (опрацюються наступним тактом)", skipped
+                "td.machine: такт пропустив %s верстатів, зайнятих паралельними транзакціями (повтор наступним тактом)",
+                skipped,
             )
         return True
 

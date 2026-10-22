@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-from .td_machine import local, param, param_bool
+from .td_machine import CONTENTION_ERRORS, local, param, param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -36,6 +36,19 @@ class F3dMachineWo(models.Model):
     def _td_autostart_on(self):
         self.ensure_one()
         return param_bool(self.env, "auto_start_enabled") and self.auto_start_mode != "off"
+
+    def _td_lock_wo(self, wo):
+        """DEC-20: `FOR UPDATE SKIP LOCKED` на рядок завдання; `False` — зайнято (диспетчер живого виробництва,
+        інший крон) або змінено паралельно після знімка (REPEATABLE READ): крок такту пропускається до наступного."""
+        cr = self.env.cr
+        try:
+            with cr.savepoint(flush=False):
+                cr.execute(
+                    "SELECT id FROM mrp_workorder WHERE id = %s FOR UPDATE SKIP LOCKED", (wo.id,), log_exceptions=False
+                )
+                return bool(cr.fetchone())
+        except CONTENTION_ERRORS:
+            return False
 
     def _td_activity(self, rec, text, user=None):
         """Діяльність `mail.mail_activity_data_todo` (SPEC §13.0 п. 7); дубль за `summary` не створюється."""
@@ -384,6 +397,9 @@ class F3dMachineWo(models.Model):
                 return False
             since = self._td_idle_since()
             if counted < plan or not since or ts < since + timedelta(seconds=self.finish_idle_s):
+                return False
+            if not self._td_lock_wo(wo):
+                _logger.info("td.machine %s: завдання %s зайняте, завершення пізніше", self.code, wo.id)
                 return False
             return self._td_finish(wo, ts, counted, plan)
         return self._td_finish(wo, ts, counted, plan) if counted >= plan else self._td_partial(wo, ts, counted, plan)
