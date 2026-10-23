@@ -505,3 +505,18 @@ class TestClaudeV2(TransactionCase):
     def test_log_time_all_roles(self):
         for code in ROLE_CODES:
             self.assertEqual(self._log(0.5, code=code).employee_id.user_id, self._user(code))
+
+    def test_manager_role_is_project_admin(self):
+        pm = self.env.ref("project.group_project_manager")
+        manager_user = self.team["manager"].agent_user_id
+        coder_user = self.team["coder"].agent_user_id
+        self.assertIn(pm, manager_user.all_group_ids)
+        self.assertNotIn(pm, coder_user.all_group_ids)
+        project = self.env["project.project"].with_user(manager_user).create({"name": "Навчання агентів"})
+        self.assertTrue(project)
+        # зміна прав ролі синхронізується з наявними агентами
+        tester = self.roles["tester"]
+        tester.group_ids = [(4, pm.id)]
+        self.assertIn(pm, self.team["tester"].agent_user_id.all_group_ids)
+        tester.group_ids = [(3, pm.id)]
+        self.assertNotIn(pm, self.team["tester"].agent_user_id.all_group_ids)

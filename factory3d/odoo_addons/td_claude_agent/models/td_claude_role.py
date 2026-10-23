@@ -23,6 +23,9 @@ class TdClaudeRole(models.Model):
         [("opus", "Opus"), ("sonnet", "Sonnet")], string="Модель", help="Підказка, яку модель використати Routine"
     )
     active = fields.Boolean(default=True)
+    group_ids = fields.Many2many(
+        "res.groups", string="Додаткові права агентів", help="Групи, які отримують користувачі-агенти цієї ролі"
+    )
 
     _code_uniq = models.Constraint("UNIQUE(code)", "Роль з таким кодом уже існує.")
 
@@ -39,7 +42,21 @@ class TdClaudeRole(models.Model):
 
     def write(self, vals):
         self._td_check_human_editor()
-        return super().write(vals)
+        old = {role.id: role.group_ids for role in self} if "group_ids" in vals else {}
+        res = super().write(vals)
+        for role in self.filtered(lambda r: r.id in old):
+            role._td_sync_agent_groups(removed=old[role.id] - role.group_ids)
+        return res
+
+    def _td_sync_agent_groups(self, removed=None):
+        """Додає групи ролі її користувачам-агентам; зняті з ролі групи забирає."""
+        for role in self:
+            agents = self.env["td.claude.agent"].sudo().with_context(active_test=False).search(
+                [("role_id", "=", role.id)]
+            )
+            commands = [(4, g.id) for g in role.group_ids] + [(3, g.id) for g in (removed or [])]
+            if agents and commands:
+                agents.agent_user_id.sudo().write({"group_ids": commands})
 
     def unlink(self):
         self._td_check_human_editor()

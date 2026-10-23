@@ -193,6 +193,7 @@ class TdClaudeAgent(models.Model):
             self.env.ref("base.group_user")
             | self.env.ref("project.group_project_user")
             | self.env.ref("hr_timesheet.group_hr_timesheet_user")
+            | role.group_ids
         )
         agent_user = Users.create(
             {

@@ -30,6 +30,7 @@
                         <group>
                             <field name="sequence"/>
                             <field name="model_hint"/>
+                            <field name="group_ids" widget="many2many_tags"/>
                         </group>
                     </group>
                     <separator string="Інструкція ролі (базовий промпт, Markdown)"/>
