@@ -163,6 +163,12 @@ class TestClaudeProject(TransactionCase):
             },
         )
 
+    def test_payload_project_record_itself(self):
+        request = self.env["td.claude.request"]._td_create(self.agent, "manual", record=self.project, schedule=False)
+        payload = json.loads(request.payload)
+        self.assertEqual(payload["model"], "project.project")
+        self.assertEqual(payload["project"]["id"], self.project.id)
+
     def test_append_context_human_member(self):
         self.project.with_user(self.member).td_claude_append_context("Рішення від людини")
         self.assertIn("Рішення від людини", self.project.td_claude_context)
