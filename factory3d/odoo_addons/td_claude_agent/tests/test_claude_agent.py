@@ -46,6 +46,7 @@ class TestClaudeAgent(TransactionCase):
             {
                 "owner_id": cls.owner.id,
                 "agent_user_id": cls.agent_user.id,
+                "role_id": cls.env.ref("td_claude_agent.role_manager").id,
                 "fire_url": FIRE_URL,
                 "fire_token": "sk-secret-token",
             }
@@ -282,7 +283,8 @@ class TestClaudeAgent(TransactionCase):
         agent = self.env["td.claude.agent"].sudo().browse(ctx["default_agent_id"])
         self.assertEqual(agent.owner_id, self.other)
         user = agent.agent_user_id
-        self.assertEqual(user.name, "Claude · Other Two")
+        self.assertTrue(user.name.startswith("Claude · Менеджер"))
+        self.assertEqual(agent.role_id.code, "manager")
         self.assertEqual(user.login, "claude.other.two")
         self.assertFalse(user.share)
         self.assertTrue(user.has_group("project.group_project_user"))

@@ -7,9 +7,12 @@
             <list>
                 <header>
                     <button name="action_create_my_agent" type="object" string="Створити мого агента Claude"
+                            display="always"/>
+                    <button name="action_create_team" type="object" string="Створити команду Claude"
                             display="always" class="btn-primary"/>
                 </header>
                 <field name="name"/>
+                <field name="role_id"/>
                 <field name="owner_id"/>
                 <field name="fire_url"/>
                 <field name="last_fire_at"/>
@@ -42,6 +45,7 @@
                         <group string="Агент">
                             <field name="active" invisible="1"/>
                             <field name="owner_id" options="{'no_create': True}"/>
+                            <field name="role_id" options="{'no_create': True}"/>
                             <field name="agent_user_id" options="{'no_create': True}"/>
                             <field name="name"/>
                         </group>

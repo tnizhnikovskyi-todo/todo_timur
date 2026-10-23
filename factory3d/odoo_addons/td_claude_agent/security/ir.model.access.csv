@@ -3,3 +3,7 @@ access_td_claude_agent_user,td.claude.agent user,model_td_claude_agent,base.grou
 access_td_claude_request_user,td.claude.request user,model_td_claude_request,base.group_user,1,0,0,0
 access_td_claude_session_user,td.claude.session user,model_td_claude_session,base.group_user,1,1,1,1
 access_td_claude_agent_wizard_user,td.claude.agent.wizard user,model_td_claude_agent_wizard,base.group_user,1,1,1,0
+access_td_claude_role_user,td.claude.role user,model_td_claude_role,base.group_user,1,1,1,1
+access_td_claude_skill_user,td.claude.skill user,model_td_claude_skill,base.group_user,1,1,1,1
+access_td_claude_skill_version_user,td.claude.skill.version user,model_td_claude_skill_version,base.group_user,1,0,0,0
+access_td_claude_team_wizard_user,td.claude.team.wizard user,model_td_claude_team_wizard,base.group_user,1,1,1,1

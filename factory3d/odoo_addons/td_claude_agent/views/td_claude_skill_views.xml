@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_skill_list" model="ir.ui.view">
+        <field name="name">td.claude.skill.list</field>
+        <field name="model">td.claude.skill</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="has_proposal" decoration-muted="state == 'archived'">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="scope"/>
+                <field name="role_ids" widget="many2many_tags"/>
+                <field name="version"/>
+                <field name="state"/>
+                <field name="has_proposal" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_claude_skill_kanban" model="ir.ui.view">
+        <field name="name">td.claude.skill.kanban</field>
+        <field name="model">td.claude.skill</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="scope"/>
+                <field name="version"/>
+                <field name="state"/>
+                <field name="has_proposal"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="fw-bold"><field name="name"/></div>
+                        <div class="text-muted"><field name="code"/> · v<field name="version"/></div>
+                        <div><field name="scope"/> <field name="role_ids" widget="many2many_tags"/></div>
+                        <div t-if="record.has_proposal.raw_value" class="text-warning">Є пропозиція</div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_td_claude_skill_form" model="ir.ui.view">
+        <field name="name">td.claude.skill.form</field>
+        <field name="model">td.claude.skill</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_approve_proposal" type="object" string="Затвердити пропозицію"
+                            class="btn-primary" invisible="not has_proposal"/>
+                    <button name="action_reject_proposal" type="object" string="Відхилити"
+                            invisible="not has_proposal"/>
+                    <button name="action_archive_skill" type="object" string="В архів"
+                            invisible="state == 'archived'"/>
+                    <button name="action_activate_skill" type="object" string="Активувати"
+                            invisible="state != 'archived' or not version"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <field name="has_proposal" invisible="1"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="scope"/>
+                            <field name="role_ids" widget="many2many_tags" options="{'no_create': True}"
+                                   invisible="scope != 'role'"/>
+                        </group>
+                        <group>
+                            <field name="version"/>
+                            <field name="description" placeholder="Коли застосовувати (1-2 речення)"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="body" string="Інструкція">
+                            <field name="body" class="font-monospace" nolabel="1" placeholder="# Скіл ..."/>
+                        </page>
+                        <page name="proposal" string="Пропозиція" invisible="not has_proposal">
+                            <group>
+                                <field name="proposal_author_id"/>
+                                <field name="proposal_date"/>
+                                <field name="proposal_note"/>
+                            </group>
+                            <group>
+                                <group string="Поточний текст">
+                                    <field name="body" class="font-monospace" nolabel="1" readonly="1"/>
+                                </group>
+                                <group string="Запропонований текст">
+                                    <field name="proposal_body" class="font-monospace" nolabel="1" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page name="history" string="Історія">
+                            <field name="version_ids" readonly="1">
+                                <list>
+                                    <field name="version"/>
+                                    <field name="date"/>
+                                    <field name="author_id"/>
+                                    <field name="note"/>
+                                </list>
+                                <form>
+                                    <group>
+                                        <field name="version"/>
+                                        <field name="date"/>
+                                        <field name="author_id"/>
+                                        <field name="note"/>
+                                    </group>
+                                    <field name="body" class="font-monospace" nolabel="1"/>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_claude_skill_search" model="ir.ui.view">
+        <field name="name">td.claude.skill.search</field>
+        <field name="model">td.claude.skill</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="role_ids"/>
+                <filter name="corporate" string="Корпоративні" domain="[('scope', '=', 'corporate')]"/>
+                <filter name="by_role" string="Рольові" domain="[('scope', '=', 'role')]"/>
+                <filter name="has_proposal" string="Є пропозиція" domain="[('has_proposal', '=', True)]"/>
+                <separator/>
+                <filter name="active_skills" string="Активні" domain="[('state', '=', 'active')]"/>
+                <group>
+                    <filter name="group_scope" string="Охоплення" context="{'group_by': 'scope'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_claude_skill" model="ir.actions.act_window">
+        <field name="name">Скіли Claude</field>
+        <field name="res_model">td.claude.skill</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="search_view_id" ref="view_td_claude_skill_search"/>
+    </record>
+</odoo>

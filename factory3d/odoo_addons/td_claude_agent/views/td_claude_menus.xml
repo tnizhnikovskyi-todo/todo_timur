@@ -2,6 +2,9 @@
 <odoo>
     <menuitem id="menu_td_claude" name="Claude" parent="project.menu_project_config" sequence="90"/>
     <menuitem id="menu_td_claude_agent" name="Агенти" parent="menu_td_claude" action="action_td_claude_agent" sequence="10"/>
+    <menuitem id="menu_td_claude_team" name="Створити команду" parent="menu_td_claude" action="action_td_claude_create_team" sequence="12"/>
+    <menuitem id="menu_td_claude_role" name="Ролі" parent="menu_td_claude" action="action_td_claude_role" sequence="15"/>
+    <menuitem id="menu_td_claude_skill" name="Скіли" parent="menu_td_claude" action="action_td_claude_skill" sequence="18"/>
     <menuitem id="menu_td_claude_session" name="Сесії" parent="menu_td_claude" action="action_td_claude_session" sequence="20"/>
     <menuitem id="menu_td_claude_request" name="Журнал запитів" parent="menu_td_claude" action="action_td_claude_request" sequence="30"/>
 </odoo>

@@ -25,6 +25,10 @@ class TdClaudeAgent(models.Model):
     agent_user_id = fields.Many2one(
         "res.users", string="Користувач-агент", required=True, ondelete="restrict", index=True
     )
+    role_id = fields.Many2one(
+        "td.claude.role", string="Роль", ondelete="restrict", index=True, help="Обов'язкова для нових агентів"
+    )
+    role_code = fields.Selection(related="role_id.code", string="Код ролі", store=True)
     name = fields.Char(related="agent_user_id.name", string="Назва", readonly=True)
     fire_url = fields.Char(string="Fire URL", help="Адреса API «fire» вашої Claude Code Routine")
     fire_token = fields.Char(string="Токен Routine", copy=False)
@@ -33,8 +37,21 @@ class TdClaudeAgent(models.Model):
     last_fire_status = fields.Char(string="Статус останнього запуску", readonly=True)
     request_count = fields.Integer(compute="_compute_request_count", string="Запитів")
 
-    _owner_uniq = models.Constraint("UNIQUE(owner_id)", "Кожен користувач може мати лише одного агента Claude.")
+    _owner_role_uniq = models.Constraint(
+        "UNIQUE(owner_id, role_id)", "Користувач уже має агента Claude з такою роллю."
+    )
     _agent_user_uniq = models.Constraint("UNIQUE(agent_user_id)", "Цей користувач уже є агентом Claude.")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if any(not vals.get("role_id") for vals in vals_list):
+            raise ValidationError(_("Вкажіть роль агента."))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if "role_id" in vals and not vals["role_id"]:
+            raise ValidationError(_("Вкажіть роль агента."))
+        return super().write(vals)
 
     @api.constrains("fire_url")
     def _check_fire_url(self):
@@ -107,13 +124,50 @@ class TdClaudeAgent(models.Model):
     # Створення агента для поточного користувача
     # ------------------------------------------------------------------
     @api.model
+    def _td_is_agent_user(self, uid):
+        return bool(self.sudo().with_context(active_test=False).search_count([("agent_user_id", "=", uid)]))
+
+    @api.model
     def _td_check_agent_user(self):
-        if not self.sudo().with_context(active_test=False).search_count([("agent_user_id", "=", self.env.uid)]):
+        if not self._td_is_agent_user(self.env.uid):
             raise AccessError(_("Дія доступна лише користувачам-агентам Claude."))
 
     @api.model
-    def _td_unique_login(self, owner):
+    def _td_current_agent(self):
+        """Запис агента поточного користувача-агента (sudo; токен агенту не віддається)."""
+        self._td_check_agent_user()
+        return self.sudo().with_context(active_test=False).search([("agent_user_id", "=", self.env.uid)], limit=1)
+
+    @api.model
+    def _td_owner_of(self, user):
+        """Власник контуру: для агента — його власник, для людини — вона сама."""
+        agent = self.sudo().with_context(active_test=False).search([("agent_user_id", "=", user.id)], limit=1)
+        return agent.owner_id if agent else user
+
+    @api.model
+    def td_claude_brief(self):
+        """Бриф для агента на старті: роль з інструкцією та перелік скілів (без тіл — економія контексту)."""
+        agent = self._td_current_agent()
+        role = agent.role_id
+        skills = self.env["td.claude.skill"].sudo().search(self.env["td.claude.skill"]._td_agent_domain(agent))
+        return {
+            "role": {
+                "code": role.code,
+                "name": role.name,
+                "model_hint": role.model_hint or None,
+                "instructions": role.instructions or "",
+            },
+            "skills": [
+                {"code": s.code, "name": s.name, "description": s.description or "", "version": s.version}
+                for s in skills
+            ],
+        }
+
+    @api.model
+    def _td_unique_login(self, owner, role=None):
         base = "claude." + re.sub(r"[^a-z0-9._@+-]", "-", (owner.login or str(owner.id)).lower())
+        if role and role.code != "manager":
+            base += "." + role.code
         Users = self.env["res.users"].sudo().with_context(active_test=False)
         login, n = base, 1
         while Users.search_count([("login", "=", login)]):
@@ -122,21 +176,28 @@ class TdClaudeAgent(models.Model):
         return login
 
     @api.model
-    def action_create_my_agent(self):
-        """Створює агента для поточного користувача (лише для себе). Повертає діалог із одноразовим API-ключем."""
-        owner = self.env.user
-        if owner.share or owner._is_public():
-            raise UserError(_("Агента можуть створити лише внутрішні користувачі."))
-        existing = self.sudo().with_context(active_test=False).search_count([("owner_id", "=", owner.id)])
-        if existing:
-            raise UserError(_("У вас уже є агент Claude."))
+    def _td_agent_user_name(self, owner, role):
+        name = f"Claude · {role.name}"
+        taken = self.env["res.users"].sudo().with_context(active_test=False).search_count([("name", "=", name)])
+        return f"{name} · {owner.name}" if taken else name
+
+    @api.model
+    def _td_create_agent(self, owner, role):
+        """Створює користувача-агента, працівника й запис агента (ключ видається окремо)."""
+        if self.sudo().with_context(active_test=False).search_count(
+            [("owner_id", "=", owner.id), ("role_id", "=", role.id)]
+        ):
+            raise UserError(_("У вас уже є агент Claude з роллю «%s».", role.name))
         Users = self.env["res.users"].sudo()
-        groups = self.env.ref("base.group_user") | self.env.ref("project.group_project_user")
-        login = self._td_unique_login(owner)
+        groups = (
+            self.env.ref("base.group_user")
+            | self.env.ref("project.group_project_user")
+            | self.env.ref("hr_timesheet.group_hr_timesheet_user")
+        )
         agent_user = Users.create(
             {
-                "name": f"Claude · {owner.name}",
-                "login": login,
+                "name": self._td_agent_user_name(owner, role),
+                "login": self._td_unique_login(owner, role),
                 "company_id": owner.company_id.id,
                 "company_ids": [(6, 0, owner.company_ids.ids)],
                 "group_ids": [(6, 0, groups.ids)],
@@ -145,8 +206,37 @@ class TdClaudeAgent(models.Model):
             }
         )
         self._td_create_agent_employee(owner, agent_user)
-        agent = self.sudo().create({"owner_id": owner.id, "agent_user_id": agent_user.id})
-        return agent._td_issue_api_key(_("Агент Claude створено"))
+        return self.sudo().create({"owner_id": owner.id, "agent_user_id": agent_user.id, "role_id": role.id})
+
+    @api.model
+    def _td_check_can_create(self):
+        owner = self.env.user
+        if owner.share or owner._is_public():
+            raise UserError(_("Агента можуть створити лише внутрішні користувачі."))
+        if self._td_is_agent_user(owner.id):
+            raise UserError(_("Агент Claude не може створювати агентів."))
+        return owner
+
+    @api.model
+    def action_create_my_agent(self):
+        """Створює агента-Менеджера для поточного користувача. Повертає діалог із одноразовим API-ключем."""
+        owner = self._td_check_can_create()
+        role = self.env["td.claude.role"].sudo().search([("code", "=", "manager")], limit=1)
+        if not role:
+            raise UserError(_("Немає ролі «Менеджер»."))
+        return self._td_create_agent(owner, role)._td_issue_api_key(_("Агент Claude створено"))
+
+    @api.model
+    def action_create_team(self):
+        """Відкриває майстер «Створити команду Claude»."""
+        self._td_check_can_create()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Створити команду Claude"),
+            "res_model": "td.claude.team.wizard",
+            "view_mode": "form",
+            "target": "new",
+        }
 
     def action_new_api_key(self):
         """Відкликає ключі odoo-mcp агента і видає новий (лише власник)."""
@@ -158,12 +248,19 @@ class TdClaudeAgent(models.Model):
         )._remove()
         return self._td_issue_api_key(_("Новий API-ключ агента"))
 
-    def _td_issue_api_key(self, title):
-        agent, agent_user = self, self.agent_user_id
-        login = agent_user.login
+    def _td_generate_key(self):
+        """Видає новий ключ odoo-mcp агента. Повертає (ключ, дата завершення)."""
+        self.ensure_one()
+        agent_user = self.agent_user_id
         max_days = max(agent_user.all_group_ids.mapped("api_key_duration") or [0.0]) or 1.0
         expiration = datetime.now() + timedelta(days=max_days) - timedelta(minutes=1)
         key = self.env["res.users.apikeys"].with_user(agent_user).sudo()._generate("rpc", "odoo-mcp", expiration)
+        return key, expiration
+
+    def _td_issue_api_key(self, title):
+        agent, agent_user = self, self.agent_user_id
+        login = agent_user.login
+        key, expiration = self._td_generate_key()
         return {
             "type": "ir.actions.act_window",
             "name": title,

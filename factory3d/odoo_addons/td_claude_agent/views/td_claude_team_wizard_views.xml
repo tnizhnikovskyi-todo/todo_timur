@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_team_wizard_form" model="ir.ui.view">
+        <field name="name">td.claude.team.wizard.form</field>
+        <field name="model">td.claude.team.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Створити команду Claude" create="0">
+                <field name="state" invisible="1"/>
+                <group invisible="state != 'draft'">
+                    <field name="role_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                </group>
+                <div invisible="state != 'draft'" class="text-muted">
+                    Для кожної ролі буде створено користувача «Claude · &lt;Роль&gt;», співробітника і API-ключ.
+                </div>
+                <div class="alert alert-warning" role="alert" invisible="state != 'done'">
+                    Ключі показуються лише один раз: скопіюйте їх зараз і додайте в odoo-mcp як нові з'єднання
+                    (по одному на роль). Потім вкажіть Fire URL і токен Routine в картці кожного агента.
+                </div>
+                <group invisible="state != 'done'">
+                    <field name="result" nolabel="1" colspan="2" class="font-monospace"/>
+                </group>
+                <footer>
+                    <button name="action_create" type="object" string="Створити" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button string="Закрити" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_claude_create_team" model="ir.actions.server">
+        <field name="name">Створити команду Claude</field>
+        <field name="model_id" ref="model_td_claude_agent"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_create_team()</field>
+    </record>
+</odoo>

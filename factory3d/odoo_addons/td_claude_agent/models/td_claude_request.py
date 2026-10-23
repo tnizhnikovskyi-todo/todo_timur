@@ -1,6 +1,10 @@
 import json
 import logging
 
+from datetime import timedelta
+
+from markupsafe import Markup
+
 from odoo import SUPERUSER_ID, _, api, fields, models
 from odoo.modules.registry import Registry
 from odoo.tools import html2plaintext
@@ -8,6 +12,9 @@ from odoo.tools import html2plaintext
 _logger = logging.getLogger(__name__)
 
 RESPONSE_LIMIT = 2000
+DEDUP_SECONDS = 60
+DEFAULT_MAX_HOPS = 6
+HOPS_PARAM = "td.claude.max_hops_per_day"
 
 
 class TdClaudeRequest(models.Model):
@@ -19,7 +26,13 @@ class TdClaudeRequest(models.Model):
     owner_id = fields.Many2one(related="agent_id.owner_id", store=True, index=True)
     agent_user_id = fields.Many2one(related="agent_id.agent_user_id", store=True, index=True)
     kind = fields.Selection(
-        [("mention", "Згадка"), ("assign", "Призначення"), ("ping", "Перевірка"), ("manual", "Вручну")],
+        [
+            ("mention", "Згадка"),
+            ("assign", "Призначення"),
+            ("stage", "Зміна стадії"),
+            ("ping", "Перевірка"),
+            ("manual", "Вручну"),
+        ],
         string="Тип",
         required=True,
         default="manual",
@@ -45,6 +58,79 @@ class TdClaudeRequest(models.Model):
         labels = dict(self._fields["kind"].selection)
         for rec in self:
             rec.display_name = f"{labels.get(rec.kind, '')} · {rec.record_name or ''}".strip(" ·") or str(rec.id)
+
+    # ------------------------------------------------------------------
+    # Запуски: правила й запобіжники
+    # ------------------------------------------------------------------
+    @api.model
+    def _td_max_hops(self):
+        value = self.env["ir.config_parameter"].sudo().get_param(HOPS_PARAM)
+        try:
+            return int(value) if value else DEFAULT_MAX_HOPS
+        except ValueError:
+            return DEFAULT_MAX_HOPS
+
+    @api.model
+    def _td_hops_today(self, record):
+        """Кількість запусків (крім ping) для запису за останню добу."""
+        if not record:
+            return 0
+        return self.sudo().search_count(
+            [
+                ("res_model", "=", record._name),
+                ("res_id", "=", record.id),
+                ("kind", "!=", "ping"),
+                ("create_date", ">=", fields.Datetime.now() - timedelta(days=1)),
+            ]
+        )
+
+    @api.model
+    def _td_recent_duplicate(self, agent, record):
+        return self.sudo().search_count(
+            [
+                ("agent_id", "=", agent.id),
+                ("res_model", "=", record._name),
+                ("res_id", "=", record.id),
+                ("kind", "!=", "ping"),
+                ("state", "in", ("pending", "sent")),
+                ("create_date", ">=", fields.Datetime.now() - timedelta(seconds=DEDUP_SECONDS)),
+            ]
+        )
+
+    @api.model
+    def _td_launch(self, agent, kind, record=None, message=None):
+        """Створює запит із запобіжниками. Повертає запит або порожній набір.
+
+        Запускати може власник агента або інший агент того ж власника; агент не запускає сам себе.
+        Згадка власника відправляється завжди; решта запусків задач — з паузою, лімітом на добу і склеюванням.
+        """
+        agent = agent.sudo()
+        user = self.env.user
+        empty = self.browse()
+        if agent.agent_user_id == user:
+            return empty
+        if self.env["td.claude.agent"]._td_owner_of(user) != agent.owner_id:
+            return empty
+        owner_mention = kind == "mention" and user == agent.owner_id
+        if not owner_mention and record is not None and record._name == "project.task":
+            if record.td_claude_paused:
+                return empty
+            if self._td_hops_today(record) >= self._td_max_hops():
+                record.sudo().message_post(
+                    body=Markup("<p>%s</p>")
+                    % _(
+                        "Claude: ліміт запусків на задачу за добу (%(n)s) вичерпано, "
+                        "запит до «%(agent)s» не надіслано.",
+                        n=self._td_max_hops(),
+                        agent=agent.name,
+                    ),
+                    message_type="notification",
+                    subtype_xmlid="mail.mt_note",
+                )
+                return empty
+        if kind in ("assign", "stage") and record is not None and self._td_recent_duplicate(agent, record):
+            return empty
+        return self._td_create(agent, kind, record=record, message=message)
 
     # ------------------------------------------------------------------
     # Створення і payload
@@ -95,6 +181,8 @@ class TdClaudeRequest(models.Model):
                 "text": html2plaintext(message.body or "").strip(),
                 "date": fields.Datetime.to_string(message.date) if message.date else None,
             }
+        role = agent.role_id
+        hops = self._td_hops_today(record) if record else 0
         return {
             "v": 1,
             "kind": self.kind,
@@ -108,6 +196,8 @@ class TdClaudeRequest(models.Model):
             "project": project,
             "author": {"user_id": env.user.id, "name": env.user.name},
             "agent": {"user_id": agent_user.id, "login": agent_user.login, "partner_id": agent_user.partner_id.id},
+            "role": {"code": role.code, "name": role.name} if role else None,
+            "hops_today": hops,
             "message": msg,
             "session": session,
         }

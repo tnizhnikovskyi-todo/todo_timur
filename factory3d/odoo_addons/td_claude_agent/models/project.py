@@ -2,7 +2,8 @@ import logging
 
 from markupsafe import Markup
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -22,10 +23,31 @@ class ProjectProject(models.Model):
         return True
 
 
+class ProjectTaskType(models.Model):
+    _inherit = "project.task.type"
+
+    td_claude_role_id = fields.Many2one(
+        "td.claude.role",
+        string="Роль Claude",
+        ondelete="set null",
+        help="Зміна стадії задачі на цю запускає агента цієї ролі (того ж власника).",
+    )
+
+
 class ProjectTask(models.Model):
     _inherit = "project.task"
 
+    td_claude_paused = fields.Boolean(
+        string="Пауза Claude", copy=False, help="Агенти не запускаються автоматично; згадка власника працює."
+    )
+    td_claude_hops_today = fields.Integer(string="Запусків Claude за добу", compute="_compute_td_claude_hops_today")
+
     td_claude_session_url = fields.Char(string="Claude-сесія", compute="_compute_td_claude_session_url")
+
+    def _compute_td_claude_hops_today(self):
+        Request = self.env["td.claude.request"]
+        for task in self:
+            task.td_claude_hops_today = Request._td_hops_today(task) if task.id else 0
 
     @api.depends_context("uid")
     def _compute_td_claude_session_url(self):
@@ -56,25 +78,93 @@ class ProjectTask(models.Model):
         return {"type": "ir.actions.act_url", "url": self.td_claude_session_url, "target": "new"}
 
     # ------------------------------------------------------------------
+    # Табель агента
+    # ------------------------------------------------------------------
+    def td_claude_log_time(self, hours, description, actual_minutes=0):
+        """Агент списує час на задачу: hours — людський еквівалент (вгору до 0,25; 0,25..8), опис за стандартом.
+
+        Повертає id рядка табеля (account.analytic.line).
+        """
+        self.ensure_one()
+        agent = self.env["td.claude.agent"]._td_current_agent()
+        Line = self.env["account.analytic.line"]
+        hours = Line._td_claude_round_hours(hours)
+        text = Line._td_claude_clean_description(description)
+        try:
+            minutes = int(actual_minutes or 0)
+        except (TypeError, ValueError) as exc:
+            raise UserError(_("Реальний час має бути числом хвилин.")) from exc
+        if minutes < 0:
+            raise UserError(_("Реальний час не може бути від'ємним."))
+        self.check_access("read")
+        if not self.project_id.allow_timesheets:
+            raise UserError(_("У проєкті «%s» вимкнено табель.", self.project_id.display_name))
+        employee = self.env["hr.employee"].sudo().search(
+            [("user_id", "=", agent.agent_user_id.id), ("company_id", "in", self.company_id.ids + [False])], limit=1
+        ) or self.env["hr.employee"].sudo().search([("user_id", "=", agent.agent_user_id.id)], limit=1)
+        if not employee:
+            raise UserError(_("Для агента немає співробітника: табель неможливий."))
+        request = self.env["td.claude.request"].sudo().search(
+            [
+                ("agent_id", "=", agent.id),
+                ("res_model", "=", self._name),
+                ("res_id", "=", self.id),
+                ("kind", "!=", "ping"),
+            ],
+            limit=1,
+        )
+        today = fields.Date.context_today(self.with_context(tz=self.env.user.tz or "UTC"))
+        line = Line.create(
+            {
+                "task_id": self.id,
+                "project_id": self.project_id.id,
+                "employee_id": employee.id,
+                "name": text,
+                "unit_amount": hours,
+                "date": today,
+                "td_claude_is_ai": True,
+                "td_claude_actual_minutes": minutes,
+                "td_claude_request_id": request.id,
+            }
+        )
+        return line.id
+
+    # ------------------------------------------------------------------
     # Призначення задачі агенту
     # ------------------------------------------------------------------
+    def _td_claude_agents(self):
+        """Активні агенти контуру поточного користувача (власника або агента-колеги)."""
+        Agent = self.env["td.claude.agent"].sudo()
+        owner = Agent._td_owner_of(self.env.user)
+        return Agent.search([("owner_id", "=", owner.id), ("active", "=", True)])
+
     def _td_claude_notify_assigned(self, previous):
-        """previous: {task_id: set(user_id)}; створює запити для нових виконавців-агентів власника."""
-        user = self.env.user
-        agents = self.env["td.claude.agent"].sudo().search([("owner_id", "=", user.id), ("active", "=", True)], limit=1)
+        """previous: {task_id: set(user_id)}; створює запити для нових виконавців-агентів контуру."""
+        agents = self._td_claude_agents()
+        for agent in agents:
+            agent_uid = agent.agent_user_id.id
+            for task in self:
+                if agent_uid in task.user_ids.ids and agent_uid not in previous.get(task.id, set()):
+                    self._td_claude_launch_safe(agent, "assign", task)
+
+    def _td_claude_notify_stage(self, previous):
+        """previous: {task_id: stage}; запускає агента ролі нової стадії того ж власника."""
+        agents = self._td_claude_agents()
         if not agents:
             return
-        agent = agents[0]
-        agent_uid = agent.agent_user_id.id
-        if user.id == agent_uid:
-            return
         for task in self:
-            if agent_uid in task.user_ids.ids and agent_uid not in previous.get(task.id, set()):
-                try:
-                    with self.env.cr.savepoint():
-                        self.env["td.claude.request"]._td_create(agent, "assign", record=task)
-                except Exception:
-                    _logger.exception("td_claude_agent: не вдалося створити запит на призначення задачі %s", task.id)
+            stage = task.stage_id
+            if not stage.td_claude_role_id or previous.get(task.id) == stage:
+                continue
+            for agent in agents.filtered(lambda a, role=stage.td_claude_role_id: a.role_id == role):
+                self._td_claude_launch_safe(agent, "stage", task)
+
+    def _td_claude_launch_safe(self, agent, kind, task):
+        try:
+            with self.env.cr.savepoint():
+                self.env["td.claude.request"]._td_launch(agent, kind, record=task)
+        except Exception:
+            _logger.exception("td_claude_agent: не вдалося створити запит %s для задачі %s", kind, task.id)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -85,7 +175,10 @@ class ProjectTask(models.Model):
 
     def write(self, vals):
         previous = {task.id: set(task.user_ids.ids) for task in self} if "user_ids" in vals else None
+        stages = {task.id: task.stage_id for task in self} if "stage_id" in vals else None
         res = super().write(vals)
         if previous is not None:
             self._td_claude_notify_assigned(previous)
+        if stages is not None:
+            self._td_claude_notify_stage(stages)
         return res

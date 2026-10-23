@@ -27,11 +27,28 @@
                 </button>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="after">
+                <div class="mb-2">
+                    <field name="td_claude_paused"/>
+                    <label for="td_claude_paused" string="Пауза Claude" class="me-3"/>
+                    <label for="td_claude_hops_today" string="Запусків за добу:" class="me-1"/>
+                    <field name="td_claude_hops_today" readonly="1" class="d-inline"/>
+                </div>
                 <div class="mb-2" invisible="not td_claude_session_url">
                     <label for="td_claude_session_url" string="Claude-сесія" class="me-2"/>
                     <field name="td_claude_session_url" widget="url" readonly="1" class="d-inline"/>
                 </div>
             </xpath>
+        </field>
+    </record>
+
+    <record id="task_type_edit_td_claude" model="ir.ui.view">
+        <field name="name">project.task.type.form.td.claude</field>
+        <field name="model">project.task.type</field>
+        <field name="inherit_id" ref="project.task_type_edit"/>
+        <field name="arch" type="xml">
+            <field name="mail_template_id" position="after">
+                <field name="td_claude_role_id" options="{'no_create': True}" invisible="user_id"/>
+            </field>
         </field>
     </record>
 </odoo>

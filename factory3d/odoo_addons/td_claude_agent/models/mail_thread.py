@@ -2,8 +2,7 @@ import logging
 
 from markupsafe import Markup
 
-from odoo import _, models
-from odoo.exceptions import AccessError
+from odoo import models
 from odoo.tools import html_sanitize
 
 _logger = logging.getLogger(__name__)
@@ -27,13 +26,11 @@ class MailThread(models.AbstractModel):
         if not message.partner_ids or message.author_id != user.partner_id:
             return
         Agent = self.env["td.claude.agent"].sudo()
-        # захист від циклів: агент ніколи не запускає агентів
-        if Agent.with_context(active_test=False).search_count([("agent_user_id", "=", user.id)]):
-            return
-        agent = Agent.search([("owner_id", "=", user.id), ("active", "=", True)], limit=1)
-        if not agent or agent.agent_user_id.partner_id not in message.partner_ids:
-            return
-        self.env["td.claude.request"]._td_create(agent, "mention", record=self, message=message)
+        owner = Agent._td_owner_of(user)
+        # згадати можна лише агентів свого контуру; агент ніколи не запускає сам себе (перевіряє _td_launch)
+        agents = Agent.search([("owner_id", "=", owner.id), ("active", "=", True)])
+        for agent in agents.filtered(lambda a: a.agent_user_id.partner_id in message.partner_ids):
+            self.env["td.claude.request"]._td_launch(agent, "mention", record=self, message=message)
 
     def td_claude_post(self, body, partner_ids=None):
         """Відповідь агента в чатер (через RPC): HTML після санітизації, а не екранований текст."""
