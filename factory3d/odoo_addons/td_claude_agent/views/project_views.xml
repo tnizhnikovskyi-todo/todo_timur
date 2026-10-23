@@ -7,6 +7,20 @@
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
                 <page name="td_claude" string="Claude">
+                    <div class="mb-2" invisible="not id">
+                        <button name="action_td_claude_project_wizard" type="object" class="btn-secondary"
+                                string="Інструкція для проєкту Claude" icon="fa-clipboard"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="td_claude_repo" placeholder="owner/repo"/>
+                            <field name="td_claude_branch" placeholder="main"/>
+                        </group>
+                        <group>
+                            <field name="td_claude_project_url" widget="url" placeholder="https://claude.ai/project/..."/>
+                            <field name="td_claude_skill_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </group>
+                    </group>
                     <field name="td_claude_context" placeholder="Контекст проєкту для Claude: цілі, правила, терміни..."/>
                 </page>
             </xpath>

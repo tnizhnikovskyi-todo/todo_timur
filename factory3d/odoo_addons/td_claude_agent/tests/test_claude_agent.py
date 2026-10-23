@@ -89,7 +89,10 @@ class TestClaudeAgent(TransactionCase):
         self.assertEqual(payload["res_id"], self.task.id)
         self.assertEqual(payload["record_name"], "Задача 1")
         self.assertEqual(payload["record_url"], f"https://erp.example.com/odoo/project.task/{self.task.id}")
-        self.assertEqual(payload["project"], {"id": self.project.id, "name": "Проєкт A"})
+        self.assertEqual(
+            payload["project"],
+            {"id": self.project.id, "name": "Проєкт A", "repo": None, "branch": None, "claude_url": None},
+        )
         self.assertEqual(payload["author"], {"user_id": self.owner.id, "name": "Owner One"})
         self.assertEqual(
             payload["agent"],
@@ -373,5 +376,4 @@ class TestClaudeAgent(TransactionCase):
         self.project.with_user(self.agent_user).td_claude_append_context("рішення <b>A</b>")
         ctx = str(self.project.td_claude_context)
         self.assertIn("рішення &lt;b&gt;A&lt;/b&gt;", ctx)
-        with self.assertRaises(AccessError):
-            self.project.with_user(self.other).td_claude_append_context("x")
+        # людина-учасник теж може дописувати (V2 §8); заборони — у test_claude_project

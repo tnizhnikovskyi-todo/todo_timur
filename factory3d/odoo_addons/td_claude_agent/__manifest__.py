@@ -20,7 +20,7 @@ Claude-агент
 * Адреса і токен Routine вводяться власником у своєму агенті; токен недоступний користувачу-агенту й іншим користувачам.
 * Дані запиту (текст повідомлення, назва запису) надсилаються на адресу Routine власника.
 """,
-    "version": "19.0.2.0.2",
+    "version": "19.0.2.1.0",
     "category": "Services/Project",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -38,6 +38,7 @@ Claude-агент
         "views/td_claude_session_views.xml",
         "views/td_claude_wizard_views.xml",
         "views/td_claude_team_wizard_views.xml",
+        "views/td_claude_project_wizard_views.xml",
         "views/project_views.xml",
         "views/res_users_views.xml",
         "views/td_claude_menus.xml",

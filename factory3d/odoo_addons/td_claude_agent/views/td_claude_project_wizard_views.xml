@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_claude_project_wizard_form" model="ir.ui.view">
+        <field name="name">td.claude.project.wizard.form</field>
+        <field name="model">td.claude.project.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Інструкція для проєкту Claude" create="0">
+                <field name="project_id" invisible="1"/>
+                <div class="text-muted mb-2">
+                    Створіть у claude.ai проєкт, скопіюйте цю інструкцію в «Project instructions»
+                    і вставте посилання на проєкт нижче.
+                </div>
+                <field name="instruction" readonly="1" class="font-monospace" nolabel="1"/>
+                <group>
+                    <field name="claude_url" widget="url" placeholder="https://claude.ai/project/..."/>
+                </group>
+                <footer>
+                    <button name="action_save_url" type="object" string="Зберегти посилання" class="btn-primary"/>
+                    <button string="Закрити" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -16,9 +16,20 @@ class TdClaudeSkill(models.Model):
     name = fields.Char(string="Назва", required=True, tracking=True)
     code = fields.Char(string="Код (slug)", required=True, copy=False, tracking=True)
     scope = fields.Selection(
-        [("corporate", "Корпоративний"), ("role", "Рольовий")], string="Охоплення", required=True, default="corporate"
+        [("corporate", "Корпоративний"), ("role", "Рольовий"), ("project", "Проєктний")],
+        string="Охоплення",
+        required=True,
+        default="corporate",
     )
     role_ids = fields.Many2many("td.claude.role", string="Ролі", help="Для рольового скіла")
+    project_ids = fields.Many2many(
+        "project.project",
+        "td_claude_project_skill_rel",
+        "skill_id",
+        "project_id",
+        string="Проєкти",
+        help="Для проєктного скіла",
+    )
     description = fields.Text(string="Коли застосовувати", help="1-2 речення, як frontmatter SKILL.md")
     body = fields.Text(string="Інструкція (Markdown)")
     version = fields.Integer(string="Версія", default=0, readonly=True, copy=False, tracking=True)
@@ -175,6 +186,12 @@ class TdClaudeSkill(models.Model):
         ]
 
     @api.model
+    def _td_brief_items(self, skills):
+        return [
+            {"code": s.code, "name": s.name, "description": s.description or "", "version": s.version} for s in skills
+        ]
+
+    @api.model
     def td_claude_read(self, codes):
         """Тіла скілів за кодами (лише агент). Повертає [{code, version, body}] для активних скілів."""
         self.env["td.claude.agent"]._td_check_agent_user()
@@ -221,7 +238,7 @@ class TdClaudeSkill(models.Model):
         """Агент пропонує новий скіл (стан «Пропозиція», версія 0 до затвердження)."""
         agent = self._td_check_proposer()
         if scope not in ("corporate", "role"):
-            raise UserError(_("Охоплення: corporate або role."))
+            raise UserError(_("Охоплення: corporate або role (проєктні скіли прив'язує людина в Odoo)."))
         if not (body or "").strip():
             raise UserError(_("Порожня пропозиція."))
         roles = self.env["td.claude.role"].sudo().search([("code", "in", list(role_codes or []))])

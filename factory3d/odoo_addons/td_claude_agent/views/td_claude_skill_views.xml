@@ -9,6 +9,7 @@
                 <field name="code"/>
                 <field name="scope"/>
                 <field name="role_ids" widget="many2many_tags"/>
+                <field name="project_ids" widget="many2many_tags" optional="show"/>
                 <field name="version"/>
                 <field name="state"/>
                 <field name="has_proposal" column_invisible="1"/>
@@ -31,7 +32,10 @@
                     <t t-name="card">
                         <div class="fw-bold"><field name="name"/></div>
                         <div class="text-muted"><field name="code"/> · v<field name="version"/></div>
-                        <div><field name="scope"/> <field name="role_ids" widget="many2many_tags"/></div>
+                        <div>
+                            <field name="scope"/> <field name="role_ids" widget="many2many_tags"/>
+                            <field name="project_ids" widget="many2many_tags"/>
+                        </div>
                         <div t-if="record.has_proposal.raw_value" class="text-warning">Є пропозиція</div>
                     </t>
                 </templates>
@@ -64,6 +68,8 @@
                             <field name="scope"/>
                             <field name="role_ids" widget="many2many_tags" options="{'no_create': True}"
                                    invisible="scope != 'role'"/>
+                            <field name="project_ids" widget="many2many_tags" options="{'no_create': True}"
+                                   invisible="scope != 'project'"/>
                         </group>
                         <group>
                             <field name="version"/>
@@ -123,8 +129,10 @@
                 <field name="name"/>
                 <field name="code"/>
                 <field name="role_ids"/>
+                <field name="project_ids"/>
                 <filter name="corporate" string="Корпоративні" domain="[('scope', '=', 'corporate')]"/>
                 <filter name="by_role" string="Рольові" domain="[('scope', '=', 'role')]"/>
+                <filter name="by_project" string="Проєктні" domain="[('scope', '=', 'project')]"/>
                 <filter name="has_proposal" string="Є пропозиція" domain="[('has_proposal', '=', True)]"/>
                 <separator/>
                 <filter name="active_skills" string="Активні" domain="[('state', '=', 'active')]"/>

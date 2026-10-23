@@ -164,7 +164,8 @@ class TdClaudeRequest(models.Model):
             record_url = f"{base_url}/odoo/{path}/{res_id}"
         project = None
         if record and record._name == "project.task" and record.project_id:
-            project = {"id": record.project_id.id, "name": record.project_id.display_name}
+            info = record.project_id._td_claude_project_info()
+            project = {k: info[k] for k in ("id", "name", "repo", "branch", "claude_url")}
         session = None
         if model and res_id:
             sess = (

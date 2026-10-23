@@ -145,23 +145,35 @@ class TdClaudeAgent(models.Model):
         return agent.owner_id if agent else user
 
     @api.model
-    def td_claude_brief(self):
-        """Бриф для агента на старті: роль з інструкцією та перелік скілів (без тіл — економія контексту)."""
+    def td_claude_brief(self, project_id=None):
+        """Бриф для агента на старті: роль з інструкцією та перелік скілів (без тіл — економія контексту).
+
+        З project_id додається проєкт (id, назва, репо, гілка, посилання claude.ai, контекст) і скіли проєкту.
+        """
         agent = self._td_current_agent()
         role = agent.role_id
-        skills = self.env["td.claude.skill"].sudo().search(self.env["td.claude.skill"]._td_agent_domain(agent))
-        return {
+        Skill = self.env["td.claude.skill"].sudo()
+        skills = Skill.search(Skill._td_agent_domain(agent))
+        project_info = None
+        if project_id:
+            project = self.env["project.project"].browse(int(project_id)).exists()
+            if not project:
+                raise UserError(_("Проєкт %s не знайдено.", project_id))
+            project.check_access("read")
+            project_info = project._td_claude_project_info()
+            skills |= project._td_claude_project_skills()
+        brief = {
             "role": {
                 "code": role.code,
                 "name": role.name,
                 "model_hint": role.model_hint or None,
                 "instructions": role.instructions or "",
             },
-            "skills": [
-                {"code": s.code, "name": s.name, "description": s.description or "", "version": s.version}
-                for s in skills
-            ],
+            "skills": Skill._td_brief_items(skills),
         }
+        if project_info:
+            brief["project"] = project_info
+        return brief
 
     @api.model
     def _td_unique_login(self, owner, role=None):

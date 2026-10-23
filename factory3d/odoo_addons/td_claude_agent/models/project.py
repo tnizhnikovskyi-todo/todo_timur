@@ -1,26 +1,89 @@
 import logging
+import re
 
 from markupsafe import Markup
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
+
+REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 
 class ProjectProject(models.Model):
     _inherit = "project.project"
 
     td_claude_context = fields.Html(string="Контекст проєкту для Claude")
+    td_claude_project_url = fields.Char(string="Проєкт Claude (claude.ai)", copy=False)
+    td_claude_repo = fields.Char(string="Репозиторій (owner/repo)", help="Наприклад, todo-ltd/factory3d")
+    td_claude_branch = fields.Char(string="Гілка за замовчуванням")
+    td_claude_skill_ids = fields.Many2many(
+        "td.claude.skill",
+        "td_claude_project_skill_rel",
+        "project_id",
+        "skill_id",
+        string="Скіли проєкту",
+        domain="[('scope', '=', 'project')]",
+    )
+
+    @api.constrains("td_claude_repo")
+    def _check_td_claude_repo(self):
+        for project in self:
+            if project.td_claude_repo and not REPO_RE.match(project.td_claude_repo):
+                raise ValidationError(_("Репозиторій вказуйте у форматі owner/repo (наприклад, todo-ltd/factory3d)."))
+
+    def _td_claude_project_info(self):
+        """Вказівник на проєкт для Claude: id, назва, репозиторій, гілка, посилання на проєкт claude.ai, контекст."""
+        self.ensure_one()
+        project = self.sudo()
+        return {
+            "id": project.id,
+            "name": project.display_name,
+            "repo": project.td_claude_repo or None,
+            "branch": project.td_claude_branch or None,
+            "claude_url": project.td_claude_project_url or None,
+            "context_text": html2plaintext(project.td_claude_context or "").strip(),
+        }
+
+    def _td_claude_project_skills(self):
+        """Активні скіли, прив'язані до проєкту (scope=project)."""
+        self.ensure_one()
+        return self.sudo().td_claude_skill_ids.filtered(lambda s: s.scope == "project" and s.state == "active")
+
+    def td_claude_project_brief(self):
+        """Бриф проєкту для людини й агента (лише читання): проєкт + скіли (корпоративні й проєкту, без тіл)."""
+        self.ensure_one()
+        if not self.env.user.has_group("base.group_user"):
+            raise AccessError(_("Бриф проєкту доступний лише внутрішнім користувачам."))
+        self.check_access("read")
+        Skill = self.env["td.claude.skill"].sudo()
+        corporate = Skill.search([("state", "=", "active"), ("scope", "=", "corporate")])
+        skills = corporate | self._td_claude_project_skills()
+        return {"project": self._td_claude_project_info(), "skills": Skill._td_brief_items(skills)}
 
     def td_claude_append_context(self, text):
-        """Агент дописує пункт у контекст проєкту (без права змінювати сам проєкт)."""
+        """Агент або людина (учасник проєкту з доступом на читання) дописує пункт у контекст проєкту."""
         self.ensure_one()
-        self.env["td.claude.agent"]._td_check_agent_user()
+        Agent = self.env["td.claude.agent"]
+        if not Agent._td_is_agent_user(self.env.uid) and not self.env.user.has_group("base.group_user"):
+            raise AccessError(_("Дописувати контекст проєкту можуть лише внутрішні користувачі."))
         self.check_access("read")
         entry = Markup("<p>%s — %s</p>") % (fields.Date.context_today(self), text or "")
         self.sudo().td_claude_context = Markup(self.td_claude_context or "") + entry
         return True
+
+    def action_td_claude_project_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Інструкція для проєкту Claude"),
+            "res_model": "td.claude.project.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_project_id": self.id},
+        }
 
 
 class ProjectTaskType(models.Model):
@@ -104,14 +167,18 @@ class ProjectTask(models.Model):
         ) or self.env["hr.employee"].sudo().search([("user_id", "=", agent.agent_user_id.id)], limit=1)
         if not employee:
             raise UserError(_("Для агента немає співробітника: табель неможливий."))
-        request = self.env["td.claude.request"].sudo().search(
-            [
-                ("agent_id", "=", agent.id),
-                ("res_model", "=", self._name),
-                ("res_id", "=", self.id),
-                ("kind", "!=", "ping"),
-            ],
-            limit=1,
+        request = (
+            self.env["td.claude.request"]
+            .sudo()
+            .search(
+                [
+                    ("agent_id", "=", agent.id),
+                    ("res_model", "=", self._name),
+                    ("res_id", "=", self.id),
+                    ("kind", "!=", "ping"),
+                ],
+                limit=1,
+            )
         )
         today = fields.Date.context_today(self.with_context(tz=self.env.user.tz or "UTC"))
         line = Line.create(
