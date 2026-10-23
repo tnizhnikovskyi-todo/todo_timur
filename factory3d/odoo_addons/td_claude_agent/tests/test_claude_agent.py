@@ -122,6 +122,39 @@ class TestClaudeAgent(TransactionCase):
         self._post(self.owner)
         self.assertFalse(self._requests())
 
+    # ------------------------------------------------------------------
+    # Тригер: особистий чат (Discuss) з агентом — без згадки
+    # ------------------------------------------------------------------
+    def _chat_post(self, chat, user, body="привіт"):
+        return chat.with_user(user).message_post(body=body, message_type="comment", subtype_xmlid="mail.mt_comment")
+
+    def test_direct_chat_message_creates_request(self):
+        chat = self.env["discuss.channel"].with_user(self.owner)._get_or_create_chat(self.agent_user.partner_id.ids)
+        self.assertEqual(chat.channel_type, "chat")
+        message = self._chat_post(chat, self.owner)
+        request = self._requests("mention")
+        self.assertEqual(len(request), 1)
+        self.assertEqual(request.message_id, message)
+        self.assertEqual((request.res_model, request.res_id), ("discuss.channel", chat.id))
+        payload = json.loads(request.payload)
+        self.assertEqual(payload["model"], "discuss.channel")
+        self.assertEqual(payload["message"]["text"], "привіт")
+        self.assertIsNone(payload["project"])
+
+    def test_direct_chat_agent_reply_and_foreign_chat_do_nothing(self):
+        chat = self.env["discuss.channel"].with_user(self.owner)._get_or_create_chat(self.agent_user.partner_id.ids)
+        self._chat_post(chat, self.agent_user, body="відповідь агента")
+        other_chat = self.env["discuss.channel"].with_user(self.owner)._get_or_create_chat(self.other.partner_id.ids)
+        self._chat_post(other_chat, self.owner)
+        self.assertFalse(self._requests())
+
+    def test_group_chat_needs_mention(self):
+        group = self.env["discuss.channel"].with_user(self.owner)._create_group(
+            (self.agent_user.partner_id | self.other.partner_id).ids
+        )
+        self._chat_post(group, self.owner)
+        self.assertFalse(self._requests())
+
     def test_payload_contains_existing_session(self):
         self.env["td.claude.session"].create(
             {
