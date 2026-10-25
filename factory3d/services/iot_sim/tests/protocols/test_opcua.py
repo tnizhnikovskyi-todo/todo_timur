@@ -1,10 +1,13 @@
 """P-01 OPC UA: читання, статуси, JobOrderList, методи (SPEC §8.3)."""
 
+import asyncio
+
 import pytest
 from asyncua import Client, ua
 from iot_sim.protocols.opcua_server import OpcUaServer
 
 NS_INST = "http://todo.ltd/f3d/iot_sim/instances/"
+NS_WW = "http://opcfoundation.org/UA/Woodworking/"
 
 
 @pytest.fixture
@@ -156,3 +159,51 @@ async def test_source_timestamp_is_utc_aware(opc, world):
             # значення без змін не переписуються (кеш), тому ts може відставати на кілька с; помилка зони дала б ±3 год
             assert abs(ts - expected) < timedelta(minutes=1), (node_id, ts, expected)
             assert isinstance(ts, datetime)
+
+
+class _Events:
+    def __init__(self):
+        self.q: asyncio.Queue = asyncio.Queue()
+
+    def event_notification(self, event):
+        self.q.put_nowait(event)
+
+
+async def _ww_types(c):
+    """Так колектор (machine_connect) шукає типи подій: browse-шлях у просторі Woodworking."""
+    idx = await c.get_namespace_index(NS_WW)
+    base = await c.get_node(ua.ObjectIds.BaseEventType).get_child(f"{idx}:WwBaseEventType")
+    alarm = await c.get_node(ua.ObjectIds.AlarmConditionType).get_child(f"{idx}:WwAlarmConditionType")
+    return base, alarm
+
+
+async def test_woodworking_event_types_published(opc):
+    async with Client(url(opc)) as c:
+        base, alarm = await _ww_types(c)
+        assert (await base.read_browse_name()).Name == "WwBaseEventType"
+        assert (await alarm.read_browse_name()).Name == "WwAlarmConditionType"
+        props = {(await n.read_browse_name()).Name for n in await alarm.get_properties()}
+        assert {"MessageId", "MessageName", "EventCategory", "PathParts", "Group", "LocalizedMessages"} <= props
+
+
+async def test_events_are_woodworking_types(opc, world):
+    async with Client(url(opc)) as c:
+        base, alarm = await _ww_types(c)
+        h = _Events()
+        sub = await c.create_subscription(100, h)
+        ns = await c.get_namespace_index(NS_INST)
+        await sub.subscribe_events(c.get_node(f"ns={ns};s=SAW-1.Events"), [base, alarm])
+        world.events.emit("info", "Зміна розпочата", device="SAW-1")
+        world.events.emit(
+            "alarm", "Низький тиск повітря", device="SAW-1", payload={"signal": "workcenters/SAW-1/alarm"}
+        )
+        await opc.refresh()
+        info = await asyncio.wait_for(h.q.get(), 5)
+        al = await asyncio.wait_for(h.q.get(), 5)
+        assert info.EventType == base.nodeid and al.EventType == alarm.nodeid
+        assert info.SourceName == "SAW-1" and info.EventCategory == 2 and info.MessageId.startswith("I")
+        assert al.EventCategory == 4 and al.Severity == 800 and al.MessageId.startswith("A")
+        assert al.MessageName == "workcenters/SAW-1/alarm" and al.PathParts == ["SAW-1", "alarm"]
+        assert getattr(al, "ActiveState/Id") is True
+        assert any(m.Locale == "uk" and m.Text == "Низький тиск повітря" for m in al.LocalizedMessages)
+        await sub.delete()

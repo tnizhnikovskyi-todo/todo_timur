@@ -2,10 +2,15 @@
 
 Спрощення відносно стандарту OPC 40550/40001 (nodeset-файли не завантажуються):
 типи вузлів — ``BaseObjectType``; ``JobOrderList`` — ``String[]`` з ``JobOrderID``
-(повний ``ISA95JobOrderAndStateDataType`` — ПРИПУЩЕННЯ на наступну ітерацію); події —
-``BaseEventType`` з ``Message``/``Severity``/``SourceName``. Методи ``JobOrderControl.*`` приймають
+(повний ``ISA95JobOrderAndStateDataType`` — ПРИПУЩЕННЯ на наступну ітерацію). Методи ``JobOrderControl.*`` приймають
 ``JobOrderID`` і ставлять команду ``world.post("opc_joborder", {...})``; виклик методів — лише
 під ``SIM_OPCUA_USER`` (анонім -> BadUserAccessDenied).
+
+Події (SPEC §8.3.3) — типи простору Woodworking: ``7:WwBaseEventType`` (підтип ``BaseEventType``) і
+``7:WwAlarmConditionType`` (підтип ``AlarmConditionType``) з полями ``MessageId``/``MessageName``/``EventCategory``/
+``PathParts``/``Group``/``LocalizedMessages``/``Arguments``. Колектор (machine_connect) шукає ці типи за browse-шляхом
+у просторі ``…/UA/Woodworking/``; без них підписується на ``BaseEventType`` і попереджає
+«Woodworking event types not found».
 
 Дані читаються лише через ``World``: ``workcenters/<C>/{state,mode,alarm,pieces_out,job}``,
 ``energy/consumers/<C>/p_now``, ``equipment/GANTRY-1/*``. Нові ``JobOrder`` від ``/jobs`` (API-33)
@@ -16,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import zlib
 from datetime import UTC
 from pathlib import Path
 from typing import Any
@@ -39,6 +45,23 @@ NS_URIS = [
     "http://opcfoundation.org/UA/Woodworking/",  # 7
 ]
 APP_URI = "urn:todo.ltd:f3d:iot_sim"
+WW_URI = NS_URIS[5]
+# інтерфейс IWwEventMessageType (SPEC §8.3.3) — поля обох типів подій
+WW_EVENT_PROPS = (
+    ("MessageId", ua.VariantType.String),
+    ("MessageName", ua.VariantType.String),
+    ("EventCategory", ua.VariantType.Int32),
+    ("PathParts", ua.VariantType.String),
+    ("Group", ua.VariantType.String),
+    ("LocalizedMessages", ua.VariantType.LocalizedText),
+    ("Arguments", ua.VariantType.String),
+)
+# kind події емулятора -> (WwAlarmConditionType?, EventCategory, літера MessageId, Severity)
+EVENT_KINDS = {
+    "alarm": (True, 4, "A", 800),
+    "fault": (True, 4, "A", 800),
+    "error": (True, 5, "E", 1000),
+}
 STATE_ENUM = {"OFFLINE": 0, "STANDBY": 1, "READY": 2, "WORKING": 3, "ERROR": 4}
 GANTRY_STATE = {"idle": 2, "moving": 3, "picking": 3, "placing": 3, "blocked": 1, "error": 4}
 DEVICE_CLASS = {
@@ -194,6 +217,8 @@ class OpcUaServer(ProtocolServer):
         self._nodes: dict[str, Any] = {}
         self._cache: dict[str, Any] = {}
         self._events: dict[str, Any] = {}
+        self._ev_base: Any = None  # 7:WwBaseEventType
+        self._ev_alarm: Any = None  # 7:WwAlarmConditionType
         self._cursor = 0
         self._wake = asyncio.Event()
         self._task: asyncio.Task[Any] | None = None
@@ -223,6 +248,13 @@ class OpcUaServer(ProtocolServer):
         for uri in NS_URIS:
             await srv.register_namespace(uri)
         self.ns = await srv.get_namespace_index(NS_URIS[0])
+        ww = await srv.get_namespace_index(WW_URI)
+        self._ev_base = await srv.create_custom_event_type(
+            ww, "WwBaseEventType", ua.ObjectIds.BaseEventType, list(WW_EVENT_PROPS)
+        )
+        self._ev_alarm = await srv.create_custom_event_type(
+            ww, "WwAlarmConditionType", ua.ObjectIds.AlarmConditionType, list(WW_EVENT_PROPS)
+        )
         self.machines = self._machine_codes()
         folder = await srv.nodes.objects.add_folder(ua.NodeId("Machines", self.ns), ua.QualifiedName("Machines", 4))
         for code in self.machines:
@@ -497,8 +529,25 @@ class OpcUaServer(ProtocolServer):
             holder = self._events.get(ev.device or "")
             if holder is None or self.server is None:
                 continue
-            g = await self.server.get_event_generator(emitting_node=holder)
-            g.event.Message = ua.LocalizedText(ev.message)
-            g.event.SourceName = ev.device
-            g.event.Severity = {"alarm": 800, "error": 1000, "fault": 800}.get(ev.kind, 200)
-            await g.trigger()
+            is_alarm, category, letter, severity = EVENT_KINDS.get(ev.kind, (False, 2, "I", 200))
+            g = await self.server.get_event_generator(self._ev_alarm if is_alarm else self._ev_base, holder)
+            e = g.event
+            signal = str((ev.payload or {}).get("signal") or "")
+            name = signal or ev.kind
+            e.SourceName = ev.device
+            e.Severity = severity
+            e.MessageId = f"{letter}{zlib.crc32(name.encode()) % 10000:04d}"
+            e.MessageName = name
+            e.EventCategory = category
+            e.PathParts = [ev.device or "", *([signal.rsplit("/", 1)[-1]] if signal else [])]
+            e.Group = ev.kind
+            e.LocalizedMessages = [ua.LocalizedText(ev.message, "uk")]
+            e.Arguments = []
+            if is_alarm:
+                e.ActiveState = ua.LocalizedText("Active")
+                setattr(e, "ActiveState/Id", True)
+                e.data_types["ActiveState/Id"] = ua.VariantType.Boolean
+                e.AckedState = ua.LocalizedText("Unacknowledged")
+                setattr(e, "AckedState/Id", False)
+                e.data_types["AckedState/Id"] = ua.VariantType.Boolean
+            await g.trigger(message=ev.message)

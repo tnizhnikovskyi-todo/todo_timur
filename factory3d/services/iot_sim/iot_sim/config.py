@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     odoo_export_token: str = ""
     odoo_follow_s: int = 10
     odoo_follow_slow_s: int = 60
+    odoo_people_s: int = 600  # період читання працівників Odoo у scenario (0 — вимкнено)
     odoo_stale_s: int = 120
     mqtt_url: str = "mqtt://user:pass@mosquitto:1883"
     mqtt_prefix: str = "f3d"

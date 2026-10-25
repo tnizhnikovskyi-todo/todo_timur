@@ -13,6 +13,10 @@
   "state", "progress"}`` (X-15, X-49); ``world.people`` — працівники з ``barcode``; ``world.shift`` —
   календар зміни; ``world.maintenance_closed`` — коди пристроїв із закритою заявкою ТО.
 
+Окрім того, у режимі ``scenario`` (коли Odoo налаштована) ``FollowOdoo`` лише читає список працівників із ``barcode``
+і календар зміни — на старті (якщо ``world.people`` порожній) і раз на ``SIM_ODOO_PEOPLE_S`` (10 хв), щоб СКУД мав людей
+без знімка і з'являлись нові; помилка — лише попередження, старий список лишається. Решта follow_odoo у scenario не діє.
+
 Помилка читання довше ``SIM_ODOO_STALE_S`` -> ``world.odoo_stale = True`` (режим не змінюється,
 стан завдань заморожено); після відновлення — повна синхронізація і подія ``info``.
 Фактор у цьому режимі завжди 1 (A-12) — це контролює ``control_api``.
@@ -125,9 +129,12 @@ class FollowOdoo:
         stale_s: float = 120.0,
         mono: Callable[[], float] = time.monotonic,
         level0_sync: bool = True,
+        people_s: float = 600.0,
     ) -> None:
         self.world, self.odoo = world, odoo
         self.follow_s, self.slow_s, self.stale_s = follow_s, slow_s, stale_s
+        self.people_s = people_s  # період читання працівників у scenario (0 — вимкнено)
+        self._last_people: float | None = None
         self._mono = mono
         self.level0_sync = level0_sync
         self.last_ok: datetime | None = None
@@ -289,9 +296,24 @@ class FollowOdoo:
                 }
             )
         w.trucks = trucks
+        await self.poll_people()
+        await self._poll_maintenance()
+        if self.level0_sync and not self._level0_done:
+            self._level0_done = True
+            await self._sync_level0()
+
+    async def poll_people(self, *, keep_if_empty: bool = False) -> None:
+        """``world.people`` — працівники з ``barcode`` (``hr.employee``) і календар зміни (``world.shift``).
+
+        ``keep_if_empty`` (режим scenario): порожню відповідь Odoo не застосовувати, лишити попередній список.
+        """
+        o, w = self.odoo, self.world
         emps = await o.search_read(
             "hr.employee", [("barcode", "!=", False)], ["name", "barcode", "resource_calendar_id", "job_title"]
         )
+        if keep_if_empty and not emps and w.people:
+            log.warning("Odoo: працівників із barcode немає, лишаємо попередній список (%d)", len(w.people))
+            return
         w.people = [
             {
                 "name": e["name"],
@@ -307,10 +329,31 @@ class FollowOdoo:
                 "resource.calendar.attendance", [("calendar_id", "in", cal_ids)], ["dayofweek", "hour_from", "hour_to"]
             )
             self._apply_shift(att)
-        await self._poll_maintenance()
-        if self.level0_sync and not self._level0_done:
-            self._level0_done = True
-            await self._sync_level0()
+        self._last_people = self._mono()
+
+    async def _step_people(self) -> None:
+        """Режим scenario: лише працівники й календар (read-only); помилка — попередження, список не чіпаємо."""
+        if self.people_s <= 0 or not self.configured:
+            return
+        now = self._mono()
+        if self._last_people is None:  # перший крок: порожній список — читати одразу, інакше за період
+            self._last_people = -1e12 if not self.world.people else now
+        wait = self.people_s if self.world.people else min(self.slow_s, self.people_s)  # порожній — повтор частіше
+        if now - self._last_people < wait:
+            return
+        self._last_people = now
+        try:
+            await self.poll_people(keep_if_empty=True)
+        except Exception as exc:  # noqa: BLE001 - Odoo недоступна/без прав: СКУД живе зі старим списком
+            self.errors += 1
+            log.warning(
+                "scenario: читання працівників з Odoo не вдалось (лишаємо %d): %s",
+                len(self.world.people),
+                exc,
+                extra={"proto": "odoo"},
+            )
+            return
+        self._mark_ok(now)
 
     def _apply_shift(self, att: list[dict[str, Any]]) -> None:
         if not att:
@@ -380,6 +423,7 @@ class FollowOdoo:
     async def step(self) -> None:
         """Один крок планувальника опитування (викликається щосекунди)."""
         if not self.active:
+            await self._step_people()
             return
         now = self._mono()
         try:
@@ -405,9 +449,12 @@ class FollowOdoo:
             if self.world.odoo_stale:
                 self.kick()  # після відновлення — повна синхронізація
 
-    def _ok(self, now: float) -> None:
+    def _mark_ok(self, now: float) -> None:
         self._last_ok_mono = now
         self.last_ok = self.world.now()
+
+    def _ok(self, now: float) -> None:
+        self._mark_ok(now)
         if self.world.odoo_stale:
             self.world.odoo_stale = False
             self.world.events.emit("info", "Зв'язок з Odoo відновлено, виконано повну синхронізацію")

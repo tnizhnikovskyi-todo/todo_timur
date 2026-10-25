@@ -164,6 +164,7 @@ class Service:
             slow_s=s.odoo_follow_slow_s,
             stale_s=s.odoo_stale_s,
             level0_sync=s.level0_sync,
+            people_s=s.odoo_people_s,
         )
         self.devices_client = DevicesClient(s.odoo_url, s.odoo_export_token, guard=self.guard)
         self.forwarder = EventForwarder(w, self.devices_client)

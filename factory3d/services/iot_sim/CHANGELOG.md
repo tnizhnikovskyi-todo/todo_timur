@@ -1,5 +1,22 @@
 # Changelog — iot_sim
 
+## Unreleased: працівники СКУД читаються з Odoo і в режимі scenario; OPC UA публікує типи подій Woodworking
+- **Виправлення: у scenario `world.people` порожній після перевстановлення/рестарту без знімка** — людей читав лише `follow_odoo`
+  (`poll_slow`), тож СКУД (BioStar, розклад `AccessCtl`) не давав подій, доки знімок не мав людей (на стенді — 2 доби). Сам `follow_odoo`
+  для цього не годиться (машини йдуть за Odoo, навантаження на БД). Тепер, коли Odoo налаштована (`SIM_ODOO_*`), `FollowOdoo` у scenario
+  лише читає (read-only XML-RPC) `hr.employee` з `barcode` і календар зміни — те саме, що `poll_slow` (спільний `poll_people`): на старті,
+  якщо список порожній (до одержання — повтор що `SIM_ODOO_FOLLOW_SLOW_S`, 60 с), інакше через `SIM_ODOO_PEOPLE_S` (за замовчуванням 600 с;
+  `0` — вимкнено). Помилка — лише попередження, старий список лишається; порожня відповідь Odoo список зі знімка не стирає.
+  Успішне читання оновлює `status()['odoo']['last_ok']` (метрика `iot_sim_odoo_last_ok_timestamp`); `stale`/події/завдання/фури/ТО у scenario не чіпаються.
+- **Виправлення: колектор писав «Woodworking event types not found» для UA-EDGE/UA-NEST/UA-SAW/UA-SORT.** Колектор (machine_connect,
+  `opcua.py::_event_types`) шукає за browse-шляхом `7:WwBaseEventType` під `BaseEventType` і `7:WwAlarmConditionType` під `AlarmConditionType`
+  у просторі `http://opcfoundation.org/UA/Woodworking/`; емулятор реєстрував простір, але типів не створював і слав події як `BaseEventType`.
+  Тепер `OpcUaServer.start` створює обидва типи з полями `IWwEventMessageType` (`MessageId`, `MessageName`, `EventCategory`, `PathParts`, `Group`,
+  `LocalizedMessages`, `Arguments`), а події `alarm`/`fault`/`error` йдуть як `WwAlarmConditionType` (`ActiveState/Id`=true, категорія 4/5, Severity 800/1000),
+  решта — як `WwBaseEventType` (категорія 2, Severity 200). `MessageId` — літера I/A/E + 4 цифри від CRC32 сигналу (стабільний), `MessageName` — код сигналу.
+- Тести: `tests/unit/test_follow.py` (`test_scenario_*`: старт без людей, період, збій, порожня відповідь, вимкнено, не налаштовано; `test_idle_in_scenario_mode`
+  тепер дозволяє лише читання працівників), `tests/protocols/test_opcua.py` (`test_woodworking_event_types_published`, `test_events_are_woodworking_types`).
+
 ## Unreleased: фільтри вентиляції/аспірації більше не «забиваються» безмежно (R-09)
 - **Виправлення: перепад на фільтрах ріс лінійно без стелі** (`rate`·хв: RV-*/AHU-1 +3 Па/год, DUST-1 +0,03 кПа/год) і
   скидався лише заявкою ТО, тож за ~2,5 доби безперервної роботи стенда `filter_dp_pa` перетинав норму 250 Па (DUST-1 — за ~27 год,

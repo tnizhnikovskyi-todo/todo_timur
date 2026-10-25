@@ -221,9 +221,117 @@ async def test_periods_10s_and_60s(follow, odoo, mono):
 
 
 async def test_idle_in_scenario_mode(world, odoo, mono):
+    """scenario: жодного follow_odoo (завдання, фури, ТО) — лише читання працівників і календаря."""
     f = FollowOdoo(world, odoo, mono=mono)  # world.mode == scenario
     await f.step()
+    assert {c[1] for c in odoo.calls} == {"hr.employee", "resource.calendar.attendance"}
+    assert world.jobs == [] and world.trucks == [] and world.workcenters == {}
+
+
+async def test_scenario_idle_when_people_disabled(world, odoo, mono):
+    f = FollowOdoo(world, odoo, mono=mono, people_s=0)
+    await f.step()
     assert odoo.calls == []
+
+
+async def test_scenario_idle_when_odoo_not_configured(world, odoo, mono):
+    odoo.configured = False
+    f = FollowOdoo(world, odoo, mono=mono)
+    await f.step()
+    assert odoo.calls == [] and world.people == []
+
+
+async def test_scenario_loads_people_at_startup_when_empty(world, odoo, mono):
+    f = FollowOdoo(world, odoo, mono=mono)
+    assert world.people == [] and f.last_ok is None
+    await f.step()
+    assert world.people == [{"name": "Олег Мельник", "barcode": "OPSAW1", "job": "Оператор", "shift": "Зміна 1"}]
+    assert (world.shift.start.hour, world.shift.end.hour, world.shift.end.minute) == (7, 15, 30)
+    assert f.last_ok is not None and f.status()["last_ok"] is not None  # status()['odoo']['last_ok']
+    assert f.status()["stale"] is False
+
+
+async def test_scenario_people_not_reread_before_period(world, odoo, mono):
+    f = FollowOdoo(world, odoo, mono=mono, people_s=600)
+    await f.step()
+    for _ in range(599):
+        mono.t += 1
+        await f.step()
+    assert count(odoo, "hr.employee") == 1
+    mono.t += 1
+    odoo.data["hr.employee"].append(
+        {"id": 2, "name": "Ірина", "barcode": "OPNEST1", "job_title": False, "resource_calendar_id": False}
+    )
+    await f.step()
+    assert count(odoo, "hr.employee") == 2
+    assert [p["barcode"] for p in world.people] == ["OPSAW1", "OPNEST1"]  # новий працівник з'явився
+    assert world.people[1]["job"] is None and world.people[1]["shift"] is None
+
+
+async def test_scenario_existing_people_wait_one_period(world, odoo, mono):
+    """Люди зі знімка вже є — одразу не читаємо, перше оновлення через people_s."""
+    world.people = [{"name": "Зі знімка", "barcode": "OLD1", "code": "OP-OLD-1", "group": "A"}]
+    f = FollowOdoo(world, odoo, mono=mono, people_s=600)
+    await f.step()
+    assert odoo.calls == [] and world.people[0]["barcode"] == "OLD1"
+    mono.t += 600
+    await f.step()
+    assert [p["barcode"] for p in world.people] == ["OPSAW1"]
+
+
+async def test_scenario_people_failure_keeps_old_list_and_retries(world, odoo, mono, caplog):
+    world.people = [{"name": "Зі знімка", "barcode": "OLD1"}]
+    f = FollowOdoo(world, odoo, mono=mono, people_s=600)
+    await f.step()  # t=0: список зі знімка є — старт без читання
+    assert odoo.calls == []
+    odoo.fail = True
+    mono.t += 600
+    with caplog.at_level("WARNING", logger="iot_sim.follow"):
+        await f.step()  # не кидає
+    assert [p["barcode"] for p in world.people] == ["OLD1"]
+    assert f.last_ok is None and f.errors == 1 and world.odoo_stale is False
+    assert any("працівників" in r.getMessage() for r in caplog.records)
+    odoo.fail = False
+    mono.t += 599
+    await f.step()  # повтор лише через період
+    assert [p["barcode"] for p in world.people] == ["OLD1"]
+    mono.t += 1
+    await f.step()
+    assert [p["barcode"] for p in world.people] == ["OPSAW1"] and f.last_ok is not None
+
+
+async def test_scenario_empty_people_retried_every_slow_period(world, odoo, mono):
+    f = FollowOdoo(world, odoo, mono=mono, slow_s=60, people_s=600)
+    odoo.fail = True
+    await f.step()
+    assert world.people == [] and count(odoo, "hr.employee") == 1
+    odoo.fail = False
+    mono.t += 59
+    await f.step()
+    assert count(odoo, "hr.employee") == 1
+    mono.t += 1
+    await f.step()  # порожній список — повтор за 60 с, а не 10 хв
+    assert len(world.people) == 1
+
+
+async def test_scenario_empty_odoo_answer_keeps_old_people(world, odoo, mono):
+    world.people = [{"name": "Зі знімка", "barcode": "OLD1"}]
+    odoo.data["hr.employee"] = []
+    f = FollowOdoo(world, odoo, mono=mono, people_s=600)
+    await f.step()
+    mono.t += 600
+    await f.step()
+    assert count(odoo, "hr.employee") == 1
+    assert [p["barcode"] for p in world.people] == ["OLD1"] and f.last_ok is not None
+
+
+async def test_follow_mode_people_come_from_slow_poll(follow, odoo, world, mono):
+    """follow_odoo: працівників читає poll_slow (раз на 60 с), окремого читання scenario немає."""
+    for _ in range(61):
+        await follow.step()
+        mono.t += 1
+    assert count(odoo, "hr.employee") == 2  # t=0, 60
+    assert [p["barcode"] for p in world.people] == ["OPSAW1"]
 
 
 async def test_stale_after_threshold_then_full_resync(follow, odoo, world, mono):
