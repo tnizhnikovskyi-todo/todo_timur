@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import sqlite3
 import ssl
 from collections import Counter
 from collections.abc import Awaitable, Callable, Iterable
@@ -21,6 +23,10 @@ RETRY_STATUSES = frozenset({502, 503, 504})
 RETRY_DELAYS = (1.0, 2.0)  # між 3 спробами
 EVENT_BATCH = 100
 RESULT_BATCH = 100
+STALE_AFTER_S = 600.0  # черга старша за це -> «спершу живі дані» (див. Pusher)
+BACKLOG_GAP_S = 1.25  # пауза між пакетами при черзі: ≤ 48 пакетів/хв при ліміті Odoo 60/хв (429 + Retry-After 10 с)
+POISON_AFTER = 5  # скільки поспіль HTTP 500 на єдиному показанні, щоб відкинути його як «отруєне»
+BUFFER_ERRORS = (sqlite3.Error, OSError)
 
 
 class OdooError(Exception):
@@ -282,7 +288,22 @@ async def flush_events(client: OdooClient, buffer: Buffer) -> int:
 
 
 class Pusher:
-    """Буфер -> API-02 (R-19, §8.4). `push_once()` повертає: ok|empty|wait|retry|locked|rejected."""
+    """Буфер -> API-02 (R-19, §8.4). `push_once()` повертає: ok|empty|wait|retry|locked|rejected.
+
+    Політика черги (інцидент стенда: 3 млн рядків, відправка крутила найстаріше, нове не доходило):
+
+    * видаляється (ack) рівно те, що Odoo прийняв (HTTP 200 -> увесь пакет; `rejected` у відповіді — це невалідні
+      рядки, повторна відправка їм не допоможе). Якщо Odoo прийняв, а видалити з буфера не вдалося (locked/IO),
+      id запам'ятовуються у `_pending_ack` і видаляються першими на наступному кроці — пакет НЕ шлеться вдруге;
+    * помилка буфера (locked/IO) — це «retry з бекофом», а не падіння циклу;
+    * звичайний режим — FIFO. Якщо найстаріше показання старше за `stale_after_s` (черга «відстає»), пакети чергуються:
+      найновіші (`take(newest=True)`, живі дані доходять за ≤ 2 кроки) — найстаріші (черга розгрібається). Старе
+      Odoo приймає як історію (`last_*` оновлюються лише свіжішими `ts`); те, що не встигло, викидає ліміт розміру
+      буфера (найстаріше першим);
+    * пакет, що не проходить (таймаут/5xx), ділиться навпіл після 2-ї поспіль невдачі (`_cap`), щоб не слати той самий
+      великий пакет вічно; єдине показання з `POISON_AFTER` поспіль HTTP 500 відкидається, лише якщо інші пакети
+      Odoo при цьому приймав (глобальний збій Odoo буфер не спустошує).
+    """
 
     def __init__(
         self,
@@ -295,6 +316,8 @@ class Pusher:
         metrics: Any = None,
         clock: Clock | None = None,
         on_read_enabled: Callable[[bool], Awaitable[None]] | None = None,
+        stale_after_s: float = STALE_AFTER_S,
+        backlog_gap_s: float = BACKLOG_GAP_S,
     ) -> None:
         self.client = client
         self.buffer = buffer
@@ -304,9 +327,26 @@ class Pusher:
         self.metrics = metrics
         self.clock: Clock = clock or SystemClock()
         self.on_read_enabled = on_read_enabled
+        self.stale_after_s = stale_after_s
+        self.backlog_gap_s = backlog_gap_s
         self.read_enabled = True
         self.retry_at = 0.0  # monotonic: не раніше цього моменту
+        self.behind = False  # черга старша за stale_after_s
+        self.backlog_age_s = 0.0
         self._fails = 0
+        self._buffer_fails = 0
+        self._pending_ack: list[int] = []
+        self._cap: int | None = None  # тимчасове зменшення пакета після невдач
+        self._cap_ok = False  # поки пакет зменшено, хоч один пакет Odoo прийняв (отже, Odoo живий, а рядок «отруєний»)
+        self._live_turn = False
+        self._took_live = False
+
+    def configure(self, interval_s: float | None, push_max: int | None) -> None:
+        """Параметри з Odoo (`collector.push_interval_s/push_max`) мають пріоритет над F3D_PUSH_*; None — лишити."""
+        if interval_s:
+            self.push_interval_s = interval_s
+        if push_max:
+            self.push_max = push_max
 
     def _count(self, status: str) -> None:
         if self.metrics is not None:
@@ -318,26 +358,79 @@ class Pusher:
             if self.on_read_enabled is not None:
                 await self.on_read_enabled(value)
 
+    async def _take_batch(self) -> list[tuple[int, Reading]]:
+        limit = max(1, min(self.push_max, self._cap or self.push_max))
+        oldest = await self.buffer.oldest_ts()
+        if oldest is None:
+            self.backlog_age_s = 0.0
+            self.behind = False
+            return []
+        self.backlog_age_s = max(0.0, (self.clock.now() - oldest).total_seconds())
+        behind = self.stale_after_s > 0 and self.backlog_age_s > self.stale_after_s
+        if behind != self.behind:
+            self.behind = behind
+            if behind:
+                log.warning(
+                    "push backlog is %.0f s behind (%d rows): live readings first, backlog in turns",
+                    self.backlog_age_s,
+                    self.buffer.rows,
+                )
+            else:
+                log.info("push backlog caught up")
+        self._took_live = behind and self._live_turn
+        return await self.buffer.take(limit, newest=self._took_live)
+
     async def push_once(self) -> str:
         now = self.clock.monotonic()
         if now < self.retry_at:
             return "wait"
-        rows = await self.buffer.take(self.push_max)
+        try:
+            status = await self._push_once()
+        except BUFFER_ERRORS as exc:
+            self._buffer_fails += 1
+            delay = min(30.0, 2.0 ** (self._buffer_fails - 1))
+            log.warning("buffer error (%s): push postponed for %.0f s, will retry", exc, delay)
+            self.retry_at = self.clock.monotonic() + delay
+            self._count("retry")
+            return "retry"
+        self._buffer_fails = 0
+        return status
+
+    async def _push_once(self) -> str:
+        if self._pending_ack:  # Odoo це вже прийняв: спершу видалити, а не слати вдруге
+            await self.buffer.ack(self._pending_ack)
+            self._pending_ack = []
+        rows = await self._take_batch()
         if not rows:
             await flush_events(self.client, self.buffer)
             await flush_results(self.client, self.buffer)
             return "empty"
+        ids = [i for i, _ in rows]
         t0 = self.clock.monotonic()
         try:
             resp = await self.client.push([r for _, r in rows])
         except OdooError as exc:
-            return await self._on_error(exc, [i for i, _ in rows])
+            return await self._on_error(exc, ids)
         if self.metrics is not None:
             self.metrics.push_latency.observe(max(0.0, self.clock.monotonic() - t0))
-        await self.buffer.ack([i for i, _ in rows])
+        self._pending_ack = ids
         self._fails = 0
+        if self._cap is not None:
+            self._cap_ok = True
+            self._cap = self._cap * 2 if self._cap * 2 < self.push_max else None
+            if self._cap is None:
+                self._cap_ok = False
+        self._live_turn = self.behind and not self._took_live
         self._count("ok")
+        ack_error: Exception | None = None
+        try:
+            await self.buffer.ack(ids)
+            self._pending_ack = []
+        except BUFFER_ERRORS as exc:
+            ack_error = exc  # id лишаються у _pending_ack
         await self._after_ok(resp)
+        if ack_error is not None:
+            raise ack_error
         await flush_events(self.client, self.buffer)
         await flush_results(self.client, self.buffer)
         return "ok"
@@ -361,12 +454,24 @@ class Pusher:
                 self.metrics.push_rejected.inc()
             self._count("rejected")
             return "rejected"
+        fails = self._fails + 1
         if st in (401, 403):
             log.error("push refused by Odoo (HTTP %s): check F3D_COLLECTOR_TOKEN; readings kept", st)
         else:
             log.warning("push failed (%s), readings kept in buffer", exc)
-        self._fails += 1
-        self.retry_at = now + min(60.0, 2.0 ** (self._fails - 1))
+            if len(ids) > 1 and fails >= 2:
+                self._cap = max(1, len(ids) // 2)
+                log.warning("push of %d readings keeps failing: batch lowered to %d", len(ids), self._cap)
+            elif len(ids) == 1 and st == 500 and self._cap_ok and fails >= POISON_AFTER:
+                log.error("push of reading id=%d failed %d times with HTTP 500: dropped as poisoned", ids[0], fails)
+                await self.buffer.ack(ids)
+                self._fails = 0
+                if self.metrics is not None:
+                    self.metrics.push_rejected.inc()
+                self._count("rejected")
+                return "rejected"
+        self._fails = fails
+        self.retry_at = now + min(60.0, 2.0 ** (fails - 1))
         self._count("retry")
         return "retry"
 
@@ -385,12 +490,20 @@ class Pusher:
             await self.registry.refresh()
 
     async def run(self) -> None:
+        """Цикл відправки; не завершується від помилок. Є черга -> наступний пакет через `backlog_gap_s`
+        (кілька пакетів за інтервал, у межах ліміту Odoo), інакше — через `push_interval_s`."""
         while True:
-            status = await self.push_once()
-            if self.metrics is not None:
-                self.metrics.buffer_rows.set(await self.buffer.count())
-            if status == "ok" and await self.buffer.count() >= self.push_max:
-                await self.clock.sleep(1)
+            try:
+                status = await self.push_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - цикл відправки не має вмирати
+                log.exception("push loop error, retrying")
+                self._fails += 1
+                self.retry_at = self.clock.monotonic() + min(60.0, 2.0 ** (self._fails - 1))
+                status = "retry"
+            if status == "ok" and (self.buffer.rows >= self.push_max or self.behind):
+                await self.clock.sleep(self.backlog_gap_s)
             elif status in ("wait", "retry", "locked"):
                 await self.clock.sleep(max(self.retry_at - self.clock.monotonic(), 0.5))
             else:
@@ -475,6 +588,9 @@ class StatusReporter:
         except OdooError as exc:
             log.warning("status not delivered: %s", exc)
             return None
+        except BUFFER_ERRORS as exc:
+            log.warning("status not built (buffer error): %s", exc)
+            return None
         if self.on_flags is not None and "read_enabled" in resp:
             await self.on_flags(
                 bool(resp["read_enabled"]), bool(resp.get("write_enabled", self.registry.write_enabled))
@@ -486,5 +602,10 @@ class StatusReporter:
 
     async def run(self) -> None:
         while True:
-            await self.send_once()
+            try:
+                await self.send_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - звіт статусу не має вмирати
+                log.exception("status loop error")
             await self.clock.sleep(self.interval_s)

@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     config_poll_s: int = 60
     push_interval_s: int = 5
     push_max: int = 1000
+    push_stale_s: int = 600
+    push_backlog_gap_s: float = 1.25
     status_interval_s: int = 60
     commands_poll_s: int = 5
     write_enabled: bool = False
