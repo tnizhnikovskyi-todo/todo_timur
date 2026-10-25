@@ -221,10 +221,10 @@ async def test_periods_10s_and_60s(follow, odoo, mono):
 
 
 async def test_idle_in_scenario_mode(world, odoo, mono):
-    """scenario: жодного follow_odoo (завдання, фури, ТО) — лише читання працівників і календаря."""
+    """scenario: жодного follow_odoo (завдання, фури, ТО, календар) — лише читання працівників."""
     f = FollowOdoo(world, odoo, mono=mono)  # world.mode == scenario
     await f.step()
-    assert {c[1] for c in odoo.calls} == {"hr.employee", "resource.calendar.attendance"}
+    assert {c[1] for c in odoo.calls} == {"hr.employee"}
     assert world.jobs == [] and world.trucks == [] and world.workcenters == {}
 
 
@@ -246,9 +246,21 @@ async def test_scenario_loads_people_at_startup_when_empty(world, odoo, mono):
     assert world.people == [] and f.last_ok is None
     await f.step()
     assert world.people == [{"name": "Олег Мельник", "barcode": "OPSAW1", "job": "Оператор", "shift": "Зміна 1"}]
-    assert (world.shift.start.hour, world.shift.end.hour, world.shift.end.minute) == (7, 15, 30)
     assert f.last_ok is not None and f.status()["last_ok"] is not None  # status()['odoo']['last_ok']
     assert f.status()["stale"] is False
+
+
+async def test_scenario_keeps_env_shift_windows(world, odoo, mono):
+    """В scenario календар Odoo не читається і вікна SIM_SHIFT_WINDOWS (світ) лишаються головними."""
+    from datetime import time
+
+    windows = ((time(6, 0), time(14, 0)), (time(14, 0), time(22, 0)))
+    world.shift.set_windows(windows)
+    f = FollowOdoo(world, odoo, mono=mono)
+    await f.step()
+    assert len(world.people) == 1
+    assert world.shift.shifts == windows
+    assert count(odoo, "resource.calendar.attendance") == 0
 
 
 async def test_scenario_people_not_reread_before_period(world, odoo, mono):

@@ -14,8 +14,9 @@
   календар зміни; ``world.maintenance_closed`` — коди пристроїв із закритою заявкою ТО.
 
 Окрім того, у режимі ``scenario`` (коли Odoo налаштована) ``FollowOdoo`` лише читає список працівників із ``barcode``
-і календар зміни — на старті (якщо ``world.people`` порожній) і раз на ``SIM_ODOO_PEOPLE_S`` (10 хв), щоб СКУД мав людей
-без знімка і з'являлись нові; помилка — лише попередження, старий список лишається. Решта follow_odoo у scenario не діє.
+(без календаря: вікна змін лишаються з ``SIM_SHIFT_WINDOWS``) — на старті (якщо ``world.people`` порожній) і раз на
+``SIM_ODOO_PEOPLE_S`` (10 хв), щоб СКУД мав людей без знімка і з'являлись нові; помилка — лише попередження, старий
+список лишається. Решта follow_odoo у scenario не діє.
 
 Помилка читання довше ``SIM_ODOO_STALE_S`` -> ``world.odoo_stale = True`` (режим не змінюється,
 стан завдань заморожено); після відновлення — повна синхронізація і подія ``info``.
@@ -302,16 +303,17 @@ class FollowOdoo:
             self._level0_done = True
             await self._sync_level0()
 
-    async def poll_people(self, *, keep_if_empty: bool = False) -> None:
-        """``world.people`` — працівники з ``barcode`` (``hr.employee``) і календар зміни (``world.shift``).
+    async def poll_people(self, *, scenario: bool = False) -> None:
+        """``world.people`` — працівники з ``barcode`` (``hr.employee``); у follow_odoo ще й календар (``world.shift``).
 
-        ``keep_if_empty`` (режим scenario): порожню відповідь Odoo не застосовувати, лишити попередній список.
+        ``scenario``: календар не читаємо і вікна змін не чіпаємо (головні — ``SIM_SHIFT_WINDOWS``); порожню відповідь
+        Odoo не застосовуємо, лишаємо попередній список.
         """
         o, w = self.odoo, self.world
         emps = await o.search_read(
             "hr.employee", [("barcode", "!=", False)], ["name", "barcode", "resource_calendar_id", "job_title"]
         )
-        if keep_if_empty and not emps and w.people:
+        if scenario and not emps and w.people:
             log.warning("Odoo: працівників із barcode немає, лишаємо попередній список (%d)", len(w.people))
             return
         w.people = [
@@ -324,7 +326,7 @@ class FollowOdoo:
             for e in emps
         ]
         cal_ids = sorted({c for e in emps if (c := _m2o_id(e.get("resource_calendar_id")))})
-        if cal_ids:
+        if cal_ids and not scenario:
             att = await o.search_read(
                 "resource.calendar.attendance", [("calendar_id", "in", cal_ids)], ["dayofweek", "hour_from", "hour_to"]
             )
@@ -332,7 +334,7 @@ class FollowOdoo:
         self._last_people = self._mono()
 
     async def _step_people(self) -> None:
-        """Режим scenario: лише працівники й календар (read-only); помилка — попередження, список не чіпаємо."""
+        """Режим scenario: лише працівники (read-only), без календаря; помилка — попередження, список не чіпаємо."""
         if self.people_s <= 0 or not self.configured:
             return
         now = self._mono()
@@ -343,7 +345,7 @@ class FollowOdoo:
             return
         self._last_people = now
         try:
-            await self.poll_people(keep_if_empty=True)
+            await self.poll_people(scenario=True)
         except Exception as exc:  # noqa: BLE001 - Odoo недоступна/без прав: СКУД живе зі старим списком
             self.errors += 1
             log.warning(
