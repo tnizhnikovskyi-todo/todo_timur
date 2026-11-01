@@ -211,16 +211,28 @@ class Buffer:
         await self._run(op)
         return len(rows)
 
-    async def take(self, limit: int, newest: bool = False) -> list[tuple[int, Reading]]:
+    async def take(
+        self, limit: int, newest: bool = False, *, min_id: int | None = None, max_id: int | None = None
+    ) -> list[tuple[int, Reading]]:
         """`limit` показань разом з id (за зростанням id); видаляються лише через ack().
 
         За замовчуванням найстаріші (FIFO); `newest=True` — найновіші (політика «спершу живі дані», коли відправник
-        відстає від опитування; див. `Pusher`)."""
+        відстає від опитування; див. `Pusher`). `min_id` (виключно) / `max_id` (включно) звужують діапазон id:
+        так відправник обходить підозрілий «отруєний» діапазон або, навпаки, ділить його навпіл."""
         order = "DESC" if newest else "ASC"
+        conds: list[str] = []
+        args: list[int] = []
+        if min_id is not None:
+            conds.append("id > ?")
+            args.append(min_id)
+        if max_id is not None:
+            conds.append("id <= ?")
+            args.append(max_id)
+        where = f"WHERE {' AND '.join(conds)} " if conds else ""
 
         async def op(db: aiosqlite.Connection) -> list[Any]:
             async with db.execute(
-                f"SELECT id, code, ts, value, text, q FROM readings ORDER BY id {order} LIMIT ?", (limit,)
+                f"SELECT id, code, ts, value, text, q FROM readings {where}ORDER BY id {order} LIMIT ?", (*args, limit)
             ) as cur:
                 return list(await cur.fetchall())
 

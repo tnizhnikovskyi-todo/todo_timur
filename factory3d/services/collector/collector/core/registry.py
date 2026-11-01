@@ -15,6 +15,7 @@ from collector.core.config import Settings
 from collector.core.odoo_client import OdooClient, OdooError
 from collector.core.types import Health, SignalCfg, SourceCfg
 from collector.plugins.base import PluginContext, SourcePlugin
+from collector.util.tasks import wait_bounded
 from collector.util.timeutil import Clock, SystemClock, parse_iso, to_iso_z
 
 log = logging.getLogger("collector.registry")
@@ -200,7 +201,7 @@ class Registry:
         for cb in self.listeners:
             await cb()
 
-    async def _stop_source(self, code: str) -> None:
+    async def _stop_source(self, code: str, force: bool = False) -> None:
         plugin = self.plugins.pop(code, None)
         self._built.pop(code, None)
         self.errors.pop(code, None)
@@ -208,7 +209,7 @@ class Registry:
         self.connected.discard(code)
         if self.metrics is not None:
             self.metrics.forget_source(code)
-        if plugin is not None and was_connected:
+        if plugin is not None and (was_connected or force):  # force: транспорт міг лишитись напівжвим після connect()
             try:
                 await plugin.disconnect()
             except Exception as exc:  # noqa: BLE001
@@ -269,7 +270,14 @@ class Registry:
     def find_signal(self, code: str) -> tuple[SourceCfg, SignalCfg] | None:
         return self.signal_index.get(code)
 
-    async def close(self) -> None:
-        async with self._lock:
-            for code in list(self._built):
-                await self._stop_source(code)
+    async def close(self, timeout: float | None = None) -> None:
+        """Закриває всі плагіни. `timeout` (зупинка колектора): без `_lock` (задача оновлення могла зависнути з ним у
+        `connect()`), `disconnect()` усіх плагінів паралельно, у т.ч. тих, що так і не з'єдналися (pymodbus сам
+        перепідключається), і не довше `timeout` с: завислі покидаються (з логом), решта закривається."""
+        if timeout is None:
+            async with self._lock:
+                for code in list(self._built):
+                    await self._stop_source(code)
+            return
+        jobs = [asyncio.create_task(self._stop_source(c, force=True), name=f"close:{c}") for c in list(self._built)]
+        await wait_bounded(jobs, timeout, "disconnect")

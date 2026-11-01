@@ -15,6 +15,7 @@ from collector.core.buffer import Buffer
 from collector.core.live import LiveCache
 from collector.core.types import Health, PushEvent, Reading, SignalCfg, SourceCfg
 from collector.plugins.base import SourcePlugin
+from collector.util.tasks import cancel_tasks
 from collector.util.timeutil import Clock, SystemClock
 
 log = logging.getLogger("collector.scheduler")
@@ -27,17 +28,27 @@ MAX_PENDING = 50_000  # показань у пам'яті Emitter, поки бу
 MAX_PENDING_EVENTS = 5_000  # подій у пам'яті Emitter, поки буфер недоступний
 PENDING_LOG_EVERY_S = 60.0
 SCALED_KINDS = frozenset({"gauge", "counter"})
+MAX_WARNED_CODES = 1000  # кодів невідомих сигналів, про які вже попереджено (далі — мовчки, пам'ять обмежена)
 
 
 def apply_signal_scale(
-    readings: Iterable[Reading], signals: Mapping[str, SignalCfg], warn: Callable[[str], None] | None = None
+    readings: Iterable[Reading],
+    signals: Mapping[str, SignalCfg],
+    warn: Callable[[str], None] | None = None,
+    warned: set[str] | None = None,
 ) -> list[Reading]:
-    """R-02: `value = eng · signal.scale` рівно один раз, лише gauge/counter з числовим value."""
+    """R-02: `value = eng · signal.scale` рівно один раз, лише gauge/counter з числовим value.
+
+    `warned` (набір кодів викликача): попередження про невідомий сигнал — один раз на код (інакше heartbeat
+    невідомого сигналу засмічує лог кожні 10 с); без нього — щоразу."""
     out: list[Reading] = []
     for r in readings:
         sig = signals.get(r.code)
         if sig is None:
-            (warn or log.warning)(f"reading for unknown signal {r.code}: scale not applied")
+            if warned is None or (r.code not in warned and len(warned) < MAX_WARNED_CODES):
+                if warned is not None:
+                    warned.add(r.code)
+                (warn or log.warning)(f"reading for unknown signal {r.code}: scale not applied")
             out.append(r)
         elif sig.kind in SCALED_KINDS and r.value is not None and sig.scale != 1.0:
             out.append(dataclasses.replace(r, value=r.value * sig.scale))
@@ -72,6 +83,7 @@ class Scheduler:
         self._tasks: dict[str, list[asyncio.Task]] = {}
         self._plugins: dict[str, SourcePlugin] = {}
         self._last_overrun_log: dict[str, float] = {}
+        self._warned_unknown: set[str] = set()
         if registry is not None:
             registry.listeners.append(self.sync)
 
@@ -101,9 +113,13 @@ class Scheduler:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def stop(self) -> None:
-        for code in list(self._tasks):
-            await self.stop_source(code)
+    async def stop(self, timeout: float | None = None) -> list[asyncio.Task]:
+        """Скасовує всі опитування одразу. `timeout` (зупинка колектора): чекати не довше, а задачі, що ігнорують
+        скасування, покинути (повертаються списком); без нього — чекати завершення, як `stop_source`."""
+        tasks = [t for ts in self._tasks.values() for t in ts]
+        self._tasks.clear()
+        self._plugins.clear()
+        return await cancel_tasks(tasks, timeout, "poll")
 
     async def sync(self) -> None:
         """Узгоджує таски з Registry: нові/змінені плагіни — старт, зниклі — зупинка. Push-плагіни не опитуються."""
@@ -158,7 +174,7 @@ class Scheduler:
             t0 = self.clock.monotonic()
             try:
                 readings = await plugin.poll(signals)
-                readings = apply_signal_scale(readings, by_code)
+                readings = apply_signal_scale(readings, by_code, warned=self._warned_unknown)
                 if self.live is not None:
                     self.live.update(readings)
                 await self.buffer.put_many(readings)
@@ -219,12 +235,13 @@ class Emitter:
         self._readings: list[Reading] = []
         self._events: list[PushEvent] = []
         self._last_drop_log = float("-inf")
+        self._warned_unknown: set[str] = set()
 
     def _lookup(self) -> Mapping[str, SignalCfg]:
         return self._signals() if callable(self._signals) else self._signals
 
     def emit(self, reading: Reading) -> None:
-        scaled = apply_signal_scale([reading], self._lookup())
+        scaled = apply_signal_scale([reading], self._lookup(), warned=self._warned_unknown)
         if self.live is not None:
             self.live.update(scaled)
         self._readings.extend(scaled)

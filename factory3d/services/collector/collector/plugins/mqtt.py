@@ -133,11 +133,16 @@ class MqttPlugin(SourcePlugin):
             await asyncio.gather(self._task, return_exceptions=True)
             self._task = None
         if self.client is not None:
+            client, self.client = self.client, None
+            # loop_stop() join-ить потік paho, який може сидіти в connect() до недоступного брокера: не блокуємо цикл
             with contextlib.suppress(Exception):
-                self.client.loop_stop()
-                self.client.disconnect()
-            self.client = None
+                await asyncio.to_thread(self._close_client, client)
         self._state = "offline"
+
+    @staticmethod
+    def _close_client(client: Any) -> None:
+        client.loop_stop()
+        client.disconnect()
 
     # --- колбеки paho (потік paho) ---
     def _filters(self) -> list[tuple[str, int]]:
