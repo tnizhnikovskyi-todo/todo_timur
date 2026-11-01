@@ -69,7 +69,8 @@ class TestPushOrder(F3DMachineCase):
         return spy.like('update "td_machine"')
 
     def test_unchanged_push_does_not_write_machine_row(self):
-        """Показання без змін не пишуть td_machine; мітки `raw_ts`/`pieces_ts` — не частіше за HEARTBEAT_S."""
+        """Показання без змін не пишуть td_machine; мітки `raw_ts`/`pieces_ts` — не частіше за `heartbeat_s` (30 с)."""
+        self._icp().set_param(P + "heartbeat_s", "30")
         m = self.m_ua
         first = self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC", pieces=5, job="J-1")
         updates = self._machine_updates(first)
@@ -86,7 +87,7 @@ class TestPushOrder(F3DMachineCase):
         self.assertEqual((m.state, m.pieces_last, m.raw_job), ("working", 5, "J-1"))
 
     def test_changes_are_written_at_once(self):
-        """Зміна лічильника, стану й `raw_ts` — одразу, без очікування HEARTBEAT_S."""
+        """Зміна лічильника, стану й `raw_ts` — одразу, без очікування `heartbeat_s`."""
         m = self.m_ua
         self.feed(self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC", pieces=5))
         self.feed(self.ua(m, "10:00:02", state="WORKING", mode="AUTOMATIC", pieces=6))
