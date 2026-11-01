@@ -213,23 +213,35 @@ class F3dFireZone(models.Model):
                 rec.warning = "Пристрій %s%s: несправність (%s)." % (worst.address, loc, worst.reliability)
 
     def _compute_request(self):
+        """Перша (за id) незакрита заявка зони: за `td_fire_zone_id` або сигналом групи/її приладів.
+        Один пошук на весь набір зон (раніше — по одному на зону: ≈35 SELECT на кожен /data)."""
         Request = self.env["maintenance.request"]
         has_zone = "td_fire_zone_id" in Request._fields
         has_signal = "td_signal_id" in Request._fields
+        zone_signals = {}
         for rec in self:
-            domain = [("stage_id.done", "=", False)]
-            conds = []
-            if has_zone:
-                conds.append([("td_fire_zone_id", "=", rec.id)])
             signals = (
                 rec.signal_id | rec.dust_signal_id | rec.device_ids.state_signal_id | rec.device_ids.dust_signal_id
             ).ids
-            if has_signal and signals:
-                conds.append([("td_signal_id", "in", signals)])
-            request = Request.browse()
-            if conds:
-                dom = domain + (["|"] * (len(conds) - 1)) + [c for cond in conds for c in cond]
-                request = Request.search(dom, limit=1, order="id")
+            zone_signals[rec.id] = signals if has_signal else []
+        conds = []
+        if has_zone and self.ids:
+            conds.append([("td_fire_zone_id", "in", self.ids)])
+        all_signals = sorted({sid for signals in zone_signals.values() for sid in signals})
+        if all_signals:
+            conds.append([("td_signal_id", "in", all_signals)])
+        by_zone, by_signal = {}, {}
+        if conds:
+            dom = [("stage_id.done", "=", False)] + ["|"] * (len(conds) - 1) + [c for cond in conds for c in cond]
+            for request in Request.search(dom, order="id"):  # за зростанням id: setdefault лишає першу
+                if has_zone and request.td_fire_zone_id:
+                    by_zone.setdefault(request.td_fire_zone_id.id, request.id)
+                if has_signal and request.td_signal_id:
+                    by_signal.setdefault(request.td_signal_id.id, request.id)
+        for rec in self:
+            ids = [by_zone[rec.id]] if rec.id in by_zone else []
+            ids += [by_signal[sid] for sid in zone_signals[rec.id] if sid in by_signal]
+            request = Request.browse(min(ids)) if ids else Request.browse()
             rec.maintenance_request_id = request
             rec.maintenance_request_name = request.name if request else False
 
