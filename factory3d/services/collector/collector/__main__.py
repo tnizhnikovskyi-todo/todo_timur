@@ -124,11 +124,15 @@ async def test_source(s: Settings, code: str) -> int:
 async def drain_buffer(s: Settings) -> int:
     client = _client(s)
     buffer = Buffer(s.buffer_dir / "buffer.sqlite", s.buffer_max_mb)
-    pusher = Pusher(client, buffer, push_max=s.push_max, push_interval_s=s.push_interval_s)
+    pusher = Pusher(
+        client, buffer, push_max=s.push_max, push_interval_s=s.push_interval_s, backlog_gap_s=s.push_backlog_gap_s
+    )
     sent = 0
     try:
         while True:
             before = await buffer.count()
+            if before:
+                await pusher.backlog_pause()  # пакети не частіше за `backlog_gap_s`: не впиратись у 429 Odoo
             status = await pusher.push_once()
             if status == "empty":
                 break

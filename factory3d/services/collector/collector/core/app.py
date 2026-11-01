@@ -29,6 +29,7 @@ from collector.util.timeutil import Clock, SystemClock
 log = logging.getLogger("collector.app")
 
 FLUSH_TIMEOUT_S = 10.0
+SHUTDOWN_PUSHES = 5  # не більше пакетів при зупинці: рестарт не впирається в 429 (ліміт Odoo 60/хв)
 PUSH_MAX_LIMIT = 2000
 MAINTENANCE_S = 60.0
 RESTART_MAX_S = 30.0
@@ -78,6 +79,7 @@ class Collector:
             clock=self.clock,
             metrics=self.metrics,
             on_flags=self.registry.set_flags,
+            pusher=self.pusher,
         )
         self.commands = CommandLoop(
             self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics, live=self.live
@@ -204,8 +206,10 @@ class Collector:
 
     async def _flush(self) -> None:
         await self.emitter.flush()
-        while await self.pusher.push_once() == "ok":
-            pass
+        for _ in range(SHUTDOWN_PUSHES):
+            await self.pusher.backlog_pause()  # цикл відправки щойно міг слати: тримаємо паузу між пакетами
+            if await self.pusher.push_once() != "ok" or self.buffer.rows <= 0:
+                break
 
     async def run(self) -> int:
         loop = asyncio.get_running_loop()

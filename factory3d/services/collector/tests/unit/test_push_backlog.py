@@ -24,6 +24,12 @@ class RecordingClient:
         self.times: list[float] = []  # віртуальний час кожної відправки (якщо задано clock)
         self.clock = None
         self.fail = None
+        self.health_ok = True  # GET /health: False -> Odoo не відповідає (глобальний збій)
+
+    async def health(self):
+        if not self.health_ok:
+            raise OdooError(500, "db down")
+        return {"ok": True}
 
     async def push(self, readings):
         readings = list(readings)
@@ -102,7 +108,7 @@ async def test_run_loop_survives_unexpected_error(buffer, vclock, monkeypatch):
     monkeypatch.setattr(p, "push_once", flaky)
     task = asyncio.create_task(p.run())
     try:
-        await asyncio.wait_for(_until(lambda: client.batches), 10)
+        await asyncio.wait_for(_until(lambda: client.batches and buffer.rows == 0), 10)  # дочекатися й ack
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
@@ -120,6 +126,7 @@ async def test_stuck_backlog_live_data_flows(buffer, vclock):
     client = RecordingClient()
     p = _pusher(client, buffer, vclock, stale_after_s=600)
     await buffer.put_many([_mk(i, age_s=7200 - i) for i in range(450)])
+    vclock.advance(7200)  # вік черги — від вставки в буфер
     live = [_mk(1000 + i, code=f"live/{i}") for i in range(50)]
     await buffer.put_many(live)
     assert await p.push_once() == "ok" and p.behind is True
@@ -139,6 +146,7 @@ async def test_new_live_rows_overtake_old_backlog_each_cycle(buffer, vclock):
     client = RecordingClient()
     p = _pusher(client, buffer, vclock, push_max=10, stale_after_s=600)
     await buffer.put_many([_mk(i, age_s=5000) for i in range(100)])
+    vclock.advance(5000)
     for turn in range(4):
         await buffer.put_many([_mk(0, code=f"live/{turn}/{k}") for k in range(3)])
         await p.push_once()  # старі
@@ -201,6 +209,7 @@ async def test_global_odoo_500_does_not_empty_buffer(buffer, vclock):
         raise OdooError(500, "db down")
 
     client.fail = fail
+    client.health_ok = False  # Odoo не відповідає взагалі: відкидати нічого
     p = _pusher(client, buffer, vclock, push_max=4)
     await buffer.put_many([_mk(i) for i in range(10)])
     for _ in range(40):

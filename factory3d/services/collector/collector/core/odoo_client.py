@@ -25,17 +25,32 @@ EVENT_BATCH = 100
 RESULT_BATCH = 100
 STALE_AFTER_S = 600.0  # черга старша за це -> «спершу живі дані» (див. Pusher)
 BACKLOG_GAP_S = 1.25  # пауза між пакетами при черзі: ≤ 48 пакетів/хв при ліміті Odoo 60/хв (429 + Retry-After 10 с)
-POISON_AFTER = 5  # скільки поспіль HTTP 500 на єдиному показанні, щоб відкинути його як «отруєне»
+POISON_AFTER = 5  # скільки поспіль HTTP 500/413 на одному й тому ж єдиному показанні, щоб відкинути його як «отруєне»
+POISON_STATUSES = frozenset({413, 500})
+LIMIT_PROBE_OK = 200  # успішних пакетів на вивченому ліміті Odoo (після 413), після яких ліміт пробуємо подвоїти
 BUFFER_ERRORS = (sqlite3.Error, OSError)
+# обірвана/затиснута відповідь (зменшення пакета може допомогти), на відміну від ClientConnectorError/ClientOSError
+TIMEOUT_LIKE = (TimeoutError, aiohttp.ServerDisconnectedError, aiohttp.ClientPayloadError)
 
 
 class OdooError(Exception):
     """Помилка виклику Odoo; `status=None` — мережева помилка/таймаут."""
 
-    def __init__(self, status: int | None, message: str = "", retry_after: float | None = None) -> None:
+    def __init__(
+        self, status: int | None, message: str = "", retry_after: float | None = None, *, timeout_like: bool = False
+    ) -> None:
         super().__init__(f"odoo HTTP {status}: {message}" if status else f"odoo unreachable: {message}")
         self.status = status
         self.retry_after = retry_after
+        self.timeout_like = timeout_like  # таймаут / сервер обірвав з'єднання (а не «connection refused»)
+
+    @property
+    def shrinkable(self) -> bool:
+        """Чи може зменшення пакета допомогти: 5xx, 408, таймаут, обрив з боку сервера. НЕ «connection refused» та
+        інші помилки з'єднання/ОС (Odoo недоступний: розмір пакета ні до чого, а зменшення сповільнить відновлення)."""
+        if self.status is None:
+            return self.timeout_like
+        return self.status == 408 or self.status >= 500
 
 
 class OdooClient:
@@ -125,7 +140,7 @@ class OdooClient:
                         self._check_skew(data)
                         return status, data
             except (aiohttp.ClientError, TimeoutError) as exc:
-                last = OdooError(None, type(exc).__name__)
+                last = OdooError(None, type(exc).__name__, timeout_like=isinstance(exc, TIMEOUT_LIKE))
             assert last is not None
             if last.status is not None and last.status not in RETRY_STATUSES:
                 if last.status >= 500 and self.metrics is not None:
@@ -287,6 +302,18 @@ async def flush_events(client: OdooClient, buffer: Buffer) -> int:
     return len(rows)
 
 
+class _Stream:
+    """Стан одного «потоку» пакетів (голова черги або живі дані): зменшення пакета і лічильник невдач поспіль.
+    Окремі потоки потрібні, щоб успіх живого пакета не скидав і не збільшував стан пакета з отруєною головою."""
+
+    __slots__ = ("cap", "cap_ok", "streak")
+
+    def __init__(self) -> None:
+        self.cap: int | None = None  # тимчасове зменшення пакета після невдач
+        self.cap_ok = False  # поки пакет зменшено, хоч один пакет цього потоку Odoo прийняв (Odoo живий)
+        self.streak = 0  # невдач поспіль
+
+
 class Pusher:
     """Буфер -> API-02 (R-19, §8.4). `push_once()` повертає: ok|empty|wait|retry|locked|rejected.
 
@@ -296,13 +323,18 @@ class Pusher:
       рядки, повторна відправка їм не допоможе). Якщо Odoo прийняв, а видалити з буфера не вдалося (locked/IO),
       id запам'ятовуються у `_pending_ack` і видаляються першими на наступному кроці — пакет НЕ шлеться вдруге;
     * помилка буфера (locked/IO) — це «retry з бекофом», а не падіння циклу;
-    * звичайний режим — FIFO. Якщо найстаріше показання старше за `stale_after_s` (черга «відстає»), пакети чергуються:
-      найновіші (`take(newest=True)`, живі дані доходять за ≤ 2 кроки) — найстаріші (черга розгрібається). Старе
-      Odoo приймає як історію (`last_*` оновлюються лише свіжішими `ts`); те, що не встигло, викидає ліміт розміру
-      буфера (найстаріше першим);
-    * пакет, що не проходить (таймаут/5xx), ділиться навпіл після 2-ї поспіль невдачі (`_cap`), щоб не слати той самий
-      великий пакет вічно; єдине показання з `POISON_AFTER` поспіль HTTP 500 відкидається, лише якщо інші пакети
-      Odoo при цьому приймав (глобальний збій Odoo буфер не спустошує).
+    * звичайний режим — FIFO. Якщо найстаріше показання пробуло в буфері довше за `stale_after_s` (черга «відстає»;
+      вік — від вставки в буфер, а не від `ts` показання), пакети чергуються: найновіші (`take(newest=True)`, живі
+      дані доходять за ≤ 2 кроки) — найстаріші (черга розгрібається); черга змінюється і після невдалої спроби, тож
+      «отруєна» голова не блокує живі дані. Старе Odoo приймає як історію (`last_*` оновлюються лише свіжішими `ts`);
+      те, що не встигло, викидає ліміт розміру буфера (найстаріше першим);
+    * пакет, що не проходить (таймаут/5xx), ділиться навпіл після 2-ї поспіль невдачі свого потоку; «connection
+      refused» і подібні помилки з'єднання пакет НЕ зменшують (Odoo просто недоступний);
+    * HTTP 413 (`too_many_readings`/`payload_too_large`): пакет ніколи не видаляється — ліміт Odoo запам'ятовується
+      (`server_limit` = половина пакета), пакет шлеться повторно меншим; ліміт повільно пробує зрости назад;
+    * єдине показання, що `POISON_AFTER` разів поспіль дало HTTP 500/413, відкидається («отруєне», з логом `code`/`ts`
+      і лічильником `poisoned_total`), якщо Odoo при цьому живий: інші пакети проходили або `GET /health` відповідає.
+      Глобальний збій Odoo буфер не спустошує.
     """
 
     def __init__(
@@ -333,13 +365,18 @@ class Pusher:
         self.retry_at = 0.0  # monotonic: не раніше цього моменту
         self.behind = False  # черга старша за stale_after_s
         self.backlog_age_s = 0.0
+        self.server_limit: int | None = None  # ліміт пакета, вивчений з HTTP 413
+        self.poisoned_total = 0  # «отруєних» показань відкинуто з моменту старту
         self._fails = 0
         self._buffer_fails = 0
         self._pending_ack: list[int] = []
-        self._cap: int | None = None  # тимчасове зменшення пакета після невдач
-        self._cap_ok = False  # поки пакет зменшено, хоч один пакет Odoo прийняв (отже, Odoo живий, а рядок «отруєний»)
+        self._streams = {False: _Stream(), True: _Stream()}  # ключ — «пакет живих даних» (newest)
         self._live_turn = False
         self._took_live = False
+        self._poison_id: int | None = None
+        self._poison_n = 0
+        self._ok_at_limit = 0
+        self._last_push: float | None = None  # monotonic останньої спроби відправки (див. `backlog_pause`)
 
     def configure(self, interval_s: float | None, push_max: int | None) -> None:
         """Параметри з Odoo (`collector.push_interval_s/push_max`) мають пріоритет над F3D_PUSH_*; None — лишити."""
@@ -358,9 +395,20 @@ class Pusher:
             if self.on_read_enabled is not None:
                 await self.on_read_enabled(value)
 
+    def _limit(self) -> int:
+        """Верхня межа пакета: `push_max`, але не більше за вивчений ліміт Odoo."""
+        return max(1, min(self.push_max, self.server_limit or self.push_max))
+
+    async def backlog_pause(self) -> None:
+        """Чекає, поки мине `backlog_gap_s` від останньої відправки (щоб послідовні пакети не впиралися в 429 Odoo)."""
+        if self._last_push is None:
+            return
+        wait = self._last_push + self.backlog_gap_s - self.clock.monotonic()
+        if wait > 0:
+            await self.clock.sleep(wait)
+
     async def _take_batch(self) -> list[tuple[int, Reading]]:
-        limit = max(1, min(self.push_max, self._cap or self.push_max))
-        oldest = await self.buffer.oldest_ts()
+        oldest = await self.buffer.oldest_inserted_at()
         if oldest is None:
             self.backlog_age_s = 0.0
             self.behind = False
@@ -378,6 +426,7 @@ class Pusher:
             else:
                 log.info("push backlog caught up")
         self._took_live = behind and self._live_turn
+        limit = max(1, min(self._limit(), self._streams[self._took_live].cap or self.push_max))
         return await self.buffer.take(limit, newest=self._took_live)
 
     async def push_once(self) -> str:
@@ -407,19 +456,23 @@ class Pusher:
             return "empty"
         ids = [i for i, _ in rows]
         t0 = self.clock.monotonic()
+        self._last_push = t0
         try:
             resp = await self.client.push([r for _, r in rows])
         except OdooError as exc:
-            return await self._on_error(exc, ids)
+            return await self._on_error(exc, rows)
         if self.metrics is not None:
             self.metrics.push_latency.observe(max(0.0, self.clock.monotonic() - t0))
         self._pending_ack = ids
         self._fails = 0
-        if self._cap is not None:
-            self._cap_ok = True
-            self._cap = self._cap * 2 if self._cap * 2 < self.push_max else None
-            if self._cap is None:
-                self._cap_ok = False
+        stream = self._streams[self._took_live]
+        stream.streak = 0
+        if stream.cap is not None:
+            stream.cap_ok = True
+            stream.cap = stream.cap * 2 if stream.cap * 2 < self.push_max else None
+            if stream.cap is None:
+                stream.cap_ok = False
+        self._probe_server_limit(len(ids))
         self._live_turn = self.behind and not self._took_live
         self._count("ok")
         ack_error: Exception | None = None
@@ -435,9 +488,61 @@ class Pusher:
         await flush_results(self.client, self.buffer)
         return "ok"
 
-    async def _on_error(self, exc: OdooError, ids: list[int]) -> str:
+    def _probe_server_limit(self, sent: int) -> None:
+        """Після багатьох успішних пакетів на вивченому ліміті пробуємо його подвоїти (адмін міг збільшити параметр
+        Odoo); якщо ні — наступний 413 знову зменшить ліміт ціною одного невдалого запиту."""
+        if self.server_limit is None or sent < self.server_limit:
+            return
+        self._ok_at_limit += 1
+        if self._ok_at_limit >= LIMIT_PROBE_OK:
+            self._ok_at_limit = 0
+            self.server_limit = self.server_limit * 2 if self.server_limit * 2 < self.push_max else None
+            log.info("push batch limit probe: %s", self.server_limit or "back to push_max")
+
+    async def _odoo_alive(self) -> bool:
+        """Чи відповідає Odoo взагалі (`GET /health`): відрізняє «отруєний» рядок від глобального збою."""
+        try:
+            await self.client.health()
+        except OdooError:
+            return False
+        return True
+
+    async def _drop_poisoned(self, row: tuple[int, Reading], st: int | None, stream: _Stream) -> bool:
+        """Єдине показання дало POISON_AFTER разів поспіль 500/413: відкидає його, якщо Odoo живий."""
+        rid, reading = row
+        if self._poison_id != rid:
+            self._poison_id, self._poison_n = rid, 0
+        self._poison_n += 1
+        if self._poison_n < POISON_AFTER:
+            return False
+        if not (stream.cap_ok or await self._odoo_alive()):
+            log.warning("reading id=%d keeps failing (HTTP %s), but Odoo is not answering: kept", rid, st)
+            return False
+        log.error(
+            "poisoned reading dropped after %d x HTTP %s: id=%d code=%s ts=%s value=%r text=%r (Odoo is alive)",
+            self._poison_n,
+            st,
+            rid,
+            reading.code,
+            to_iso_z(reading.ts),
+            reading.value,
+            reading.text,
+        )
+        await self.buffer.ack([rid])
+        self._poison_id, self._poison_n = None, 0
+        self.poisoned_total += 1
+        self._fails = 0
+        stream.streak = 0
+        if self.metrics is not None:
+            self.metrics.push_rejected.inc()
+        self._count("rejected")
+        return True
+
+    async def _on_error(self, exc: OdooError, rows: list[tuple[int, Reading]]) -> str:
         st = exc.status
+        ids = [i for i, _ in rows]
         now = self.clock.monotonic()
+        stream = self._streams[self._took_live]
         if st == 423:
             self._count("locked")
             self.retry_at = now + self.push_interval_s
@@ -447,31 +552,39 @@ class Pusher:
             self._count("retry")
             self.retry_at = now + (exc.retry_after or 10.0)
             return "retry"
-        if st is not None and 400 <= st < 500 and st not in (401, 403, 408):
+        if st == 413 and len(ids) > 1:  # забагато показань/байтів: пакет НЕ видаляється, а ділиться навпіл
+            self.server_limit = max(1, len(ids) // 2)
+            self._ok_at_limit = 0
+            log.warning(
+                "push of %d readings refused by Odoo (HTTP 413): batch limit lowered to %d", len(ids), self.server_limit
+            )
+            self._live_turn = self.behind and not self._took_live
+            self._count("retry")
+            self.retry_at = now
+            return "retry"
+        if st is not None and 400 <= st < 500 and st not in (401, 403, 408, 413):
             log.error("push rejected by Odoo (HTTP %s): %d readings dropped", st, len(ids))
             await self.buffer.ack(ids)
             if self.metrics is not None:
                 self.metrics.push_rejected.inc()
             self._count("rejected")
+            self._live_turn = self.behind and not self._took_live
             return "rejected"
         fails = self._fails + 1
+        stream.streak += 1
         if st in (401, 403):
             log.error("push refused by Odoo (HTTP %s): check F3D_COLLECTOR_TOKEN; readings kept", st)
         else:
             log.warning("push failed (%s), readings kept in buffer", exc)
-            if len(ids) > 1 and fails >= 2:
-                self._cap = max(1, len(ids) // 2)
-                log.warning("push of %d readings keeps failing: batch lowered to %d", len(ids), self._cap)
-            elif len(ids) == 1 and st == 500 and self._cap_ok and fails >= POISON_AFTER:
-                log.error("push of reading id=%d failed %d times with HTTP 500: dropped as poisoned", ids[0], fails)
-                await self.buffer.ack(ids)
-                self._fails = 0
-                if self.metrics is not None:
-                    self.metrics.push_rejected.inc()
-                self._count("rejected")
+            if len(ids) > 1 and exc.shrinkable and stream.streak >= 2:
+                stream.cap = max(1, len(ids) // 2)
+                log.warning("push of %d readings keeps failing: batch lowered to %d", len(ids), stream.cap)
+            elif len(ids) == 1 and st in POISON_STATUSES and await self._drop_poisoned(rows[0], st, stream):
+                self._live_turn = self.behind and not self._took_live
                 return "rejected"
         self._fails = fails
         self.retry_at = now + min(60.0, 2.0 ** (fails - 1))
+        self._live_turn = self.behind and not self._took_live  # невдача не блокує другу чергу (живі дані / голова)
         self._count("retry")
         return "retry"
 
@@ -524,6 +637,7 @@ class StatusReporter:
         clock: Clock | None = None,
         metrics: Any = None,
         on_flags: Callable[[bool, bool], Awaitable[None]] | None = None,
+        pusher: Any = None,
     ) -> None:
         self.client = client
         self.registry = registry
@@ -533,6 +647,7 @@ class StatusReporter:
         self.clock: Clock = clock or SystemClock()
         self.metrics = metrics
         self.on_flags = on_flags
+        self.pusher = pusher
         self._started = self.clock.monotonic()
 
     def source_health(self, code: str) -> Any:
@@ -577,6 +692,7 @@ class StatusReporter:
                 "rows": await self.buffer.count(),
                 "dropped_total": self.buffer.dropped_total,
                 "bytes": await self.buffer.size_bytes(),
+                "poisoned_total": getattr(self.pusher, "poisoned_total", 0),  # відкинуті «отруєні» показання
             },
             "plugins": plugins,
             "sources": sources,

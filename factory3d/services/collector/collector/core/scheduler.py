@@ -7,6 +7,7 @@ import dataclasses
 import logging
 import random
 import sqlite3
+import time
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
@@ -22,7 +23,9 @@ POLL_BACKOFF_MAX = 30.0
 CONNECT_BACKOFF_MAX = 60.0
 ERROR_AFTER = 3
 OVERRUN_LOG_EVERY_S = 60.0
-MAX_PENDING = 500_000  # показань у пам'яті Emitter, поки буфер недоступний
+MAX_PENDING = 50_000  # показань у пам'яті Emitter, поки буфер недоступний (~15-25 МБ); далі — відкидаються найстаріші
+MAX_PENDING_EVENTS = 5_000  # подій у пам'яті Emitter, поки буфер недоступний
+PENDING_LOG_EVERY_S = 60.0
 SCALED_KINDS = frozenset({"gauge", "counter"})
 
 
@@ -212,8 +215,10 @@ class Emitter:
         self._signals = signals
         self.metrics = metrics
         self.live = live
+        self.dropped_total = 0  # показань відкинуто з пам'яті через `MAX_PENDING` (буфер довго недоступний)
         self._readings: list[Reading] = []
         self._events: list[PushEvent] = []
+        self._last_drop_log = float("-inf")
 
     def _lookup(self) -> Mapping[str, SignalCfg]:
         return self._signals() if callable(self._signals) else self._signals
@@ -227,31 +232,61 @@ class Emitter:
     def emit_event(self, event: PushEvent) -> None:
         self._events.append(event)
 
+    def _restore(self, readings: list[Reading], events: list[PushEvent]) -> None:
+        """Повертає в чергу те, що не записалося; понад `MAX_PENDING` (події — `MAX_PENDING_EVENTS`) відкидаються
+        найстаріші, голосно (error не частіше за `PENDING_LOG_EVERY_S`) і з лічильником `dropped_total`."""
+        merged = readings + self._readings
+        dropped = max(0, len(merged) - MAX_PENDING)
+        self._readings = merged[dropped:]
+        merged_ev = events + self._events
+        dropped_ev = max(0, len(merged_ev) - MAX_PENDING_EVENTS)
+        self._events = merged_ev[dropped_ev:]
+        if dropped or dropped_ev:
+            self.dropped_total += dropped
+            if dropped and self.metrics is not None:
+                self.metrics.buffer_dropped.inc(dropped)
+            now = time.monotonic()
+            if now - self._last_drop_log >= PENDING_LOG_EVERY_S:
+                self._last_drop_log = now
+                log.error(
+                    "buffer unavailable too long: in-memory queue is full, dropped %d oldest readings and %d events "
+                    "(dropped_total=%d); check disk space / buffer file",
+                    dropped,
+                    dropped_ev,
+                    self.dropped_total,
+                )
+
     async def flush(self) -> int:
         """Скидає чергу в буфер. Помилка буфера (locked/IO) не губить дані: те, що не записалося, лишається в черзі
-        (не більше `MAX_PENDING` показань — тоді відкидаються найстаріші) і піде на наступному виклику."""
+        (не більше `MAX_PENDING` показань — тоді відкидаються найстаріші) і піде на наступному виклику. Те саме при
+        скасуванні (зупинка) чи будь-якому іншому винятку: дані повертаються в чергу, виняток піднімається далі."""
         readings, self._readings = self._readings, []
         events, self._events = self._events, []
         done = 0
         try:
             if readings:
                 await self.buffer.put_many(readings)
-                done += len(readings)
+                written, readings = readings, []  # записано: далі помилка метрик не поверне це в чергу вдруге
+                done += len(written)
                 if self.metrics is not None:
-                    for r in readings:
+                    for r in written:
                         sig = self._lookup().get(r.code)
                         self.metrics.readings.labels(sig.source_code if sig else "unknown").inc()
-                readings = []
             while events:
                 await self.buffer.put_event(events[0])
                 events.pop(0)
                 done += 1
         except (sqlite3.Error, OSError) as exc:
-            self._readings = (readings + self._readings)[-MAX_PENDING:]
-            self._events = events + self._events
+            self._restore(readings, events)
             log.warning(
-                "buffer write failed (%s): %d readings, %d events kept in memory", exc, len(readings), len(events)
+                "buffer write failed (%s): %d readings, %d events kept in memory",
+                exc,
+                len(self._readings),
+                len(self._events),
             )
+        except BaseException:  # CancelledError (зупинка) та будь-що інше: батч не губимо
+            self._restore(readings, events)
+            raise
         return done
 
     async def run(self, interval_s: float = 0.5) -> None:

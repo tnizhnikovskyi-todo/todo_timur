@@ -12,7 +12,11 @@
   до 90 % ліміту, за «корисним» обсягом (сторінки без вільного списку), а не за розміром файлу;
   вільні сторінки віддаються ОС порціями `incremental_vacuum(N)`;
 * лічильник рядків `readings` ведеться в пам'яті (O(1) для `/health`, метрик і статусу); точний `recount()` —
-  при відкритті та в обслуговуванні.
+  при відкритті та в обслуговуванні;
+* кожне показання має час вставки в буфер (`ins`): вік черги відправки рахується від нього, а не від `ts` показання
+  (годинники пристроїв, `ts_path` у MQTT);
+* файл, створений до 0.2.0 без `auto_vacuum=INCREMENTAL`, один раз конвертується `VACUUM` при відкритті, якщо буфер
+  майже порожній і вистачає місця на диску (див. `_maybe_convert_vacuum`).
 """
 
 from __future__ import annotations
@@ -23,9 +27,10 @@ import json
 import logging
 import math
 import os
+import shutil
 import sqlite3
 from collections.abc import Awaitable, Callable, Iterable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -48,9 +53,12 @@ BUSY_RETRY_S = 0.05
 VACUUM_PAGES = 1_000  # сторінок за один крок incremental_vacuum
 MAX_SHRINK_STEPS = 2_000
 WAL_LIMIT_BYTES = 64 * 1024 * 1024
+VACUUM_MAX_ROWS = 10_000  # одноразовий VACUUM старого файлу лише для «майже порожнього» буфера
+VACUUM_MIN_FREE_BYTES = 32 * 1024 * 1024  # запас диска понад 2 × корисний обсяг
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS readings(id INTEGER PRIMARY KEY, code TEXT, ts TEXT, value REAL, text TEXT, q TEXT);
+CREATE TABLE IF NOT EXISTS readings(id INTEGER PRIMARY KEY, code TEXT, ts TEXT, value REAL, text TEXT, q TEXT,
+    ins REAL);
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, event_id TEXT UNIQUE, route TEXT, ts TEXT, remote TEXT,
     headers TEXT, payload TEXT);
 CREATE TABLE IF NOT EXISTS results(id INTEGER PRIMARY KEY, cmd_id INTEGER, state TEXT, ts TEXT, result TEXT,
@@ -95,15 +103,60 @@ class Buffer:
                 await db.execute("PRAGMA synchronous=NORMAL")
                 await db.execute(f"PRAGMA journal_size_limit={WAL_LIMIT_BYTES}")
                 await db.executescript(_SCHEMA)
+                await self._migrate(db)
                 await db.commit()
                 async with db.execute("SELECT COUNT(*) FROM readings") as cur:
                     row = await cur.fetchone()
                 self._rows = int(row[0]) if row else 0
+                await self._maybe_convert_vacuum(db)
             except BaseException:
                 await db.close()
                 raise
             self._db = db
         return self._db
+
+    async def _migrate(self, db: aiosqlite.Connection) -> None:
+        """Файл до 0.2.1 не має `readings.ins` (час вставки): додаємо; старі рядки (NULL) оцінюються за `ts`."""
+        async with db.execute("PRAGMA table_info(readings)") as cur:
+            cols = {r[1] for r in await cur.fetchall()}
+        if "ins" not in cols:
+            try:
+                await db.execute("ALTER TABLE readings ADD COLUMN ins REAL")
+            except sqlite3.OperationalError as exc:  # інший процес (CLI) устиг першим
+                if "duplicate column" not in str(exc).lower():
+                    raise
+
+    async def _maybe_convert_vacuum(self, db: aiosqlite.Connection) -> None:
+        """`PRAGMA auto_vacuum=INCREMENTAL` не діє на вже створений файл: без `VACUUM` вільні сторінки не віддаються
+        ОС (інцидент: 209 МБ при кількох тисячах рядків). Один раз виконуємо `VACUUM`, якщо файл має `auto_vacuum=0`,
+        рядків ≤ `VACUUM_MAX_ROWS` (копіюється лише корисне) і на диску є ≥ 2 × корисний обсяг + запас.
+        Будь-яка помилка лише логується: колектор стартує й так (для великих файлів — ручний VACUUM, див. README)."""
+        try:
+            async with db.execute("PRAGMA auto_vacuum") as cur:
+                row = await cur.fetchone()
+            if row and int(row[0]) != 0:
+                return
+            if self._rows > VACUUM_MAX_ROWS:
+                log.info("buffer file has auto_vacuum=0 but %d rows: skip automatic VACUUM (see README)", self._rows)
+                return
+            async with db.execute("PRAGMA page_count") as cur:
+                pages = int((await cur.fetchone())[0])  # type: ignore[index]
+            async with db.execute("PRAGMA freelist_count") as cur:
+                free_pages = int((await cur.fetchone())[0])  # type: ignore[index]
+            async with db.execute("PRAGMA page_size") as cur:
+                psize = int((await cur.fetchone())[0])  # type: ignore[index]
+            if free_pages <= 0:
+                return
+            used = max(0, pages - free_pages) * psize
+            if shutil.disk_usage(self.path.parent).free < 2 * used + VACUUM_MIN_FREE_BYTES:
+                log.warning("buffer file has auto_vacuum=0, but too little free disk for VACUUM: skipped")
+                return
+            await db.execute("PRAGMA auto_vacuum=INCREMENTAL")
+            await db.execute("VACUUM")
+            await db.commit()
+            log.info("buffer VACUUM done (auto_vacuum=INCREMENTAL): %d -> %d bytes", pages * psize, used)
+        except (sqlite3.Error, OSError) as exc:
+            log.warning("buffer one-off VACUUM failed (%s): skipped", exc)
 
     async def _run(self, fn: Callable[[aiosqlite.Connection], Awaitable[T]]) -> T:
         """Виконує `fn(db)` під Lock; транзакція при помилці відкочується; тимчасове locked/busy — повтор."""
@@ -145,12 +198,13 @@ class Buffer:
     async def put_many(self, readings: Iterable[Reading]) -> int:
         """Один INSERT-пакет = одна коротка транзакція. Ліміт розміру тут не перевіряється (це `enforce_limit`
         з задачі обслуговування): обрізання не повинне гальмувати цикл опитування."""
-        rows = [(r.code, to_iso_z(r.ts), r.value, r.text, r.q) for r in readings]
+        inserted = self.clock.now().timestamp()
+        rows = [(r.code, to_iso_z(r.ts), r.value, r.text, r.q, inserted) for r in readings]
         if not rows:
             return 0
 
         async def op(db: aiosqlite.Connection) -> None:
-            await db.executemany("INSERT INTO readings(code, ts, value, text, q) VALUES (?,?,?,?,?)", rows)
+            await db.executemany("INSERT INTO readings(code, ts, value, text, q, ins) VALUES (?,?,?,?,?,?)", rows)
             await db.commit()
             self._rows += len(rows)
 
@@ -184,6 +238,19 @@ class Buffer:
 
         row = await self._run(op)
         return parse_iso(row[0]) if row else None
+
+    async def oldest_inserted_at(self) -> datetime | None:
+        """Час вставки в буфер найстарішого показання (за id) — вік черги відправки. Рядки старого файлу (без `ins`)
+        оцінюються за `ts`."""
+
+        async def op(db: aiosqlite.Connection) -> Any:
+            async with db.execute("SELECT ins, ts FROM readings ORDER BY id LIMIT 1") as cur:
+                return await cur.fetchone()
+
+        row = await self._run(op)
+        if not row:
+            return None
+        return datetime.fromtimestamp(row[0], UTC) if row[0] is not None else parse_iso(row[1])
 
     async def ack(self, ids: Iterable[int]) -> int:
         """Видаляє рівно ці показання (одна транзакція); повертає кількість видалених."""

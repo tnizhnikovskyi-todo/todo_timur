@@ -133,10 +133,11 @@ def settings(tmp_path, monkeypatch, fake_odoo):
 
 
 @pytest.fixture
-def buffer(tmp_path):
+def buffer(tmp_path, vclock):
+    """Буфер на віртуальному годиннику (час вставки `ins` збігається з часом Pusher у тестах)."""
     from collector.core.buffer import Buffer
 
-    return Buffer(tmp_path / "buffer.sqlite", max_mb=200)
+    return Buffer(tmp_path / "buffer.sqlite", max_mb=200, clock=vclock)
 
 
 class FakeMqttClient:
