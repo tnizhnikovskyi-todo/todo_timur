@@ -24,7 +24,7 @@ Requirements and notes
 * Processing of events and sending of barrier commands are disabled by default.
 * The Gantt view of gate bookings is provided by the separate bridge Yard Gantt, which requires Odoo Enterprise.
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "category": "Inventory/Inventory",
     "author": "ToDo",
     "website": "https://todo.ltd",

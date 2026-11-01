@@ -3,6 +3,7 @@ from . import test_visit
 from . import test_booking
 from . import test_picking
 from . import test_gate
+from . import test_gate_ingest
 from . import test_lpr
 from . import test_commands
 from . import test_scale

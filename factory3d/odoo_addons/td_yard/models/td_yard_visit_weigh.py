@@ -79,12 +79,22 @@ class F3dYardGate(models.Model):
     @api.model
     def _td_yard_dispatch(self, readings):
         """Показання `yard/gates/*` (M-13) -> gate._td_yard_on_readings."""
+        # лише ворота й сигнали з цього пакета: без читання всіх воріт і всіх їхніх сигналів на кожному прийомі
+        codes = sorted({r["code"] for r in readings if isinstance(r.get("code"), str)})
+        sigs = (
+            self.env["td.signal"].sudo().with_context(active_test=False).search_fetch([("code", "in", codes)], ["code"])
+        )
+        if not sigs:
+            return
+        code_by_sig = {sig.id: sig.code for sig in sigs}
+        sig_fields = [role + "_signal_id" for role in self.ROLES]
+        domain = [("active", "=", True)] + ["|"] * (len(sig_fields) - 1) + [(f, "in", sigs.ids) for f in sig_fields]
         by_code = {}
-        for gate in self.sudo().search([("active", "=", True)]):
+        for gate in self.sudo().search_fetch(domain, sig_fields):
             for role in self.ROLES:
-                sig = gate[role + "_signal_id"]
-                if sig:
-                    by_code[sig.code] = (gate, role)
+                code = code_by_sig.get(gate[role + "_signal_id"].id)
+                if code:
+                    by_code[code] = (gate, role)
         groups = {}
         for r in readings:
             target = by_code.get(r.get("code"))
