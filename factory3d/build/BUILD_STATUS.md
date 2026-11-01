@@ -334,3 +334,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - Злито в deploy-гілку (чекає install_stand.sh): колектор 0.2.0 cebb0b0, емулятор 56b5c6d.
 - Далі: td_energy_scenario._td_engine_update (no-op write), td_bms_check last_ok щохвилини, N+1 у td_fire_zone
   _compute_request, VACUUM FULL td_viewer_event після першої чистки; пункт «А» (частота кронів) користувач відклав.
+- 01.11 перевірка перед одним install_stand: ревʼю стенду — безпечно (емулятор 788, колектор 214, yard 37 тестів; старий
+  буфер і знімки 3 старих версій піднімаються); e2e локально — PASS (пуші, СКУД з ін'єкцією, рестарти, Odoo 2 хв офлайн).
+  Задеплоєно a92419d: td_energy_control 1.0.3, td_bms 1.0.5, td_fire_safety 1.1.4, td_yard 1.0.2 (менше no-op write, N+1).
+  Для свіжого стенду (не наш): td.access.biostar_password, SIM_ODOO_* (+ hr.group_hr_user), URL сервера СКУД з Docker.
