@@ -7,7 +7,7 @@ from odoo.tests import BaseCase, tagged
 from odoo.addons.td_viewer3d.hooks import is_demo_db
 
 from odoo.addons.td_viewer3d.tools import dates, payload as payload_tools
-from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, deep_merge, default_delta
+from odoo.addons.td_viewer3d.tools.payload import DELTA_CURSOR_LAG, DeltaBuilder, deep_merge, default_delta
 
 from .common import F3dViewerBase
 
@@ -88,6 +88,16 @@ class TestDelta(F3dViewerBase):
         self.assertIsInstance(meta["now_ms"], int)
         self.assertEqual(meta["now_ms"] // 60000, dates.utc(meta["now"]).replace(tzinfo=timezone.utc).timestamp() // 60)
         self.assertRegex(res["ts"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+
+    def test_cursor_lags_behind_now(self):
+        """Курсор `ts` відстає на DELTA_CURSOR_LAG: подія, закомічена пізно з раннім `ts`, не загубиться."""
+        before = dates.real_now()
+        res = self._delta({})
+        after = dates.real_now()
+        cursor = dates.parse_iso_utc(res["ts"])
+        self.assertLessEqual(cursor, after - DELTA_CURSOR_LAG)
+        self.assertGreaterEqual(cursor, before - DELTA_CURSOR_LAG)
+        self.assertEqual(DELTA_CURSOR_LAG.total_seconds(), 2)
 
     def test_empty_delta(self):
         res = self._delta({})

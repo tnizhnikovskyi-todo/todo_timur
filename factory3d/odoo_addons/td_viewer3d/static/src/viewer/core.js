@@ -1756,6 +1756,7 @@ const metaNow = (m) => {
   const base = Date.parse(m.now.replace(" ", "T")), ms = Number(m.now_ms);
   return { base, frac: Number.isFinite(ms) ? ((ms % 60000) + 60000) % 60000 : 0 };
 };
+const SIM_RESYNC_BACK_MS = 90000; // на стільки клієнт може випередити сервер, перш ніж патч поверне годинник назад
 let playbackMode = "plan", userPlan = false, snapChecked = false, snapList = [], soLabel = null;
 function indexData() {
   idx.mo = new Map(D.productions.map((m) => [m.name, m]));
@@ -1919,10 +1920,13 @@ function applyPatch(patch) {
     }
     names.forEach((c) => changed.add(c));
   }
-  // патч лише посуває годинник уперед (інакше «синхр.» відкочувався б до :00 щоразу, якщо немає meta.now_ms із секундами)
+  // патч посуває годинник уперед (інакше «синхр.» відкочувався б до :00 щоразу, якщо немає meta.now_ms із секундами:
+  // це відставання < 60 с); а коли клієнт випередив сервер більше ніж на SIM_RESYNC_BACK_MS (завмерлий демо-годинник,
+  // кіоск поспішає) — повертаємо назад, інакше він ніколи б не синхронізувався
   if (patch.meta?.now) {
     const { base, frac } = metaNow(D.meta);
-    if (base + frac > simNow().getTime()) { simBase = base; simFrac = frac; simStart = Date.now(); }
+    const behind = simNow().getTime() - (base + frac);
+    if (behind < 0 || behind > SIM_RESYNC_BACK_MS) { simBase = base; simFrac = frac; simStart = Date.now(); }
   }
   indexData();
   if (lists.has("locations") || lists.has("pickings") || lists.has("productions") || lists.has("quality_checks")) {staleLocHist();}

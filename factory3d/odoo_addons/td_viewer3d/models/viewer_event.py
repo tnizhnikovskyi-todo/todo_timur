@@ -5,7 +5,7 @@ import time
 from datetime import timedelta
 from functools import partial
 
-from odoo import api, fields, models
+from odoo import api, fields, models, modules
 from odoo.tools import SQL
 
 from ..tools import dates
@@ -19,6 +19,7 @@ CODES_CAP = 500
 KEEP_HOURS_DEFAULT = 24  # скільки подій потрібно дельті; решта — лише журнал (знімки живуть окремо, snapshot_keep_days)
 PURGE_BATCH = 5000
 PURGE_SECONDS = 50
+PURGE_LOCK = 0x7D3D0E01  # ключ advisory-блокування чистки: щогодинний крон і щодобова ротація не працюють одночасно
 
 
 def _flag(value, default=True):
@@ -160,17 +161,28 @@ class F3dViewerEvent(models.Model):
     def _purge_old(self, keep_hours=None, batch=PURGE_BATCH, max_seconds=PURGE_SECONDS):
         """Видаляє події старші за `event_keep_hours` (дельта старішого `since` і так віддає «повний») пакетами по
         `batch` рядків прямим SQL (без ORM-кешу), не довше `max_seconds`; решта — наступним запуском.
-        Повертає кількість видалених."""
+        Повертає кількість видалених.
+
+        У кроні (`ir_cron_progress_id`) кожен пакет фіксується (commit): одна довга транзакція тримала б блокування
+        рядків і не пускала б автовакуум. Перед кожним пакетом береться `pg_try_advisory_xact_lock`: коли чистку вже
+        веде інший запуск (щогодинний крон ↔ щодобова ротація), цей пропускається (блокування знімається разом із
+        commit-ом, тож береться знову в кожній транзакції). Поза кроном (тести, RPC) — одна транзакція без commit."""
         started = time.monotonic()
         if keep_hours is None:
             keep_hours = _int(
                 self.env["ir.config_parameter"].sudo().get_param(PREFIX + "event_keep_hours"), KEEP_HOURS_DEFAULT
             )
         cutoff = fields.Datetime.now() - timedelta(hours=max(keep_hours, 1))
+        in_cron = bool(self.env.context.get("ir_cron_progress_id")) and not modules.module.current_test
+        cr = self.env.cr
         self.flush_model()  # прямий SQL нижче не бачить ще не записаних створень
         total = 0
         while True:
-            self.env.cr.execute(
+            cr.execute("SELECT pg_try_advisory_xact_lock(%s)", (PURGE_LOCK,))
+            if not cr.fetchone()[0]:
+                _logger.info("td.viewer.event: чистку вже веде інший запуск, пропущено")
+                break
+            cr.execute(
                 SQL(
                     "DELETE FROM td_viewer_event WHERE id IN "
                     "(SELECT id FROM td_viewer_event WHERE ts < %s ORDER BY ts LIMIT %s)",
@@ -178,8 +190,10 @@ class F3dViewerEvent(models.Model):
                     batch,
                 )
             )
-            deleted = self.env.cr.rowcount
+            deleted = cr.rowcount
             total += deleted
+            if in_cron:
+                self.env["ir.cron"]._commit_progress(deleted)
             if deleted < batch or time.monotonic() - started >= max_seconds:
                 break
         if total:

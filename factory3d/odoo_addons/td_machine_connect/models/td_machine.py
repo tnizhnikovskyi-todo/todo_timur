@@ -23,6 +23,7 @@ PENDING_SLACK_S = 30
 # DEC-20: паралельна транзакція — не помилка коду: рядок зайнятий (`NOWAIT`), змінений після знімка REPEATABLE READ
 # (`SerializationFailure`) або взаємне блокування. Такий верстат/завдання пропускається до наступного такту/опитування.
 CONTENTION_ERRORS = (pg_errors.SerializationFailure, pg_errors.LockNotAvailable, pg_errors.DeadlockDetected)
+_TICK_CURSOR = {}  # база → id останнього верстата, якого такт встиг обробити до кінця бюджету (продовження обходу)
 
 STATES = [
     ("working", "В роботі"),
@@ -320,24 +321,63 @@ class F3dMachine(models.Model):
         for machine in machines:
             try:
                 with self.env.cr.savepoint():
-                    machine._td_lock()
+                    machine._td_lock(nowait=True)  # push не стоїть у черзі за тактом чи OEE: воркер HTTP не чекає
+                    machine._td_drain()  # раніше відкладені показання — перед новими, у порядку часу
                     machine._td_apply(groups[machine.id])
                 stats["machines"] += 1
-            except CONTENTION_ERRORS as exc:  # DEC-20: не помилка, показання прийдуть наступним опитуванням
+            except CONTENTION_ERRORS as exc:
+                # DEC-20: не помилка. Показання `td.signal` уже прийняв, колектор їх підтвердив і не повторить, тож
+                # ставимо їх у чергу: наступний push цього верстата або такт (`_td_drain`) застосує їх за часом.
                 _logger.warning(
-                    "td.machine %s: паралельне оновлення (%s), показання пропущено", machine.code, type(exc).__name__
+                    "td.machine %s: паралельне оновлення (%s), показання відкладено", machine.code, type(exc).__name__
                 )
                 stats["locked"].append(machine.code)
+                self._td_queue(machine, groups[machine.id], stats)
             except Exception:
                 _logger.exception("td.machine %s: помилка обробки показань", machine.code)
                 stats["errors"].append(machine.code)
         return stats
 
-    def _td_lock(self):
-        """Блокування рядків верстатів до зміни стану (R-04 п. 0, R-09 п. 7) і свіжий стан після блокування."""
+    @api.model
+    def _td_queue(self, machine, items, stats):
+        """Показання, які не вдалось застосувати: у чергу `td.machine.backlog` (вставка без блокувань верстата)."""
+        try:
+            with self.env.cr.savepoint():
+                self.env["td.machine.backlog"]._td_put(machine.id, items)
+            stats["queued"] = stats.get("queued", 0) + len(items)
+        except Exception:
+            _logger.exception("td.machine %s: показання не вдалось відкласти, втрачено", machine.code)
+            stats["errors"].append(machine.code)
+
+    def _td_drain(self):
+        """Застосувати відкладені показання верстата (рядок уже заблоковано викликачем) і прибрати їх з черги.
+
+        Конкуренція йде догори (викликач її обробляє, черга лишається); інша помилка — «отруєна» пачка: лог і видалення,
+        щоб вона не блокувала нові показання верстата до кінця `BACKLOG_TTL`.
+        """
+        self.ensure_one()
+        rows = self.env["td.machine.backlog"].sudo().search([("machine_id", "=", self.id)])
+        if not rows:
+            return 0
+        try:
+            with self.env.cr.savepoint():
+                self._td_apply(rows._td_items())
+        except CONTENTION_ERRORS:
+            raise
+        except Exception:
+            _logger.exception("td.machine %s: відкладені показання не застосовано, відкинуто", self.code)
+        rows.unlink()
+        return len(rows)
+
+    def _td_lock(self, nowait=False):
+        """Блокування рядків верстатів до зміни стану (R-04 п. 0, R-09 п. 7) і свіжий стан після блокування.
+
+        `nowait` (push): зайнятий рядок — одразу `LockNotAvailable` (а не очікування й `SerializationFailure` після
+        нього), викликач відкладає показання в чергу.
+        """
         if self.ids:
             self.env.cr.execute(
-                "SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE",
+                "SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE" + (" NOWAIT" if nowait else ""),
                 (tuple(self.ids),),
                 log_exceptions=False,  # DEC-20: конкуренцію обробляє викликач, «bad query» в лог не потрібен
             )
@@ -646,7 +686,14 @@ class F3dMachine(models.Model):
     # --- крон ----------------------------------------------------------------------------------------
     @api.model
     def _cron_tick(self):
-        """Щохвилини: стан MC-DERIVED, відкладені переходи (R-02 п. 4), `_td_tick_extra` для кожного верстата."""
+        """Щохвилини: стан MC-DERIVED, відкладені переходи (R-02 п. 4), `_td_tick_extra` для кожного верстата,
+        відкладені показання (`_td_drain`).
+
+        Бюджет `TICK_BUDGET_S`: Odoo перевикликає крон, поки є `remaining`, а кожен виклик починав би з першого
+        верстата — решта голодувала б. Тому перерваний обхід продовжується з наступного id (пам'ять процесу, після
+        рестарту чи в іншому воркері — з початку), а після завершення обходу лічильник скидається. Виклик після
+        закінчення часу воркера (`cron_end_time`) нічого не робить.
+        """
         enabled = param_bool(self.env, "read_enabled", env_default(self.env))
         source = self.env.ref("td_machine_connect.source_mc_derived", raise_if_not_found=False)
         if source:
@@ -655,22 +702,36 @@ class F3dMachine(models.Model):
                 source.sudo().write({"state": wanted})
         if not enabled:
             return True
+        end = self.env.context.get("cron_end_time")
+        if self.env.context.get("ir_cron_progress_id") and end and time.monotonic() >= end:
+            self.env["ir.cron"]._commit_progress(remaining=1)  # час запуску вичерпано: решта — наступним запуском
+            return True
         now = fields.Datetime.now()
         started = time.monotonic()
+        Backlog = self.env["td.machine.backlog"]
+        Backlog._td_purge(now)
         # DEC-19: стабільний порядок (id), пачки з commit між ними, рядки, зайняті push, — SKIP LOCKED (без очікування).
         ids = self.sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
+        cursor = _TICK_CURSOR.pop(self.env.cr.dbname, None)
+        if cursor is not None:
+            ids = [i for i in ids if i > cursor] or ids
         Machine = self.sudo().with_context(f3d_mc_stats={})
         skipped = 0
         for pos in range(0, len(ids), TICK_BATCH):
             if time.monotonic() - started > TICK_BUDGET_S:
                 _logger.warning("td.machine: такт перевищив %s с, решту верстатів пропущено", TICK_BUDGET_S)
+                if pos:
+                    _TICK_CURSOR[self.env.cr.dbname] = ids[pos - 1]
                 break
             batch = Machine.browse(ids[pos : pos + TICK_BATCH])
             locked = batch._td_lock_skip_locked()
             skipped += len(batch) - len(locked)
+            queued = set(Backlog.sudo().search([("machine_id", "in", locked.ids)]).mapped("machine_id"))
             for machine in locked:
                 try:
                     with self.env.cr.savepoint():
+                        if machine.id in queued:
+                            machine._td_drain()
                         if machine.pending_state and machine.pending_since:
                             limit = machine.pending_since + timedelta(seconds=machine.micro_stop_s + PENDING_SLACK_S)
                             if now >= limit:

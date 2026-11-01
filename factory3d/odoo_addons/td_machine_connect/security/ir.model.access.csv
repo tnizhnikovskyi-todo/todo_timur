@@ -9,6 +9,7 @@ access_td_downtime_mrp_manager,td.downtime mrp manager,model_td_downtime,mrp.gro
 access_td_downtime_admin,td.downtime admin,model_td_downtime,td_factory3d.group_td_admin,1,1,1,1
 access_td_machine_event_user,td.machine.event user,model_td_machine_event,td_factory3d.group_td_user,1,0,0,0
 access_td_machine_event_admin,td.machine.event admin,model_td_machine_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_machine_backlog_admin,td.machine.backlog admin,model_td_machine_backlog,td_factory3d.group_td_admin,1,0,0,0
 access_td_machine_message_user,td.machine.message user,model_td_machine_message,td_factory3d.group_td_user,1,0,0,0
 access_td_machine_message_manager,td.machine.message manager,model_td_machine_message,td_factory3d.group_td_manager,1,1,1,1
 access_td_oee_shift_user,td.oee.shift user,model_td_oee_shift,td_factory3d.group_td_user,1,0,0,0

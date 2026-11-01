@@ -41,10 +41,10 @@ export const spanS = (live) => (live.end_ms != null ? (live.end_ms - live.start_
 
 /**
  * Секунд від тривоги на «зараз»: живий режим — годинник сервера з payload (`now_ms`) + час, що минув після його отримання
- * (`perfNow − recvPerf`); після завершення навчання кадр завмирає на кінці й зникає через `KEEP_AFTER_END_S` (10 хв). «Потік зміни» (`simMin` — київська хвилина доби
+ * (`perfNow − recvPerf`); `clockMs` — монотонний годинник шару (див. `applyData`), якщо задано, замість `live.now_ms`; після завершення навчання кадр завмирає на кінці й зникає через `KEEP_AFTER_END_S` (10 хв). «Потік зміни» (`simMin` — київська хвилина доби
  * з `api.simMinutes()`, VX-08) — відтворення того самого навчання за часом доби. `null` — нема що показувати.
  */
-export function elapsedAt(live, { perfNow = 0, recvPerf = 0, simMin = null } = {}) {
+export function elapsedAt(live, { perfNow = 0, recvPerf = 0, simMin = null, clockMs = null } = {}) {
     if (!live) {
         return null;
     }
@@ -53,7 +53,7 @@ export function elapsedAt(live, { perfNow = 0, recvPerf = 0, simMin = null } = {
         const e = simMin * 60 - kyivSecondsOfDay(live.start_ms);
         return e < 0 || (span != null && e > span + REPLAY_TAIL_S) ? null : e;
     }
-    const serverNow = live.now_ms + (perfNow - recvPerf);
+    const serverNow = (clockMs ?? live.now_ms) + (perfNow - recvPerf);
     if (span != null && (serverNow - live.end_ms) / 1000 > KEEP_AFTER_END_S) {
         return null; // навчання давно завершилось і ще не закрите: плашку й людей прибираємо
     }

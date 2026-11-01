@@ -1,5 +1,22 @@
 # Changelog
 
+## 19.0.1.4.4
+Оновлення: `-u` модуля (нова модель `td.machine.backlog`, одна таблиця; даних і міграцій немає).
+
+- **Push не губить показання верстата, зайнятого тактом чи OEE (B).** `_td_dispatch` блокував рядок верстата звичайним `FOR UPDATE`: push чекав рядки, які тримав такт або OEE-крон
+  (`_cron_oee` тримав усі верстати до одного commit-у), далі `SerializationFailure` відкидав показання верстата (`stats["locked"]`), хоча `td.signal` їх уже прийняв, а колектор підтвердив
+  (`rejected` колектор лише логує й відкидає) — зникали зміна стану, імпульс тривоги, мікрозупинка; воркери HTTP простоювали.
+  Тепер push блокує `FOR UPDATE NOWAIT` (`_td_lock(nowait=True)`), а показання верстата, який не вдалось заблокувати, ставить у чергу `td.machine.backlog` (ціле `machine_id` без FK: вставка не чекає рядка верстата,
+  JSON-показання). Чергу застосовує `_td_drain` у порядку часу під блокуванням верстата: наступний push цього верстата або такт `_cron_tick`; «отруєна» пачка логується й відкидається,
+  застарілі (> 1 год, `BACKLOG_TTL`) відкидаються з попередженням. У результаті `_td_dispatch` — ключ `queued`.
+- **`_cron_oee` комітить по верстату (B)** (`ir.cron._commit_progress`, у тестах — ні), як `_cron_tick`: рядки верстатів не тримаються весь запуск.
+- **Такт верстатів не голодує хвіст (C).** Після бюджету `TICK_BUDGET_S` Odoo перевикликав крон, а кожен виклик ішов з першого верстата. Тепер перерваний обхід продовжується з наступного id
+  (пам'ять процесу; інший воркер чи рестарт — з початку), після повного обходу лічильник скидається; виклик після `cron_end_time` нічого не робить (`remaining=1`), як `_cron_td_live_tick`.
+- **`td.signal._mark_stale` (D):** сигнал стану, який стався пропущений (зайнятий паралельною транзакцією), більше не ставить верстату `nodata` — лише сигнал, що справді став `stale` (або вже був); раніше верстат блимав у `nodata`.
+- Тести (`tests/test_concurrency.py`, `TestPushBacklog`): `test_push_locks_machine_row_nowait`, `test_contended_readings_are_queued_then_applied_by_tick`, `test_next_push_applies_queue_first`,
+  `test_stale_queue_is_purged_not_applied`, `test_poisoned_queue_is_dropped_and_does_not_block_machine`, `test_tick_resumes_after_budget_instead_of_restarting`, `test_tick_yields_when_worker_time_is_up`,
+  `test_mark_stale_skipped_signal_does_not_set_nodata`, `test_oee_cron_commits_per_machine`; наявні тести підлаштовано під `_td_lock(rec, nowait=False)`.
+
 ## 19.0.1.4.3
 - DEC-21 (зайві UPDATE `td_machine`): повтор показань без змін не викликає `write` верстата взагалі — сирі `raw_state`/`raw_mode`/`raw_alarm` і `pieces_last`
   пишуться лише коли значення змінилось (раніше `write` викликався на кожне показання, а відсіював його лише ORM). Мітки «останнє показання» (`raw_ts`, `pieces_ts`) без

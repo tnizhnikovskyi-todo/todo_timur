@@ -7,6 +7,7 @@ import copy
 import json
 import logging
 import re
+from datetime import timedelta
 
 from odoo import release
 
@@ -19,6 +20,9 @@ DEFAULT_GROUP = "td_factory3d.group_td_user"
 ENERGY_COST_GROUP = "td_energy.group_td_energy_cost"
 SCHEMA = "1.1"
 DELTA_MAX_BYTES = 200 * 1024
+# Курсор дельти (`ts`) відстає від «зараз»: подія пишеться з `ts` на precommit, а видима стає після commit; дельта в цей
+# проміжок її не бачить, і курсор «зараз» назавжди проскочив би повз неї. Дублікати безпечні (патч ідемпотентний).
+DELTA_CURSOR_LAG = timedelta(seconds=2)
 
 # 26 базових ключів верхнього рівня у порядку Додатка A.0 (X-24)
 BASE_KEYS = (
@@ -385,7 +389,7 @@ class DeltaBuilder(_Base):
     def _build(self):
         env = self.env
         now = dates.now(env)
-        ts = dates.iso_utc(dates.real_now())
+        ts = dates.iso_utc(dates.real_now() - DELTA_CURSOR_LAG)
         if self.changes is not None:
             changes = self.changes
         elif "td.viewer.event" in env:
