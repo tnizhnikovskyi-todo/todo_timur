@@ -47,6 +47,7 @@ def dump(world: World) -> dict[str, Any]:
         "seed": world.seed,
         "minute0": world.minute0,
         "catalog_hash": world.registry.catalog_hash,
+        "protocol_state": dict(world.protocol_state),
         "signals": {c: [s.value, _iso(s.ts), s.status, _iso(s.held_until)] for c, s in world.signals.items()},
         "devices": {c: d.model.to_dict() for c, d in world.devices.items()},
         "rng": {c: r.to_dict() for c, r in world._rngs.items()},
@@ -77,7 +78,7 @@ def restore(world: World, data: dict[str, Any]) -> None:
     # Годинник не відкочується після рестарту: за час, що сервіс стояв (реальний час від ``saved_at`` — він же
     # «real_at» знімка, пишеться в ``dump``), sim-час іде далі з поточним factor. Для real-time годинника
     # (factor 1, без demo-зсуву) це рівно реальний час, а свідомий demo-зсув зберігається. Знімок без
-    # ``saved_at`` (не трапляється: ``load`` його вимагає) — як раніше, sim_now знімка. Ручний FakeClock
+    # ``saved_at`` (``load`` підставляє mtime файлу) — як раніше, sim_now знімка. Ручний FakeClock
     # (тести) не рухається сам, тому для нього без поправки.
     if not world.clock.manual and (saved_at := data.get("saved_at")) is not None:
         sim_now += timedelta(seconds=max(0.0, time.time() - float(saved_at)) * world.clock.factor)
@@ -94,6 +95,7 @@ def restore(world: World, data: dict[str, Any]) -> None:
     world.trucks, world.people, world.balance = w["trucks"], w["people"], w["balance"]
     world.maintenance_closed = set(w["maintenance_closed"])
     world.tick_count = w.get("tick_count", 0)
+    world.protocol_state = dict(data.get("protocol_state") or {})  # id BioStar; старий знімок — {}
     world.minute0 = data.get("minute0", world.minute0)
     if sh := w.get("shift"):  # вікна змін — ДО моделей: розклад СКУД ділить людей на бригади за ними
         world.shift.shifts = tuple((dtime.fromisoformat(a), dtime.fromisoformat(b)) for a, b in sh["shifts"])
@@ -130,7 +132,15 @@ def load(state_dir: str | Path, max_age_s: float = MAX_AGE_S) -> dict[str, Any] 
     except (ValueError, KeyError, TypeError, OSError) as exc:
         log.warning("snapshot ignored (corrupt): %s", exc)
         return None
-    age = time.time() - data["saved_at"]
+    saved_at = data.get("saved_at")
+    if isinstance(saved_at, bool) or not isinstance(saved_at, (int, float)):  # немає/пошкоджено: за mtime файлу
+        try:
+            saved_at = path.stat().st_mtime
+        except OSError:
+            saved_at = time.time()
+        log.warning("snapshot has no valid saved_at, using file mtime")
+        data["saved_at"] = saved_at
+    age = time.time() - saved_at
     if age > max_age_s:
         log.warning("snapshot ignored (too old: %.0f s)", age)
         return None

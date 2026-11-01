@@ -153,6 +153,35 @@ async def test_event_ids_not_restart_at_1(bs, world, monkeypatch):
     assert BioStarStore(world)._next_id > row["id"]  # новий (порожній) стор продовжує нумерацію, а не з 1
 
 
+def test_event_ids_survive_snapshot_when_clock_steps_back(world, registry, monkeypatch):
+    """Id BioStar лежать у знімку: рестарт із годинником, що відстав, не видає вже використані id (UNIQUE в Odoo)."""
+    import json
+
+    from iot_sim.core.clock import FakeClock
+    from iot_sim.core.world import World
+
+    store = BioStarStore(world)
+    ids = [store.add_event("OPSAW1", "ACR-IN", 4102, tna_key="1", ts=DAY)["id"] for _ in range(3)]
+    assert ids[-1] == ids[0] + 2
+    data = json.loads(json.dumps(world.snapshot()))
+    assert data["protocol_state"]["biostar_next_id"] == ids[-1] + 1
+
+    w2 = World(registry, seed=world.seed, clock=FakeClock("2026-10-12T10:30:00"))
+    w2.restore(data)
+    real = time.time()
+    monkeypatch.setattr("iot_sim.models.access.time.time", lambda: real - 3600)  # годинник пішов назад на годину
+    assert event_id_seed() < ids[0]
+    store2 = BioStarStore(w2)
+    assert store2.add_event("OPSAW1", "ACR-IN", 4102, ts=DAY)["id"] == ids[-1] + 1
+    assert store2.add_event("OPSAW1", "ACR-IN", 4102, ts=DAY)["id"] == ids[-1] + 2
+
+    old = dict(data)  # знімок до появи ключа: restore не падає, лічильник — лише за годинником
+    old.pop("protocol_state")
+    w3 = World(registry, seed=world.seed, clock=FakeClock("2026-10-12T10:30:00"))
+    w3.restore(old)
+    assert w3.protocol_state == {}
+
+
 async def test_event_row_format(bs):
     bs.srv.store.add_event("OPSAW1", "ACR-IN", 4102, tna_key="1", ts=DAY + dt.timedelta(seconds=10))
     col = await search(bs, limit=10)

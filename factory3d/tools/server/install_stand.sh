@@ -30,24 +30,35 @@
 #   файл TD_SECRETS_FILE (строки KEY=VALUE, по умолчанию /etc/td-stand/secrets.env, если есть);
 #   значение, уже записанное в /etc/td-stand/*.env прошлым запуском.
 #
-# Переменные (значения по умолчанию подходят для timur-o19demo): TD_REPO (по умолчанию — клон, в котором лежит этот
-#   скрипт), TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON, TD_USER, TD_PUSH_PORT, TD_SIM_PORT_BIOSTAR_HTTP (HTTP-порт
-#   эмулятора BioStar, по умолчанию 8081; пишется в iot-sim.env как SIM_PORT_BIOSTAR_HTTP), TD_IP_FILTER (0 — не
-#   ограничивать сеть служб), TD_IP_ALLOW (доп. сети в фильтр служб, например 172.16.0.0/12 — чтобы Odoo из
-#   контейнера Docker достучался до эмулятора и имитатора ретранслятора; через пробел), TD_SIM_PORT_GENSET_RELAY (порт
-#   имитатора ретранслятора, по умолчанию 8087), TD_GENSET_RELAY_HOSTID (hostid имитатора; по умолчанию не совпадает с
-#   hostid настоящего модуля), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
-# Пример (Odoo в Docker на 8094, порт 8081 занят ретранслятором SmartGen):
+# Переменные TD_* (TD_REPO — по умолчанию клон, в котором лежит этот скрипт): TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON,
+#   TD_USER, TD_COLLECTOR_CODE, TD_PUSH_PORT, TD_SIM_PORT_BIOSTAR_HTTP (HTTP-порт эмулятора BioStar; пишется в iot-sim.env
+#   как SIM_PORT_BIOSTAR_HTTP), TD_IP_FILTER (0 — не ограничивать сеть служб), TD_IP_ALLOW (доп. сети в фильтр служб,
+#   например 172.16.0.0/12 — чтобы Odoo из контейнера Docker достучался до эмулятора и имитатора ретранслятора; через
+#   пробел), TD_SIM_PORT_GENSET_RELAY (порт имитатора ретранслятора), TD_GENSET_RELAY_HOSTID (hostid имитатора), TD_HARDEN
+#   (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
+# ЗНАЧЕНИЯ ПОВТОРНОГО ЗАПУСКА. Для каждого TD_* порядок такой: 1) задано в команде; 2) уже установлено (читается из
+#   /etc/td-stand/collector.env, iot-sim.env, genset-relay.env и unit-файлов); 3) по умолчанию (только для первой установки:
+#   TD_ODOO_URL=http://127.0.0.1:8069, TD_SIM_PORT_BIOSTAR_HTTP=8081, TD_SIM_PORT_GENSET_RELAY=8087, TD_PUSH_PORT=8080,
+#   TD_IP_FILTER=1, TD_IP_ALLOW пусто). Поэтому «голый» повторный запуск (только TD_SECRETS_FILE) НИЧЕГО не меняет: порт
+#   BioStar, адрес Odoo и сети TD_IP_ALLOW остаются прежними. Если заданное значение ОТЛИЧАЕТСЯ от установленного, скрипт
+#   остановится с препятствием, пока не добавлен флаг --confirm-change (или TD_CONFIRM_CHANGE=1). TD_SIM_PORT_BIOSTAR_HTTP
+#   по умолчанию 8081 только если порт свободен; занятый чужим процессом 8081 (на timur-o19demo — настоящий ретранслятор
+#   SmartGen) всегда препятствие. --check печатает каждое эффективное TD_* значение и его источник (задан / установлен /
+#   по умолчанию); секреты не печатаются.
+# Пример (Odoo в Docker на 8094, порт 8081 занят ретранслятором SmartGen) — первая установка:
 #   sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
-#       bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
+#       TD_IP_ALLOW=172.16.0.0/12 bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
 # Токены имитатора ретранслятора (TD_RELAY_API_TOKEN для Odoo, TD_RELAY_SIM_TOKEN для /sim/v1) обычно выдаёт менеджер:
 #   stand_odoo_setup.py genset --token-file td-stand.secrets (дописывает строки KEY=VALUE); без них скрипт генерирует свои.
+# Odoo для людей СКУД в режиме scenario (SIM_ODOO_*, необязательно): в файле секретов (или TD_SIM_ODOO_URL/DB/USER/APIKEY)
+#   строки SIM_ODOO_DB, SIM_ODOO_USER, SIM_ODOO_APIKEY (и SIM_ODOO_URL; по умолчанию = TD_ODOO_URL) — скрипт переносит их в
+#   iot-sim.env, значения не печатаются. Права пользователя и альтернатива (iot-sim.local.env) — в STAND.md.
 # Режимы проверки: --no-system — не трогать пользователей, apt, systemd, mosquitto (файлы пишутся под TD_ROOT).
 set -euo pipefail
 umask 022
 
 # ---------------------------------------------------------------- аргументы
-CHECK=0 UNINSTALL=0 PURGE=0 STATUS_ONLY=0 NO_MQTT=0 NO_SYSTEM=0 NO_RELAY=0
+CHECK=0 UNINSTALL=0 PURGE=0 STATUS_ONLY=0 NO_MQTT=0 NO_SYSTEM=0 NO_RELAY=0 CONFIRM_CHANGE="${TD_CONFIRM_CHANGE:-0}"
 usage() { sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 for arg in "$@"; do
     case "$arg" in
@@ -58,6 +69,7 @@ for arg in "$@"; do
         --no-mqtt) NO_MQTT=1 ;;
         --no-system) NO_SYSTEM=1 ;;
         --no-relay) NO_RELAY=1 ;;
+        --confirm-change) CONFIRM_CHANGE=1 ;;
         -h | --help) usage; exit 0 ;;
         *) echo "Неизвестный аргумент: $arg (см. --help)" >&2; exit 2 ;;
     esac
@@ -74,25 +86,13 @@ ETC="${TD_ETC:-$ROOT/etc/td-stand}"
 STATE="${TD_STATE:-$ROOT/var/lib/td-stand}"
 UNIT_DIR="${TD_UNIT_DIR:-$ROOT/etc/systemd/system}"
 HOSTS_FILE="${TD_HOSTS_FILE:-$ROOT/etc/hosts}"
-SVC_USER="${TD_USER:-td-stand}"
-ODOO_URL="${TD_ODOO_URL:-http://127.0.0.1:8069}"
-ODOO_URL="${ODOO_URL%/}"
-ODOO_SERVICE="${TD_ODOO_SERVICE:-odoo}"
-COLLECTOR_CODE="${TD_COLLECTOR_CODE:-COL-MAIN}"
-IP_FILTER="${TD_IP_FILTER:-1}"
-IP_ALLOW_EXTRA="${TD_IP_ALLOW:-}"                      # доп. сети для фильтра служб, напр. 172.16.0.0/12 (Odoo в Docker → эмулятор)
-HARDEN="${TD_HARDEN:-1}"                             # 0 — без песочницы mount-namespace (LXC и т. п., status=226/NAMESPACE)
+# Значения TD_* (SVC_USER, ODOO_URL, ODOO_SERVICE, COLLECTOR_CODE, IP_FILTER, IP_ALLOW_EXTRA, HARDEN, BIOSTAR_HTTP_PORT,
+# GENSET_RELAY_PORT, GENSET_RELAY_HOSTID, PUSH_PORT, PORTS_*) определяет resolve_params: задано > установлено > по умолчанию.
 SECRETS_FILE="${TD_SECRETS_FILE:-/etc/td-stand/secrets.env}"
 HOSTS_NAMES="iot-sim mosquitto collector"
 MQ_CONF="${TD_MOSQUITTO_CONF:-/etc/mosquitto/conf.d/td-stand.conf}"
 MQ_PASSWD="${TD_MOSQUITTO_PASSWD:-/etc/mosquitto/td-stand.passwd}"
-BIOSTAR_HTTP_PORT="${TD_SIM_PORT_BIOSTAR_HTTP:-8081}"   # 8081 на timur-o19demo занят ретранслятором SmartGen → 8181
-GENSET_RELAY_PORT="${TD_SIM_PORT_GENSET_RELAY:-8087}"   # имитатор ретранслятора SmartGen; 8081 занят настоящим → не он
-# hostid имитатора намеренно не равен hostid настоящего модуля: при ошибочном адресе Odoo получит 404 «unknown hostid»
-GENSET_RELAY_HOSTID="${TD_GENSET_RELAY_HOSTID:-53494D47454E534554443730}"
-PORTS_SIM_TCP="502 4001 4840 $BIOSTAR_HTTP_PORT 8082 8083 8090 8443 50000"
-PUSH_PORT="${TD_PUSH_PORT:-8080}"
-PORTS_COL_TCP="$PUSH_PORT 9108"
+PORTS_SIM_FIXED="502 4001 4840 8082 8083 8090 8443 50000"   # фиксированные порты эмулятора (порт BioStar HTTP — отдельно)
 RECIPE=3                                             # версия способа установки: меняется — venv пересобираются
 COL_PLUGINS="f3d_collector_bms f3d_collector_yard machine_connect td_collector_energy"   # плагины сборщика (W2: energy_ctl)
 SIM_ENV="$ETC/iot-sim.env"
@@ -108,23 +108,6 @@ plan() { printf '   БУДЕТ    %s\n' "$*"; }
 warn() { printf '   ВНИМАНИЕ %s\n' "$*" >&2; WARNS=$((WARNS + 1)); }
 block() { printf '   ПРЕПЯТСТВИЕ %s\n' "$*" >&2; BLOCKERS=$((BLOCKERS + 1)); }
 die() { printf '%s  ОШИБКА: %s\n' "$(date +%H:%M:%S)" "$*" >&2; exit 1; }
-for net in $IP_ALLOW_EXTRA; do
-    [[ "$net" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}(/[0-9]{1,2})?$ || "$net" =~ ^[0-9a-fA-F]*:[0-9a-fA-F:]*(/[0-9]{1,3})?$ ]] \
-        || die "TD_IP_ALLOW: «$net» — нужна сеть вида 172.16.0.0/12 (несколько — через пробел)"
-done
-[[ "$BIOSTAR_HTTP_PORT" =~ ^[0-9]+$ ]] && ((BIOSTAR_HTTP_PORT >= 1 && BIOSTAR_HTTP_PORT <= 65535)) \
-    || die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT: нужен номер порта 1…65535"
-case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 " in
-    *" $BIOSTAR_HTTP_PORT "*) die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT совпадает с другим портом стенда" ;;
-esac
-[[ "$GENSET_RELAY_PORT" =~ ^[0-9]+$ ]] && ((GENSET_RELAY_PORT >= 1 && GENSET_RELAY_PORT <= 65535)) \
-    || die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT: нужен номер порта 1…65535"
-case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 $BIOSTAR_HTTP_PORT " in
-    *" $GENSET_RELAY_PORT "*) die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT совпадает с другим портом стенда" ;;
-esac
-[[ "$GENSET_RELAY_PORT" != 8081 ]] ||
-    die "TD_SIM_PORT_GENSET_RELAY=8081: на timur-o19demo этот порт занят настоящим ретранслятором SmartGen, возьмите другой (по умолчанию 8087)"
-[[ "$GENSET_RELAY_HOSTID" =~ ^[0-9A-Za-z]{1,24}$ ]] || die "TD_GENSET_RELAY_HOSTID: до 24 символов A-Z a-z 0-9"
 have() { command -v "$1" >/dev/null 2>&1; }
 real() { [[ $CHECK -eq 0 ]]; }                       # true, когда реально меняем систему
 sysctl_on() { [[ $NO_SYSTEM -eq 0 ]] && have systemctl && [[ -d /run/systemd/system ]]; }
@@ -153,6 +136,119 @@ secret_in() {
     [[ -n "$v" ]] || v="$(kv_get "$SECRETS_FILE" "$name")"
     [[ -n "$v" ]] || v="$(env_get "$envf" "$key")"
     printf '%s' "$v"
+}
+
+# ---------------------------------------------------------------- значения TD_*: задано > установлено > по умолчанию
+PARAM_ROWS=""        # строки для show_params: ИМЯ|значение|источник|установлено|изменение(0/1)
+CHANGES=""           # заданные значения, отличные от установленных (нужен --confirm-change)
+SYS_ACTIVE=0         # td-iot-sim.service работает (заполняет resolve_params)
+
+norm_plain() { printf '%s' "$1"; }
+norm_url() { printf '%s' "${1%/}"; }
+norm_nets() { local a; read -ra a <<<"$1"; [[ ${#a[@]} -gt 0 ]] || return 0; printf '%s\n' "${a[@]}" | LC_ALL=C sort -u | tr '\n' ' ' | sed 's/ $//'; }
+
+# unit_val ФАЙЛ ШАБЛОН_sed — значение из unit-файла (последнее совпадение)
+unit_val() { [[ -r "$1" ]] && sed -n "$2" "$1" | tail -1 || true; }
+
+# resolve ИМЯ_TD ПЕРЕМЕННАЯ УСТАНОВЛЕНО ИЗВЕСТНО(0/1) ПО_УМОЛЧАНИЮ [НОРМАЛИЗАТОР] [ПУСТОЕ_ЗАДАНО_ОК]
+# Результат — в ПЕРЕМЕННАЯ. ИЗВЕСТНО=1 — источник установленного значения существует (даже если значение пустое).
+resolve() {
+    local td=$1 var=$2 inst=$3 known=$4 def=$5 norm=${6:-norm_plain} empty_ok=${7:-0} val src chg=0
+    if [[ -n "${!td:-}" || ( "$empty_ok" == 1 && -n "${!td+x}" ) ]]; then
+        val="${!td:-}" src="задан"
+        if [[ "$known" == 1 ]] && [[ "$("$norm" "$val")" != "$("$norm" "$inst")" ]]; then
+            chg=1
+            CHANGES="$CHANGES$td: установлено «${inst:-пусто}», задано «${val:-пусто}»"$'\n'
+        fi
+    elif [[ "$known" == 1 && ( -n "$inst" || "$empty_ok" == 1 ) ]]; then
+        val="$inst" src="установлен"
+    else
+        val="$def" src="по умолчанию"
+    fi
+    printf -v "$var" '%s' "$val"
+    PARAM_ROWS="$PARAM_ROWS$td|${val:-(пусто)}|$src|${inst:-}|$chg"$'\n'
+}
+
+net_re4='^[0-9]{1,3}(\.[0-9]{1,3}){3}(/[0-9]{1,2})?$'
+net_re6='^[0-9a-fA-F]*:[0-9a-fA-F:]*(/[0-9]{1,3})?$'
+
+resolve_params() {
+    local i_sim_unit="$UNIT_DIR/td-iot-sim.service" i_col_unit="$UNIT_DIR/td-collector.service" f net
+    local sim_unit_known=0 col_env_known=0 sim_env_known=0 rel_env_known=0
+    [[ -e "$i_sim_unit" ]] && sim_unit_known=1
+    [[ -e "$COL_ENV" ]] && col_env_known=1
+    [[ -e "$SIM_ENV" ]] && sim_env_known=1
+    [[ -e "$RELAY_ENV" ]] && rel_env_known=1
+    for f in "$i_sim_unit" "$i_col_unit" "$COL_ENV" "$SIM_ENV" "$RELAY_ENV"; do
+        if [[ -e "$f" && ! -r "$f" ]]; then
+            warn "$f не читается (нужен root): установленные значения не учтены, «установлено» может показаться значением по умолчанию — запустите через sudo"
+        fi
+    done
+    local i_ip_allow="" i_filter="" i_harden="" i_user="" i_svc=""
+    if [[ $sim_unit_known -eq 1 ]]; then
+        i_ip_allow="$(sed -n 's/^IPAddressAllow=//p' "$i_sim_unit" 2>/dev/null | grep -vx 'localhost' | tr '\n' ' ' | sed 's/ $//' || true)"
+        if grep -qx 'IPAddressDeny=any' "$i_sim_unit" 2>/dev/null; then i_filter=1; else i_filter=0; fi
+        if grep -qx 'ProtectSystem=strict' "$i_sim_unit" 2>/dev/null; then i_harden=1; else i_harden=0; fi
+        i_user="$(unit_val "$i_sim_unit" 's/^User=//p')"
+    fi
+    [[ ! -e "$i_col_unit" ]] || i_svc="$(unit_val "$i_col_unit" 's/^After=network\.target td-iot-sim\.service mosquitto\.service \(.*\)\.service$/\1/p')"
+
+    resolve TD_USER SVC_USER "$i_user" "$sim_unit_known" td-stand
+    resolve TD_ODOO_URL ODOO_URL "$(env_get "$COL_ENV" F3D_ODOO_URL)" "$col_env_known" http://127.0.0.1:8069 norm_url
+    ODOO_URL="${ODOO_URL%/}"
+    resolve TD_ODOO_SERVICE ODOO_SERVICE "$i_svc" "$([[ -n "$i_svc" ]] && echo 1 || echo 0)" odoo
+    resolve TD_COLLECTOR_CODE COLLECTOR_CODE "$(env_get "$COL_ENV" F3D_COLLECTOR_CODE)" "$col_env_known" COL-MAIN
+    resolve TD_PUSH_PORT PUSH_PORT "$(env_get "$COL_ENV" F3D_HTTP_PUSH_PORT)" "$col_env_known" 8080
+    resolve TD_IP_FILTER IP_FILTER "$i_filter" "$sim_unit_known" 1
+    resolve TD_IP_ALLOW IP_ALLOW_EXTRA "$i_ip_allow" "$sim_unit_known" "" norm_nets 1
+    resolve TD_HARDEN HARDEN "$i_harden" "$sim_unit_known" 1
+    resolve TD_SIM_PORT_BIOSTAR_HTTP BIOSTAR_HTTP_PORT "$(env_get "$SIM_ENV" SIM_PORT_BIOSTAR_HTTP)" "$sim_env_known" 8081
+    if [[ $NO_RELAY -eq 0 ]]; then
+        resolve TD_SIM_PORT_GENSET_RELAY GENSET_RELAY_PORT "$(env_get "$RELAY_ENV" RELAY_PORT)" "$rel_env_known" 8087
+        # hostid имитатора намеренно не равен hostid настоящего модуля: при ошибочном адресе Odoo получит 404 «unknown hostid»
+        resolve TD_GENSET_RELAY_HOSTID GENSET_RELAY_HOSTID "$(env_get "$RELAY_ENV" RELAY_HOSTID)" "$rel_env_known" 53494D47454E534554443730
+    else
+        GENSET_RELAY_PORT="${TD_SIM_PORT_GENSET_RELAY:-8087}" GENSET_RELAY_HOSTID="${TD_GENSET_RELAY_HOSTID:-53494D47454E534554443730}"
+    fi
+    PORTS_SIM_TCP="$PORTS_SIM_FIXED $BIOSTAR_HTTP_PORT"
+    PORTS_COL_TCP="$PUSH_PORT 9108"
+    sysctl_on && systemctl is-active -q td-iot-sim.service 2>/dev/null && SYS_ACTIVE=1 || true
+
+    for net in $IP_ALLOW_EXTRA; do
+        [[ "$net" =~ $net_re4 || "$net" =~ $net_re6 ]] ||
+            die "TD_IP_ALLOW: «$net» — нужна сеть вида 172.16.0.0/12 (несколько — через пробел)"
+    done
+    [[ "$IP_FILTER" =~ ^[01]$ && "$HARDEN" =~ ^[01]$ ]] || die "TD_IP_FILTER и TD_HARDEN: 0 или 1"
+    [[ "$BIOSTAR_HTTP_PORT" =~ ^[0-9]+$ ]] && ((BIOSTAR_HTTP_PORT >= 1 && BIOSTAR_HTTP_PORT <= 65535)) ||
+        die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT: нужен номер порта 1…65535"
+    [[ "$PUSH_PORT" =~ ^[0-9]+$ ]] && ((PUSH_PORT >= 1 && PUSH_PORT <= 65535)) || die "TD_PUSH_PORT=$PUSH_PORT: нужен номер порта 1…65535"
+    case " $PORTS_SIM_FIXED $PUSH_PORT 9108 " in
+        *" $BIOSTAR_HTTP_PORT "*) die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT совпадает с другим портом стенда" ;;
+    esac
+    [[ "$GENSET_RELAY_PORT" =~ ^[0-9]+$ ]] && ((GENSET_RELAY_PORT >= 1 && GENSET_RELAY_PORT <= 65535)) ||
+        die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT: нужен номер порта 1…65535"
+    case " $PORTS_SIM_FIXED $PUSH_PORT 9108 $BIOSTAR_HTTP_PORT " in
+        *" $GENSET_RELAY_PORT "*) die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT совпадает с другим портом стенда" ;;
+    esac
+    [[ "$GENSET_RELAY_PORT" != 8081 ]] ||
+        die "TD_SIM_PORT_GENSET_RELAY=8081: на timur-o19demo этот порт занят настоящим ретранслятором SmartGen, возьмите другой (по умолчанию 8087)"
+    [[ "$GENSET_RELAY_HOSTID" =~ ^[0-9A-Za-z]{1,24}$ ]] || die "TD_GENSET_RELAY_HOSTID: до 24 символов A-Z a-z 0-9"
+}
+
+# show_params — эффективные значения TD_* и источник (задан / установлен / по умолчанию); секреты не печатаются.
+show_params() {
+    local td val src inst chg
+    log "параметры стенда (значение · источник: задан / установлен / по умолчанию)"
+    while IFS='|' read -r td val src inst chg; do
+        [[ -n "$td" ]] || continue
+        if [[ "$chg" == 1 ]]; then
+            printf '   %-28s %-34s %s, ИЗМЕНЕНИЕ установленного «%s»\n' "$td" "$val" "$src" "${inst:-пусто}"
+        else
+            printf '   %-28s %-34s %s\n' "$td" "$val" "$src"
+        fi
+    done <<<"$PARAM_ROWS"
+    printf '   %-28s %s\n' "TD_CONFIRM_CHANGE" "$([[ "$CONFIRM_CHANGE" == 1 ]] && echo 1 || echo 0)"
+    printf '   %-28s %s\n' "TD_SECRETS_FILE" "$SECRETS_FILE ($([[ -r "$SECRETS_FILE" ]] && echo найден || echo нет))"
 }
 
 # put_file ПУТЬ РЕЖИМ ВЛАДЕЛЕЦ ГРУППА — содержимое из stdin. Результат: PUT=same|new|changed. В режиме --check не пишет.
@@ -226,6 +322,32 @@ check_ports() {
     fi
 }
 
+# port_pid ПОРТ — pid слушающего TCP-порт процесса (пусто: порт свободен или pid не виден без root)
+port_pid() { port_lines | awk -v p="$1" '$1 == "tcp" && $5 ~ (":" p "$") { if (match($7, /pid=[0-9]+/)) { print substr($7, RSTART + 4, RLENGTH - 4); exit } }'; }
+
+# check_biostar_port — порт HTTP BioStar не должен оказаться портом чужого процесса (на timur-o19demo 8081 — настоящий
+# ретранслятор SmartGen). check_ports пропускает порты эмулятора, пока служба работает, поэтому здесь отдельно:
+# работающая служба владеет только тем портом, что уже установлен; новый или чужой занятый порт — препятствие.
+check_biostar_port() {
+    local busy pid main inst
+    have ss || return 0
+    inst="$(env_get "$SIM_ENV" SIM_PORT_BIOSTAR_HTTP)"
+    busy="$(busy_ports tcp "$BIOSTAR_HTTP_PORT")"
+    if [[ "$BIOSTAR_HTTP_PORT" == 8081 && "$PARAM_ROWS" == *"TD_SIM_PORT_BIOSTAR_HTTP|8081|по умолчанию|"* && -n "$busy" ]]; then
+        block "TD_SIM_PORT_BIOSTAR_HTTP не задан и не установлен, а порт 8081 занят ($busy): на timur-o19demo это настоящий ретранслятор SmartGen. Задайте порт явно, например TD_SIM_PORT_BIOSTAR_HTTP=8181"
+        return 0
+    fi
+    [[ $SYS_ACTIVE -eq 1 ]] || return 0                 # без работающей службы порт уже проверил check_ports
+    [[ -n "$busy" ]] || return 0
+    if [[ "$inst" == "$BIOSTAR_HTTP_PORT" ]]; then
+        pid="$(port_pid "$BIOSTAR_HTTP_PORT")"
+        main="$(systemctl show -p MainPID --value td-iot-sim.service 2>/dev/null || true)"
+        if [[ -n "$pid" && "$pid" == "$main" ]]; then ok "порт BioStar $BIOSTAR_HTTP_PORT занят нашим td-iot-sim (pid $pid)"; return 0; fi
+        if [[ -z "$pid" ]]; then warn "порт BioStar $BIOSTAR_HTTP_PORT занят ($busy), владельца не видно (нужен root): проверьте, что это td-iot-sim"; return 0; fi
+    fi
+    block "порт BioStar HTTP $BIOSTAR_HTTP_PORT занят не td-iot-sim: $busy"
+}
+
 odoo_probe() {
     local code tok
     code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 "$ODOO_URL/web/health" 2>/dev/null || true)"
@@ -268,8 +390,21 @@ relay_tokens() {
     done
 }
 
+# params_conflicts — заданное значение отличается от установленного: без --confirm-change это препятствие.
+params_conflicts() {
+    local line
+    [[ -n "$CHANGES" ]] || return 0
+    while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        if [[ "$CONFIRM_CHANGE" == 1 ]]; then warn "будет изменено (--confirm-change): $line"
+        else block "$line. Это изменит уже установленный стенд и перезапустит службы: уберите TD_* из команды (останется установленное) или добавьте --confirm-change"; fi
+    done <<<"$CHANGES"
+}
+
 preflight() {
     log "проверка окружения"
+    show_params
+    params_conflicts
     [[ $EUID -eq 0 ]] || if real; then die "запустите через sudo"; else warn "запущено не от root: часть проверок (секреты, порты процессов) неполная"; fi
     if [[ -r /etc/os-release ]] && ! grep -qiE '^ID(_LIKE)?=.*(debian|ubuntu)' /etc/os-release; then
         warn "ОС не Debian/Ubuntu: установка пакетов (apt) не будет работать"
@@ -306,8 +441,49 @@ preflight() {
     local url_re='^https?://[][A-Za-z0-9._:-]+(/[^[:space:]]*)?$'
     [[ "$ODOO_URL" =~ $url_re ]] || block "TD_ODOO_URL «$ODOO_URL» некорректен"
     check_ports
+    check_biostar_port
+    resolve_sim_odoo
     odoo_probe
     check_hosts_conflicts
+}
+
+# ---------------------------------------------------------------- SIM_ODOO_*: люди СКУД из Odoo в режиме scenario
+# sim_odoo_val ИМЯ (URL|DB|USER|APIKEY) — приоритет как у секретов: TD_SIM_ODOO_<ИМЯ> (окружение, ..._FILE, файл секретов),
+# строка SIM_ODOO_<ИМЯ> файла секретов, значение, уже записанное в iot-sim.env. Значения не печатаются.
+sim_odoo_val() {
+    local k=$1 v
+    v="$(secret_in "TD_SIM_ODOO_$k" /dev/null x)"        # /dev/null: без чтения iot-sim.env на этом шаге
+    [[ -n "$v" ]] || v="$(kv_get "$SECRETS_FILE" "SIM_ODOO_$k")"
+    [[ -n "$v" ]] || v="$(env_get "$SIM_ENV" "SIM_ODOO_$k")"
+    printf '%s' "$v"
+}
+
+SIM_ODOO_URL="" SIM_ODOO_DB="" SIM_ODOO_USER="" SIM_ODOO_APIKEY=""
+resolve_sim_odoo() {
+    local host
+    SIM_ODOO_DB="$(sim_odoo_val DB)" SIM_ODOO_USER="$(sim_odoo_val USER)" SIM_ODOO_APIKEY="$(sim_odoo_val APIKEY)"
+    SIM_ODOO_URL="$(sim_odoo_val URL)"
+    if [[ -z "$SIM_ODOO_DB$SIM_ODOO_USER$SIM_ODOO_APIKEY" ]]; then
+        warn "SIM_ODOO_* не заданы: в режиме scenario эмулятор не читает людей из Odoo, СКУД останется без людей. Добавьте SIM_ODOO_DB/SIM_ODOO_USER/SIM_ODOO_APIKEY в файл секретов или в iot-sim.local.env (STAND.md, «Люди СКУД из Odoo»)"
+        SIM_ODOO_URL=""
+        return 0
+    fi
+    [[ -n "$SIM_ODOO_URL" ]] || SIM_ODOO_URL="$ODOO_URL"
+    SIM_ODOO_URL="${SIM_ODOO_URL%/}"
+    if [[ -z "$SIM_ODOO_DB" || -z "$SIM_ODOO_USER" || -z "$SIM_ODOO_APIKEY" ]]; then
+        block "SIM_ODOO_*: нужны все три — SIM_ODOO_DB, SIM_ODOO_USER, SIM_ODOO_APIKEY (SIM_ODOO_URL по умолчанию = TD_ODOO_URL)"
+        return 0
+    fi
+    [[ "$SIM_ODOO_DB" =~ ^[A-Za-z0-9._-]{1,63}$ ]] || block "SIM_ODOO_DB некорректен (A-Z a-z 0-9 . _ -, до 63 символов)"
+    [[ "$SIM_ODOO_USER" =~ ^[A-Za-z0-9._@+-]{1,128}$ ]] || block "SIM_ODOO_USER некорректен (A-Z a-z 0-9 . _ @ + -, до 128 символов)"
+    valid_secret "$SIM_ODOO_APIKEY" || block "SIM_ODOO_APIKEY некорректен (32-256 символов A-Z a-z 0-9 . _ ~ + / = -)"
+    [[ "$SIM_ODOO_URL" =~ ^https?://[][A-Za-z0-9._:-]+(/[^[:space:]]*)?$ ]] || block "SIM_ODOO_URL «$SIM_ODOO_URL» некорректен"
+    host="$(printf '%s' "$SIM_ODOO_URL" | sed -E 's#^https?://\[?([^]/:]+)\]?.*#\1#')"
+    case ",mosquitto,odoo19,collector,genset_relay,127.0.0.1," in
+        *",$host,"*) ;;
+        *) warn "SIM_ODOO_URL: хост $host вне SIM_ALLOW_OUTBOUND по умолчанию (mosquitto,odoo19,collector,genset_relay,127.0.0.1): добавьте его в SIM_ALLOW_OUTBOUND в iot-sim.local.env" ;;
+    esac
+    ok "SIM_ODOO_*: url=$SIM_ODOO_URL db=$SIM_ODOO_DB user=$SIM_ODOO_USER apikey=задан (${#SIM_ODOO_APIKEY} симв., не печатается)"
 }
 
 # ---------------------------------------------------------------- пользователь и каталоги
@@ -443,6 +619,22 @@ relay_sim_lines() {
     printf 'SIM_GENSET_RELAY_URL=http://127.0.0.1:%s\nSIM_GENSET_RELAY_TOKEN=%s\n' "$GENSET_RELAY_PORT" "$R_SIM_TOKEN"
 }
 
+# sim_odoo_lines — SIM_ODOO_* для iot_sim (people из hr.employee в scenario); пусто, если не заданы.
+sim_odoo_lines() {
+    [[ -n "$SIM_ODOO_APIKEY" && -n "$SIM_ODOO_DB" && -n "$SIM_ODOO_USER" && -n "$SIM_ODOO_URL" ]] || return 0
+    printf 'SIM_ODOO_URL=%s\nSIM_ODOO_DB=%s\nSIM_ODOO_USER=%s\nSIM_ODOO_APIKEY=%s\n' \
+        "$SIM_ODOO_URL" "$SIM_ODOO_DB" "$SIM_ODOO_USER" "$SIM_ODOO_APIKEY"
+}
+
+# sim_extra_lines — хвост iot-sim.env: ретранслятор и SIM_ODOO_*; без пустых строк, чтобы файл не менялся зря (рестарт службы).
+sim_extra_lines() {
+    local a b
+    a="$(relay_sim_lines)" b="$(sim_odoo_lines)"
+    printf '%s' "$a"
+    [[ -z "$a" || -z "$b" ]] || printf '\n'
+    printf '%s' "$b"
+}
+
 write_envs() {
     local s_opcua s_wood s_jobs s_bio s_mq_sim s_mq_col s_lpr_sec s_lpr_tok
     g() {
@@ -478,7 +670,7 @@ SIM_OPCUA_PASS=$s_opcua
 SIM_MQTT_URL=mqtt://sim:$s_mq_sim@mosquitto:1883
 SIM_LPR_PUSH_URL=http://collector:$PUSH_PORT/f3d/lpr/$s_lpr_sec
 SIM_LPR_PUSH_TOKEN=$s_lpr_tok
-$(relay_sim_lines)
+$(sim_extra_lines)
 EOF
     [[ "$PUT" == same ]] || CHANGED_SIM=1
     if [[ $NO_RELAY -eq 0 ]]; then
@@ -874,6 +1066,7 @@ do_uninstall() {
 # ---------------------------------------------------------------- main
 main() {
     [[ $CHECK -eq 0 ]] || log "РЕЖИМ ПРОВЕРКИ: ничего не меняю, только показываю план"
+    resolve_params
     if [[ $STATUS_ONLY -eq 1 ]]; then show_status; return 0; fi
     if [[ $UNINSTALL -eq 1 ]]; then
         [[ $EUID -eq 0 || $CHECK -eq 1 ]] || die "запустите через sudo"

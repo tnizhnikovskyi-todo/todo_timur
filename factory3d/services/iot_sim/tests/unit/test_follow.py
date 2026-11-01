@@ -377,6 +377,49 @@ def test_readonly_client_has_no_write_methods():
     assert OdooReadOnly("", "", "", "").configured is False
 
 
+async def test_readonly_client_times_out_on_hung_server():
+    """Odoo приймає з'єднання й мовчить: виклик завершується таймаутом, а не висить у потоці вічно."""
+    import socket
+    import time as _time
+
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(5)  # accept() не викликаємо: з'єднання встановлюється, відповіді нема
+    try:
+        c = OdooReadOnly(f"http://127.0.0.1:{srv.getsockname()[1]}", "db", "u", "k", timeout=0.3)
+        t0 = _time.monotonic()
+        with pytest.raises(OSError):  # socket.timeout == TimeoutError
+            await c.search_read("mrp.workorder", [], ["id"])
+        assert _time.monotonic() - t0 < 3
+    finally:
+        srv.close()
+
+
+async def test_readonly_client_wait_for_caps_blocking_call(monkeypatch):
+    """Навіть якщо потік завис поза сокетом, await обмежений ``timeout × 4``."""
+    import threading
+    import time as _time
+
+    release = threading.Event()
+    c = OdooReadOnly("http://odoo", "db", "u", "k", timeout=0.1)
+    monkeypatch.setattr(c, "_call", lambda *a, **kw: release.wait(5))
+    t0 = _time.monotonic()
+    try:
+        with pytest.raises(TimeoutError):
+            await c.search_count("res.partner", [])
+        assert _time.monotonic() - t0 < 2
+    finally:
+        release.set()
+
+
+def test_readonly_client_proxy_has_socket_timeout():
+    c = OdooReadOnly("http://odoo:8069/", "db", "u", "k", timeout=7.0)
+    conn = c._proxy("object")._ServerProxy__transport.make_connection("odoo:8069")
+    assert conn.timeout == 7.0
+    sconn = OdooReadOnly("https://odoo", "db", "u", "k", timeout=3.0)._proxy("common")._ServerProxy__transport
+    assert sconn.make_connection("odoo").timeout == 3.0
+
+
 def test_readonly_client_respects_allow_list():
     from iot_sim.core.outbound import OutboundDenied, OutboundGuard
 

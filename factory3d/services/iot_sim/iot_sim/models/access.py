@@ -327,6 +327,7 @@ class Access(Model):
             "on_site": c.on_site,
             "ptr": c.ptr,
             "last_ts": c.last_ts,
+            "drill_id": c.drill_id,  # інакше рестart під час навчальної тривоги знову видає unlock + FIRE
             "day": c.day.isoformat() if c.day else None,
             "events": [dict(e, datetime=e["datetime"].isoformat()) for e in c.events],
         }
@@ -343,6 +344,11 @@ class Access(Model):
             c.ptr = d.get("ptr", 0)
             c.last_ts = d.get("last_ts", c.schedule[c.ptr - 1][0] if 0 < c.ptr <= len(c.schedule) else None)
         c.on_site = d.get("on_site", 0)
+        if "drill_id" in d:
+            c.drill_id = d["drill_id"]
+        else:  # знімок до появи ключа: поточну тривогу вважаємо вже обробленою (без повторної пачки подій)
+            view = drill_view(self.world)
+            c.drill_id = view["id"] if view and view["steps"]["doors"] else None
         last: dict[str, str] = {}  # хто всередині — за останнім проходом ACR-IN у журналі
         for e in sorted((e for e in c.events if e["device"] == "ACR-IN" and e["user_id"]), key=lambda e: e["id"]):
             if e["tna_key"] in ("1", "2"):

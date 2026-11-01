@@ -47,8 +47,32 @@ ISA_STATE = {
 }
 
 
+class _TimeoutMixin:
+    """Транспорт XML-RPC із таймаутом сокета (``ServerProxy`` за замовчуванням чекає безкінечно)."""
+
+    timeout: float = 10.0
+
+    def make_connection(self, host: Any) -> Any:
+        conn = super().make_connection(host)  # type: ignore[misc]
+        conn.timeout = self.timeout  # HTTPConnection бере timeout у connect(); кеш-з'єднання теж
+        return conn
+
+
+class _Transport(_TimeoutMixin, xmlrpc.client.Transport):
+    pass
+
+
+class _SafeTransport(_TimeoutMixin, xmlrpc.client.SafeTransport):
+    pass
+
+
 class OdooReadOnly:
-    """XML-RPC клієнт лише для читання. Усі виклики — у потоці (``asyncio.to_thread``)."""
+    """XML-RPC клієнт лише для читання. Усі виклики — у потоці (``asyncio.to_thread``).
+
+    Завислий Odoo не блокує опитування: сокет має таймаут ``timeout`` (на кожну операцію), а await у ``_to_thread``
+    обмежений ``timeout × 4`` (авторизація + виклик, кожен — connect + читання); після цього — ``TimeoutError``,
+    яку ``FollowOdoo`` рахує як помилку читання (stale, ``people`` — попередження).
+    """
 
     ALLOWED = ("search_read", "read", "search_count", "fields_get")
 
@@ -64,7 +88,10 @@ class OdooReadOnly:
     def _proxy(self, path: str) -> xmlrpc.client.ServerProxy:
         if self.guard is not None:
             self.guard.check_url(self.url)
-        return xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/{path}", allow_none=True)
+        url = f"{self.url}/xmlrpc/2/{path}"
+        transport = (_SafeTransport if url.lower().startswith("https:") else _Transport)()
+        transport.timeout = self.timeout
+        return xmlrpc.client.ServerProxy(url, transport=transport, allow_none=True)
 
     def _call(self, model: str, method: str, args: list[Any], kwargs: dict[str, Any]) -> Any:
         if method not in self.ALLOWED:
@@ -76,17 +103,22 @@ class OdooReadOnly:
             self._uid = int(uid)  # type: ignore[arg-type]
         return self._proxy("object").execute_kw(self.db, self._uid, self.apikey, model, method, args, kwargs)
 
+    async def _to_thread(self, model: str, method: str, args: list[Any], kwargs: dict[str, Any]) -> Any:
+        return await asyncio.wait_for(
+            asyncio.to_thread(self._call, model, method, args, kwargs), timeout=max(self.timeout, 0.1) * 4
+        )
+
     async def search_read(self, model: str, domain: list[Any], fields: list[str], **kw: Any) -> list[dict[str, Any]]:
-        return await asyncio.to_thread(self._call, model, "search_read", [domain], {"fields": fields, **kw})
+        return await self._to_thread(model, "search_read", [domain], {"fields": fields, **kw})  # type: ignore[no-any-return]
 
     async def read(self, model: str, ids: list[int], fields: list[str]) -> list[dict[str, Any]]:
-        return await asyncio.to_thread(self._call, model, "read", [ids], {"fields": fields})
+        return await self._to_thread(model, "read", [ids], {"fields": fields})  # type: ignore[no-any-return]
 
     async def search_count(self, model: str, domain: list[Any]) -> int:
-        return await asyncio.to_thread(self._call, model, "search_count", [domain], {})
+        return await self._to_thread(model, "search_count", [domain], {})  # type: ignore[no-any-return]
 
     async def fields_get(self, model: str, attributes: list[str] | None = None) -> dict[str, Any]:
-        return await asyncio.to_thread(self._call, model, "fields_get", [], {"attributes": attributes or ["type"]})
+        return await self._to_thread(model, "fields_get", [], {"attributes": attributes or ["type"]})  # type: ignore[no-any-return]
 
 
 def _m2o_id(v: Any) -> int | None:

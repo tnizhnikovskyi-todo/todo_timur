@@ -30,6 +30,19 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor) + имитатор ретран�
     sudo bash install_stand.sh --status                                         # службы, health, ответ Odoo
     sudo bash install_stand.sh --uninstall [--purge]                            # снять службы и venv; Odoo и БД не трогает
     sudo TD_SECRETS_FILE=… bash install_stand.sh --no-relay                     # без имитатора ретранслятора (как было раньше)
+    sudo TD_SECRETS_FILE=… TD_…=… bash install_stand.sh --check --confirm-change  # осознанная смена уже установленного значения
+    bash factory3d/tools/server/test_install_stand.sh                            # самопроверка скрипта во временном каталоге (без sudo, без системы)
+
+**Повторный запуск не меняет установленное.** Для каждого `TD_*` порядок такой: 1) значение, заданное в команде; 2) уже
+установленное (читается из `/etc/td-stand/collector.env`, `iot-sim.env`, `genset-relay.env` и unit-файлов: адрес Odoo, порты
+BioStar/ретранслятора/push, `TD_IP_ALLOW`, `TD_IP_FILTER`, `TD_HARDEN`, код сборщика, имя службы Odoo); 3) значение по умолчанию
+(только при первой установке). «Голый» повторный запуск (`sudo TD_SECRETS_FILE=… bash install_stand.sh`) поэтому оставляет порт
+BioStar, адрес Odoo и сети `TD_IP_ALLOW` как есть и ничего не перезапускает. `--check` печатает каждое эффективное значение и его источник
+(`задан` / `установлен` / `по умолчанию`; секреты не печатаются). Если заданное значение **отличается** от установленного,
+скрипт останавливается с препятствием (код 3) и просит `--confirm-change` (или `TD_CONFIRM_CHANGE=1`), потому что изменение
+перепишет env, unit и перезапустит службы. Порт BioStar HTTP по умолчанию 8081 берётся только если он свободен: занятый чужим
+процессом 8081 (на timur-o19demo — настоящий ретранслятор SmartGen) всегда препятствие; для работающей службы владельцем
+считается только её собственный PID (`systemctl show -p MainPID`).
 
 Токены можно передать иначе: переменные `TD_COLLECTOR_TOKEN` / `TD_SIM_API_TOKEN` / `TD_RELAY_API_TOKEN` /
 `TD_RELAY_SIM_TOKEN`, файлы `TD_COLLECTOR_TOKEN_FILE` / `TD_SIM_API_TOKEN_FILE` / `TD_RELAY_API_TOKEN_FILE` /
@@ -47,7 +60,8 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor) + имитатор ретран�
 не совпадает с hostid настоящего модуля), `TD_PYTHON`, `TD_IP_FILTER=0` (не ограничивать сеть служб),
 `TD_IP_ALLOW` (доп. сети в фильтр `IPAddressAllow` служб через пробел, например `172.16.0.0/12`, чтобы Odoo из
 контейнера Docker обращался к эмулятору; фильтр остаётся включённым), `TD_HARDEN=0` (без песочницы systemd: нужен, если в `journalctl` у службы `status=226/NAMESPACE`, например в LXC),
-`--no-mqtt` (не ставить брокер).
+`--no-mqtt` (не ставить брокер). Значения по умолчанию (только первая установка): Odoo `http://127.0.0.1:8069`, BioStar HTTP 8081,
+ретранслятор 8087, push 8080, `TD_IP_FILTER=1`, `TD_IP_ALLOW` пусто, `TD_HARDEN=1`; дальше действует «повторный запуск не меняет установленное» (см. выше).
 
 **timur-o19demo** (Odoo в Docker, опубликован на хосте как 127.0.0.1:8094; 127.0.0.1:8081 занят ретранслятором SmartGen,
 его не трогаем; клон — `/opt/timur-o19/timur-o19e/git/todo_timur`, пути `/mnt/f3d-addons` на хосте нет):
@@ -56,7 +70,9 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor) + имитатор ретран�
         TD_IP_ALLOW=172.16.0.0/12 \
         bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
 
-Затем та же команда без `--check`. Обращение Odoo → эмулятор (`td.iot_sim.url`, сценарии и сбои из пульта) из контейнера
+Затем та же команда без `--check`. Дальше обновления кода идут «голой» командой (`sudo TD_SECRETS_FILE=… bash …/install_stand.sh`): адрес Odoo, порт 8181 и
+`TD_IP_ALLOW` берутся из установленных файлов; если `--check` пишет «ИЗМЕНЕНИЕ установленного» там, где вы ничего менять не хотели,
+остановитесь: файлы стенда уже кто-то перезаписал значениями по умолчанию — передайте правильные `TD_*` явно и добавьте `--confirm-change`. Обращение Odoo → эмулятор (`td.iot_sim.url`, сценарии и сбои из пульта) из контейнера
 в сети bridge не попадёт на `127.0.0.1:8090` хоста: менеджер задаёт `td.iot_sim.url` = адрес хоста со стороны
 контейнера (шлюз сети compose, на timur-o19demo `http://172.18.0.1:8090`; `stand_odoo_setup.py params` с `TD_SIM_URL`),
 а установка — `TD_IP_ALLOW=172.16.0.0/12`, чтобы фильтр служб пропускал сеть Docker. Сбор показаний это не затрагивает.
@@ -214,6 +230,47 @@ UDP 47808, 50001; имитатор ретранслятора TCP 8087 (`TD_SIM_
 (сценарии лишь выставляют флаги, а ATS в запасном режиме §8.14), поэтому пока генератор по сценариям не реагирует; вручную:
 `POST /sim/v1/mains {"available": false}`, затем `POST /sim/v1/load {"kw": 348}` (Bearer `RELAY_SIM_TOKEN`).
 
+## Люди СКУД из Odoo (SIM_ODOO_*) и BioStar в Odoo
+
+**Зачем.** В режиме `scenario` эмулятор берёт людей для СКУД (BioStar, журнал проходов) из `hr.employee` с заполненным `barcode`:
+на старте и затем раз в `SIM_ODOO_PEOPLE_S` (600 с). Без `SIM_ODOO_*` людей нет, журнал СКУД пуст и «turnstile/on_site» остаются нулевыми
+(на свежем стенде это молчаливое состояние: ошибок в журнале нет). Читается только `search_read` по `hr.employee`; запись в Odoo невозможна.
+
+**Пользователь Odoo** (отдельный внутренний пользователь, например `simreader`, не `admin`): тип «Внутренний пользователь»
+и группа **`hr.group_hr_user`** («Сотрудники / Сотрудник» — без неё поле `barcode` не читается и Odoo вернёт ошибку доступа).
+Режиму `follow_odoo` (`SIM_MODE=follow_odoo`) дополнительно нужно чтение `mrp.workorder`/`mrp.workcenter`, `stock.picking`,
+`stock.picking.batch`, `stock.move`, `stock.location`, `maintenance.equipment`/`maintenance.request`, `resource.calendar.attendance`
+(группы Производство / Пользователь, Склад / Пользователь, Обслуживание / Пользователь). API-ключ создаёт сам пользователь:
+Настройки → Профиль → Безопасность аккаунта → «Новый API-ключ» (показывается один раз).
+
+**Куда положить (значения не печатаются ни скриптом, ни `--check`).** Любой из двух способов:
+
+1. Файл секретов (`TD_SECRETS_FILE`, права 0600, не в git и не в чат): строки `SIM_ODOO_DB=odoo`, `SIM_ODOO_USER=simreader`,
+   `SIM_ODOO_APIKEY=…` и при необходимости `SIM_ODOO_URL=…` (по умолчанию = `TD_ODOO_URL`); те же имена с префиксом `TD_` или
+   переменные `TD_SIM_ODOO_*` / `TD_SIM_ODOO_*_FILE` тоже годятся. Установка перенесёт их в `/etc/td-stand/iot-sim.env`
+   (0640 root:td-stand), повторный запуск без файла сохранит записанное. Нужны все три: DB, USER, APIKEY (иначе препятствие);
+   нет ни одного — предупреждение «SIM_ODOO_* не заданы».
+2. Вручную в `/etc/td-stand/iot-sim.local.env` (скрипт его не трогает и он перекрывает `iot-sim.env`): `SIM_ODOO_URL`, `SIM_ODOO_DB`,
+   `SIM_ODOO_USER`, `SIM_ODOO_APIKEY`; затем `systemctl restart td-iot-sim`.
+
+Адрес Odoo у эмулятора (служба на хосте) — `http://127.0.0.1:8094` (на timur-o19demo), а не `172.18.0.1`. Исходящие соединения эмулятора
+ограничены `SIM_ALLOW_OUTBOUND` (по умолчанию `mosquitto,odoo19,collector,genset_relay,127.0.0.1`): другой хост нужно добавить в
+`iot-sim.local.env`, а сетевой фильтр службы (`IPAddressAllow=localhost` + `TD_IP_ALLOW`) должен его пропускать.
+Проверка (токен из env, на экран не выводится): `sudo bash -c '. /etc/td-stand/iot-sim.env; curl -s -K - http://127.0.0.1:8090/sim/v1/status <<<"header = \"Authorization: Bearer $SIM_API_TOKEN\""'` —
+в блоке `odoo` свежий `last_ok`, а в `journalctl -u td-iot-sim` нет предупреждений «people»; через минуту-две в Odoo появляются события СКУД.
+Сеть Odoo → эмулятор здесь не участвует: ходит сам эмулятор.
+
+**BioStar в Odoo (`td_access`), менеджер.**
+
+| Параметр Odoo | Значение | Откуда |
+|---|---|---|
+| `td.access.biostar_password` (Настройки → СКУД → «Пароль BioStar») | `SIM_BIOSTAR_PASS` из `/etc/td-stand/iot-sim.env` (генерируется один раз; логин `admin`, `SIM_BIOSTAR_USER`) | `sudo grep ^SIM_BIOSTAR_PASS= /etc/td-stand/iot-sim.env` — копировать вручную, не в чат и не в git |
+| `td.access.server` → «URL сервера» | Odoo в Docker не видит `iot-sim`: `https://172.18.0.1:8443` (шлюз compose-сети; HTTPS-порт BioStar 8443 фиксирован, менять `TD_SIM_PORT_BIOSTAR_HTTP` для Odoo не нужно) | сид `td_access` ставит `https://iot-sim:8443` — годится только когда Odoo на самом хосте |
+| `td.access.server` → «Перевіряти сертифікат» | выключить: сертификат эмулятора самоподписанный (`/var/lib/td-stand/sim/certs`) | — |
+| сеть | служба `td-iot-sim` пропускает контейнеры Docker только при установке с `TD_IP_ALLOW=172.16.0.0/12`; проверка из контейнера: `curl -sk -o /dev/null -w '%{http_code}\n' https://172.18.0.1:8443/api/login` (ответ любой, кроме таймаута, = порт достижим) | `TD_IP_ALLOW` |
+
+Нейтрализация БД (`td_access/data/neutralize.sql`) удаляет `td.access.biostar_password` и сбрасывает сервер в `offline`: после неё параметр задаётся заново.
+
 ## Диагностика
 
     sudo bash install_stand.sh --status
@@ -231,6 +288,8 @@ UDP 47808, 50001; имитатор ретранслятора TCP 8087 (`TD_SIM_
 | pip не скачивает пакеты | нужен доступ к PyPI с сервера; прокси — через `HTTPS_PROXY` в окружении sudo (`sudo -E`) |
 | источник `MQTT-MOBILE` offline | брокер не поднят: `systemctl status mosquitto`; в `/etc/mosquitto` уже были свои `listener`, скрипт их не менял (настройте вручную: пользователи `sim`, `collector`, пароли из env-файлов) |
 | `genset`: «показаний пока нет», связь offline | имитатор не ответил Odoo: служба не запущена (`systemctl status td-genset-relay`), токен API в Odoo не совпал (401: повторите установку с файлом из `genset --token-file`) или контейнер не достучался до `172.18.0.1:8087` (`TD_IP_ALLOW`, фаервол хоста); крон подхватит данные сам |
+| `--check` пишет «установлено «X», задано «Y»» и препятствие про `--confirm-change` | значение в команде не совпало с установленным. Не хотели менять — уберите `TD_*` (останется установленное). Хотели — добавьте `--confirm-change`. Если «установлено» — значения по умолчанию (8081, 8069, пусто), файлы уже были перезаписаны «голым» запуском старой версии скрипта: передайте правильные значения явно с `--confirm-change` |
+| СКУД без людей, `odoo.last_ok` пуст | не заданы `SIM_ODOO_*` или у пользователя нет `hr.group_hr_user` (см. «Люди СКУД из Odoo») |
 | сеть служб ограничена `IPAddressAllow=localhost`, а нужен внешний доступ | `TD_IP_FILTER=0` и повторная установка, либо drop-in `systemctl edit …` |
 
 Имитатор ретранслятора не имеет отношения к настоящему ретранслятору SmartGen на 127.0.0.1:8081: другой порт (8087), другой

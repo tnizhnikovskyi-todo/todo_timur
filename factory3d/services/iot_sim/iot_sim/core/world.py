@@ -194,6 +194,7 @@ class World:
         self.runs: dict[str, Any] = {}  # заповнює ScenarioRunner
         self.odoo_stale = False
         self.tick_count = 0
+        self.protocol_state: dict[str, Any] = {}  # лічильники протоколів, що живуть у знімку (``biostar_next_id``)
         self.last_tick_real: float | None = None
         self._hooks: dict[str, list[Callable[[World, float], None]]] = {s: [] for s in HOOK_STAGES}
         self._tick_cbs: list[Callable[[World], None]] = []

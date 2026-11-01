@@ -33,6 +33,7 @@ from iot_sim.protocols.woodstore_api import UvicornRunner
 
 log = logging.getLogger("iot_sim.biostar")
 
+NEXT_ID_KEY = "biostar_next_id"  # ключ ``world.protocol_state``: лічильник id подій у знімку
 SESSION_TTL_S = 30 * 60
 MAX_SESSIONS = 10
 MAX_LIMIT = 2000
@@ -115,10 +116,20 @@ class BioStarStore:
         self.world, self.login, self.password, self._clock = world, login, password, clock
         self.sessions: dict[str, float] = {}
         self.events: list[dict[str, Any]] = []
-        self._next_id = event_id_seed()  # журнал у пам'яті: після рестарту id не повторюють видані Odoo (UNIQUE)
+        self._seed = event_id_seed()  # журнал у пам'яті: після рестарту id не повторюють видані Odoo (UNIQUE)
         self.requests = 0
         self._by_code = {d[1]: d for d in DEVICES}
         world.events.subscribe(self._on_event)
+
+    @property
+    def _next_id(self) -> int:
+        """Наступний id: не менший за годинниковий seed і за збережений у знімку (годинник міг піти назад)."""
+        return max(self._seed, int(self.world.protocol_state.get(NEXT_ID_KEY, 0)))
+
+    @_next_id.setter
+    def _next_id(self, value: int) -> None:
+        self._seed = value
+        self.world.protocol_state[NEXT_ID_KEY] = value
 
     # --- події --------------------------------------------------------------------------
     def _on_event(self, ev: Event) -> None:
@@ -160,8 +171,9 @@ class BioStarStore:
     ) -> dict[str, Any]:
         ts = ts or self.world.now()
         dev = self._by_code.get(device) or DEVICES[0]
+        eid = self._next_id
         row = {
-            "id": self._next_id,
+            "id": eid,
             "ts": ts.astimezone(dt.UTC),
             "user_id": user_id,
             "device": dev[0],
@@ -170,7 +182,7 @@ class BioStarStore:
             "code": int(code),
             "tna_key": str(tna_key or ""),
         }
-        self._next_id += 1
+        self._next_id = eid + 1  # і в world.protocol_state -> знімок
         self.events.append(row)
         if len(self.events) > 100_000:
             del self.events[:10_000]
