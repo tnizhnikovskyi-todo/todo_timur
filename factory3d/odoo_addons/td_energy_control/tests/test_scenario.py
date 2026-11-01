@@ -1,5 +1,6 @@
 """AC-159…AC-164, AC-169: сценарії автоматики, чипи, версія конфігурації."""
 
+from contextlib import contextmanager
 from datetime import timedelta
 
 from odoo.exceptions import AccessError, ValidationError
@@ -11,6 +12,12 @@ from .common import NOW, TAGS, TestControlCommon
 
 @tagged(*TAGS)
 class TestScenario(TestControlCommon):
+    @contextmanager
+    def capture_queries(self):
+        queries = []
+        yield from self._patchExecute(queries)
+        queries[:] = [q.decode() if isinstance(q, bytes) else q for q in queries]
+
     def sc(self, code):
         return self.Scenario.search([("code", "=", code)])
 
@@ -127,3 +134,59 @@ class TestScenario(TestControlCommon):
         self.State._td_report({"collector": "X", "config_version_applied": 1})
         state.invalidate_recordset()
         self.assertGreaterEqual(state.applied_version, pfc.config_version)
+
+    def test_engine_report_writes_only_on_change(self):  # API-25: без UPDATE на кожен звіт
+        peak, night = self.sc("peak"), self.sc("night")
+        version = max(peak.config_version, night.config_version)
+        body = {"peak": {"state": "armed", "facts": {"margin_kw": 402}}, "night": {"state": "armed"}}
+        self.State._td_report({"collector": "X", "config_version_applied": version, "scenarios": body})
+        self.assertEqual((peak.engine_state, peak.engine_facts, peak.engine_ts), ("armed", {"margin_kw": 402}, NOW))
+        self.assertEqual((night.engine_state, night.engine_facts or {}), ("armed", {}))
+        # той самий звіт за секунду: жодного запису (ні engine_ts, ні write_date)
+        later = NOW + timedelta(seconds=10)
+        env_later = self.env(context=dict(self.env.context, f3d_now=later))
+        wd = peak.write_date
+        with self.capture_queries() as queries:
+            env_later["td.energy.control.state"]._td_report(
+                {"collector": "X", "config_version_applied": version, "scenarios": body}
+            )
+        scen = [q for q in queries if "td_energy_scenario" in q]
+        self.assertEqual([q for q in scen if q.lstrip().upper().startswith("UPDATE")], [])
+        self.assertEqual(len([q for q in scen if q.lstrip().upper().startswith("SELECT")]), 1)  # один пошук на звіт
+        peak.invalidate_recordset()
+        self.assertEqual((peak.engine_ts, peak.write_date), (NOW, wd))
+        # зміна факту/стану — пишеться одразу, engine_ts оновлюється
+        body["peak"]["facts"] = {"margin_kw": 380}
+        body["night"] = {"state": "active", "facts": {"until": "06:00"}}
+        env_later["td.energy.control.state"]._td_report(
+            {"collector": "X", "config_version_applied": version, "scenarios": body}
+        )
+        peak.invalidate_recordset()
+        night.invalidate_recordset()
+        self.assertEqual((peak.engine_facts, peak.engine_ts), ({"margin_kw": 380}, later))
+        self.assertEqual((night.engine_state, night.engine_ts), ("active", later))
+
+    def test_engine_report_touch_keeps_state_text_fresh(self):  # engine_ts не старіє за 2·heartbeat_stale_s
+        peak = self.sc("peak")
+        version = peak.config_version
+        body = {"peak": {"state": "armed", "facts": {"margin_kw": 402}}}
+        self.State._td_report({"collector": "X", "config_version_applied": version, "scenarios": body})
+        stale_s = self.State._stale_s()
+        touch_s = self.Scenario._td_engine_touch_s()
+        self.assertLess(touch_s, stale_s)
+        # звіт раніше за інтервал `touch` — без запису; пізніше — лише engine_ts
+        soon = NOW + timedelta(seconds=touch_s - 1)
+        env_soon = self.env(context=dict(self.env.context, f3d_now=soon))
+        env_soon["td.energy.scenario"]._td_engine_update("peak", body["peak"], version)
+        peak.invalidate_recordset()
+        self.assertEqual(peak.engine_ts, NOW)
+        past = NOW + timedelta(seconds=touch_s + 1)
+        env_past = self.env(context=dict(self.env.context, f3d_now=past))
+        self.assertTrue(env_past["td.energy.scenario"]._td_engine_update("peak", body["peak"], version))
+        peak.invalidate_recordset()
+        self.assertEqual((peak.engine_ts, peak.engine_facts), (past, {"margin_kw": 402}))
+        text = peak.with_context(f3d_now=past + timedelta(seconds=stale_s))._td_state_text()[0]
+        self.assertNotEqual(text, "Немає даних від рушія")
+        # застарілий звіт (версія конфігурації) і невідомий код ігноруються
+        self.assertFalse(env_past["td.energy.scenario"]._td_engine_update("peak", body["peak"], version - 1))
+        self.assertFalse(env_past["td.energy.scenario"]._td_engine_update("nope", body["peak"], version))

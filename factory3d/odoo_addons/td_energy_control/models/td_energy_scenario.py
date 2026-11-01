@@ -174,21 +174,44 @@ class TdEnergyScenario(models.Model):
 
     @api.model
     def _td_engine_update(self, code, item, applied_version=0):
-        """API-25: стан сценарію від рушія (ігнорує звіт, що ще не знає поточної версії `enabled`)."""
-        rec = self.sudo().search([("code", "=", code)], limit=1)
-        if not rec or not isinstance(item, dict):
-            return False
-        if applied_version < rec.config_version:
-            return False
-        state = item.get("state") if item.get("state") in ENGINE_STATES else "unknown"
-        rec.with_context(td_energy_control_internal=True).write(
-            {
-                "engine_state": state,
-                "engine_facts": item.get("facts") or {},
-                "engine_ts": dates.now_utc(self.env),
-            }
-        )
-        return True
+        """API-25: стан одного сценарію від рушія (звіт збирача йде одним пакетом через `_td_engine_update_many`)."""
+        return bool(self._td_engine_update_many({code: item}, applied_version))
+
+    @api.model
+    def _td_engine_touch_s(self):
+        """Не рідше цього інтервалу `engine_ts` оновлюється й без змін (свіжість для `_td_state_text`: 2·stale)."""
+        return tools.cparam_float(self.env, "heartbeat_stale_s", 30.0) / 2.0
+
+    @api.model
+    def _td_engine_update_many(self, items, applied_version=0):
+        """API-25: стан сценаріїв від рушія; `items` = {код: {state, facts}}. Один пошук на звіт.
+
+        Ігнорує звіт, що ще не знає поточної версії `enabled`. Пише лише зміну стану/фактів або, без змін,
+        `engine_ts` не частіше за `_td_engine_touch_s()` (раніше — UPDATE кожного сценарію в кожному звіті).
+        Повертає кількість прийнятих сценаріїв."""
+        items = {code: item for code, item in (items or {}).items() if isinstance(item, dict)}
+        if not items:
+            return 0
+        now = dates.now_utc(self.env)
+        touch_s = self._td_engine_touch_s()
+        accepted = 0
+        for rec in self.sudo().search([("code", "in", list(items))]):
+            if applied_version < rec.config_version:
+                continue
+            accepted += 1
+            item = items[rec.code]
+            state = item.get("state") if item.get("state") in ENGINE_STATES else "unknown"
+            facts = item.get("facts") or {}
+            vals = {}
+            if rec.engine_state != state:
+                vals["engine_state"] = state
+            if (rec.engine_facts or {}) != facts:
+                vals["engine_facts"] = facts
+            if not vals and rec.engine_ts and 0 <= (now - rec.engine_ts).total_seconds() < touch_s:
+                continue
+            vals["engine_ts"] = now
+            rec.with_context(td_energy_control_internal=True).write(vals)
+        return accepted
 
     # --- API-16: схема для діалогу параметрів ---------------------------------------------------------------
     def _td_schema(self):

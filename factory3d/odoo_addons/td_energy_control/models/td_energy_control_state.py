@@ -120,9 +120,7 @@ class TdEnergyControlState(models.Model):
         if collector:
             vals["collector_id"] = collector.id
         state.write(vals)
-        Scenario = self.env["td.energy.scenario"].sudo()
-        for code, item in (body.get("scenarios") or {}).items():
-            Scenario._td_engine_update(code, item, applied)
+        self.env["td.energy.scenario"].sudo()._td_engine_update_many(body.get("scenarios") or {}, applied)
         Action = self.env["td.energy.action"].sudo()
         rejected, accepted_actions = [], 0
         for item in body.get("actions") or []:
