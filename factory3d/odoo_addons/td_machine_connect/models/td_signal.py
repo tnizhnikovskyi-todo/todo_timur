@@ -37,6 +37,10 @@ class F3dSignal(models.Model):
         res = super(F3dSignal, self - of_machine)._mark_stale(reason)
         Machine = self.env["td.machine"].sudo()
         enabled = param_bool(self.env, "read_enabled", env_default(self.env))
+        # Відкладені записи (напр. дотик колектора у тому ж запиті) скидаємо ДО savepoint: інакше їхній
+        # SerializationFailure виникає на вході в savepoint, ловиться нижче, а транзакція лишається перерваною
+        # (InFailedSqlTransaction на наступному запиті). Тут конфлікт іде нагору — запит/крон повторить.
+        self.env.flush_all()
         for sig in of_machine.sorted(lambda s: code_map[s.code][0]):
             machine = Machine.browse(code_map[sig.code][0]).exists().filtered(lambda m: m.active and m.read_enabled)
             machine = machine if enabled else Machine  # читання вимкнено — `_td_mark_nodata` нічого не робить
