@@ -8,6 +8,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import address as address_tools
+from ..tools import periods
 from ..tools import sim_catalog
 from ..tools import thresholds
 from ..tools.ingest import STATUS_LABELS, Ingester
@@ -579,20 +580,27 @@ class F3dSignal(models.Model):
             rec.message_post(body=body, subtype_xmlid="mail.mt_note")
 
     # --- stale (R-07) --------------------------------------------------------------------------------
+    def _td_effective_period_s(self, icp=None):
+        """Період, з яким колектор опитує сигнал: не менший за `td.telemetry.min_period_s`, крім сигналів безпеки."""
+        self.ensure_one()
+        icp = icp or self.env["ir.config_parameter"].sudo()
+        safety = periods.is_safety(self.code, self.kind, self.alarm_states, periods.exempt_segments(icp))
+        return periods.effective_period_s(self.period_s, safety, periods.min_period_s(icp))
+
     def _td_stale_after(self):
         """Вікно stale сигналу в секундах; для COV-сигналів BACnet — від `cov_check_s` (X-06)."""
         self.ensure_one()
         icp = self.env["ir.config_parameter"].sudo()
-        periods = int(icp.get_param("td.telemetry.stale_periods", "3") or 3)
+        n_periods = int(icp.get_param("td.telemetry.stale_periods", "3") or 3)
         min_s = int(icp.get_param("td.telemetry.stale_min_s", "60") or 60)
-        p = self.period_s
+        p = self._td_effective_period_s(icp)
         src = self.source_id
         if src and src.type == "bacnet_ip" and not (src.params or {}).get("read_only"):
             addr = self.address or {}
             mode = addr.get("mode")
             if mode == "cov" or (mode is None and addr.get("object") in COV_DEFAULT_OBJECTS):
                 p = thresholds.cov_check_s(self.period_s)
-        return max(periods * p, min_s)
+        return max(n_periods * p, min_s)
 
     def _mark_stale(self, reason):
         """Сигнали → `stale` («Немає даних»); уже `unknown`/`stale` пропускаються (пишуться лише змінені значення).

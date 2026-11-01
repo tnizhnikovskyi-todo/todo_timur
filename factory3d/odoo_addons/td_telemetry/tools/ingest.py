@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from odoo import fields
 
-from . import thresholds
+from . import periods, thresholds
 from .titles import fmt_num
 
 CODE_RE = re.compile(r"^[a-z_]+(/[A-Za-z0-9_\-\.]+)+$")
@@ -29,6 +29,7 @@ SIGNAL_FIELDS = [
     "collector_id",
     "states",
     "store_period_s",
+    "period_s",
     "sim_params",
     "derive_rule",
     "derived_from_id",
@@ -56,6 +57,10 @@ SIGNAL_FIELDS = [
     "request_closed_at",
     "last_notified_ts",
 ]
+# `td.telemetry.last_write_min_s`: верхня межа інтервалу «живого» запису last_ts, с (0 — вимкнено)
+LAST_WRITE_MIN_S = 15
+# `td.telemetry.last_deadband_pct`: мертва зона gauge, % від збереженого значення
+LAST_DEADBAND_PCT = 0.5
 LAST_FIELDS = ["last_value", "last_text", "last_ts", "last_quality", "last_stored_ts"]
 STATUS_LABELS = {"unknown": "невідомо", "ok": "норма", "warn": "увага", "alarm": "тривога", "stale": "немає даних"}
 
@@ -95,13 +100,30 @@ class Ingester:
         self.keep_days = int(icp.get_param("td.telemetry.keep_days", "30") or 30)
         self.bus_min = int(icp.get_param("td.telemetry.bus_min_interval_s", "10") or 10)
         self.cooldown = int(icp.get_param("td.telemetry.realarm_cooldown_s", "3600") or 3600)
+        self.stale_periods = int(icp.get_param("td.telemetry.stale_periods", "3") or 3)
+        self.stale_min_s = int(icp.get_param("td.telemetry.stale_min_s", "60") or 60)
+        # Відкладений запис last_* — лише для пакетів колектора (асинхронні, часті); модулі, що кличуть
+        # `_td_ingest(src="module")` синхронно, читають last_* одразу після прийому й дістають їх без відкладання.
+        self.last_write_min_s = max(self._float_param(icp, "last_write_min_s", LAST_WRITE_MIN_S), 0.0)
+        self.last_deadband_pct = max(self._float_param(icp, "last_deadband_pct", LAST_DEADBAND_PCT), 0.0)
+        self.defer_last = src == "collector" and self.last_write_min_s > 0
+        self.min_period_s = periods.min_period_s(icp)
+        self.safety_segments = periods.exempt_segments(icp)
         self.states = {}  # signal_id -> рабочий стан
         self.rejected = []
         self.accepted = 0
         self.stored = 0
         self.duplicates = 0
+        self.skipped_last = 0  # скільки сигналів пакета лишилось без запису last_* (діагностика)
         self.maybe_dup = []
         self.stored_rows = []  # (signal_id, ts, value) збережених у цьому виклику
+
+    @staticmethod
+    def _float_param(icp, key, default):
+        try:
+            return float(icp.get_param("td.telemetry." + key, str(default)))
+        except (TypeError, ValueError):
+            return float(default)
 
     # --- розбір і валідація ------------------------------------------------------------------------
     def _parse(self, i, r):
@@ -152,6 +174,8 @@ class Ingester:
         st["last_notified_ts"] = rec["last_notified_ts"] or None
         st["request_closed_at"] = rec["request_closed_at"] or None
         st["orig"] = {k: st[k] for k in ("last_value", "last_text", "status", "breach_since")}
+        st["db_last"] = {k: st[k] for k in ("last_value", "last_text", "last_ts", "last_quality", "last_stored_ts")}
+        st["safety"] = periods.is_safety(st["code"], st["kind"], st["alarm_states"], self.safety_segments)
         st.update(
             fresh=False,
             status_changed=False,
@@ -379,8 +403,56 @@ class Ingester:
             self.duplicates += self.cr.fetchone()[0]
 
     # --- завершення: last_*, статуси, заявки, ТО, шина -----------------------------------------------
+    def _fresh_interval_s(self, s):
+        """Як часто (за часом показання) треба оновлювати `last_ts`, навіть якщо значення не змінилось.
+
+        Не рідше за половину вікна stale (`max(stale_periods·period_s, stale_min_s)`, період — ефективний, з
+        `min_period_s`) і не рідше за `last_write_min_s`: `_cron_stale` і споживачі зі своїм вікном свіжості
+        (td_chp `stale_s` = 30 с, ворота двору 15 с, `max(3·period_s, 120 с)` в енергетиці) бачать `last_ts`, що відстає
+        від останнього показання не більш ніж на цей інтервал + період + період відправки колектора.
+        """
+        period = periods.effective_period_s(s["period_s"], s["safety"], self.min_period_s)
+        stale = max(self.stale_periods * period, self.stale_min_s)
+        return min(self.last_write_min_s, stale / 2.0)
+
+    def _deadband(self, s, stored):
+        """Мертва зона gauge: більше з відносної (% від збереженого значення) та півкроку відображення (`decimals`)."""
+        floor = 0.5 * 10 ** -(s["decimals"] or 0)
+        return max(abs(stored) * self.last_deadband_pct / 100.0, floor)
+
+    def _needs_write(self, s):
+        """Чи треба писати `last_*` у `td_signal` (інакше значення живе лише в пам'яті цього пакета).
+
+        Пишемо, коли: це перше показання, змінились статус/breach_since/якість/текст, лічильник (будь-яка зміна),
+        подію чи сигнал безпеки; gauge вийшов за мертву зону від збереженого значення; записано нове показання в
+        `td_reading` (`last_stored_ts` — основа політики `store_period_s`); збережений `last_ts` старший за інтервал
+        свіжості.
+        """
+        if not self.defer_last:
+            return True
+        db = s["db_last"]
+        if db["last_ts"] is None or s["status_changed"] or s["decreased"] or s["safety"] or s["kind"] == "event":
+            return True
+        if s["breach_since"] != s["orig"]["breach_since"]:  # відлік min_duration_s не губимо
+            return True
+        if s["last_quality"] != db["last_quality"] or s["last_text"] != db["last_text"]:
+            return True
+        if s["store_period_s"] and s["last_stored_ts"] != db["last_stored_ts"]:
+            return True
+        value, stored = s["last_value"], db["last_value"]
+        if value != stored:
+            if s["kind"] != "gauge" or value is None or stored is None:
+                return True
+            if abs(value - stored) > self._deadband(s, stored):
+                return True
+        return (s["last_ts"] - db["last_ts"]).total_seconds() >= self._fresh_interval_s(s)
+
     def _finish(self):
-        sts = [s for s in self.states.values() if s["last_dirty"]]
+        dirty = [s for s in self.states.values() if s["last_dirty"]]
+        if not dirty:
+            return [], 0
+        sts = [s for s in dirty if self._needs_write(s)]
+        self.skipped_last = len(dirty) - len(sts)
         if not sts:
             return [], 0
         rows = [

@@ -23,6 +23,10 @@ PARAM_KEYS = [
     "drop_level0",
     "level0_migrated",
     "stale_notify_min",
+    "last_write_min_s",
+    "last_deadband_pct",
+    "min_period_s",
+    "min_period_exempt",
 ]
 PARAM_VALUES = {
     "write_enabled": "False",
@@ -38,6 +42,8 @@ PARAM_VALUES = {
     "meter_lead_pct": "5",
     "drop_level0": "False",
     "stale_notify_min": "0",
+    "last_deadband_pct": "0.5",
+    "min_period_exempt": "fire,gas,safe,safety,alarm,alarms,estop,gates,scale",
 }
 CRONS = {  # xml-id -> (interval_number, interval_type)
     "cron_td_telemetry_stale": (1, "minutes"),
@@ -59,7 +65,7 @@ SOURCES = {  # Додаток C.1: xml-id -> (code, type, ключові params)
 @tagged(*TAGS)
 class TestData(F3DTelemetryCase):
     def test_params(self):
-        """AC-66: 16 параметрів §5.1."""
+        """AC-66: 16 параметрів §5.1 + 4 параметри 19.0.1.1.5 (відкладений last_*, мінімальний період)."""
         icp = self.env["ir.config_parameter"].sudo()
         records = icp.search([("key", "=like", "td.telemetry.%")])
         self.assertEqual(sorted(r.key.rsplit(".", 1)[1] for r in records), sorted(PARAM_KEYS))

@@ -19,6 +19,8 @@ PARAMS = {
     "push_max_readings": "2000",
     "push_rate_per_min": "60",
     "meter_lead_pct": "5",
+    "last_write_min_s": "0",  # 19.0.1.1.5: застарілі тести чекають запис last_* на кожен пакет; нові — test_churn.py
+    "min_period_s": "0",
 }
 
 EQUIPMENT = {  # атрибут -> (назва, td_code, з командою)

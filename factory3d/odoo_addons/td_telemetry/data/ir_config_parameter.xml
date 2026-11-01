@@ -64,4 +64,20 @@
         <field name="key">td.telemetry.stale_notify_min</field>
         <field name="value">0</field>
     </record>
+    <record id="param_last_write_min_s" model="ir.config_parameter">
+        <field name="key">td.telemetry.last_write_min_s</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_last_deadband_pct" model="ir.config_parameter">
+        <field name="key">td.telemetry.last_deadband_pct</field>
+        <field name="value">0.5</field>
+    </record>
+    <record id="param_min_period_s" model="ir.config_parameter">
+        <field name="key">td.telemetry.min_period_s</field>
+        <field name="value">5</field>
+    </record>
+    <record id="param_min_period_exempt" model="ir.config_parameter">
+        <field name="key">td.telemetry.min_period_exempt</field>
+        <field name="value">fire,gas,safe,safety,alarm,alarms,estop,gates,scale</field>
+    </record>
 </odoo>

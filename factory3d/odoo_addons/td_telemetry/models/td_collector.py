@@ -9,6 +9,7 @@ from datetime import timedelta
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
+from ..tools import periods
 from ..tools.locking import CONTENTION_ERRORS, lock_skip_locked
 
 _logger = logging.getLogger(__name__)
@@ -182,6 +183,7 @@ class F3dCollector(models.Model):
 
         read_enabled, write_enabled = flag("read_enabled"), flag("write_enabled")
         local = self.env["td.source"]._td_local_types()
+        min_period, exempt = periods.min_period_s(icp), periods.exempt_segments(icp)
         sources = []
         for src in self.sudo().source_ids.filtered(lambda s: s.active and s.type not in local).sorted("code"):
             signals = []
@@ -191,7 +193,9 @@ class F3dCollector(models.Model):
                         "code": sig.code,
                         "kind": sig.kind,
                         "unit": sig.unit or "",
-                        "period_s": sig.period_s,
+                        "period_s": periods.effective_period_s(
+                            sig.period_s, periods.is_safety(sig.code, sig.kind, sig.alarm_states, exempt), min_period
+                        ),
                         "scale": sig.scale,
                         "write_enabled": bool(sig.write_enabled),
                         "states": sig.states or None,

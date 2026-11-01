@@ -16,3 +16,4 @@ from . import test_security  # noqa: F401
 from . import test_views  # noqa: F401
 from . import test_hooks  # noqa: F401
 from . import test_concurrency  # noqa: F401
+from . import test_churn  # noqa: F401
