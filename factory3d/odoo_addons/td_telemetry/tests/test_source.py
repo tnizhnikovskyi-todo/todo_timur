@@ -202,6 +202,22 @@ class TestApplyStatus(SourceCase):
         self.src_bac._apply_status(self._item("boom"))
         self.assertEqual(self.sig_rv.status, "stale")
 
+    def test_status_writes_only_changes_and_throttles_volatile(self):  # DEC-21
+        src = self.src_bac
+        item = {"code": "BAC-T-105", "state": "online", "last_ok": "2026-10-14T05:50:10Z", "stats": {"polls": 1}}
+        src._apply_status(item)
+        with patch.object(type(src), "write", autospec=True, side_effect=type(src).write) as spy:
+            src._apply_status(item)  # без змін — запису немає
+            src._apply_status(dict(item, last_ok="2026-10-14T05:51:10Z", stats={"polls": 2}))  # лише мінливі — тротлінг
+            self.assertEqual(spy.call_count, 0)
+            self.assertEqual(src.stats, {"polls": 1})
+            src._apply_status(dict(item, state="error", error="boom"))  # зміна стану — одразу
+            self.assertEqual(spy.call_count, 1)
+        self.assertEqual((src.state, src.last_error), ("error", "boom"))
+        self.env["ir.config_parameter"].sudo().set_param("td.telemetry.status_touch_s", "0")
+        src._apply_status(dict(item, stats={"polls": 3}))  # 0 — пишемо завжди
+        self.assertEqual(src.stats, {"polls": 3})
+
 
 @tagged(*TAGS)
 class TestLocalSource(SourceCase):

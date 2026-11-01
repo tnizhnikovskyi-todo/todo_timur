@@ -15,7 +15,9 @@ _logger = logging.getLogger(__name__)
 KYIV = ZoneInfo("Europe/Kyiv")
 ROLE_ORDER = {"state": 0, "mode": 1, "alarm": 2, "job": 3, "pieces": 4}
 TICK_BUDGET_S = 10
-HEARTBEAT_S = 30  # DEC-19: `raw_ts`/`pieces_ts` без інших змін пишуться не частіше за раз на стільки секунд
+# DEC-19/21: `raw_ts`/`pieces_ts` без інших змін пишуться не частіше за раз на стільки секунд (параметр `heartbeat_s`).
+# Мітки лише показують «останнє показання» в картці: свіжість даних визначає `td.signal` (`last_ts`, `_cron_stale`).
+HEARTBEAT_S = 120
 TICK_BATCH = 10  # DEC-19: верстатів на транзакцію такту (після пачки — commit, нова знімка, блокування знято)
 PENDING_SLACK_S = 30
 # DEC-20: паралельна транзакція — не помилка коду: рядок зайнятий (`NOWAIT`), змінений після знімка REPEATABLE READ
@@ -62,6 +64,15 @@ def param(env, key, default):
 
 def param_bool(env, key, default="False"):
     return param(env, key, default) in ("True", "true", "1")
+
+
+def param_int(env, key, default):
+    """Цілий параметр; нечисловий або від'ємний — `default`."""
+    try:
+        value = int(param(env, key, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else default
 
 
 def env_default(env):
@@ -405,8 +416,10 @@ class F3dMachine(models.Model):
                     changed = True
             if changed:
                 vals = {"raw_state": raw["state"] or False, "raw_mode": raw["mode"] or False, "raw_alarm": raw["alarm"]}
-                dirty = dirty or any(self[key] != val for key, val in vals.items())
-                self.write(vals)
+                diff = {key: val for key, val in vals.items() if self[key] != val}  # DEC-21: лише зміни
+                if diff:
+                    dirty = True
+                    self.write(diff)
                 raw["bad"] = raw["state"] is None
                 new = normalize(self.protocol, raw, key=self.code, now=ts)
                 self._td_on_raw_state(new, ts)
@@ -427,10 +440,9 @@ class F3dMachine(models.Model):
         ):
             self.write({"raw_ts": raw_ts})
 
-    @staticmethod
-    def _td_heartbeat_due(stored, new):
-        """DEC-19: чи минуло `HEARTBEAT_S` від збереженої мітки (порожня мітка — пишемо одразу)."""
-        return not stored or abs((new - stored).total_seconds()) >= HEARTBEAT_S
+    def _td_heartbeat_due(self, stored, new):
+        """DEC-19/21: чи минув `heartbeat_s` (умовно `HEARTBEAT_S`) від збереженої мітки (порожня — пишемо одразу)."""
+        return not stored or abs((new - stored).total_seconds()) >= param_int(self.env, "heartbeat_s", HEARTBEAT_S)
 
     def _td_on_raw_state(self, new, ts):
         """R-02: мікрозупинки й момент фіксації стану."""
@@ -549,10 +561,14 @@ class F3dMachine(models.Model):
             elif delta > 1000:
                 _logger.warning("td.machine %s: стрибок лічильника %s → %s", self.code, self.pieces_last, value)
                 delta = 0.0
-        vals = {"pieces_last": value}
-        if value != self.pieces_last or self._td_heartbeat_due(self.pieces_ts, ts):
-            vals["pieces_ts"] = ts  # мітка без зміни лічильника — не частіше за HEARTBEAT_S (DEC-19)
-        self.write(vals)
+        vals = {}
+        changed = value != self.pieces_last
+        if changed:
+            vals["pieces_last"] = value
+        if changed or self._td_heartbeat_due(self.pieces_ts, ts):
+            vals["pieces_ts"] = ts  # мітка без зміни лічильника — не частіше за `heartbeat_s` (DEC-19/21)
+        if vals:
+            self.write(vals)
         if delta and self.current_log_id:
             self.current_log_id.pieces += delta
         self._td_on_count(delta, ts)

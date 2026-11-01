@@ -24,3 +24,4 @@ from . import test_downtime_cost  # DT-1…DT-4
 from . import test_bottleneck  # R-30: чисті функції
 from . import test_bottleneck_model  # R-30: моделі, аналітика, плитка, payload, тур
 from . import test_portal  # R-31: портальний склад у 3D (вузли payload, плитка, демо-історія)
+from . import test_write_churn  # DEC-21: без зайвих UPDATE td_machine/td_source

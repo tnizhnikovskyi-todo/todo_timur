@@ -1,5 +1,13 @@
 # Changelog
 
+## 19.0.1.4.3
+- DEC-21 (зайві UPDATE `td_machine`): повтор показань без змін не викликає `write` верстата взагалі — сирі `raw_state`/`raw_mode`/`raw_alarm` і `pieces_last`
+  пишуться лише коли значення змінилось (раніше `write` викликався на кожне показання, а відсіював його лише ORM). Мітки «останнє показання» (`raw_ts`, `pieces_ts`) без
+  інших змін пишуться не частіше за параметр `td.machine_connect.heartbeat_s` (умовно 120 с замість жорстких 30 с; `0` — кожне показання, нечисловий — умовчання):
+  вони лише відображаються в картці, свіжість даних визначає `td.signal.last_ts` і `_cron_stale`. Зміна лічильника, стану, завдання пишеться одразу, як і раніше.
+- Тести `TestNoopWrites` (`tests/test_write_churn.py`): повторні такт і OEE не пишуть `td_machine` і `td_source`, повтор показань не викликає `write`, пишуться лише змінені
+  поля, `heartbeat_s` (умовчання, параметр, `0`, сміття). `test_unchanged_push_does_not_write_machine_row` задає `heartbeat_s = 30`.
+
 ## 19.0.1.4.2
 - Паралельні транзакції (DEC-20): щохвилинні крони (такт верстатів, OEE, диспетчер живого виробництва, stale-крон телеметрії) і push більше не падають
   на `SerializationFailure`/`LockNotAvailable`/`DeadlockDetected` у `td.machine`. `_td_lock_skip_locked` у REPEATABLE READ, крім зайнятих рядків, пропускає й

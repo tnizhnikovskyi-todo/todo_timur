@@ -26,6 +26,7 @@
 `gantry_auto_replenish`, `gantry_auto_feed`. Пороги: `micro_stop_s`, `pause_after_min`, `finish_idle_s`,
 `qty_sync_mode`, `qty_sync_s`, `coverage_min`, `oee_good`, `oee_warn`, `no_job_activity_min`, `stack_diff_*`.
 Розкрій: `cutting_mode`, `export_token_ttl_s`. Зберігання: `keep_log_days`, `keep_event_days`.
+Записи: `heartbeat_s` (120 с; 0 — кожне показання) — як часто без інших змін пишуться мітки «останнє показання» `raw_ts`/`pieces_ts`.
 Повний список — SPEC §5.1; форма — Налаштування → 3D Завод → «Налаштування верстатів» (V-31).
 
 ## Команди на пристрої

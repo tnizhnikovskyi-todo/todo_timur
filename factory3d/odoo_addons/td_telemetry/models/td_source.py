@@ -8,6 +8,9 @@ from ..tools import address as address_tools
 from ..tools.ingest import parse_ts
 
 MASK_RE = re.compile(r"(?i)(password=|token=|bearer\s+)\S+")
+STATUS_TOUCH_PARAM = "td.telemetry.status_touch_s"
+STATUS_TOUCH_S = 300  # DEC-21: `last_ok`/`stats` без інших змін пишуться не частіше за раз на стільки секунд
+STATUS_VOLATILE = {"last_ok", "stats"}
 CONFIG_FIELDS = {"params", "params_text", "read_enabled", "write_enabled", "active", "type", "collector_id"}
 
 DEFAULT_ADDRESS = {
@@ -219,9 +222,26 @@ class F3dSource(models.Model):
             vals["stats"] = stats
             if isinstance(stats.get("errors"), int) and not isinstance(stats.get("errors"), bool):
                 vals["error_count"] = stats["errors"]
-        self.sudo().write(vals)
+        self._td_write_status(vals)
         if vals.get("state") in ("offline", "error"):
             self.sudo().with_context(active_test=False).signal_ids._mark_stale(vals["state"])
+
+    def _td_write_status(self, vals):
+        """DEC-21: пише лише змінене; `last_ok`/`stats` (міняються в кожному звіті) без інших змін — не частіше за
+        `td.telemetry.status_touch_s` с (300 за замовчуванням, 0 — завжди). Стан, помилка, `error_count` — одразу."""
+        self.ensure_one()
+        rec = self.sudo()
+        changed = {key: val for key, val in vals.items() if rec[key] != val}
+        if not changed:
+            return
+        if not set(changed) - STATUS_VOLATILE and rec.write_date:
+            try:
+                interval = int(self.env["ir.config_parameter"].sudo().get_param(STATUS_TOUCH_PARAM, STATUS_TOUCH_S))
+            except ValueError:
+                interval = STATUS_TOUCH_S
+            if 0 <= (fields.Datetime.now() - rec.write_date).total_seconds() < interval:
+                return
+        rec.write(changed)
 
     def action_view_signals(self):
         self.ensure_one()
