@@ -72,9 +72,9 @@ def test_tk01_ac58_demo_copy():
 
 
 def test_tk02_ac84_first_exchange(odoo, metrics, token):
-    """ТК-02 / AC-84: колектор online (0.1.0), 7 джерел online, жодного stale, 55 сигналів зі свіжим last_ts."""
+    """ТК-02 / AC-84: колектор online (0.2.0), 7 джерел online, жодного stale, 55 сигналів зі свіжим last_ts."""
     col = odoo.search_read("td.collector", [("code", "=", "COL-MAIN")], ["state", "version", "last_seen"])[0]
-    assert col["state"] == "online" and col["version"] == "0.1.0", col
+    assert col["state"] == "online" and col["version"] == "0.2.0", col
     states = {s["code"]: s["state"] for s in odoo.search_read("td.source", [], ["code", "state"])}
     assert states == {c: "online" for c in SOURCES}, states
     st, body, _ = http("GET", f"{odoo.url}/f3d/telemetry/health", headers={"Authorization": "Bearer " + token})

@@ -9,7 +9,8 @@ import inspect
 import logging
 import random
 import signal
-from collections.abc import Callable
+import sqlite3
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from collector.core.allowlist import Allowlist
@@ -30,6 +31,7 @@ log = logging.getLogger("collector.app")
 FLUSH_TIMEOUT_S = 10.0
 PUSH_MAX_LIMIT = 2000
 MAINTENANCE_S = 60.0
+RESTART_MAX_S = 30.0
 
 
 class Collector:
@@ -40,6 +42,7 @@ class Collector:
         self.clock: Clock = clock or SystemClock()
         self.metrics = Metrics(self.clock)
         self.buffer = Buffer(settings.buffer_dir / "buffer.sqlite", settings.buffer_max_mb, self.clock, self.metrics)
+        self.metrics.buffer_rows.set_function(lambda: self.buffer.rows)  # завжди справжня кількість, не «останнє set()»
         self.allowlist = Allowlist(settings.allow_hosts, settings.odoo_url, self.metrics)
         self.client = OdooClient(
             settings.odoo_url,
@@ -63,6 +66,8 @@ class Collector:
             metrics=self.metrics,
             clock=self.clock,
             on_read_enabled=lambda v: self.registry.set_flags(v),
+            stale_after_s=settings.push_stale_s,
+            backlog_gap_s=settings.push_backlog_gap_s,
         )
         self.status = StatusReporter(
             self.client,
@@ -77,7 +82,7 @@ class Collector:
         self.commands = CommandLoop(
             self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics, live=self.live
         )
-        self.metrics_server = MetricsServer(self.metrics, settings.metrics_port)
+        self.metrics_server = MetricsServer(self.metrics, settings.metrics_port, rows=lambda: self.buffer.rows)
         self.registry.listeners.append(self._on_config)
         self.http_push: Any = None
         self._tasks: list[asyncio.Task] = []
@@ -105,15 +110,42 @@ class Collector:
 
     async def _on_config(self) -> None:
         c = self.registry.collector
-        self.pusher.push_interval_s = c.get("push_interval_s") or self.settings.push_interval_s
-        self.pusher.push_max = min(PUSH_MAX_LIMIT, c.get("push_max") or self.settings.push_max)
+        # конфіг Odoo (колектор у `td.collector`) має пріоритет над F3D_PUSH_INTERVAL_S / F3D_PUSH_MAX;
+        # env — лише запасні значення, поки конфіг не отримано або в ньому порожньо
+        self.pusher.configure(
+            c.get("push_interval_s") or self.settings.push_interval_s,
+            min(PUSH_MAX_LIMIT, c.get("push_max") or self.settings.push_max),
+        )
         self.status.interval_s = c.get("status_interval_s") or self.settings.status_interval_s
+
+    async def _maintenance_once(self) -> None:
+        try:
+            await self.buffer.enforce_limit()
+            await self.buffer.recount()
+        except sqlite3.Error as exc:
+            log.warning("buffer maintenance failed (%s), will retry in %.0f s", exc, MAINTENANCE_S)
 
     async def _maintenance(self) -> None:
         while True:
             await self.clock.sleep(MAINTENANCE_S)
-            await self.buffer.enforce_limit()
-            self.metrics.buffer_rows.set(await self.buffer.count())
+            await self._maintenance_once()
+
+    async def _supervised(self, name: str, factory: Callable[[], Awaitable[None]]) -> None:
+        """Фонова задача не вмирає мовчки: виняток -> лог і перезапуск з бекофом (1, 2, 4 ... 30 с)."""
+        delay = 1.0
+        while True:
+            started = self.clock.monotonic()
+            try:
+                await factory()
+                return
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - будь-яка помилка задачі -> перезапуск
+                log.exception("task %s crashed, restarting in %.0f s", name, delay)
+            if self.clock.monotonic() - started > 60:
+                delay = 1.0
+            await self.clock.sleep(delay)
+            delay = min(RESTART_MAX_S, delay * 2)
 
     async def _start_http_push(self) -> None:
         """Приймач http_push (W6) підключається, якщо модуль `collector.core.http_push` присутній."""
@@ -137,22 +169,21 @@ class Collector:
             await self.http_push.start()
 
     async def start(self) -> None:
-        self.metrics_server.rows = lambda: int(self.metrics.buffer_rows._value.get())
         await self.metrics_server.start()
         self.metrics.up.set(1)
         await self.buffer.open()
         await self._start_http_push()
         await self.registry.load()
-        coros = [
-            self.registry.run_refresh(),
-            self.pusher.run(),
-            self.status.run(),
-            self.emitter.run(),
-            self._maintenance(),
+        loops: list[tuple[str, Callable[[], Awaitable[None]]]] = [
+            ("registry", self.registry.run_refresh),
+            ("pusher", self.pusher.run),
+            ("status", self.status.run),
+            ("emitter", self.emitter.run),
+            ("maintenance", self._maintenance),
         ]
         if self.settings.write_enabled:
-            coros.append(self.commands.run())
-        self._tasks = [asyncio.create_task(c) for c in coros]
+            loops.append(("commands", self.commands.run))
+        self._tasks = [asyncio.create_task(self._supervised(n, f), name=f"f3d-{n}") for n, f in loops]
         log.info("collector %s started", self.settings.collector_code)
 
     async def stop(self) -> None:

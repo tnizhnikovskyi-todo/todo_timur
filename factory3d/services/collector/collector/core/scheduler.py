@@ -6,6 +6,7 @@ import asyncio
 import dataclasses
 import logging
 import random
+import sqlite3
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
@@ -21,6 +22,7 @@ POLL_BACKOFF_MAX = 30.0
 CONNECT_BACKOFF_MAX = 60.0
 ERROR_AFTER = 3
 OVERRUN_LOG_EVERY_S = 60.0
+MAX_PENDING = 500_000  # показань у пам'яті Emitter, поки буфер недоступний
 SCALED_KINDS = frozenset({"gauge", "counter"})
 
 
@@ -226,17 +228,31 @@ class Emitter:
         self._events.append(event)
 
     async def flush(self) -> int:
+        """Скидає чергу в буфер. Помилка буфера (locked/IO) не губить дані: те, що не записалося, лишається в черзі
+        (не більше `MAX_PENDING` показань — тоді відкидаються найстаріші) і піде на наступному виклику."""
         readings, self._readings = self._readings, []
         events, self._events = self._events, []
-        if readings:
-            await self.buffer.put_many(readings)
-            if self.metrics is not None:
-                for r in readings:
-                    sig = self._lookup().get(r.code)
-                    self.metrics.readings.labels(sig.source_code if sig else "unknown").inc()
-        for ev in events:
-            await self.buffer.put_event(ev)
-        return len(readings) + len(events)
+        done = 0
+        try:
+            if readings:
+                await self.buffer.put_many(readings)
+                done += len(readings)
+                if self.metrics is not None:
+                    for r in readings:
+                        sig = self._lookup().get(r.code)
+                        self.metrics.readings.labels(sig.source_code if sig else "unknown").inc()
+                readings = []
+            while events:
+                await self.buffer.put_event(events[0])
+                events.pop(0)
+                done += 1
+        except (sqlite3.Error, OSError) as exc:
+            self._readings = (readings + self._readings)[-MAX_PENDING:]
+            self._events = events + self._events
+            log.warning(
+                "buffer write failed (%s): %d readings, %d events kept in memory", exc, len(readings), len(events)
+            )
+        return done
 
     async def run(self, interval_s: float = 0.5) -> None:
         while True:
