@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
+import os
 import sys
 from typing import Any
 
@@ -150,6 +152,17 @@ async def drain_buffer(s: Settings) -> int:
     return 0
 
 
+def _hard_exit(code: int) -> None:
+    """Примусовий вихід (страховка `Collector`): записи логу скидаються, `atexit` і join потоків пропускаються."""
+    logging.shutdown()
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except Exception:  # noqa: BLE001, S110
+            pass
+    os._exit(code)
+
+
 def run_cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="f3d-collector")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -169,7 +182,7 @@ def run_cli(argv: list[str] | None = None) -> int:
         return EXIT_CONFIG
     setup_logging(settings.log_level, settings.log_json)
     if args.cmd == "run":
-        return asyncio.run(Collector(settings).run())
+        return asyncio.run(Collector(settings, hard_exit=_hard_exit).run())
     if args.cmd == "check-config":
         return asyncio.run(check_config(settings))
     if args.cmd == "dump-config":

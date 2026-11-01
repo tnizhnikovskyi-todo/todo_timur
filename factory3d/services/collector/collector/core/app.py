@@ -10,6 +10,7 @@ import logging
 import random
 import signal
 import sqlite3
+import threading
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -24,11 +25,18 @@ from collector.core.registry import Registry
 from collector.core.scheduler import Emitter, Scheduler
 from collector.core.types import SignalCfg, SourceCfg
 from collector.plugins.base import PluginContext
+from collector.util.tasks import cancel_tasks, run_bounded
 from collector.util.timeutil import Clock, SystemClock
 
 log = logging.getLogger("collector.app")
 
-FLUSH_TIMEOUT_S = 10.0
+# Graceful shutdown вкладається в SHUTDOWN_TIMEOUT_S = сума фаз; завислі задачі/транспорти покидаються (з логом ERROR)
+SHUTDOWN_CANCEL_S = 3.0  # скасування задач ядра й опитувань
+SHUTDOWN_FLUSH_S = 3.0  # скидання Emitter у буфер і кілька останніх пакетів в Odoo
+SHUTDOWN_CLOSE_S = 2.0  # `disconnect()` плагінів (паралельно)
+SHUTDOWN_FINAL_S = 2.0  # приймач http_push, буфер, клієнт Odoo, сервер метрик
+SHUTDOWN_TIMEOUT_S = SHUTDOWN_CANCEL_S + SHUTDOWN_FLUSH_S + SHUTDOWN_CLOSE_S + SHUTDOWN_FINAL_S
+HARD_EXIT_S = SHUTDOWN_TIMEOUT_S + 5.0  # від початку зупинки: якщо процес усе ще живий (потоки бібліотек) — _exit
 SHUTDOWN_PUSHES = 5  # не більше пакетів при зупинці: рестарт не впирається в 429 (ліміт Odoo 60/хв)
 PUSH_MAX_LIMIT = 2000
 MAINTENANCE_S = 60.0
@@ -37,9 +45,14 @@ RESTART_MAX_S = 30.0
 
 class Collector:
     def __init__(
-        self, settings: Settings, clock: Clock | None = None, rand: Callable[[], float] = random.random
+        self,
+        settings: Settings,
+        clock: Clock | None = None,
+        rand: Callable[[], float] = random.random,
+        hard_exit: Callable[[int], None] | None = None,
     ) -> None:
         self.settings = settings
+        self.hard_exit = hard_exit  # CLI: os._exit; страховка, якщо після `stop()` процес не завершується
         self.clock: Clock = clock or SystemClock()
         self.metrics = Metrics(self.clock)
         self.buffer = Buffer(settings.buffer_dir / "buffer.sqlite", settings.buffer_max_mb, self.clock, self.metrics)
@@ -89,6 +102,7 @@ class Collector:
         self.http_push: Any = None
         self._tasks: list[asyncio.Task] = []
         self._stop = asyncio.Event()
+        self._stopped_ok = False
 
     def _signals(self) -> dict[str, SignalCfg]:
         return {code: sg for code, (_s, sg) in self.registry.signal_index.items()}
@@ -189,20 +203,23 @@ class Collector:
         log.info("collector %s started", self.settings.collector_code)
 
     async def stop(self) -> None:
+        """Graceful shutdown не довше `SHUTDOWN_TIMEOUT_S`, навіть якщо опитування/плагіни зависли на з'єднанні з
+        пристроєм (reconnect-цикли pymodbus/paho/bacpypes ковтають скасування): кожна фаза обмежена, завислі
+        задачі й транспорти покидаються, а те, що можна скинути (буфер, останні пакети), скидається."""
         self.metrics.up.set(0)
-        for t in self._tasks:
-            t.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-        self._tasks = []
-        await self.scheduler.stop()
-        with contextlib.suppress(Exception):
-            await asyncio.wait_for(self._flush(), FLUSH_TIMEOUT_S)
+        tasks, self._tasks = self._tasks, []
+        await asyncio.gather(
+            cancel_tasks(tasks, SHUTDOWN_CANCEL_S, "task"),
+            self.scheduler.stop(SHUTDOWN_CANCEL_S),
+            return_exceptions=True,
+        )
+        await run_bounded(self._flush(), SHUTDOWN_FLUSH_S, "final flush")
+        await run_bounded(self.registry.close(SHUTDOWN_CLOSE_S), SHUTDOWN_CLOSE_S + 0.5, "plugin close")
+        final = [self.buffer.close(), self.client.close(), self.metrics_server.stop()]
         if self.http_push is not None and hasattr(self.http_push, "stop"):
-            await self.http_push.stop()
-        await self.registry.close()
-        await self.buffer.close()
-        await self.client.close()
-        await self.metrics_server.stop()
+            final.append(self.http_push.stop())
+        await asyncio.gather(*(run_bounded(c, SHUTDOWN_FINAL_S, "shutdown") for c in final))
+        self._stopped_ok = True
 
     async def _flush(self) -> None:
         await self.emitter.flush()
@@ -219,5 +236,21 @@ class Collector:
         await self.start()
         await self._stop.wait()
         log.info("shutting down")
+        self._arm_watchdog()
         await self.stop()
         return 0
+
+    def _arm_watchdog(self) -> None:
+        """Страховка: якщо після `stop()` процес не завершується (бібліотечний потік/`to_thread` не відпускає
+        інтерпретатор), через `HARD_EXIT_S` від початку зупинки — примусовий вихід."""
+        if self.hard_exit is None:
+            return
+        timer = threading.Timer(HARD_EXIT_S, self._force_exit)
+        timer.daemon = True
+        timer.start()
+
+    def _force_exit(self) -> None:
+        code = 0 if self._stopped_ok else 1
+        log.critical("process still alive %.0f s after shutdown started: forced exit (code %d)", HARD_EXIT_S, code)
+        if self.hard_exit is not None:
+            self.hard_exit(code)
