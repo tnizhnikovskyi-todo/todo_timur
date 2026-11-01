@@ -136,7 +136,7 @@ export const evacExtension = {
         let st = this.states.get(api.scene);
         if (!st) {
             st = {
-                group: null, key: "", live: null, recvPerf: 0, raf: 0, lastTick: 0, off: null, plate: null, plateHtml: "", tex: null,
+                group: null, key: "", live: null, recvPerf: 0, srvNowMs: null, clockMs: null, clockName: null, raf: 0, lastTick: 0, off: null, plate: null, plateHtml: "", tex: null,
                 ribbons: [], exits: new Map(), smokes: [], fire: null, dots: new Map(), counters: new Map(), marks: [], elapsed: null,
             };
             this.states.set(api.scene, st);
@@ -163,11 +163,19 @@ export const evacExtension = {
         const st = this.stateOf(api);
         const perf = performance.now();
         // Годинник сервера тільки вперед: патч інших розділів повертає той самий `live` зі старим `now_ms` —
-        // без цього плашка навчання відкочувалась назад до моменту останнього оновлення розділу.
-        const prev = st.live;
-        if (prev && prev.name === live.name && prev.now_ms != null && live.now_ms != null) {
-            live.now_ms = Math.max(live.now_ms, prev.now_ms + (perf - st.recvPerf));
+        // без цього плашка навчання відкочувалась назад до моменту останнього оновлення розділу. `live` після deepMerge
+        // — той самий об'єкт, що й `st.live`, тож «попереднє» значення `now_ms` у ньому вже перезаписане: тримаємо власні
+        // `srvNowMs` (останній сирий `now_ms` сервера) і `clockMs` (годинник шару на момент `recvPerf`), `live` не чіпаємо.
+        if (live.now_ms == null) {
+            st.srvNowMs = st.clockMs = null;
+        } else if (st.clockMs != null && st.clockName === live.name) {
+            const ticked = st.clockMs + (perf - st.recvPerf);
+            st.clockMs = live.now_ms !== st.srvNowMs ? Math.max(live.now_ms, ticked) : ticked; // свіже читання сервера або той самий
+            st.srvNowMs = live.now_ms;
+        } else {
+            st.srvNowMs = st.clockMs = live.now_ms; // перше читання або інше навчання
         }
+        st.clockName = live.name;
         st.live = live;
         st.recvPerf = perf;
         const key = [live.name, live.mode, live.zone, Object.keys(D.evacuation.routes || {}).length, (live.smoke || []).map((s) => s.code).join()].join("|");
@@ -334,6 +342,7 @@ export const evacExtension = {
         const had = !!st.group;
         this.clearScene(api, st);
         st.live = null;
+        st.srvNowMs = st.clockMs = st.clockName = null;
         if (had) {
             api.invalidate?.();
         }
@@ -363,7 +372,7 @@ export const evacExtension = {
 
     clock(api, st, nowMs) {
         const sim = typeof api.simMinutes === "function" ? api.simMinutes() : null; // VX-08
-        return elapsedAt(st.live, { perfNow: nowMs, recvPerf: st.recvPerf, simMin: sim });
+        return elapsedAt(st.live, { perfNow: nowMs, recvPerf: st.recvPerf, simMin: sim, clockMs: st.clockMs });
     },
 
     tick(api, nowMs, force) {

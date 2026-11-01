@@ -266,6 +266,32 @@ test("EV11 «Вентиляція заблокована» лічить лише
     expect(text(q(el, ".o_td_ev_plate"))).toMatch(/Вентиляція заблокована: 2/);
 });
 
+test("EV13 годинник шару: свіжий now_ms сервера не додає час удруге; той самий — іде далі; відстаючий — не відкочує назад", async () => {
+    const { api } = await mountEvac();
+    const st = evacExtension.stateOf(api);
+    const shown = () => Math.floor(evacExtension.clock(api, st, performance.now()));
+    expect(shown()).toBe(135);
+    // після deepMerge `live` — той самий об'єкт, що й `st.live`: патч іншого розділу лишає `now_ms` без змін, минуло 10 с
+    st.recvPerf -= 10000;
+    evacExtension.applyData(api, api.D);
+    expect(shown()).toBe(145);
+    // патч із свіжим now_ms сервера (його годинник пішов так само): +10 с від попереднього, а не +20 с
+    st.recvPerf -= 10000;
+    api.D.evacuation.live.now_ms = NOW + 20000;
+    evacExtension.applyData(api, api.D);
+    expect(shown()).toBe(155);
+    // сервер відстає від клієнта (кіоск поспішає): плашка не відкочується назад
+    st.recvPerf -= 10000;
+    api.D.evacuation.live.now_ms = NOW + 25000;
+    evacExtension.applyData(api, api.D);
+    expect(shown()).toBe(165);
+    // сервер перегнав клієнта: наздоганяємо його
+    api.D.evacuation.live.now_ms = NOW + 300000;
+    evacExtension.applyData(api, api.D);
+    expect(shown()).toBe(435);
+    expect(elapsedAt(live(), { perfNow: 2000, recvPerf: 1000, clockMs: NOW + 5000 })).toBe(141); // clockMs замість now_ms
+});
+
 test("EV12 закрите навчання не показується; навчання в оцінюванні — лише 10 хв після кінця евакуації", async () => {
     const { el, api } = await mountEvac();
     const show = (over) => {
