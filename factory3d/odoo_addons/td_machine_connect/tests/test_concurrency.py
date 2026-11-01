@@ -2,12 +2,14 @@
 паралельна транзакція (зайнятий або змінений після знімка рядок) — пропуск до наступного такту, а не помилка."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from psycopg2 import errors as pg_errors
 
 from odoo import SUPERUSER_ID, api, fields, sql_db
 from odoo.tests import TransactionCase, tagged
+
+from odoo.addons.td_machine_connect.models import td_machine as machine_module
 
 from .common import P, F3DMachineCase, at
 
@@ -49,9 +51,9 @@ class TestPushOrder(F3DMachineCase):
         Machine = self.registry["td.machine"]
         orig = Machine._td_lock
 
-        def lock(rec):
+        def lock(rec, nowait=False):
             ids.extend(rec.ids)
-            return orig(rec)
+            return orig(rec, nowait=nowait)
 
         readings = (
             self.io(self.m_io, "10:00:00", run=True)
@@ -254,10 +256,10 @@ class TestContentionHandling(F3DMachineCase):
         orig = Machine._td_lock
         busy = self.m_io
 
-        def lock(rec):
+        def lock(rec, nowait=False):
             if rec == busy:
                 raise pg_errors.SerializationFailure("could not serialize access due to concurrent update")
-            return orig(rec)
+            return orig(rec, nowait=nowait)
 
         readings = self.io(busy, "10:00:00", run=True) + self.ua(self.m_ua, "10:00:00", state="READY")
         with patch.object(Machine, "_td_lock", lock), self.assertLogs(MODEL, "WARNING") as logs:
@@ -354,3 +356,157 @@ class TestIdleFinishLockedWorkorder(F3DMachineCase):
         self.assertEqual(wo.state, "progress")
         self.tick("10:42:01")
         self.assertEqual((wo.state, wo.qty_produced), ("done", 8))
+
+
+@tagged(*TAGS)
+class TestPushBacklog(F3DMachineCase):
+    """Показання, які push не зміг застосувати (верстат зайнятий), потрапляють у чергу, а не зникають; крон такту
+    не голодує хвостові верстати; зайнятий сигнал не ставить `nodata`; OEE комітить по верстату."""
+
+    def _contend(self, busy):
+        Machine = self.registry["td.machine"]
+        orig = Machine._td_lock
+
+        def lock(rec, nowait=False):
+            if rec == busy:
+                raise pg_errors.LockNotAvailable("could not obtain lock on row in relation td_machine")
+            return orig(rec, nowait=nowait)
+
+        return patch.object(Machine, "_td_lock", lock)
+
+    def _rows(self, m):
+        return self.env["td.machine.backlog"].sudo().search([("machine_id", "=", m.id)])
+
+    def test_push_locks_machine_row_nowait(self):
+        """Push не чекає рядок верстата, зайнятий тактом чи OEE: `FOR UPDATE NOWAIT`."""
+        with _SqlSpy() as spy:
+            self.feed(self.ua(self.m_ua, "10:00:00", state="READY"))
+        locks = spy.like("from td_machine", "for update")
+        self.assertTrue(locks)
+        self.assertTrue(all("for update nowait" in " ".join(q.lower().split()) for q in locks), locks)
+
+    def test_contended_readings_are_queued_then_applied_by_tick(self):
+        m = self.m_ua
+        with self._contend(m), self.assertLogs(MODEL, "WARNING"):
+            stats = self.env["td.machine"]._td_dispatch(
+                [dict(r, i=i) for i, r in enumerate(self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC"))],
+                "collector",
+            )
+        self.assertEqual((stats["locked"], stats["queued"], stats["errors"]), ([m.code], 2, []))
+        self.assertEqual(len(self._rows(m)), 1)
+        self.assertEqual(sorted(it["role"] for it in self._rows(m)._td_items()), ["mode", "state"])
+        self.assertEqual(m.state, "nodata")
+        self.tick("10:00:30")
+        self.env.invalidate_all()
+        self.assertFalse(self._rows(m))
+        self.assertEqual(m.state, "working")
+
+    def test_next_push_applies_queue_first(self):
+        m = self.m_ua
+        with self._contend(m):
+            self.feed(self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC"))
+        self.assertTrue(self._rows(m))
+        self.feed(self.ua(m, "10:00:20", pieces=3))
+        self.assertFalse(self._rows(m))
+        self.assertEqual((m.state, m.raw_state), ("working", "WORKING"))
+
+    def test_stale_queue_is_purged_not_applied(self):
+        m = self.m_ua
+        with self._contend(m):
+            self.feed(self.ua(m, "10:00:00", state="WORKING"))
+        self.assertTrue(self._rows(m))
+        self.tick("11:45:00")  # від постановки (10:30) минуло понад BACKLOG_TTL
+        self.env.invalidate_all()
+        self.assertFalse(self._rows(m))
+        self.assertEqual(m.state, "nodata")
+
+    def test_poisoned_queue_is_dropped_and_does_not_block_machine(self):
+        m = self.m_ua
+        with self._contend(m):
+            self.feed(self.ua(m, "10:00:00", state="WORKING"))
+        Machine = self.registry["td.machine"]
+
+        def boom(rec, items):
+            raise ValueError("poison")
+
+        with patch.object(Machine, "_td_apply", boom), self.assertLogs(MODEL, "ERROR"):
+            self.tick("10:30:30")
+        self.assertFalse(self._rows(m))
+        self.feed(self.ua(m, "10:31:00", state="READY"))
+        self.assertEqual(m.state, "idle")
+
+    def test_tick_resumes_after_budget_instead_of_restarting(self):
+        """Бюджет вичерпано посеред обходу: наступний виклик продовжує з наступного верстата, а не з першого."""
+        Machine = self.registry["td.machine"]
+        self.addCleanup(machine_module._TICK_CURSOR.clear)
+        expected = self.env["td.machine"].search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
+        self.assertGreaterEqual(len(expected), 3)
+        seen = []
+        orig = Machine._td_tick_extra
+
+        def spy_tick(rec, now):
+            seen.extend(rec.ids)
+            return orig(rec, now)
+
+        readings = iter([0.0, 0.0, 0.0, 100.0])  # старт, перевірки перед 1-ю, 2-ю й 3-ю пачками: бюджет вичерпано
+        fake_time = MagicMock()
+        fake_time.monotonic.side_effect = lambda: next(readings, 0.0)
+        with (
+            patch(MODEL + ".TICK_BATCH", 1),
+            patch(MODEL + ".time", fake_time),
+            patch.object(Machine, "_td_tick_extra", spy_tick),
+        ):
+            self.tick("10:30:30")
+            self.assertEqual(seen, expected[:2])
+            self.tick("10:31:30")
+            self.assertEqual(seen, expected)  # решта, без повторів
+            self.tick("10:32:30")
+            self.assertEqual(seen[len(expected) :], expected)  # обхід завершено: лічильник скинуто, знову з початку
+
+    def test_tick_yields_when_worker_time_is_up(self):
+        calls = []
+
+        def fake_commit(this, processed=0, *, remaining=None, deactivate=False):
+            calls.append((processed, remaining))
+            return 0.0
+
+        with at("10:30:30"):
+            ctx = {"ir_cron_progress_id": 1, "cron_id": 0, "cron_end_time": time.monotonic() - 1}
+            with (
+                patch.object(type(self.env["ir.cron"]), "_commit_progress", fake_commit),
+                patch.object(self.registry["td.machine"], "_td_tick_extra") as tick_extra,
+            ):
+                self.env["td.machine"].with_context(**ctx)._cron_tick()
+        self.assertEqual(calls, [(0, 1)])
+        self.assertFalse(tick_extra.called)
+
+    def test_mark_stale_skipped_signal_does_not_set_nodata(self):
+        """Сигнал зайнято (його push щойно приніс показання): stale не ставиться, отже верстат не блимає в `nodata`."""
+        m, sig = self.m_ua, self.sig_ua_state
+        self.feed(self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC"))
+        self.assertEqual((m.state, sig.status), ("working", "ok"))
+        cron_sig = sig.with_context(td_skip_locked=True)
+        with patch("odoo.addons.td_telemetry.models.td_signal.lock_skip_locked", lambda recs: recs.browse()):
+            cron_sig._mark_stale("timeout")
+        self.env.invalidate_all()
+        self.assertEqual((m.state, sig.status), ("working", "ok"))
+        cron_sig._mark_stale("timeout")
+        self.env.invalidate_all()
+        self.assertEqual((m.state, sig.status), ("nodata", "stale"))
+
+    def test_oee_cron_commits_per_machine(self):
+        """OEE: commit після кожного верстата (`_commit_progress`), а не один у кінці запуску."""
+        calls = []
+
+        def fake_commit(this, processed=0, *, remaining=None, deactivate=False):
+            calls.append((processed, remaining))
+            return 0.0
+
+        total = self.env["td.machine"].search_count([("active", "=", True), ("read_enabled", "=", True)])
+        self.assertGreaterEqual(total, 3)
+        with (
+            patch("odoo.modules.module.current_test", False),
+            patch.object(type(self.env["ir.cron"]), "_commit_progress", fake_commit),
+        ):
+            self.oee_tick("10:30")
+        self.assertEqual(calls, [(1, total - 1 - pos) for pos in range(total)])

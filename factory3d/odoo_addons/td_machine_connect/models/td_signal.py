@@ -47,6 +47,13 @@ class F3dSignal(models.Model):
                         _logger.info("td.signal %s: верстат зайнятий, stale повторить крон", sig.code)
                         continue
                     super(F3dSignal, sig)._mark_stale(reason)
+                    sig.invalidate_recordset(["status"])
+                    if sig.status not in ("stale", "unknown"):
+                        # сигнал зайнято паралельною транзакцією (її push, ймовірно, щойно приніс свіже показання):
+                        # верстат не чіпаємо, інакше `nodata` блимнув би до наступного показання
+                        savepoint.close(rollback=True)
+                        _logger.info("td.signal %s: stale пропущено, nodata верстата повторить крон", sig.code)
+                        continue
                     if machine and not machine._td_mark_nodata(fields.Datetime.now(), reason):
                         savepoint.close(rollback=True)  # nodata не вдалось — сигнал лишається, повторить крон
             except CONTENTION_ERRORS as exc:

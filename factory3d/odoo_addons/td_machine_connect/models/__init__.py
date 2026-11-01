@@ -5,6 +5,7 @@ from . import td_machine_state_log
 from . import td_downtime
 from . import td_machine_event
 from . import td_machine_message
+from . import td_machine_backlog
 from . import td_oee_shift
 from . import td_bottleneck
 from . import td_gantry_stack

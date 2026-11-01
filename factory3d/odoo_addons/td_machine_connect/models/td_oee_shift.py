@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, modules
 from odoo.exceptions import AccessError
 
 from ..tools import oee, ppt
@@ -155,7 +155,8 @@ class F3dOeeShift(models.Model):
         machines = (
             self.env["td.machine"].sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id")
         )  # DEC-19: стабільний порядок
-        for machine in machines:
+        total = len(machines)
+        for pos, machine in enumerate(machines):
             try:
                 with self.env.cr.savepoint():
                     self._td_cron_machine(machine, today)
@@ -165,6 +166,10 @@ class F3dOeeShift(models.Model):
                 )
             except Exception:
                 _logger.exception("OEE: помилка розрахунку верстата %s", machine.code)
+            # commit по верстату (як у `_cron_tick`): блокування рядків (`oee_shift_id`) не тримаються до кінця запуску
+            # й не змушують push та такт чекати всі верстати одразу
+            if not modules.module.current_test:  # у тестах commit курсора заборонено
+                self.env["ir.cron"]._commit_progress(1, remaining=total - pos - 1)
         return True
 
     @api.model
