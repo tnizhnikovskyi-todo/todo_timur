@@ -101,6 +101,14 @@ class F3dViewerProviderPeople(models.AbstractModel):
         sel = set(ctx.get("codes") or ())
         for model in ("hr.employee", "mrp.workorder", "hr.attendance"):
             sel |= set(changes.get(model) or ())
+        if not sel or payload_tools.none_match(
+            self.env,
+            [
+                ("hr.employee.public", "td_code", sel | {"OP-" + c for c in sel}),
+                ("mrp.workcenter", "td_code", sel),  # співробітника береться з завдання на вибраному центрі
+            ],
+        ):
+            return  # жодного співробітника чи центру серед вибраних кодів
         tmp = {}
         self._td_viewer_collect(tmp, ctx)
         part = {

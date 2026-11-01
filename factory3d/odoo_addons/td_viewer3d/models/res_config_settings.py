@@ -28,7 +28,7 @@ class ResConfigSettings(models.TransientModel):
         string="Зберігати знімки, днів", config_parameter=PREFIX + "snapshot_keep_days", default=14
     )
     td_event_keep_hours = fields.Integer(
-        string="Зберігати події, годин", config_parameter=PREFIX + "event_keep_hours", default=48
+        string="Зберігати події, годин", config_parameter=PREFIX + "event_keep_hours", default=24
     )
     td_delta_debounce_ms = fields.Integer(
         string="Затримка оновлень, мс", config_parameter=PREFIX + "delta_debounce_ms", default=1500
@@ -57,7 +57,8 @@ class ResConfigSettings(models.TransientModel):
     td_wall_url = fields.Char(string="Адреса «стіни»", compute="_compute_f3d_kiosk_url", readonly=True)
 
     def _td_kiosk_url(self, wall=False):
-        """Адреса кіоска (з `?wall=1` для «стіни»); порожньо, якщо користувач не адміністратор «3D Завод» або токена немає."""
+        """Адреса кіоска (з `?wall=1` для «стіни»); порожньо, якщо користувач не адміністратор «3D Завод»
+        або токена немає."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
             return ""
         params = self.env["ir.config_parameter"].sudo()
@@ -112,7 +113,8 @@ class ResConfigSettings(models.TransientModel):
         return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_td_open_wall(self):
-        """Відкриває екран планірки («стіну») у новій вкладці: меню «Екран планірки (стіна)» і кнопка в налаштуваннях."""
+        """Відкриває екран планірки («стіну») у новій вкладці: меню «Екран планірки (стіна)» і кнопка в
+        налаштуваннях."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError(_("Відкрити «стіну» може лише адміністратор «3D Завод»."))
         params = self.env["ir.config_parameter"].sudo()

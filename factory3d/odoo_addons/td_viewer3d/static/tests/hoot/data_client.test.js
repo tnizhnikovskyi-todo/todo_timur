@@ -82,10 +82,86 @@ test("inflight_again (AC-19): повідомлення під час польо�
     release();
     await tick();
     await tick();
+    // відповідь була повільною (1,7 с) → повторний запит не раніше ніж через 2× її тривалості
     await advanceTime(10);
+    expect(deltaCalls(calls).length).toBe(1);
+    await advanceTime(3500);
+    await tick();
+    await tick();
     expect(deltaCalls(calls).length).toBe(2);
     expect(patches.length).toBe(2);
     expect(client.inflight).toBe(false);
+});
+
+test("delta_hidden_tab: прихована вкладка не тягне дельту; видима — одна дельта з усіма накопиченими кодами", async () => {
+    let hidden = true;
+    const { client, bus, calls, patches, subscribe } = setup({ isHidden: () => hidden });
+    subscribe();
+    bus.emit("f3d_viewer", { codes: ["A"] });
+    await advanceTime(1600);
+    bus.emit("f3d_viewer", { codes: ["B"] });
+    await advanceTime(1600);
+    await tick();
+    expect(deltaCalls(calls).length).toBe(0);
+    expect([...client.pending].sort()).toEqual(["A", "B"]);
+    hidden = false;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    await tick();
+    const d = deltaCalls(calls);
+    expect(d.length).toBe(1);
+    expect(new URL(d[0], window.location.href).searchParams.get("codes").split(",").sort()).toEqual(["A", "B"]);
+    expect(patches.length).toBe(1);
+    client.unsubscribe();
+});
+
+test("delta_signal_codes: коди повідомлень kind=signal не йдуть у /delta, але самі повідомлення її викликають", async () => {
+    const { client, bus, calls, subscribe } = setup();
+    subscribe();
+    bus.emit("f3d_viewer", { model: "x_f3d_signal", kind: "signal", codes: ["energy/consumers/SAW-1/p_now"] });
+    expect(client.pending.size).toBe(0);
+    await advanceTime(1600);
+    await tick();
+    const d = deltaCalls(calls);
+    expect(d.length).toBe(1);
+    expect(new URL(d[0], window.location.href).searchParams.has("codes")).toBe(false);
+});
+
+test("delta_max_wait: безперервні повідомлення не відкладають дельту довше за 10 с", async () => {
+    const { client, bus, calls, subscribe } = setup();
+    subscribe();
+    for (let i = 0; i < 20; i++) {
+        bus.emit("f3d_viewer", { codes: [`C${i}`] });
+        await advanceTime(900); // частіше за debounce 1,5 с
+    }
+    await tick();
+    expect(deltaCalls(calls).length).toBeGreaterThan(0);
+    expect(client.pending.size).toBeLessThan(20);
+});
+
+test("delta_slow_spacing: після повільної відповіді наступний запит за повідомленням шини відкладено", async () => {
+    let n = 0;
+    const { calls, bus, subscribe } = setup({
+        routes: {
+            "/delta": async () => {
+                n++;
+                await new Promise((r) => setTimeout(r, 1000)); // «сервер» відповідає 1 с
+                return json({ ts: `2026-10-12T08:3${n}:00Z`, full: false, patch: {}, removed: {} });
+            },
+        },
+    });
+    subscribe();
+    bus.emit("f3d_viewer", { codes: ["A"] });
+    await advanceTime(1600); // дельта стартувала о 1,5 с
+    await advanceTime(1100); // відповіла о 2,5 с (тривалість 1 с → відступ 2 с, до 4,5 с)
+    await tick();
+    bus.emit("f3d_viewer", { codes: ["B"] });
+    await advanceTime(1600); // debounce минув, а відступ — ні
+    expect(deltaCalls(calls).length).toBe(1);
+    await advanceTime(1500);
+    await advanceTime(1100);
+    await tick();
+    expect(deltaCalls(calls).length).toBe(2);
 });
 
 test("full у відповіді: перечитує /data і віддає {full}", async () => {

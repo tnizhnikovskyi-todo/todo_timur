@@ -1,8 +1,9 @@
 """API-13: маршрут МО чи переміщення, якого немає в живому payload (виконане, скасоване, старе, майбутнє).
 
 Читання з правами користувача запиту (без `sudo`): запис, до якого немає доступу, віддається як `not_found`.
-Відповідь — завжди dict із `kind`, `name` і `reason`: `None` — маршрут є; `no_workorders` / `no_codes` / `no_locations` —
-документ знайдено, але підсвічувати нічого; `not_found`, `forbidden`, `bad_request` — документа немає або немає прав.
+Відповідь — завжди dict із `kind`, `name` і `reason`: `None` — маршрут є; `no_workorders` / `no_codes` /
+`no_locations` — документ знайдено, але підсвічувати нічого; `not_found`, `forbidden`, `bad_request` — документа
+немає або немає прав.
 """
 
 from . import dates

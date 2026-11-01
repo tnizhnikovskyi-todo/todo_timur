@@ -11,7 +11,7 @@
         <field name="key">td.viewer.snapshot_keep_days</field><field name="value">14</field>
     </record>
     <record id="param_event_keep_hours" model="ir.config_parameter">
-        <field name="key">td.viewer.event_keep_hours</field><field name="value">48</field>
+        <field name="key">td.viewer.event_keep_hours</field><field name="value">24</field>
     </record>
     <record id="param_delta_debounce_ms" model="ir.config_parameter">
         <field name="key">td.viewer.delta_debounce_ms</field><field name="value">1500</field>

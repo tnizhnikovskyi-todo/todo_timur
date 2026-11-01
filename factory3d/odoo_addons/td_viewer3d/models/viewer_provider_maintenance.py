@@ -177,6 +177,10 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         sel = set(ctx.get("codes") or ())
         for model in ("maintenance.equipment", "maintenance.request"):
             sel |= set(changes.get(model) or ())
+        if not sel or payload_tools.none_match(
+            self.env, [("maintenance.equipment", "td_code", sel), ("maintenance.request", "name", sel)]
+        ):
+            return  # жодного обладнання чи заявки серед вибраних кодів
         tmp = {}
         self._td_viewer_collect(tmp, ctx)
         reqs = [r for r in tmp.get("maintenance_requests") or [] if r["id"] in sel or r["equipment"] in sel]

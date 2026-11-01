@@ -17,7 +17,6 @@ _logger = logging.getLogger(__name__)
 PREFIX = "td.viewer."
 WINDOW_RE = re.compile(r"^(\d\d):(\d\d)-(\d\d):(\d\d)$")
 EVENTS_CAP = 500
-ROTATE_BATCH = 1000
 ROTATE_SECONDS = 60
 
 
@@ -195,14 +194,9 @@ class F3dViewerSnapshot(models.Model):
         snaps = self.sudo().search([("ts", "<", cutoff), ("kind", "!=", "install")])
         n_snaps = len(snaps)
         snaps.unlink()
-        events = self.env["td.viewer.event"].sudo()
-        n_events = 0
-        while time.monotonic() - started < ROTATE_SECONDS:
-            batch = events.search([("ts", "<", cutoff)], limit=ROTATE_BATCH)
-            if not batch:
-                break
-            n_events += len(batch)
-            batch.unlink()
+        # події потрібні лише дельті (event_keep_hours): їх чистить той самий пакетний видалювач, що й щогодинний крон
+        left = max(ROTATE_SECONDS - (time.monotonic() - started), 1)
+        n_events = self.env["td.viewer.event"].sudo()._purge_old(max_seconds=left)
         _logger.info("ротація: знімків %d, подій %d", n_snaps, n_events)
 
     # --- дії --------------------------------------------------------------

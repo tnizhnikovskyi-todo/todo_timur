@@ -373,10 +373,10 @@ class F3dViewerProviderProduction(models.AbstractModel):
         for model in ("mrp.production", "mrp.workorder", "mrp.workcenter", "mrp.workcenter.productivity"):
             sel |= set(changes.get(model) or ())
         env = self.env
-        if (
-            sel
-            and not any(WO_RE.match(c) for c in sel)
-            and all(payload_tools.access_ok(env, m) for m in ("mrp.workcenter", "mrp.production"))
+        if not sel:
+            return  # жодного коду (напр. лише тік сигналів) — збирати нічого
+        if not any(WO_RE.match(c) for c in sel) and all(
+            payload_tools.access_ok(env, m) for m in ("mrp.workcenter", "mrp.production")
         ):
             # жодного коду WO*, центру чи МО серед вибраних (напр. лише локації) — збирати нічого, 2 SQL замість ~9
             names = list(sel)
@@ -385,8 +385,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 or env["mrp.production"].search_count([("name", "in", names)], limit=1)
             ):
                 return
-        tmp = {}
-        self._td_viewer_collect(tmp, ctx)
+        tmp = payload_tools.collect_cached(self, ctx)
         wos = tmp.get("workorders") or {}
         mo_names = {w["production"] for k, w in wos.items() if k in sel}
         mo_names |= {c for c in sel if not WO_RE.match(c)}

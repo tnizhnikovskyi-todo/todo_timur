@@ -1,4 +1,5 @@
-"""API-13: маршрут МО/переміщення, якого немає в живому payload («Показати в 3D» з виконаного чи скасованого документа)."""
+"""API-13: маршрут МО/переміщення, якого немає в живому payload («Показати в 3D» з виконаного чи скасованого
+документа)."""
 
 from datetime import timedelta
 
@@ -140,8 +141,12 @@ class TestDocRoute(HttpCase, F3dViewerBase):
         picking = self._picking(src, dest, state="done")
         res = doc_route.build(self.env(user=self.user_f3d), "picking", picking.name)
         self.assertIsNone(res["reason"])
-        self.assertEqual((res["kind"], res["name"], res["state"], res["origin"]), ("picking", picking.name, "done", "TST-ORIGIN"))
-        self.assertEqual([(x["code"], x["role"]) for x in res["locations"]], [("TST-DR-SRC", "from"), ("TST-DR-DST", "to")])
+        self.assertEqual(
+            (res["kind"], res["name"], res["state"], res["origin"]), ("picking", picking.name, "done", "TST-ORIGIN")
+        )
+        self.assertEqual(
+            [(x["code"], x["role"]) for x in res["locations"]], [("TST-DR-SRC", "from"), ("TST-DR-DST", "to")]
+        )
 
     def test_picking_without_scene_locations(self):
         picking = self._picking(self._loc("TST-DR-P1"), self._loc("TST-DR-P2"))

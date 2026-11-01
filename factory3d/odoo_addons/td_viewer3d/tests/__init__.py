@@ -27,3 +27,5 @@ from . import test_maintenance_plan  # API-11, R-22
 from . import test_r26_extension  # W2-D: VX-01…VX-05
 from . import test_wall  # R-27: «стіна»
 from . import test_doc_route  # API-13: «Показати в 3D» з виконаного/скасованого документа
+from . import test_event_purge  # чистка td.viewer.event, індекси
+from . import test_delta_scope  # дельта: сигнали не будять провайдерів, stock збирає лише вибрані локації

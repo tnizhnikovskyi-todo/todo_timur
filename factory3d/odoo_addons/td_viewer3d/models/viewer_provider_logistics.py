@@ -314,8 +314,16 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         sel = set(ctx.get("codes") or ())
         for model in ("stock.picking", "stock.move", "stock.picking.batch", "sale.order", "purchase.order"):
             sel |= set(changes.get(model) or ())
-        tmp = {}
-        self._td_viewer_collect(tmp, ctx)
+        # docks теж змінюються лише з подіями переміщень/партій (їхні коди несуть назву переміщення чи код воріт)
+        if not sel or (
+            not any(DOCK_RE.match(c) for c in sel)
+            and payload_tools.none_match(
+                self.env,
+                [("stock.picking", "name", sel), ("sale.order", "name", sel), ("purchase.order", "name", sel)],
+            )
+        ):
+            return
+        tmp = payload_tools.collect_cached(self, ctx)
         part = {"docks": tmp.get("docks") or {}}
         for key in ("pickings", "sale_orders", "purchase_orders"):
             part[key] = [r for r in tmp.get(key) or [] if r["name"] in sel or r.get("dock") in sel]
