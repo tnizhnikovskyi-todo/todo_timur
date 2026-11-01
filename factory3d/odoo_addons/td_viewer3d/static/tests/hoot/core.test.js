@@ -55,6 +55,19 @@ test("R2 годинник «синхр.»: секунди з meta.now_ms; пат
     expect(txt(el, ".o_f3d_odoo-time").endsWith(`${hm}:45`)).toBe(true);
 });
 
+test("R2b годинник «синхр.»: клієнт випередив сервер (завмерлий демо-годинник) — назад лише після порога 90 с", async () => {
+    const { viewer, el } = await mountViewer({ model: "none" });
+    const meta = { now: viewer.D.meta.now, now_ms: Date.parse("2026-01-01T00:00:00Z") + 45000 };
+    viewer.applyPatch({ meta });
+    const shown = txt(el, ".o_f3d_odoo-time");
+    await advanceTime(60000); // клієнт пішов на хвилину вперед, сервер стоїть: у межах порога не відкочуємо
+    viewer.applyPatch({ meta });
+    expect(txt(el, ".o_f3d_odoo-time")).not.toBe(shown);
+    await advanceTime(60000); // випередження 120 с > 90 с: годинник повертається до сервера
+    viewer.applyPatch({ meta });
+    expect(txt(el, ".o_f3d_odoo-time")).toBe(shown);
+});
+
 test("R3 програвання зміни: повзунок, мітка, «Зараз»", async () => {
     const { viewer, el } = await mountViewer({ model: "none" });
     viewer.setSimTime(600);

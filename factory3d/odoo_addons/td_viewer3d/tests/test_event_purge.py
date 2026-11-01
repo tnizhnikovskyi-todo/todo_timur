@@ -1,7 +1,12 @@
 from datetime import timedelta
+from unittest.mock import patch
 
-from odoo import fields
+from odoo import fields, sql_db
 from odoo.tests import tagged
+
+from odoo.addons.td_viewer3d.models import viewer_event
+from odoo.addons.td_viewer3d.tools import dates
+from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
 
 from .common import F3dViewerBase
 
@@ -94,3 +99,41 @@ class TestEventPurge(F3dViewerBase):
         names = {r[0] for r in self.env.cr.fetchall()}
         self.assertIn("td_viewer_event__ts_index", names)
         self.assertFalse({n for n in names if n.endswith(("_ts_model_idx", "_model_index", "_kind_index"))}, names)
+
+    def test_late_committed_event_reaches_next_delta(self):
+        """Подія з `ts` на момент precommit, закомічена після дельти, не губиться: курсор дельти відстає від «зараз»."""
+        cursor = dates.parse_iso_utc(DeltaBuilder(self.env, None, changes={}).build()["ts"])
+        self.Event.create(
+            {"ts": dates.real_now() - timedelta(seconds=1), "model": "m", "codes": ["A"], "kind": "state"}
+        )
+        self.assertEqual(self.Event._since(cursor), {"m": {"A"}})
+
+    def test_purge_commits_each_batch_in_cron_only(self):
+        """У кроні кожен пакет фіксується (`_commit_progress`), поза кроном (тести, RPC) commit-ів немає."""
+        self._make(25, timedelta(hours=30))
+        calls = []
+
+        def fake_commit(this, processed=0, *, remaining=None, deactivate=False):
+            calls.append(processed)
+            return 0.0
+
+        cron_env = self.Event.with_context(ir_cron_progress_id=1, cron_id=0)
+        with patch.object(type(self.env["ir.cron"]), "_commit_progress", fake_commit):
+            self.assertEqual(self.Event._purge_old(batch=10), 25)
+            self.assertEqual(calls, [])  # без контексту крона
+            self._make(25, timedelta(hours=30))
+            with patch("odoo.modules.module.current_test", False):
+                self.assertEqual(cron_env._purge_old(batch=10), 25)
+        self.assertEqual(calls, [10, 10, 5])
+
+    def test_purge_skips_when_another_run_holds_the_lock(self):
+        """Щогодинний крон і щодобова ротація не чистять одночасно: хто не дістав блокування, пропускає."""
+        old = self._make(5, timedelta(hours=30))
+        holder = sql_db.db_connect(self.env.cr.dbname).cursor()
+        self.addCleanup(holder.close)
+        self.addCleanup(holder.rollback)  # advisory xact lock знімається разом із транзакцією
+        holder.execute("SELECT pg_advisory_xact_lock(%s)", [viewer_event.PURGE_LOCK])
+        self.assertEqual(self.Event._purge_old(), 0)
+        self.assertEqual(len(old.exists()), 5)
+        holder.rollback()
+        self.assertEqual(self.Event._purge_old(), 5)
