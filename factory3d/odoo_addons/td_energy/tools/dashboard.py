@@ -547,7 +547,8 @@ def diag_text(env, event, now):
     if not meter or not source:
         return None
     params = source.params or {}
-    last_ok = source.last_ok or meter.last_ts
+    # `source.last_ok` пишеться не частіше за `td.telemetry.status_touch_s` (300 с): точніший час — останнє показання
+    last_ok = max((t for t in (source.last_ok, meter.last_ts) if t), default=None)
     since = "немає відповіді з %s" % dates.to_local(last_ok).strftime("%H:%M:%S") if last_ok else "ще не відповідало"
     collector = source.collector_id
     coll = ""

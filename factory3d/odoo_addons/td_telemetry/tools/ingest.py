@@ -59,6 +59,8 @@ SIGNAL_FIELDS = [
 ]
 # `td.telemetry.last_write_min_s`: верхня межа інтервалу «живого» запису last_ts, с (0 — вимкнено)
 LAST_WRITE_MIN_S = 15
+# `td.telemetry.last_fresh_s`: найвужче вікно свіжості споживачів `last_ts`, с (див. `periods.fresh_window_s`)
+LAST_FRESH_S = periods.FRESH_CAP_S
 # `td.telemetry.last_deadband_pct`: мертва зона gauge, % від збереженого значення
 LAST_DEADBAND_PCT = 0.5
 LAST_FIELDS = ["last_value", "last_text", "last_ts", "last_quality", "last_stored_ts"]
@@ -106,6 +108,9 @@ class Ingester:
         # `_td_ingest(src="module")` синхронно, читають last_* одразу після прийому й дістають їх без відкладання.
         self.last_write_min_s = max(self._float_param(icp, "last_write_min_s", LAST_WRITE_MIN_S), 0.0)
         self.last_deadband_pct = max(self._float_param(icp, "last_deadband_pct", LAST_DEADBAND_PCT), 0.0)
+        self.last_fresh_s = max(self._float_param(icp, "last_fresh_s", LAST_FRESH_S), 0.0)
+        # період відправки колектора: найдовша затримка між показанням і його прийомом (вік `last_ts` для споживачів)
+        self.push_s = (collector.push_interval_s if collector else 0) or periods.DEFAULT_PUSH_S
         self.defer_last = src == "collector" and self.last_write_min_s > 0
         self.min_period_s = periods.min_period_s(icp)
         self.safety_segments = periods.exempt_segments(icp)
@@ -226,7 +231,7 @@ class Ingester:
             v = 1.0
         period = st["store_period_s"] or 0
         last_ts = st["last_ts"]
-        fresh = (q != "bad" or force_last) and (last_ts is None or ts > last_ts)
+        fresh = (q != "bad" or force_last) and (last_ts is None or ts > last_ts) and not self._shadowed(st, ts)
         if fresh and kind == "counter" and v is not None and last_ts is not None and q == "good":
             prev = st["last_value"] or 0.0
             if v < prev - abs(prev) * 0.01 and (st["sim_params"] or {}).get("reset") != "daily":
@@ -403,17 +408,44 @@ class Ingester:
             self.duplicates += self.cr.fetchone()[0]
 
     # --- завершення: last_*, статуси, заявки, ТО, шина -----------------------------------------------
+    def _eff_period_s(self, s):
+        return periods.effective_period_s(s["period_s"], s["safety"], self.min_period_s)
+
     def _fresh_interval_s(self, s):
         """Як часто (за часом показання) треба оновлювати `last_ts`, навіть якщо значення не змінилось.
 
-        Не рідше за половину вікна stale (`max(stale_periods·period_s, stale_min_s)`, період — ефективний, з
-        `min_period_s`) і не рідше за `last_write_min_s`: `_cron_stale` і споживачі зі своїм вікном свіжості
-        (td_chp `stale_s` = 30 с, ворота двору 15 с, `max(3·period_s, 120 с)` в енергетиці) бачать `last_ts`, що відстає
-        від останнього показання не більш ніж на цей інтервал + період + період відправки колектора.
+        Не рідше за половину вікна stale (`stale_window_s`: період — ефективний, з `min_period_s`; не менше
+        `2·push_interval_s`) і не рідше за `last_write_min_s`: `_cron_stale` бачить `last_ts`, що відстає від
+        останнього показання не більш ніж на цей інтервал + період + період відправки колектора.
         """
-        period = periods.effective_period_s(s["period_s"], s["safety"], self.min_period_s)
-        stale = max(self.stale_periods * period, self.stale_min_s)
+        stale = periods.stale_window_s(self._eff_period_s(s), self.stale_periods, self.stale_min_s, self.push_s)
         return min(self.last_write_min_s, stale / 2.0)
+
+    def _skip_gap_s(self, s):
+        """Скільки секунд після збереженого `last_ts` показання можна не писати, щоб споживачі зі своїм вікном
+        свіжості (АВР й генсет `3·period_s`, td_chp 30 с…) не бачили вік `last_ts` більшим за вікно:
+        `periods.max_skip_gap_s` (від'ємне — сигнал із вузьким вікном пишеться з кожним показанням)."""
+        return periods.max_skip_gap_s(s["period_s"], self._eff_period_s(s), self.push_s, self.last_fresh_s)
+
+    def _skippable(self, s, gap_s):
+        """Чи можна не писати показання, що новіше за збережене на `gap_s` с (за умови, що значення в мертвій зоні)."""
+        return gap_s < self._fresh_interval_s(s) and gap_s <= self._skip_gap_s(s)
+
+    def _shadowed(self, s, ts):
+        """Запізніле показання в проміжку, де могли лишитись незаписані новіші: воно не стає `last_*`.
+
+        Нове показання в межах мертвої зони не пишеться в БД (`_needs_write`), тож «найновіше бачене» живе лише в
+        пам'яті пакета. Показання повторного/запізнілого пакета (прийом пізніше за `push_interval_s` після `ts`)
+        з `ts` між збереженим `last_ts` і межею пропуску може виявитись старшим за таке незаписане: записане
+        воно повернуло б `last_value`/`last_ts` назад. Такі показання йдуть лише в історію (`td_reading`),
+        як і показання старші за `last_ts`; наступне вчасне показання оновить `last_*`.
+        """
+        if not self.defer_last or s["safety"] or s["kind"] == "event":
+            return False
+        if (self.now - ts).total_seconds() <= self.push_s + 2 * periods.FRESH_MARGIN_S:
+            return False
+        db_ts = s["db_last"]["last_ts"]
+        return db_ts is not None and ts > db_ts and self._skippable(s, (ts - db_ts).total_seconds())
 
     def _deadband(self, s, stored):
         """Мертва зона gauge: більше з відносної (% від збереженого значення) та півкроку відображення (`decimals`)."""
@@ -426,7 +458,8 @@ class Ingester:
         Пишемо, коли: це перше показання, змінились статус/breach_since/якість/текст, лічильник (будь-яка зміна),
         подію чи сигнал безпеки; gauge вийшов за мертву зону від збереженого значення; записано нове показання в
         `td_reading` (`last_stored_ts` — основа політики `store_period_s`); збережений `last_ts` старший за інтервал
-        свіжості.
+        свіжості (`_fresh_interval_s`) або за вікно споживачів (`_skip_gap_s`: сигнал із вузьким вікном — АВР, td_chp —
+        пишеться з кожним показанням).
         """
         if not self.defer_last:
             return True
@@ -445,7 +478,7 @@ class Ingester:
                 return True
             if abs(value - stored) > self._deadband(s, stored):
                 return True
-        return (s["last_ts"] - db["last_ts"]).total_seconds() >= self._fresh_interval_s(s)
+        return not self._skippable(s, (s["last_ts"] - db["last_ts"]).total_seconds())
 
     def _finish(self):
         dirty = [s for s in self.states.values() if s["last_dirty"]]
