@@ -22,7 +22,7 @@ class TestInstall(F3dViewerBase):
             "snapshot_minutes": "10",
             "snapshot_hours": "06:30-16:00",
             "snapshot_keep_days": "14",
-            "event_keep_hours": "48",
+            "event_keep_hours": "24",
             "delta_debounce_ms": "1500",
             "kiosk_enabled": "True",
             "kiosk_refresh_s": "15",

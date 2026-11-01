@@ -126,7 +126,7 @@ class F3dViewerProviderChains(models.AbstractModel):
             grp = getattr(prov, "_td_group", None)
             if grp and not payload_tools.group_ok(env, grp):
                 continue
-            prov._td_viewer_collect(tmp, full_ctx)
+            tmp.update(payload_tools.collect_cached(prov, full_ctx))
         if any(k not in tmp for k in NEEDED) or not env.user.has_group("stock.group_stock_user"):
             return
         patch.update(copy.deepcopy(chains_tools.compute(tmp)))

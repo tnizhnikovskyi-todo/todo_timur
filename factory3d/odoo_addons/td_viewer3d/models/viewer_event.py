@@ -1,10 +1,12 @@
 """M-03: подія шини td.viewer.event, коалесценція повідомлень (R-15), крон сигналів."""
 
 import logging
+import time
 from datetime import timedelta
 from functools import partial
 
 from odoo import api, fields, models
+from odoo.tools import SQL
 
 from ..tools import dates
 
@@ -14,6 +16,9 @@ PREFIX = "td.viewer."
 NOTIFY_KEY = "f3d_viewer.notify"
 SNAPSHOT_KEY = "f3d_viewer.event_snapshot"
 CODES_CAP = 500
+KEEP_HOURS_DEFAULT = 24  # скільки подій потрібно дельті; решта — лише журнал (знімки живуть окремо, snapshot_keep_days)
+PURGE_BATCH = 5000
+PURGE_SECONDS = 50
 
 
 def _flag(value, default=True):
@@ -36,20 +41,25 @@ class F3dViewerEvent(models.Model):
     _log_access = False
 
     ts = fields.Datetime(string="Момент", required=True, index=True, default=fields.Datetime.now)
-    model = fields.Char(string="Модель", required=True, index=True, size=64)
+    model = fields.Char(string="Модель", required=True, size=64)
     codes = fields.Json(string="Коди", required=True)
     kind = fields.Selection(
         [("state", "Стан"), ("stock", "Залишки"), ("doc", "Документ"), ("signal", "Сигнал"), ("maintenance", "ТО")],
         string="Тип",
         required=True,
-        index=True,
     )
     user_id = fields.Many2one("res.users", string="Користувач", ondelete="set null")
     n = fields.Integer(string="Кодів", compute="_compute_n", store=True)
     codes_text = fields.Char(string="Коди (текст)", compute="_compute_codes_text")
 
     def init(self):
-        self.env.cr.execute("CREATE INDEX IF NOT EXISTS td_viewer_event_ts_model_idx ON td_viewer_event (ts, model)")
+        # лише індекс по `ts` (його дають `_since`, знімок і чистка); (ts, model) і індекси model/kind дублювали його
+        # й подвоювали вартість кожного INSERT у журналі, що росте на тисячі рядків за годину
+        # (Odoo сам не знімає індекс, коли в полі прибрали `index=True`, тож на наявних базах — явний DROP)
+        self.env.cr.execute(
+            "DROP INDEX IF EXISTS td_viewer_event_ts_model_idx, "
+            "td_viewer_event__model_index, td_viewer_event__kind_index"
+        )
 
     @api.depends("codes")
     def _compute_n(self):
@@ -89,8 +99,9 @@ class F3dViewerEvent(models.Model):
                 now = fields.Datetime.now()
                 for (model, kind), codes in sorted(data.items()):
                     codes = sorted(codes)[:CODES_CAP]
+                    # `n` у vals: інакше збережене обчислюване поле дає ще один UPDATE на кожен рядок (мертві кортежі)
                     env["td.viewer.event"].sudo().create(
-                        {"ts": now, "model": model, "codes": codes, "kind": kind, "user_id": env.uid}
+                        {"ts": now, "model": model, "codes": codes, "kind": kind, "user_id": env.uid, "n": len(codes)}
                     )
                     if bus_on:
                         env["bus.bus"]._sendone(
@@ -130,17 +141,55 @@ class F3dViewerEvent(models.Model):
     def _since(self, since, limit=2000):
         """{model: set(codes)} для подій з `ts >= since` або None («повний»)."""
         params = self.env["ir.config_parameter"].sudo()
-        keep = _int(params.get_param(PREFIX + "event_keep_hours"), 48)
+        keep = _int(params.get_param(PREFIX + "event_keep_hours"), KEEP_HOURS_DEFAULT)
         if since < fields.Datetime.now() - timedelta(hours=keep):
             return None
-        # >= (а не >): ts має точність до секунди, подія тієї ж секунди, що й `since`, не має загубитись
-        rows = self.sudo().search_read([("ts", ">=", since)], ["model", "codes"], limit=limit + 1, order="id")
+        # >= (а не >): ts має точність до секунди, подія тієї ж секунди, що й `since`, не має загубитись.
+        # Порядок за `ts` (а не `id`): збігається з індексом, і планувальник не скануватиме всю таблицю по id.
+        rows = self.sudo().search_read([("ts", ">=", since)], ["model", "codes"], limit=limit + 1, order="ts, id")
         if len(rows) > limit:
             return None
         res = {}
         for row in rows:
             res.setdefault(row["model"], set()).update(row["codes"] or [])
         return res
+
+    # --- чистка -----------------------------------------------------------
+
+    @api.model
+    def _purge_old(self, keep_hours=None, batch=PURGE_BATCH, max_seconds=PURGE_SECONDS):
+        """Видаляє події старші за `event_keep_hours` (дельта старішого `since` і так віддає «повний») пакетами по
+        `batch` рядків прямим SQL (без ORM-кешу), не довше `max_seconds`; решта — наступним запуском.
+        Повертає кількість видалених."""
+        started = time.monotonic()
+        if keep_hours is None:
+            keep_hours = _int(
+                self.env["ir.config_parameter"].sudo().get_param(PREFIX + "event_keep_hours"), KEEP_HOURS_DEFAULT
+            )
+        cutoff = fields.Datetime.now() - timedelta(hours=max(keep_hours, 1))
+        self.flush_model()  # прямий SQL нижче не бачить ще не записаних створень
+        total = 0
+        while True:
+            self.env.cr.execute(
+                SQL(
+                    "DELETE FROM td_viewer_event WHERE id IN "
+                    "(SELECT id FROM td_viewer_event WHERE ts < %s ORDER BY ts LIMIT %s)",
+                    cutoff,
+                    batch,
+                )
+            )
+            deleted = self.env.cr.rowcount
+            total += deleted
+            if deleted < batch or time.monotonic() - started >= max_seconds:
+                break
+        if total:
+            self.env.invalidate_all()
+            _logger.info("td.viewer.event: видалено %d подій старіших за %s", total, cutoff)
+        return total
+
+    @api.model
+    def _cron_purge(self):
+        self._purge_old()
 
     # --- крон сигналів ----------------------------------------------------
 

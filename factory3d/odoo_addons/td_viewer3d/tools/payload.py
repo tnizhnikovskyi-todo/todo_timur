@@ -64,6 +64,10 @@ OPT_KEYS = {
     "workorders": ("date_start", "date_finished", "duration", "date_planned_finished", "blocked"),
     "pickings": ("dock", "truck", "location_dest", "source_locations", "vehicle", "note", "carrier"),
 }
+# події сигналів (шляхи `energy/consumers/<код>/p_now`): їхні коди потрібні лише провайдеру сигналів і енергетиці (вони
+# читають `changes`), а не збігаються з кодами записів сцени, тож у `ctx["codes"]` їх не кладемо: інакше кожен тік
+# сигналів змушував усіх провайдерів збирати свої розділи цілком, щоб відфільтрувати нічого
+SIGNAL_MODELS = ("x_f3d_signal", "td.signal")
 # модель події -> (розділ payload, ключ запису у списку або None для словника)
 REMOVED_MAP = {
     "mrp.production": ("productions", "name"),
@@ -107,6 +111,38 @@ def group_ok(env, xmlid):
     if not env["ir.model.data"]._xmlid_to_res_id(xmlid, raise_if_not_found=False):
         return False
     return env.user.has_group(xmlid)
+
+
+def none_match(env, checks):
+    """Дельта: True, якщо жодна з перевірок `(модель, поле, значення)` не знайшла запису, тобто вибрані коди не
+    стосуються провайдера й збирати його розділи цілком (щоб відфільтрувати нічого) не треба. Кожна перевірка — один
+    SQL із LIMIT 1. Моделі немає в реєстрі — записів теж немає; модель є, але прав на читання нема — невідомо: False,
+    провайдер збирає як раніше."""
+    for model, field, values in checks:
+        if not values or model not in env:
+            continue
+        if not env[model].has_access("read"):
+            return False
+        if env[model].search_count([(field, "in", sorted(values))], limit=1):
+            return False
+    return True
+
+
+def collect_cached(provider, ctx):
+    """Повний `_td_viewer_collect` провайдера, один раз на дельту: `ctx["collected"][назва]` ділиться між провайдерами
+    (напр. `production`/`logistics` збирають розділи для власної дельти, а `chains` бере їх же як вхід). Повернений
+    dict — лише для читання: дельти копіюють значення через `deep_merge`, а `chains` (послідовність 70, останній
+    споживач) дописує в нього, коли інші вже відпрацювали."""
+    memo = ctx.get("collected")
+    if memo is None:
+        tmp = {}
+        provider._td_viewer_collect(tmp, ctx)
+        return tmp
+    if provider._name not in memo:
+        tmp = {}
+        provider._td_viewer_collect(tmp, ctx)
+        memo[provider._name] = tmp
+    return memo[provider._name]
 
 
 def get_providers(env):
@@ -358,15 +394,19 @@ class DeltaBuilder(_Base):
             changes = None
         if changes is None:
             return {"full": True, "ts": ts}
-        codes = set(self.codes or ())
-        for value in changes.values():
-            codes |= set(value)
+        signal_codes = set()
+        for model in SIGNAL_MODELS:
+            signal_codes |= set(changes.get(model) or ())
+        codes = set(self.codes or ()) - signal_codes
+        for model, value in changes.items():
+            if model not in SIGNAL_MODELS:
+                codes |= set(value)
         if not codes and not changes:
             return {"ts": ts, "patch": {}, "removed": {}, "events": 0}
 
         patch = {"meta": {"now": dates.local(now), "now_ms": dates.epoch_ms(now), "errors": []}}
         errors = patch["meta"]["errors"]
-        ctx = self._ctx(now, {}, codes=codes, changes=changes, delta=True)
+        ctx = self._ctx(now, {}, codes=codes, changes=changes, delta=True, collected={})
         failed = set()
         for p in get_providers(env):
             collect = getattr(p, "_td_viewer_collect", None)

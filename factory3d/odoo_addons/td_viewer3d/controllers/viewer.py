@@ -24,7 +24,8 @@ SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
 SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
 MAX_CODES = 200
-# /delta: клієнт у бекенді накопичує коди з повідомлень шини; запас, щоб довгий день не давав 400 (клієнт шле шматками ≤ 200)
+# /delta: клієнт у бекенді накопичує коди з повідомлень шини; запас, щоб довгий день не давав 400
+# (клієнт шле шматками ≤ 200)
 MAX_DELTA_CODES = 2000
 GROUP_USER = "td_factory3d.group_td_user"
 GROUP_STOCK = "stock.group_stock_user"

@@ -63,6 +63,7 @@ class TestSnapshot(F3dViewerBase):
         self.assertNotEqual(manual, first)
 
     def test_events_in_snapshot(self):
+        self.env["td.viewer.event"].sudo().search([]).unlink()  # події встановлення (< 30 с тому) не рахуються
         first = self.Snap._take("manual")
         self.env["td.viewer.event"]._notify("stock.quant", ["TST-LOC-A"], "stock")
         self.env.flush_all()

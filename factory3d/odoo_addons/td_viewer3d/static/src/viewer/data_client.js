@@ -87,6 +87,13 @@ const DELTA_CHUNK = 200;
 const DELTA_CHUNK_CHARS = 2000;
 // після стількох поспіль помилок /delta клієнт перечитує /data повністю
 const FULL_RELOAD_AFTER = 3;
+// debounce без стелі під безперервним потоком повідомлень шини не спрацював би ніколи: дельта йде не пізніше ніж через
+// MAX_WAIT_MS після першого повідомлення
+const MAX_WAIT_MS = 10000;
+// повільна відповідь /delta (> SLOW_MS) відсуває наступний запит на 2× її тривалості (≤ MAX_SPACING_MS): клієнт не
+// «душить» сервер, що вже не встигає
+const SLOW_MS = 400;
+const MAX_SPACING_MS = 20000;
 
 export class DataClient {
     constructor({
@@ -99,6 +106,7 @@ export class DataClient {
         fetch: fetchFn = null,
         storage,
         reload = null,
+        isHidden = null,
     } = {}) {
         this.bus = bus;
         this.base = base;
@@ -109,6 +117,11 @@ export class DataClient {
         this._fetch = fetchFn;
         this.storage = storage === undefined ? safeStorage() : storage;
         this.reload = reload || (() => window.location.reload());
+        // вкладка прихована (document.visibilityState): дельти не тягнемо, коди лишаються в `pending`
+        this.isHidden = isHidden || (() => typeof document !== "undefined" && document.visibilityState === "hidden");
+        this._wake = false; // дельту відкладено через приховану вкладку
+        this._firstQueued = null; // момент першого повідомлення, що чекає в debounce
+        this._nextAllowed = 0; // не раніше цього моменту (мс): відступ після повільної відповіді
         this.state = "loading";
         this.lastTs = null;
         this.pending = new Set();
@@ -220,6 +233,7 @@ export class DataClient {
 
     subscribe(cb) {
         this.cb = cb;
+        this._watchVisibility();
         if (this.kiosk || this.busOff || !this.bus) {
             this._startPoll(this.refreshS);
             this._setState("polling");
@@ -235,12 +249,29 @@ export class DataClient {
         this._setState("live");
     }
 
+    _watchVisibility() {
+        if (this._onVis || typeof document === "undefined") {
+            return;
+        }
+        this._onVis = () => {
+            if (this._wake && !this.isHidden()) {
+                this._wake = false;
+                this._delta(); // вкладка знову видима: одна дельта з усім, що накопичилось
+            }
+        };
+        document.addEventListener("visibilitychange", this._onVis);
+    }
+
     unsubscribe() {
         // скасувати запити в польоті: після закриття вкладки/дії не лишається «network error»
         this._ac?.abort();
         clearTimeout(this.timer);
         clearInterval(this.poller);
         this.timer = this.poller = null;
+        if (this._onVis) {
+            document.removeEventListener("visibilitychange", this._onVis);
+            this._onVis = null;
+        }
         if (this.bus) {
             if (this._onMsg) {
                 this.bus.unsubscribe?.("f3d_viewer", this._onMsg);
@@ -294,15 +325,31 @@ export class DataClient {
     }
 
     _queue(msg) {
-        for (const c of msg?.codes || []) {
-            this.pending.add(c);
+        // сигнали: сервер бере їх із журналу подій за `since`, а сотні їхніх шляхів у URL лише важать і не потрібні
+        if (msg?.kind !== "signal") {
+            for (const c of msg?.codes || []) {
+                this.pending.add(c);
+            }
         }
+        this._schedule();
+    }
+
+    /** Таймер дельти: debounce, але не довше MAX_WAIT_MS від першого повідомлення й не раніше відступу після повільної відповіді. */
+    _schedule() {
+        const now = Date.now();
+        this._firstQueued ??= now;
+        let wait = Math.min(this.debounceMs, Math.max(0, this._firstQueued + MAX_WAIT_MS - now));
+        wait = Math.max(wait, this._nextAllowed - now);
         clearTimeout(this.timer);
-        this.timer = setTimeout(() => this._delta(), this.debounceMs);
+        this.timer = setTimeout(() => this._delta(), wait);
     }
 
     async _delta() {
         if (!this.cb || !this.online) {
+            return;
+        }
+        if (this.isHidden()) {
+            this._wake = true; // прихована вкладка нічого не малює: дочекаємось visibilitychange
             return;
         }
         if (this.inflight) {
@@ -310,6 +357,8 @@ export class DataClient {
             return;
         }
         this.inflight = true;
+        this._firstQueued = null;
+        const started = Date.now();
         const codes = this._takeCodes();
         try {
             const query = { since: this.lastTs };
@@ -318,6 +367,8 @@ export class DataClient {
             }
             const r = await this._json("/delta", { query });
             const d = await r.json();
+            const took = Date.now() - started;
+            this._nextAllowed = took > SLOW_MS ? Date.now() + Math.min(MAX_SPACING_MS, 2 * took) : 0;
             this._recovered();
             if (d.full) {
                 const full = await this.loadData();
@@ -345,7 +396,13 @@ export class DataClient {
             this.inflight = false;
             if (this.again) {
                 this.again = false;
-                this._delta();
+                const wait = this._nextAllowed - Date.now();
+                if (wait > 0) {
+                    clearTimeout(this.timer);
+                    this.timer = setTimeout(() => this._delta(), wait);
+                } else {
+                    this._delta();
+                }
             }
         }
     }

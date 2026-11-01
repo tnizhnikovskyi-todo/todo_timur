@@ -37,7 +37,11 @@ class F3dViewerProviderStock(models.AbstractModel):
         ):
             return
         static_locs = ((ctx.get("static") or {}).get("layout") or {}).get("locations") or {}
-        locs = env["stock.location"].search_fetch([("td_code", "!=", False), ("usage", "in", ("internal", "transit"))])
+        only = ctx.get("only_locs")  # дельта: лише вибрані локації (решта відфільтрувалась би після збирання)
+        loc_domain = [("td_code", "!=", False), ("usage", "in", ("internal", "transit"))]
+        if only is not None:
+            loc_domain = [("td_code", "in", sorted(only)), ("usage", "in", ("internal", "transit"))]
+        locs = env["stock.location"].search_fetch(loc_domain)
         quants = []
         if locs:
             # records замість search_read: без зайвих читань display_name товару й локації
@@ -59,7 +63,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         # --- товари
         pids = {q["product_id"][0] for q in quants}
         extra = set()
-        if payload_tools.access_ok(env, "mrp.production"):
+        if only is None and payload_tools.access_ok(env, "mrp.production"):  # у дельті товари потрібні лише як код
             mos = env["mrp.production"].search_fetch([("state", "not in", ("done", "cancel"))])
             extra = set(mos.product_id.ids) | set(mos.move_raw_ids.product_id.ids)
         if len(pids | extra) <= PRODUCTS_LIMIT:
@@ -94,7 +98,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         # --- допоміжні вибірки по локаціях
         reserved_for = self._reserved_for(locs)
         picking_of = self._received_today(locs, ctx)
-        quality_of = self._quality_by_lot()
+        quality_of = self._quality_by_lot() if locs else {}
         kit_links = self._kit_links(locs)
         orderpoints = self._orderpoints(locs)
 
@@ -274,8 +278,10 @@ class F3dViewerProviderStock(models.AbstractModel):
         sel = set(ctx.get("codes") or ())
         for model in ("stock.quant", "stock.move.line", "stock.location"):
             sel |= set(changes.get(model) or ())
+        if not sel:
+            return
         tmp = {}
-        self._td_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, dict(ctx, only_locs=sel))
         part = {"locations": {c: v for c, v in (tmp.get("locations") or {}).items() if c in sel}}
         if part["locations"]:
             payload_tools.deep_merge(patch, part)
