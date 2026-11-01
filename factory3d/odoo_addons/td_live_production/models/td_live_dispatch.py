@@ -30,7 +30,13 @@ COVER_PER_TICK = 10  # МО за такт, яким наперед резерв�
 COVER_BUDGET_S = 15.0  # секунд за такт на цю роботу, понад час подій
 COVER_STATES = ("confirmed", "partially_available")  # стани рухів компонентів, яким бракує резерву
 LIVE_WINDOW = timedelta(minutes=10)  # подія старша за це — «історія»: стан верстата (td.machine) не чіпаємо
+CLOSE_BACKOFF_FIRST = timedelta(minutes=5)  # пауза перед повтором закриття МО, що не закрилась; далі подвоюється
+CLOSE_BACKOFF_MAX = timedelta(minutes=60)
+CLOSE_FAILS_PER_TICK = (
+    3  # невдалих закриттів МО за такт: далі решту відкладаємо, щоб не з'їсти бюджет сьогоднішніх подій
+)
 _LAST_WARN = {}  # база → коли востаннє писали про недоступний емулятор (одне попередження на годину)
+_CLOSE_BACKOFF = {}  # (база, id МО) → (невдач, не повторювати раніше за): пам'ять процесу, після рестарту з нуля
 
 
 class TdLiveEngine(models.AbstractModel):
@@ -148,21 +154,36 @@ class TdLiveEngine(models.AbstractModel):
             events = []
         else:
             return res
-        failed = set()
+        # МО в паузі повтору (закриття не вдалось раніше) блокують залежні кроки, як невдача цього такту, але не
+        # коштують ні часу, ні місця в черзі: «вічно невдала» МО не повинна з'їдати бюджет сьогоднішніх подій
+        failed = {("mo", mid) for mid in self._td_close_backoff(mos, now)}
         started = time.monotonic()
-        processed = 0
-        for ev in events:
+        processed = close_fails = 0
+        stop = len(events)
+        for i, ev in enumerate(events):
             if (limit and processed >= limit) or (budget_s is not None and time.monotonic() - started >= budget_s):
+                stop = i
                 break
+            if self._td_event_blocked(ev, state, failed):
+                continue
+            if ev["kind"] == "mo_done" and close_fails >= CLOSE_FAILS_PER_TICK:
+                failed.add(("mo", ev["id"]))  # ліміт невдалих закриттів: решту — наступним тактом
+                continue
             processed += 1
             if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW):
                 res["applied"] += 1
-        res["pending"] = len(events) - processed
+            if ev["kind"] == "mo_done":
+                if ("mo", ev["id"]) in failed:
+                    close_fails += 1
+                    self._td_close_failed(ev["id"], now)
+                else:
+                    _CLOSE_BACKOFF.pop((self.env.cr.dbname, ev["id"]), None)
+        res["pending"] = sum(1 for ev in events[stop:] if not self._td_event_blocked(ev, state, failed))
         if checkpoint:
             checkpoint(res)
         # відкриті МО без повного резерву забезпечуємо наперед; МО, що закриваються в цьому такті, пропускаємо
         if cover_s is None:
-            soon = {ev["id"] for ev in events[processed:] if ev["kind"] == "mo_done"}
+            soon = {ev["id"] for ev in events[stop:] if ev["kind"] == "mo_done"}
             res["covered"] = self._td_cover_open(
                 now, skip=soon, budget_s=COVER_BUDGET_S if budget_s is None else min(budget_s, COVER_BUDGET_S)
             )
@@ -184,18 +205,43 @@ class TdLiveEngine(models.AbstractModel):
         return res
 
     @api.model
+    def _td_event_key(self, ev, state):
+        """Ключ залежності події: усі кроки однієї МО (старт, завершення, закриття) падають і пропускаються разом."""
+        if ev["kind"] in ("wo_start", "wo_finish"):
+            return ("mo", state["wos"][ev["id"]]["mo"])
+        return ("mo", ev["id"]) if ev["kind"] == "mo_done" else None
+
+    @api.model
+    def _td_event_blocked(self, ev, state, failed):
+        """Подія залежить від МО з `failed` (невдача в цьому такті або пауза повтору): її не виконуємо й не рахуємо."""
+        if ev["kind"] == "ship":
+            return any(("mo", m) in failed for m in state["sos"][ev["id"]]["mos"])
+        key = self._td_event_key(ev, state)
+        return bool(key and key in failed)
+
+    @api.model
+    def _td_close_backoff(self, mos, now):
+        """id МО, яким ще рано повторювати закриття; записи МО поза керованими (закриті, скасовані) прибираємо."""
+        db = self.env.cr.dbname
+        live = set(mos.ids)
+        for key in [k for k in _CLOSE_BACKOFF if k[0] == db and k[1] not in live]:
+            del _CLOSE_BACKOFF[key]
+        return {mid for (name, mid), (_n, retry) in _CLOSE_BACKOFF.items() if name == db and retry > now}
+
+    @api.model
+    def _td_close_failed(self, mo_id, now):
+        """Невдале закриття МО: наступна спроба не раніше ніж через 5, 10, 20… хв (не довше години)."""
+        key = (self.env.cr.dbname, mo_id)
+        fails = _CLOSE_BACKOFF.get(key, (0, None))[0] + 1
+        _CLOSE_BACKOFF[key] = (fails, now + min(CLOSE_BACKOFF_FIRST * 2 ** (fails - 1), CLOSE_BACKOFF_MAX))
+
+    @api.model
     def _td_apply_event(self, ev, state, failed, res, live=True):
         """Один крок у savepoint. `failed` — ключі, чиї залежні кроки цього такту пропускаються."""
         env = self.env
         kind, ident, t = ev["kind"], ev["id"], ev["t"]
-        mo_id = state["wos"][ident]["mo"] if kind in ("wo_start", "wo_finish") else None
-        if kind == "mo_done":
-            mo_id = ident
-        key = {"wo_start": ("mo", mo_id), "wo_finish": ("mo", mo_id), "mo_done": ("mo", mo_id)}.get(kind)
-        if kind == "ship":
-            if any(("mo", m) in failed for m in state["sos"][ident]["mos"]):
-                return False
-        elif key and key in failed:
+        key = self._td_event_key(ev, state)
+        if self._td_event_blocked(ev, state, failed):
             return False
         try:
             with env.cr.savepoint():
@@ -214,7 +260,16 @@ class TdLiveEngine(models.AbstractModel):
         except CONCURRENCY:
             raise  # конкурентне оновлення: Odoo повторить запит, крон — наступний такт
         except Exception as exc:  # noqa: BLE001 — крок не повинен зупиняти такт; причина в логу, повтор на наступному тику
-            _logger.warning("td_live_production: %s #%s о %s не виконано: %s", kind, ident, t, exc)
+            # закриття МО, що вже в паузі повтору, пише в лог лише на рівні debug: одне попередження на МО
+            repeat = kind == "mo_done" and (env.cr.dbname, ident) in _CLOSE_BACKOFF
+            _logger.log(
+                logging.DEBUG if repeat else logging.WARNING,
+                "td_live_production: %s #%s о %s не виконано: %s",
+                kind,
+                ident,
+                t,
+                exc,
+            )
             if key:
                 failed.add(key)
             return False

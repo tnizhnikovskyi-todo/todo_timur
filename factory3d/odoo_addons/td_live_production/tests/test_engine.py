@@ -17,6 +17,7 @@ SHIFT = (7.0, 15.5)
 T0 = clock.shift_window(DAY, SHIFT)[0]  # 07:00 Київ = 05:00 UTC
 P = "td.live_production."
 ENGINE = "odoo.addons.td_live_production.models.td_live_engine."
+DISPATCH = "odoo.addons.td_live_production.models.td_live_dispatch."
 NIGHT = "td_live_production.cron_td_live_nightly"
 
 
@@ -1209,6 +1210,65 @@ class TestLive(TransactionCase):
         self.assertGreater(seen[0]["applied"], 0)
         self.assertGreater(seen[0]["pending"], 0)
         self.assertEqual((seen[0]["covered"], seen[0]["pushed"]), (0, {}))  # ще до забезпечення й цілей
+
+    def test_failing_mo_close_backs_off_and_does_not_starve_the_queue(self):
+        """МО, чиє закриття падає щоразу (напр. компонент із лотами): повтор не раніше паузи, за такт — не більше
+        `CLOSE_FAILS_PER_TICK` невдач, невдалі не рахуються в `pending`, а цілі верстатам шляться."""
+        day = self.generate()
+        total = len(day.production_ids)
+        self.assertGreater(total, 2)
+        tried = []
+
+        def failing_close(this, mo, t):
+            tried.append(mo.id)
+            raise UserError("лотовий компонент")
+
+        push = patch.object(type(self.engine), "_td_push_targets", return_value={"ok": 1, "unknown": []})
+        with patch(DISPATCH + "CLOSE_FAILS_PER_TICK", 1), push:
+            with patch.object(type(self.engine), "_td_mo_close", failing_close):
+                for tick in range(total):  # по одній невдачі за такт: кожна МО спробувана рівно раз
+                    res = self.at(600 + tick / 10).td_dispatch()
+                    self.assertEqual(len(tried), tick + 1)
+                    self.assertEqual((res["closed"], res["shipped"], res["pending"]), (0, 0, 0))
+                self.assertEqual(sorted(tried), sorted(day.production_ids.ids))
+                res = self.at(600 + total / 10).td_dispatch()  # усі в паузі: нічого не пробуємо, чергу не тримаємо
+                self.assertEqual(len(tried), total)
+                self.assertEqual(res["pending"], 0)
+                self.assertTrue(res["targets"])
+                self.at(606).td_dispatch()  # пауза (5 хв) минула: одна повторна спроба за такт
+                self.assertEqual(len(tried), total + 1)
+        self.at(607).td_dispatch()  # закриття знову працює: МО поза паузою закриваються, а в паузі (друга невдача) — ні
+        self.assertTrue(day.production_ids.filtered(lambda mo: mo.state != "done"))
+        self.at(620).td_dispatch()  # пауза минула (10 хв після другої невдачі): усе закрито
+        self.assertEqual(day.state, "done")
+        self.assertFalse(day.production_ids.filtered(lambda mo: mo.state != "done"))
+
+    def test_close_backoff_blocks_dependent_events_and_doubles(self):
+        """МО в паузі повтору блокує свої кроки й відвантаження замовлення; пауза подвоюється до години, записи МО,
+        що вийшли з керованих, прибираються."""
+        eng, now = self.engine, T0
+        state = {"wos": {7: {"mo": 11}}, "mos": {}, "sos": {5: {"mos": [11, 12]}}}
+        evs = [
+            {"kind": k, "id": i, "t": now} for k, i in (("wo_start", 7), ("wo_finish", 7), ("mo_done", 11), ("ship", 5))
+        ]
+        self.assertFalse(any(eng._td_event_blocked(ev, state, set()) for ev in evs))
+        self.assertTrue(all(eng._td_event_blocked(ev, state, {("mo", 11)}) for ev in evs))
+        self.assertFalse(eng._td_event_blocked({"kind": "mo_done", "id": 12, "t": now}, state, {("mo", 11)}))
+        mos = self.env["mrp.production"].browse(11)
+        self.assertEqual(eng._td_close_backoff(mos, now), set())
+        eng._td_close_failed(11, now)
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(4)), {11})
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(6)), set())
+        eng._td_close_failed(11, now + mins(6))  # друга невдача — пауза 10 хв
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(15)), {11})
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(17)), set())
+        for _i in range(10):
+            eng._td_close_failed(11, now)
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(59)), {11})
+        self.assertEqual(eng._td_close_backoff(mos, now + mins(61)), set())
+        self.assertEqual(eng._td_close_backoff(self.env["mrp.production"], now), set())  # МО поза керованими
+        eng._td_close_failed(11, now)
+        self.assertEqual(eng._td_close_backoff(mos, now), {11})  # лічильник скинуто разом із записом: знову 5 хв
 
     # --- нічний крон: запис крона, що виконується, не чіпаємо ------------------------------------------------------
     def test_nightly_does_not_write_the_running_cron(self):
