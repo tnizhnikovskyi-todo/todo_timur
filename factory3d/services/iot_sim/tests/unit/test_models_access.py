@@ -214,6 +214,40 @@ def test_fire_drill_doors_once(world, ctl):
     assert sum(1 for e in ctl.events if e["code"] == 20480 and e["door_id"] == 3) >= 1
 
 
+def test_restart_during_drill_does_not_reemit_unlock_and_fire(world, ctl, registry):
+    """``drill_id`` у знімку: рестарт під час навчальної тривоги не дублює пачку unlock + FIRE."""
+    import json
+
+    from iot_sim.core.clock import FakeClock
+    from iot_sim.core.world import World
+
+    world.set_flag(
+        "fire_drill",
+        {"zone": "FA-CNC", "detector": "", "real": False, "t0": world.now().isoformat(), "phase": "active"},
+    )
+    for _ in range(30):
+        world.step(1)
+
+    def fires(c):
+        return sum(1 for e in c.events if e["code"] == 26368)
+
+    assert fires(ctl) == 1
+    data = json.loads(json.dumps(world.snapshot()))
+    assert data["devices"]["ACCESS"]["extra"]["drill_id"] is not None
+    for variant in ("with_key", "old_snapshot_without_key"):
+        d = json.loads(json.dumps(data))
+        if variant != "with_key":
+            del d["devices"]["ACCESS"]["extra"]["drill_id"]
+        b = World(registry, seed=world.seed, clock=FakeClock("2026-10-12T10:30:00"))
+        b.restore(d)
+        n0 = len(b.devices["ACCESS"].model.ctl.events)
+        for _ in range(30):
+            b.step(1)
+        c = b.devices["ACCESS"].model.ctl
+        assert fires(c) == 1, variant
+        assert sum(1 for e in c.events[n0:] if e["code"] in (26368, 20480) and e["door_id"] == 3) == 0, variant
+
+
 # --- дві зміни: бригади A (07:00–15:30) і B (15:30–23:00) ------------------------------------------------------
 def _set_time(world, hh: int, mm: int = 0) -> None:
     world.clock.set(datetime(2026, 10, 12, hh, mm))

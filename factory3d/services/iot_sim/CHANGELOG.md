@@ -1,5 +1,29 @@
 # Changelog — iot_sim
 
+## Unreleased: виправлення за незалежним ревью (дрейф фільтрів, таймаут Odoo, id BioStar, знімок, СКУД-тривога)
+- **Виправлення (HIGH): після апгрейду фільтр понад нову стелю «замерзав» навіть без сценарію.** Значення `filter_dp`, відновлене зі знімка старого
+  необмеженого дрейфу, могло бути ВИЩИМ за нову стелю `nominal + 0,75·(поріг − nominal)`: умова `change_at ≤ v ≤ стеля` його не ловила, а `v < стеля` теж,
+  тож перепад не рос і не скидався (можливо назавжди в тривозі). Тепер `v ≥ рівень заміни` без утримання (`held_until`) — це «заміна фільтра» (скидання до `nominal`).
+  Винятки: значення, виставлене через `force`/API з утриманням (`hold_s > 0`, API завжди з утриманням), поки утримання діє; сценарій S-04 `filter_clogged` (лінійно, без стелі).
+  Тести: `test_models_drift.py` (`test_value_above_ceiling_restored_from_old_snapshot_is_reset`, `..._held_or_scenario_is_exempt`; `test_drift_alarm_threshold` і
+  `test_forced_value_over_ceiling_is_held` тепер виставляють значення з утриманням — голе значення понад стелю більше не «заморожується»).
+- **Виправлення: завислий Odoo блокував опитування (people, follow_odoo) назавжди.** `OdooReadOnly.timeout` зберігався, але не використовувався: `xmlrpc.client.ServerProxy`
+  не має таймаута сокета, виклик у `asyncio.to_thread` не повертався, `stale` не виставлявся, люди не оновлювались. Тепер `ServerProxy` створюється з `Transport`/`SafeTransport`
+  з `timeout` (на кожну операцію сокета), а `await` обгорнуто в `asyncio.wait_for(… timeout × 4)`; `TimeoutError` обробляється як будь-яка помилка читання
+  (`stale` / попередження). Тести: `test_follow.py` (`test_readonly_client_times_out_on_hung_server`, `..._wait_for_caps_blocking_call`, `..._proxy_has_socket_timeout`).
+- **Виправлення: id подій BioStar лише від годинника (повтор після відкоту часу).** `BioStarStore._next_id` стартував з `event_id_seed()` (мс епохи), тож після відкоту системного годинника
+  ids могли повторити видані Odoo (`UNIQUE(server_id, biostar_id)` мовчки відкидає). Лічильник тепер лежить у `world.protocol_state["biostar_next_id"]` і в знімку (`protocol_state`),
+  а нумерація стартує з `max(seed, збережений)`. Знімок без ключа (старий) читається як раніше. Тест: `test_biostar.py::test_event_ids_survive_snapshot_when_clock_steps_back`.
+- **Виправлення: `snapshot.load` падав з `KeyError` на знімку без `saved_at`.** Тепер відсутній/некоректний `saved_at` замінюється mtime файлу (з попередженням), вік рахується за ним.
+  Тест: `test_world.py::test_snapshot_load_tolerates_missing_saved_at`.
+- **Виправлення: рестарт під час навчальної тривоги знову видавав пачку unlock + FIRE у СКУД.** `AccessCtl.drill_id` не зберігався; тепер він у `get_state` пристрою ACCESS
+  (старий знімок без ключа: поточна тривога вважається вже обробленою). Тест: `test_models_access.py::test_restart_during_drill_does_not_reemit_unlock_and_fire`.
+  Відомо: `Facp` має той самий шаблон (`drill_id` не в знімку, подія `fire` дублюється при рестарті під час тривоги) — не змінено, окрема задача.
+- **Примітка (OPC UA, без змін коду): події тепер мають `EventType = WwBaseEventType`/`WwAlarmConditionType`** (див. запис про Woodworking нижче). `asyncua` у сервері обробляє `OfType`-фільтр
+  підписки як ТОЧНИЙ збіг типу (без підтипів), тому сторонній клієнт, що підписується з `OfType(BaseEventType)`, подій не отримає; потрібен `OfType(WwBaseEventType)`/`WwAlarmConditionType`
+  (як робить колектор, `opcua.py::_event_types`) або підписка без `OfType`.
+- Стенд: `tools/server/install_stand.sh` більше не затирає установлене значеннями за замовчуванням (порт BioStar 8081, Odoo :8069, `TD_IP_ALLOW`), додано `SIM_ODOO_*` — див. `tools/server/STAND.md`.
+
 ## Unreleased: працівники СКУД читаються з Odoo і в режимі scenario; OPC UA публікує типи подій Woodworking
 - **Виправлення: у scenario `world.people` порожній після перевстановлення/рестарту без знімка** — людей читав лише `follow_odoo`
   (`poll_slow`), тож СКУД (BioStar, розклад `AccessCtl`) не давав подій, доки знімок не мав людей (на стенді — 2 доби). Сам `follow_odoo`

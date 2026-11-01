@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -260,6 +261,28 @@ def test_snapshot_rejects_bad_and_old(registry, tmp_path, caplog, world):
     data["signals"]["no/such/signal"] = [1, None, "ok", None]
     data["devices"]["NOSUCH"] = {}
     world.restore(data)  # невідомі коди ігноруються
+
+
+def test_snapshot_load_tolerates_missing_saved_at(world, tmp_path):
+    """Знімок без ``saved_at`` (чи з неприйнятним значенням) не дає KeyError: вік — за mtime файлу."""
+    import os
+
+    d = tmp_path / "s"
+    snapshot.save(world, d)
+    path = d / snapshot.FILENAME
+    data = json.loads(path.read_text())
+    for bad in (None, "x"):
+        if bad is None:
+            data.pop("saved_at")
+        else:
+            data["saved_at"] = bad
+        path.write_text(json.dumps(data))
+        loaded = snapshot.load(d)
+        assert loaded is not None and abs(loaded["saved_at"] - path.stat().st_mtime) < 1
+        world.restore(loaded)  # restore теж приймає підставлений saved_at
+    old = time.time() - 25 * 3600
+    os.utime(path, (old, old))
+    assert snapshot.load(d) is None  # без saved_at дію має mtime: старий знімок відкидається
 
 
 def _live_world(registry, factor: float = 1.0) -> tuple[World, FakeRealTime]:

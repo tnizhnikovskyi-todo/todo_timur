@@ -53,13 +53,39 @@ def test_filter_clogged_flag_release(world):
 
 
 def test_drift_alarm_threshold(world):
-    world.signals[RV05].value = 285.0
+    world.force(RV05, 285.0, hold_s=600)  # виставлене ззовні з утриманням — дрейф не чіпає
     world.step(10)
     assert world.signals[RV05].status == "alarm"
     assert world.signals["equipment/DUST-1/airflow_m3h"].value > 0
     assert world.devices["DUST-1"].model.get_state() == {"clogged": False}
     world.devices["DUST-1"].model.set_state({"clogged": True})
     assert world.devices["DUST-1"].model.drift.clogged
+
+
+def test_value_above_ceiling_restored_from_old_snapshot_is_reset(world):
+    """Апгрейд: зі знімка старого необмеженого дрейфу значення понад стелю не «замерзає»."""
+    model = world.devices["DUST-1"].model
+    ceiling = model.drift.band()[1]
+    sig = world.signals[DUST]
+    sig.value = ceiling + 0.15  # як після restore(): без утримання й без сценарію
+    assert sig.held_until is None
+    world.step(10)
+    assert sig.value == pytest.approx(1.0)
+    world.step(10)
+    assert 1.0 <= sig.value < ceiling  # далі штатний обмежений дрейф
+
+
+def test_value_above_ceiling_held_or_scenario_is_exempt(world):
+    sig = world.signals[DUST]
+    world.force(DUST, 1.9, hold_s=600)
+    world.step(10)
+    assert sig.value == 1.9  # утримання (force/API)
+    world.advance(700)
+    assert sig.value < 1.9  # утримання минуло: заміна фільтра
+    world.set_flag("filter_clogged", {"DUST-1": 1.9})
+    sig.value = 1.9
+    world.step(10)
+    assert sig.value > 1.9  # сценарій S-04: лінійно, без стелі і без скидання
 
 
 # --- обмежений дрейф: без сценарію поріг не досягається (R-09) ------------------------------------------
@@ -136,6 +162,6 @@ def test_scenario_flag_pushes_over_threshold(world):
 
 
 def test_forced_value_over_ceiling_is_held(world):
-    world.signals[RV05].value = 285.0
+    world.force(RV05, 285.0, hold_s=3 * 3600)
     trace = _run(world, "RV-05", RV05, 2)
-    assert set(trace) == {285.0}  # ручне значення: без росту й без авто-заміни
+    assert set(trace) == {285.0}  # ручне значення з утриманням: без росту й без авто-заміни
