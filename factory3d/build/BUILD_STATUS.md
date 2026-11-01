@@ -338,3 +338,10 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
   буфер і знімки 3 старих версій піднімаються); e2e локально — PASS (пуші, СКУД з ін'єкцією, рестарти, Odoo 2 хв офлайн).
   Задеплоєно a92419d: td_energy_control 1.0.3, td_bms 1.0.5, td_fire_safety 1.1.4, td_yard 1.0.2 (менше no-op write, N+1).
   Для свіжого стенду (не наш): td.access.biostar_password, SIM_ODOO_* (+ hr.group_hr_user), URL сервера СКУД з Docker.
+- 01.11 вечір: ревʼю 5×Fable → виправлення (колектор 0.2.1→0.2.2: poison-рядок, 413, без halving на refused,
+  обмежена зупинка, live під час bisect; телеметрія 1.1.6 + energy 1.1.6: запис last_* з урахуванням вікна свіжості
+  споживачів (ATS/КГУ), монотонність; емулятор: фільтри вище стелі, таймаут XML-RPC, лічильник BioStar і drill_id у
+  знімку; install_stand.sh: значення TD_* читаються з установленого, --confirm-change; machine_connect 1.4.4–1.4.5:
+  push NOWAIT + td.machine.backlog, такт без голодування хвоста, flush перед savepoint; live 1.0.8: backoff
+  незакривних МО; viewer3d 1.1.15, fire_safety_viewer3d 1.1.3). Спільні тести 859 (2 відомих падіння), e2e PASS.
+  Задеплоєно 129ddb0. Колектор/емулятор — чекають одного install_stand.sh (з --check без TD_*).
