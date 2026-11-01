@@ -600,7 +600,8 @@ class F3dSignal(models.Model):
             mode = addr.get("mode")
             if mode == "cov" or (mode is None and addr.get("object") in COV_DEFAULT_OBJECTS):
                 p = thresholds.cov_check_s(self.period_s)
-        return max(n_periods * p, min_s)
+        push = self.collector_id.push_interval_s if self.collector_id else 0
+        return periods.stale_window_s(p, n_periods, min_s, push)
 
     def _mark_stale(self, reason):
         """Сигнали → `stale` («Немає даних»); уже `unknown`/`stale` пропускаються (пишуться лише змінені значення).
