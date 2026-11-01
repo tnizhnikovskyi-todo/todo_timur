@@ -175,10 +175,10 @@ class F3dBmsCheck(models.AbstractModel):
             _logger.exception("bms check")
             env.env.invalidate_all()
             if source:
-                source.write({"state": "error", "last_error": str(exc)[:512]})
+                source._td_write_status({"state": "error", "last_error": str(exc)[:512]})
             return False
-        if source:
-            source.write({"state": "online", "last_ok": now, "last_error": False})
+        if source:  # `last_ok` без інших змін — не частіше за `td.telemetry.status_touch_s` (DEC-21 td_telemetry)
+            source._td_write_status({"state": "online", "last_ok": now, "last_error": False})
         return True
 
     def _notify_commands(self, now):
