@@ -324,3 +324,13 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
   вже спожиті/зарезервовані). Не повертається: стиснення плану (роботу виконано), 27.10 матиме менше роботи.
 - Чекає дозволу на видалення: TEMP-дії 2324, 2419; партії INV-2510-* (нульові).
 - Чекає install_stand.sh: claude/td-sim-people 56b5c6d, claude/td-col-buffer cebb0b0 (не злиті).
+
+## 01.11 — «завод тупить»: швидкодія
+- Діагноз: колектор офлайн з 28.10 22:59 Київ (0.1.0, старий баг) → 35/35 «немає даних»; сервер повільний навіть на
+  /web/health (~0.3–0.4 с); 22 крони щохвилини; td_signal 59.6M UPDATE на 1.5k рядків, td_machine 3.3M на 35.
+- Задеплоєно 478c3c1: td_telemetry 1.1.5 (відкладений last_*, min_period_s 5 з винятками для безпеки, td.source пише
+  лише зміни), td_machine_connect 1.4.3 (heartbeat 120 с, без no-op write), td_viewer3d 1.1.14 (delta сигналу
+  159→2 мс, purge td.viewer.event щогодини/24 год, клієнт не опитує прихованої вкладки, backoff).
+- Злито в deploy-гілку (чекає install_stand.sh): колектор 0.2.0 cebb0b0, емулятор 56b5c6d.
+- Далі: td_energy_scenario._td_engine_update (no-op write), td_bms_check last_ok щохвилини, N+1 у td_fire_zone
+  _compute_request, VACUUM FULL td_viewer_event після першої чистки; пункт «А» (частота кронів) користувач відклав.
