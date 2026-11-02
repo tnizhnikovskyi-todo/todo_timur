@@ -4,7 +4,8 @@
 # /etc/td-stand) скрипт не смотрит. Запуск:  bash factory3d/tools/server/test_install_stand.sh
 # Проверяет: «голый» повторный запуск сохраняет установленные значения (Odoo, порт BioStar, TD_IP_ALLOW, порт ретранслятора,
 # SIM_ODOO_*) и не переписывает файлы; заданное отличающееся значение требует --confirm-change; порт 8081 не берётся по
-# умолчанию, когда он занят; секреты не печатаются.
+# умолчанию, когда он занят; секреты не печатаются; SIM_ODOO_* из iot-sim.local.env видны --check и установке;
+# путь LPR «эмулятор → сборщик» (URL, секрет, токен с учётом *.local.env) проверяется и зондируется (заглушка сборщика).
 set -euo pipefail
 for v in $(compgen -e | grep '^TD_' || true); do unset "$v"; done   # чужие TD_* (TD_ETC, TD_ODOO_URL…) не должны влиять на тест
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -126,6 +127,123 @@ new_root badodoo
 printf 'SIM_ODOO_DB=odoo\n' >>"$SECRETS"
 OUT="$(CHK)"
 expect "неполный набор SIM_ODOO_* — препятствие" '[[ "$OUT" == *ПРЕПЯТСТВИЕ*SIM_ODOO_*нужны*все*три* ]]'
+
+echo "6. SIM_ODOO_* в iot-sim.local.env (ручной файл оператора): видны --check и установке, в iot-sim.env не копируются"
+LOCAL_REL="etc/td-stand/iot-sim.local.env"
+new_root localenv
+mkdir -p "$ROOT_D/etc/td-stand"
+printf '# комментарий\nSIM_ODOO_URL=http://127.0.0.1:18094\nSIM_ODOO_DB="odoo"\nSIM_ODOO_USER = simreader\nSIM_ODOO_APIKEY=%s\nSIM_ALLOW_OUTBOUND=mosquitto\n' "$APIKEY" >"$ROOT_D/$LOCAL_REL"
+OUT="$(CHK)"
+expect "--check: ключи из iot-sim.local.env приняты, без «SIM_ODOO_* не заданы»" '[[ "$OUT" == *"SIM_ODOO_*: url=http://127.0.0.1:18094 db=odoo user=simreader"* && "$OUT" != *"SIM_ODOO_* не заданы"* ]]'
+expect "--check: источник назван, apikey не печатается" '[[ "$OUT" == *"из iot-sim.local.env: URL DB USER APIKEY"* && "$OUT" != *"$APIKEY"* ]]'
+expect "--check: нет препятствий по SIM_ODOO_*" '[[ "$OUT" != *ПРЕПЯТСТВИЕ*SIM_ODOO* ]]'
+install_fixture
+expect "iot-sim.env не получает копию SIM_ODOO_* из local.env" '! grep -q "^SIM_ODOO_" "$ROOT_D/etc/td-stand/iot-sim.env"'
+expect "iot-sim.local.env не изменён установкой" 'grep -qx "SIM_ODOO_DB=\"odoo\"" "$ROOT_D/$LOCAL_REL" && grep -q "^SIM_ALLOW_OUTBOUND=mosquitto" "$ROOT_D/$LOCAL_REL"'
+before="$(snap)"
+OUT="$(run_fn 'resolve_params
+    COL_TOKEN=$(secret_in TD_COLLECTOR_TOKEN "$COL_ENV" F3D_COLLECTOR_TOKEN); SIM_TOKEN=$(secret_in TD_SIM_API_TOKEN "$SIM_ENV" SIM_API_TOKEN)
+    relay_tokens; resolve_sim_odoo; CHANGED_SIM=0 CHANGED_COL=0 CHANGED_RELAY=0; write_envs; install_units
+    echo "CH=$CHANGED_SIM$CHANGED_COL$CHANGED_RELAY"; echo "LOCAL=[$SIM_ODOO_LOCAL]"' 2>&1)"
+expect "голый повторный запуск: файлы не менялись, службы не перезапускаются" '[[ "$before" == "$(snap)" && "$OUT" == *CH=000* && "$OUT" == *"LOCAL=[URL DB USER APIKEY]"* ]]'
+
+new_root localmix
+mkdir -p "$ROOT_D/etc/td-stand"
+printf 'SIM_ODOO_DB=odoo\nSIM_ODOO_USER=simreader\n' >>"$SECRETS"
+printf 'SIM_ODOO_APIKEY=%s\n' "$APIKEY" >"$ROOT_D/$LOCAL_REL"
+install_fixture
+expect "часть ключей в local.env, часть в секретах: в iot-sim.env только не заданные в local.env" 'grep -qx "SIM_ODOO_DB=odoo" "$ROOT_D/etc/td-stand/iot-sim.env" && grep -qx "SIM_ODOO_USER=simreader" "$ROOT_D/etc/td-stand/iot-sim.env" && grep -qx "SIM_ODOO_URL=http://127.0.0.1:18094" "$ROOT_D/etc/td-stand/iot-sim.env" && ! grep -q "^SIM_ODOO_APIKEY" "$ROOT_D/etc/td-stand/iot-sim.env"'
+expect "…и без препятствий" '[[ "$(CHK)" != *ПРЕПЯТСТВИЕ*SIM_ODOO* ]]'
+
+new_root localbad
+mkdir -p "$ROOT_D/etc/td-stand"
+printf '# SIM_ODOO_DB=odoo\n#SIM_ODOO_USER=simreader\nSIM_ODOO_DB_OLD=x\n' >"$ROOT_D/$LOCAL_REL"
+expect "закомментированные и похожие ключи не считаются заданными" '[[ "$(CHK)" == *"SIM_ODOO_* не заданы"* ]]'
+printf 'SIM_ODOO_DB=odoo\n' >"$ROOT_D/$LOCAL_REL"
+expect "неполный набор в local.env — препятствие, как и в секретах" '[[ "$(CHK)" == *ПРЕПЯТСТВИЕ*SIM_ODOO_*нужны*все*три* ]]'
+
+echo "7. LPR «эмулятор → сборщик»: URL/секрет/токен с учётом *.local.env и зонд (иначе эмулятор пишет только «HTTP 404»)"
+new_root lpr odoo
+install_fixture
+OUT="$(run_fn 'resolve_params
+    COL_TOKEN=$(secret_in TD_COLLECTOR_TOKEN "$COL_ENV" F3D_COLLECTOR_TOKEN); SIM_TOKEN=$(secret_in TD_SIM_API_TOKEN "$SIM_ENV" SIM_API_TOKEN)
+    relay_tokens; resolve_sim_odoo; CHANGED_SIM=0 CHANGED_COL=0 CHANGED_RELAY=0; write_envs; install_units' 2>&1)"
+expect "установленный стенд: путь LPR согласован, предупреждений нет" '[[ "$OUT" == *"LPR: путь эмулятор → сборщик согласован"* && "$OUT" != *"ВНИМАНИЕ LPR"* ]]'
+ENVD="$ROOT_D/etc/td-stand"
+LSEC="$(sed -n 's/^F3D_HTTP_PUSH_SECRET_LPR=//p' "$ENVD/collector.env")"
+LTOK="$(sed -n 's/^F3D_HTTP_PUSH_TOKEN_LPR=//p' "$ENVD/collector.env")"
+expect "SIM_LPR_PUSH_URL установщика = /f3d/lpr/<секрет сборщика>, токены равны" 'grep -qx "SIM_LPR_PUSH_URL=http://collector:18080/f3d/lpr/$LSEC" "$ENVD/iot-sim.env" && grep -qx "SIM_LPR_PUSH_TOKEN=$LTOK" "$ENVD/iot-sim.env"'
+CHK_LPR() { CHK "$@" | grep -E 'LPR' || true; }
+printf 'SIM_LPR_PUSH_URL=http://collector:18080/f3d/lpr\n' >"$ENVD/iot-sim.local.env"
+OUT="$(CHK_LPR)"
+expect "iot-sim.local.env без секретного сегмента — предупреждение про 404" '[[ "$OUT" == *"ВНИМАНИЕ LPR"*"нет сегмента секрета"*"404"* && "$OUT" != *"$LSEC"* ]]'
+printf 'SIM_LPR_PUSH_URL=http://collector:18080/f3d/lpr/wrongsecret\n' >"$ENVD/iot-sim.local.env"
+OUT="$(CHK_LPR)"
+expect "чужой секрет в iot-sim.local.env — предупреждение, секреты не печатаются" '[[ "$OUT" == *"не совпадает с F3D_HTTP_PUSH_SECRET_LPR"* && "$OUT" != *"$LSEC"* && "$OUT" != *wrongsecret* ]]'
+printf 'SIM_LPR_PUSH_URL=http://collector:18080/f3d/yard_lpr/%s\nSIM_LPR_PUSH_TOKEN=othertoken\n' "$LSEC" >"$ENVD/iot-sim.local.env"
+OUT="$(CHK_LPR)"
+expect "чужой маршрут и токен в iot-sim.local.env" '[[ "$OUT" == *"должен быть /f3d/lpr/<секрет>"* && "$OUT" == *"SIM_LPR_PUSH_TOKEN"*"401"* ]]'
+rm -f "$ENVD/iot-sim.local.env"
+printf 'F3D_HTTP_PUSH_SECRET_LPR=%s\n' "other-collector-secret" >"$ENVD/collector.local.env"
+OUT="$(CHK_LPR)"
+expect "collector.local.env меняет секрет сборщика — предупреждение" '[[ "$OUT" == *"не совпадает с F3D_HTTP_PUSH_SECRET_LPR"* && "$OUT" != *other-collector-secret* ]]'
+rm -f "$ENVD/collector.local.env"
+OUT="$(CHK_LPR)"
+expect "без переопределений — снова согласовано" '[[ "$OUT" == *"согласован"* && "$OUT" != *"ВНИМАНИЕ"* ]]'
+OUT="$(run_fn 'lpr_wiring_problems http://collector:8080/f3d/lpr/S1/extra T1 S1 T1 8080; echo ---
+    lpr_wiring_problems http://collector:9090/f3d/lpr/S1 T1 S1 T1 8080; echo ---
+    lpr_wiring_problems http://collector:8080/f3d/lpr/S1 T1 S1 T1 8080; echo "ok-rc=$?"
+    lpr_wiring_problems http://collector:8080/f3d/lpr/S1 T1 "" T1 8080' 2>&1)"
+expect "lpr_wiring_problems: лишний сегмент, чужой порт, пустой секрет сборщика; верный набор — пусто" '[[ "$OUT" == *"лишние сегменты"* && "$OUT" == *"не равен F3D_HTTP_PUSH_PORT=8080"* && "$OUT" == *"F3D_HTTP_PUSH_SECRET_LPR сборщика не задан"* && "$OUT" == *"---"*"---"*"ok-rc=0"* ]]'
+
+# зонд: заглушка сборщика (маршрут lpr с секретом и токеном; /f3d/health перечисляет маршруты), тело «[]» → 400 только при верном пути
+cat >"$T/stub.py" <<'PYEOF'
+import http.server, json, sys
+portfile, routes, secret, token = sys.argv[1], [r for r in sys.argv[2].split(",") if r != "-"], sys.argv[3], sys.argv[4]
+class H(http.server.BaseHTTPRequestHandler):
+    def _send(self, code, body):
+        data = json.dumps(body).encode()
+        self.send_response(code); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+    def do_GET(self):
+        self._send(200 if self.path == "/f3d/health" else 404, {"status": "ok", "routes": routes})
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        parts = self.path.strip("/").split("/")
+        if len(parts) != 3 or parts[0] != "f3d" or parts[1] not in routes or parts[2] != secret:
+            return self._send(404, {"received": False, "error": "unknown route"})
+        if self.headers.get("X-F3D-Token") != token:
+            return self._send(401, {"received": False, "error": "unauthorized"})
+        self._send(400, {"received": False, "error": "json object expected"})
+    def log_message(self, *a): pass
+srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+open(portfile, "w").write(str(srv.server_address[1]))
+srv.serve_forever()
+PYEOF
+STUBS=()
+start_stub() { # start_stub РОУТЫ → STUB_PORT
+    rm -f "$T/stub.port"
+    python3 "$T/stub.py" "$T/stub.port" "$1" "$LSEC" "$LTOK" & STUBS+=($!)
+    for _ in $(seq 1 50); do [[ -s "$T/stub.port" ]] && break; sleep 0.1; done
+    STUB_PORT="$(cat "$T/stub.port")"
+}
+trap 'kill "${STUBS[@]}" 2>/dev/null || true; rm -rf "$T"' EXIT
+probe() { run_fn "TD_PUSH_PORT=$STUB_PORT; resolve_params; $1" 2>&1; }
+start_stub lpr
+OUT="$(probe 'echo "CODE=$(lpr_probe)"; check_lpr_route 1')"
+expect "зонд: верный путь и токен → 400 и «принял»" '[[ "$OUT" == *CODE=400* && "$OUT" == *"сборщик принял путь эмулятора"* && "$OUT" != *"ВНИМАНИЕ"* && "$OUT" != *"$LSEC"* ]]'
+printf 'SIM_LPR_PUSH_URL=http://collector:18080/f3d/lpr\n' >"$ENVD/iot-sim.local.env"
+OUT="$(probe 'echo "CODE=$(lpr_probe)"; check_lpr_route 1')"
+expect "зонд: URL без секрета в iot-sim.local.env → 404, маршрут у сборщика есть → про секрет/secret_ref" '[[ "$OUT" == *CODE=404* && "$OUT" == *"маршрут lpr у сборщика есть"*"secret_ref"* && "$OUT" != *"$LSEC"* ]]'
+rm -f "$ENVD/iot-sim.local.env"
+printf 'SIM_LPR_PUSH_TOKEN=othertoken\n' >"$ENVD/iot-sim.local.env"
+OUT="$(probe 'echo "CODE=$(lpr_probe)"; check_lpr_route 1')"
+expect "зонд: чужой токен → 401" '[[ "$OUT" == *CODE=401* && "$OUT" == *"токен не принят"* ]]'
+rm -f "$ENVD/iot-sim.local.env"
+start_stub -
+OUT="$(probe 'check_lpr_route 1')"
+expect "зонд: сборщик не знает маршрута lpr → 404 с указанием на источник HTTP-PUSH" '[[ "$OUT" == *"сборщик не знает маршрута lpr"*"HTTP-PUSH"* ]]'
+OUT="$(run_fn 'TD_PUSH_PORT=1; resolve_params; check_lpr_route 1' 2>&1)"
+expect "зонд: порт не отвечает → «сборщик не отвечает»" '[[ "$OUT" == *"сборщик не отвечает на :1"* ]]'
 
 echo
 echo "итого: $((TESTS - FAILS)) из $TESTS пройдено"

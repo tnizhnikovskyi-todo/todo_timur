@@ -12,6 +12,7 @@ import math
 import os
 import random
 import time
+from collections import deque
 from datetime import datetime, timedelta, timezone
 
 PROFILES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
@@ -30,6 +31,7 @@ STATE_CODES = {
 MODES = ("stop", "manual", "auto", "test")
 SUBSTEP_S = 0.5  # максимальний внутрішній крок, с
 MAX_SUBSTEPS = 2000
+KEEP_EVENTS = 1000  # журнал событий в памяти ограничен (id всё равно растут)
 TEST_S = 180.0  # «тест 3 хв» (ТР 1.2)
 OVER_SPEED_RPM = 1725
 # код тривоги → (назва, серйозність, одиниця)
@@ -103,7 +105,7 @@ class GensetModel:
         self.tz = get_tz(tz) if isinstance(tz, str) else tz
         self.sim_ts = time.time() if sim_ts is None else float(sim_ts)
         self.event_seq = 0
-        self.events = []
+        self.events = deque(maxlen=KEEP_EVENTS)
         self.test_on_load = False
         self.reset(self.initial_preset)
 
@@ -171,7 +173,7 @@ class GensetModel:
             timers.update(self.profile.get("timers_plant", {}))
         self.timers = timers
         s, sens = self.profile["start"], self.profile["sensors"]
-        self.events = []
+        self.events = deque(maxlen=KEEP_EVENTS)
         self.mode = s["mode"]
         self.mains_ok = bool(s["mains_ok"])
         self.mains_u, self.mains_f = float(sens["u_v"]), float(sens["f_hz"])

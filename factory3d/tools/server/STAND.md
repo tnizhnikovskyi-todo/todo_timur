@@ -141,7 +141,8 @@ UDP 47808, 50001; имитатор ретранслятора TCP 8087 (`TD_SIM_
 Источник `td.source` с `code = HTTP-PUSH` (приёмник LPR, раньше правился вручную, `http_push_params`): `params` =
 `{"routes": ["lpr"], "allow_ips": ["iot-sim", "127.0.0.1"], "token_ref": "F3D_HTTP_PUSH_TOKEN_LPR", "secret_ref":
 "F3D_HTTP_PUSH_SECRET_LPR"}`. Это имена переменных сборщика, значения лежат в `/etc/td-stand/collector.env` и совпадают
-с `SIM_LPR_PUSH_*` эмулятора; helper дополняет `params` и ничего секретного в Odoo не пишет. Остальные источники (`MB-*`,
+с `SIM_LPR_PUSH_*` эмулятора; helper дополняет `params`, включает источник (`active`, `read_enabled`), привязывает его к коллектору
+стенда и ничего секретного в Odoo не пишет (`status` печатает состояние источника). Остальные источники (`MB-*`,
 `BAC-*`, `OPCUA-*`, `SICS-*`, `MQTT-MOBILE`, …) приходят из data-файлов модулей и привязаны к `COL-MAIN`; хосты в них —
 `iot-sim` и `mosquitto`, поэтому нужен блок в `/etc/hosts`.
 
@@ -250,8 +251,9 @@ UDP 47808, 50001; имитатор ретранслятора TCP 8087 (`TD_SIM_
    переменные `TD_SIM_ODOO_*` / `TD_SIM_ODOO_*_FILE` тоже годятся. Установка перенесёт их в `/etc/td-stand/iot-sim.env`
    (0640 root:td-stand), повторный запуск без файла сохранит записанное. Нужны все три: DB, USER, APIKEY (иначе препятствие);
    нет ни одного — предупреждение «SIM_ODOO_* не заданы».
-2. Вручную в `/etc/td-stand/iot-sim.local.env` (скрипт его не трогает и он перекрывает `iot-sim.env`): `SIM_ODOO_URL`, `SIM_ODOO_DB`,
-   `SIM_ODOO_USER`, `SIM_ODOO_APIKEY`; затем `systemctl restart td-iot-sim`.
+2. Вручную в `/etc/td-stand/iot-sim.local.env` (скрипт его не пишет, а служба читает его поверх `iot-sim.env`): `SIM_ODOO_URL`,
+   `SIM_ODOO_DB`, `SIM_ODOO_USER`, `SIM_ODOO_APIKEY`; затем `systemctl restart td-iot-sim`. `--check` и установка читают этот файл
+   (нужен root): заданные в нём ключи считаются заданными, перекрывают файл секретов и в `iot-sim.env` не копируются.
 
 Адрес Odoo у эмулятора (служба на хосте) — `http://127.0.0.1:8094` (на timur-o19demo), а не `172.18.0.1`. Исходящие соединения эмулятора
 ограничены `SIM_ALLOW_OUTBOUND` (по умолчанию `mosquitto,odoo19,collector,genset_relay,127.0.0.1`): другой хост нужно добавить в
@@ -289,6 +291,7 @@ UDP 47808, 50001; имитатор ретранслятора TCP 8087 (`TD_SIM_
 | источник `MQTT-MOBILE` offline | брокер не поднят: `systemctl status mosquitto`; в `/etc/mosquitto` уже были свои `listener`, скрипт их не менял (настройте вручную: пользователи `sim`, `collector`, пароли из env-файлов) |
 | `genset`: «показаний пока нет», связь offline | имитатор не ответил Odoo: служба не запущена (`systemctl status td-genset-relay`), токен API в Odoo не совпал (401: повторите установку с файлом из `genset --token-file`) или контейнер не достучался до `172.18.0.1:8087` (`TD_IP_ALLOW`, фаервол хоста); крон подхватит данные сам |
 | `--check` пишет «установлено «X», задано «Y»» и препятствие про `--confirm-change` | значение в команде не совпало с установленным. Не хотели менять — уберите `TD_*` (останется установленное). Хотели — добавьте `--confirm-change`. Если «установлено» — значения по умолчанию (8081, 8069, пусто), файлы уже были перезаписаны «голым» запуском старой версии скрипта: передайте правильные значения явно с `--confirm-change` |
+| эмулятор: `LPR push failed (HTTP 404)` | 404 отдаёт сборщик: маршрут `lpr` не зарегистрирован (источник `HTTP-PUSH` не active / не привязан к коллектору / нет `params.routes=[lpr]`) либо путь не принят. Секретный сегмент нужен ровно тогда, когда у источника есть `params.secret_ref`: URL эмулятора `http://collector:8080/f3d/lpr/<F3D_HTTP_PUSH_SECRET_LPR>` (без лишних сегментов; `SIM_LPR_PUSH_URL` не переопределён в `iot-sim.local.env`). `install_stand.sh --status` зондирует путь пустым телом (400 — принят), `--check` и установка сверяют URL/секрет/токен с учётом `*.local.env`; `curl -s http://127.0.0.1:8080/f3d/health` показывает зарегистрированные маршруты; починка данных Odoo — `stand_odoo_setup.py setup` (идемпотентно, токен коллектора повторно не выдаёт) |
 | СКУД без людей, `odoo.last_ok` пуст | не заданы `SIM_ODOO_*` или у пользователя нет `hr.group_hr_user` (см. «Люди СКУД из Odoo») |
 | сеть служб ограничена `IPAddressAllow=localhost`, а нужен внешний доступ | `TD_IP_FILTER=0` и повторная установка, либо drop-in `systemctl edit …` |
 

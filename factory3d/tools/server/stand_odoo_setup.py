@@ -13,7 +13,9 @@
 
 Команды:
   setup     коллектор COL-MAIN (создать/включить), токен сборщика (если ещё не выдан или --rotate), токен API эмулятора,
-            параметры ir.config_parameter, params источника HTTP-PUSH. В stdout печатает строки KEY=VALUE:
+            параметры ir.config_parameter, источник HTTP-PUSH (active, read_enabled, привязка к коллектору, params:
+            routes, allow_ips, token_ref, secret_ref; без этого сборщик отвечает 404 на POST /f3d/lpr/<секрет>).
+            В stdout печатает строки KEY=VALUE:
             TD_COLLECTOR_TOKEN (виден только сейчас: в Odoo хранится хэш) и TD_SIM_API_TOKEN (лежит в td.iot_sim.token).
             Файл с этими строками клиент передаёт install_stand.sh как TD_SECRETS_FILE.
   params    только параметры (без токенов).
@@ -208,23 +210,42 @@ def ensure_params(odoo: Odoo, sim_token: str | None) -> str:
 
 
 def ensure_http_push(odoo: Odoo) -> None:
-    """params источника HTTP-PUSH (приёмник LPR): маршрут, разрешённые отправители, имена секретов (не значения)."""
+    """Источник HTTP-PUSH (приёмник LPR): сборщик отвечает 404 на POST /f3d/lpr/<секрет>, если источник не дошёл до
+    него (не active, не привязан к коллектору стенда) или у него нет params.routes=[lpr] / secret_ref (с секретным
+    сегментом в URL эмулятора без secret_ref сборщик тоже отвечает 404). Приводим всё к нужному виду; в Odoo пишутся
+    имена переменных сборщика, не значения."""
     rows = odoo.search_read(
-        "td.source", [("code", "=", HTTP_PUSH_CODE)], ["id", "params"], context={"active_test": False}
+        "td.source",
+        [("code", "=", HTTP_PUSH_CODE)],
+        ["id", "params", "active", "read_enabled", "collector_id"],
+        context={"active_test": False},
     )
     if not rows:
         info(f"источник {HTTP_PUSH_CODE} не найден (td_telemetry не загрузил данные стенда?): params пропущены")
         return
-    cur = dict(rows[0].get("params") or {})
+    rec = rows[0]
+    cur = dict(rec.get("params") or {})
     new = {**cur, **HTTP_PUSH_PARAMS}
     allow = list(dict.fromkeys(list(cur.get("allow_ips") or []) + HTTP_PUSH_PARAMS["allow_ips"]))
     new["allow_ips"] = allow
     new["routes"] = list(dict.fromkeys(list(cur.get("routes") or []) + HTTP_PUSH_PARAMS["routes"]))
+    vals: dict = {}
     if new != cur:
-        odoo.call("td.source", "write", [rows[0]["id"]], {"params": new})
-        info(f"источник {HTTP_PUSH_CODE}: params обновлены (routes, allow_ips, token_ref, secret_ref)")
+        vals["params"] = new
+    if not rec.get("active"):
+        vals["active"] = True
+    if not rec.get("read_enabled"):
+        vals["read_enabled"] = True
+    code = os.environ.get("TD_COLLECTOR_CODE", "COL-MAIN")
+    col = odoo.search_read("td.collector", [("code", "=", code)], ["id"], context={"active_test": False})
+    linked = (rec.get("collector_id") or [False])[0]
+    if col and linked != col[0]["id"]:
+        vals["collector_id"] = col[0]["id"]
+    if vals:
+        odoo.call("td.source", "write", [rec["id"]], vals)
+        info(f"источник {HTTP_PUSH_CODE}: обновлено {', '.join(sorted(vals))}")
     else:
-        info(f"источник {HTTP_PUSH_CODE}: params уже в нужном состоянии")
+        info(f"источник {HTTP_PUSH_CODE}: params, active, read_enabled и коллектор уже в нужном состоянии")
 
 
 def cmd_setup(odoo: Odoo, args: argparse.Namespace) -> None:
@@ -379,6 +400,22 @@ def cmd_status(odoo: Odoo, args: argparse.Namespace) -> None:
         context={"active_test": False},
     )
     print("коллектор:", col[0] if col else "НЕТ записи " + code)
+    push = odoo.search_read(
+        "td.source",
+        [("code", "=", HTTP_PUSH_CODE)],
+        ["state", "active", "read_enabled", "collector_id", "params"],
+        context={"active_test": False},
+    )
+    if push:
+        p = push[0].get("params") or {}
+        print(
+            f"{HTTP_PUSH_CODE}: state={push[0].get('state')} active={push[0].get('active')} "
+            f"read_enabled={push[0].get('read_enabled')} collector={push[0].get('collector_id')} "
+            f"routes={p.get('routes')} secret_ref={p.get('secret_ref')} token_ref={p.get('token_ref')} "
+            f"allow_ips={p.get('allow_ips')} (LPR: POST /f3d/lpr/<секрет> -> 404, если нет active/routes/secret_ref)"
+        )
+    else:
+        print(f"{HTTP_PUSH_CODE}: источника нет")
     for state in ("online", "offline", "error", "disabled", "unknown"):
         n = odoo.call("td.source", "search_count", [("state", "=", state)])
         if n:

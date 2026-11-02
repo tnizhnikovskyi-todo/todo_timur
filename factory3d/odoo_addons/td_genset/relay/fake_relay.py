@@ -67,12 +67,14 @@ import json
 import logging
 import os
 import random
+import socketserver
 import sys
 import threading
 import time
 import traceback
 import urllib.error
 import urllib.request
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
@@ -96,8 +98,16 @@ CMD_EXEC_S = 1.0  # queued→sent→done ≈ 1 с (симуляционные с
 CMD_PAUSE_S = 2.0  # пауза между командами одного модуля
 CMD_TIMEOUT_S = 30.0  # нет ответа модуля 30 с → timeout
 TANK_L = 145.0  # объём бака «Садовой», л
-KEEP_READINGS = 50000  # хранить в памяти не больше (id всё равно растут)
-KEEP_RAW = 5000
+# Журналы в памяти ограничены (deque maxlen; id всё равно растут). Запись снимка ≈ 8 КБ, поэтому 5000 снимков ≈ 40 МБ
+# (≈ 3,5 суток при снимке раз в минуту); unit стенда: MemoryHigh=128M — выше процесс душится cgroup-ом на секунды.
+KEEP_READINGS = 5000
+KEEP_RAW = 2000
+KEEP_COMMANDS = 500
+KEEP_CLOUD_SEEN = 10
+KEEP_EFFECTS = 50  # отложенные эффекты команд на модуль
+IDLE_TIMEOUT_S = 15.0  # молчащее/недочитанное соединение закрывается (иначе поток живёт вечно, TasksMax=64)
+MAX_CONNECTIONS = 40  # одновременных обработчиков; сверх — быстрый 503 вместо исчерпания потоков
+LISTEN_BACKLOG = 128  # у socketserver 5: при всплеске SYN теряются, клиент ждёт ретрансмит 1/3/7 с
 
 # ------------------------------------------------------------------ команды (7.1)
 COMMAND_ADDR = {
@@ -241,6 +251,8 @@ COIL_KEYS = {
 }
 COIL_ADDRS = list(range(80))  # coils_known = 80
 REG_ADDRS = [a for a in range(56) if a != 45]  # registers_known = 55
+REG_KEYS = [str(a) for a in REG_ADDRS]  # порядок как у raw_image(): regs/coils хранятся кортежами
+COIL_KEYS_STR = [str(a) for a in COIL_ADDRS]
 SHUTDOWN_KEYS = [COIL_KEYS[a] for a in (9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 44, 45, 46, 47)]
 WARNING_KEYS = [COIL_KEYS[a] for a in range(24, 40)]
 # «Залипающие» сигналы: держатся, пока их не сбросят (stop сбрасывает аварии; /_sim set — любые).
@@ -931,7 +943,7 @@ class Device:
         self.format_learned = True
         self.registers_known = len(REG_ADDRS)
         self.coils_known = len(COIL_ADDRS)
-        self.cloud_seen = []
+        self.cloud_seen = deque(maxlen=KEEP_CLOUD_SEEN)
         self.active = None  # команда в статусе sent
         self.active_left = 0.0
         self.pause_left = 0.0
@@ -1000,7 +1012,9 @@ class Relay:
         self.devices = {
             h: Device(h, d["noise"], d["seed"] + i, self._new_genset(d, i)) for i, h in enumerate(self.hostids)
         }
-        self.readings, self.raw, self.commands = [], [], []
+        self.readings = deque(maxlen=KEEP_READINGS)
+        self.raw = deque(maxlen=KEEP_RAW)
+        self.commands = deque(maxlen=KEEP_COMMANDS)
         self.reading_id = self.raw_id = self.command_id = self.id_base
         self.conn_id = 7
 
@@ -1037,11 +1051,14 @@ class Relay:
 
     # ---------------------------------------------------------- фон
     def run_ticker(self, period=0.1):
+        reported = None
         while not self.stop_event.wait(period):
             try:
                 self.tick()
             except Exception:  # noqa: BLE001  # pragma: no cover — не роняем фон
-                traceback.print_exc()
+                if reported is None or time.monotonic() - reported >= 60:  # не 10 трассировок в секунду
+                    reported = time.monotonic()
+                    traceback.print_exc()
 
     def tick(self):
         """Шаг симуляции по часам эмулятора: связь, пакеты модуля, физика, команды, снимки."""
@@ -1086,7 +1103,6 @@ class Relay:
                 "msg": msg,
             }
         )
-        del self.raw[:-KEEP_RAW]
 
     # ---------------------------------------------------------- снимки
     def _maybe_snapshot(self, dev, now, force=False):
@@ -1107,8 +1123,9 @@ class Relay:
             dev.next_interval = now + self.snapshot_sec
         dev.need_first = False
         dev.last_signature = signature
-        values = dict(full)
+        values = full
         if self.version == "1.1.1":  # в 1.1.1 этих 5 полей в values нет
+            values = dict(full)
             for key in V113_KEYS:
                 values.pop(key, None)
         regs, coils = raw_image(full)
@@ -1120,11 +1137,10 @@ class Relay:
             "hostid": dev.hostid,
             "reason": reason,
             "values": values,
-            "regs": regs,
-            "coils": coils,
+            "regs": tuple(regs.values()),  # компактно: dict-ы регистров/катушек строятся при raw=1 (reading_json)
+            "coils": bytes(coils.values()),
         }
         self.readings.append(rd)
-        del self.readings[:-KEEP_READINGS]
         dev.last_reading = rd
         return rd
 
@@ -1132,7 +1148,7 @@ class Relay:
     def reading_json(rd, raw):
         out = {k: rd[k] for k in ("id", "ts", "time_utc", "hostid", "reason", "values")}
         if raw:
-            out["regs"], out["coils"] = rd["regs"], rd["coils"]
+            out["regs"], out["coils"] = dict(zip(REG_KEYS, rd["regs"])), dict(zip(COIL_KEYS_STR, rd["coils"]))
         return out
 
     # ---------------------------------------------------------- команды
@@ -1203,7 +1219,7 @@ class Relay:
                     self._finish(cmd, "done", now, response=response)
                     locked = dev.genset.flags["remote_lock"]
                     if not dev.no_exec and not locked:
-                        dev.pending_effects.append((0.5, cmd["command"]))
+                        dev.pending_effects = (dev.pending_effects + [(0.5, cmd["command"])])[-KEEP_EFFECTS:]
             if cmd["status"] not in ("queued", "sent"):
                 dev.active = None
                 dev.pause_left = CMD_PAUSE_S
@@ -1326,7 +1342,7 @@ class Relay:
                     "command_slave": 0,
                     "command_format": "rtu" if dev.format_learned else None,
                     "commands_ready": self.commands_enabled and long_conn and dev.format_learned,
-                    "cloud_commands_seen": list(dev.cloud_seen[-10:]),
+                    "cloud_commands_seen": list(dev.cloud_seen),
                     "cloud_routes": {"livedata": "8.136.108.133:21318", "historic": "8.136.108.133:21318"},
                     "last_reading": None
                     if dev.last_reading is None
@@ -1383,43 +1399,50 @@ class Relay:
             raise ApiError(405, "method not allowed")
         if body is not None and len(body) > MAX_BODY:
             raise ApiError(413, "body too large")
+        # Под замком — только выбор ссылок на записи (журналы ограничены); записи снимков и сырых сообщений после
+        # создания не меняются, поэтому JSON из них строится уже без замка и не задерживает тикер и другие запросы.
+        readings = raw_page = None
         with self.lock:
             if sub == "/status":
                 return 200, self.status_json()
             if sub == "/latest":
                 dev = self._device(qstr(query, "hostid"))
-                pool = [r for r in self.readings if dev is None or r["hostid"] == dev.hostid]
-                if not pool:
+                last = dev.last_reading if dev is not None else (self.readings[-1] if self.readings else None)
+                if last is None:
                     raise ApiError(404, "no readings yet")
-                return 200, self.reading_json(pool[-1], qflag(query, "raw"))
-            if sub == "/readings":
+            elif sub == "/readings":
                 since, limit = qint(query, "since", 0), min(qint(query, "limit", 500), MAX_LIMIT)
                 dev = self._device(qstr(query, "hostid"))
-                raw = qflag(query, "raw")
-                page = [r for r in self.readings if r["id"] > since and (dev is None or r["hostid"] == dev.hostid)]
-                page = page[:limit]
-                return 200, {
-                    "readings": [self.reading_json(r, raw) for r in page],
-                    "next_since": page[-1]["id"] if page else since,
-                }
-            if sub == "/raw":
+                readings = tail_after(self.readings, since, limit, dev.hostid if dev is not None else None)
+            elif sub == "/raw":
                 since, limit = qint(query, "since", 0), min(qint(query, "limit", 200), MAX_LIMIT)
-                page = [r for r in self.raw if r["id"] > since][:limit]
-                return 200, {"raw": page, "next_since": page[-1]["id"] if page else since}
-            if sub == "/commands" and method == "GET":
+                raw_page = tail_after(self.raw, since, limit)
+            elif sub == "/commands" and method == "GET":
                 since, limit = qint(query, "since", 0), min(qint(query, "limit", 200), MAX_LIMIT)
-                page = [c for c in self.commands if c["id"] > since][:limit]
+                page = tail_after(self.commands, since, limit)
                 return 200, {"commands": [self.command_json(c) for c in page]}
-            if sub.startswith("/commands/"):
+            elif sub.startswith("/commands/"):
                 try:
                     cid = int(sub.rsplit("/", 1)[1])
                 except ValueError:
                     raise ApiError(404, "no such command") from None
-                for cmd in self.commands:
+                for cmd in reversed(self.commands):
                     if cmd["id"] == cid:
                         return 200, self.command_json(cmd)
+                    if cmd["id"] < cid:
+                        break
                 raise ApiError(404, "no such command")
-            return self._post_command(body)
+            else:
+                return self._post_command(body)
+        if sub == "/latest":
+            return 200, self.reading_json(last, qflag(query, "raw"))
+        if sub == "/readings":
+            raw = qflag(query, "raw")
+            return 200, {
+                "readings": [self.reading_json(r, raw) for r in readings],
+                "next_since": readings[-1]["id"] if readings else since,
+            }
+        return 200, {"raw": raw_page, "next_since": raw_page[-1]["id"] if raw_page else since}
 
     # ---------------------------------------------------------- /sim/v1/* (API-F-01…API-F-09)
     def sim_v1(self, method, path, query, body):
@@ -1713,7 +1736,6 @@ class Relay:
                 dev.cloud_seen.append(
                     {"time_utc": utc(now), "frame": frame, "format": "rtu", "slave": 0, "command": command}
                 )
-                dev.cloud_seen = dev.cloud_seen[-10:]
                 dev.format_learned = True  # ретранслятор учится формату по командам хмары
                 self._add_raw(
                     dev,
@@ -1722,7 +1744,7 @@ class Relay:
                     {"method": "writeConfig", "hostid": dev.hostid, "uid": "action", "params": frame},
                 )
                 if not g.flags["remote_lock"]:
-                    dev.pending_effects.append((0.5, command))
+                    dev.pending_effects = (dev.pending_effects + [(0.5, command)])[-KEEP_EFFECTS:]
             if "clock_offset" in data:
                 self.clock_offset = number(data, "clock_offset")
             if "clock_advance" in data:
@@ -1738,6 +1760,20 @@ class Relay:
                     raise ApiError(409, "modem is not connected right now: no snapshots without link")
                 self._maybe_snapshot(dev, now, force=True)
         return self.sim_state()
+
+
+def tail_after(log, since, limit, hostid=None):
+    """До limit самых старых записей журнала (deque по возрастанию id) с id > since.
+
+    Обход с конца до первого id <= since: цена — число новых записей, а не весь журнал; вызывать под замком."""
+    found = []
+    for item in reversed(log):
+        if item["id"] <= since:
+            break
+        if hostid is None or item["hostid"] == hostid:
+            found.append(item)
+    found.reverse()
+    return found[:limit]
 
 
 # ------------------------------------------------------------------ разбор параметров запроса
@@ -1808,6 +1844,7 @@ class RelayHandler(BaseHTTPRequestHandler):
     server_version = "fake-smartgen-relay/1.0"
     relay = None  # подставляется в make_server
     quiet = False
+    timeout = IDLE_TIMEOUT_S  # settimeout() сокета: молчащий клиент не держит поток вечно (make_server(idle_timeout=…))
 
     def do_GET(self):
         self._dispatch("GET")
@@ -1874,6 +1911,9 @@ class RelayHandler(BaseHTTPRequestHandler):
                 raise ApiError(404, "not found")
         except ApiError as exc:
             status, payload = exc.status, exc.payload
+        except (ConnectionError, TimeoutError):  # клиент оборвал или замолчал на чтении тела: отвечать некому
+            self.close_connection = True
+            return
         except Exception:  # noqa: BLE001 — любая ошибка обработчика → 500, сервер не падает
             traceback.print_exc()
             status, payload = 500, {"error": "internal error"}
@@ -1914,17 +1954,20 @@ class RelayHandler(BaseHTTPRequestHandler):
             data, ctype = html, "text/html"
         else:
             data, ctype = json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8"
-        self.send_response(status)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(data)))
-        if status == 405:
-            self.send_header("Allow", "GET, POST")
-        if self.close_connection:
-            self.send_header("Connection", "close")
-        self.end_headers()
-        if method != "HEAD":
-            self.wfile.write(data)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(data)))
+            if status == 405:
+                self.send_header("Allow", "GET, POST")
+            if self.close_connection:
+                self.send_header("Connection", "close")
+            self.end_headers()
+            if method != "HEAD":
+                self.wfile.write(data)
+        except (ConnectionError, TimeoutError):  # клиент ушёл, не дождавшись ответа (таймаут Odoo, curl --max-time)
+            self.close_connection = True
 
     def log_message(self, fmt, *args):
         if not self.quiet:
@@ -1966,11 +2009,64 @@ def setup_logging(level="INFO", secrets=()):
         log.propagate = False
 
 
-def make_server(relay, host, port, quiet=False):
-    """Создать ThreadingHTTPServer и запустить фоновый тикер ретранслятора."""
-    handler = type("BoundRelayHandler", (RelayHandler,), {"relay": relay, "quiet": quiet})
-    server = ThreadingHTTPServer((host, port), handler)
-    server.daemon_threads = True
+class RelayServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer, который не виснет: глубокая очередь accept, потолок потоков, тихие обрывы клиентов."""
+
+    daemon_threads = True
+    request_queue_size = LISTEN_BACKLOG
+
+    def __init__(self, address, handler, max_connections=MAX_CONNECTIONS):
+        self._slots = threading.BoundedSemaphore(max_connections)
+        super().__init__(address, handler)
+
+    def server_bind(self):
+        # HTTPServer.server_bind() зовёт socket.getfqdn(): при недоступном DNS порт «не отвечает» секундами
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = str(self.server_address[0]), self.server_address[1]
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            self._reject_busy(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+    def _reject_busy(self, request):
+        body = b'{"error": "too many connections"}'
+        head = (
+            "HTTP/1.1 503 Service Unavailable\r\nContent-Type: application/json\r\nContent-Length: %d\r\n"
+            "Retry-After: 1\r\nConnection: close\r\n\r\n" % len(body)
+        )
+        try:
+            request.settimeout(1.0)
+            request.sendall(head.encode("ascii") + body)
+        except OSError:
+            pass
+        self.shutdown_request(request)
+
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):  # клиент ушёл: не трассировка в журнал
+            LOG.debug("client %s disconnected: %r", client_address, sys.exc_info()[1])
+            return
+        super().handle_error(request, client_address)
+
+
+def make_server(relay, host, port, quiet=False, idle_timeout=None, max_connections=MAX_CONNECTIONS):
+    """Создать RelayServer и запустить фоновый тикер ретранслятора."""
+    attrs = {"relay": relay, "quiet": quiet}
+    if idle_timeout is not None:
+        attrs["timeout"] = idle_timeout
+    handler = type("BoundRelayHandler", (RelayHandler,), attrs)
+    server = RelayServer((host, port), handler, max_connections=max_connections)
     threading.Thread(target=relay.run_ticker, name="relay-ticker", daemon=True).start()
     return server
 
