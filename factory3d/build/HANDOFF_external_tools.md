@@ -1,7 +1,8 @@
 # Передача: поиск по GitHub и забор внешних находок
 
-Состояние на 03.11.2026. Ветка `claude/charming-goldberg-03upz1`, коммит `9ab9b0f7` (плюс этот файл).
-В `claude/factory3d-build` **ещё не влито**.
+Состояние на 03.11.2026. Оба коммита перенесены (cherry-pick) из `claude/charming-goldberg-03upz1`
+на `claude/factory3d-build` в ветке `claude/bold-bell-5okjhm`; имена модулей приведены к `td_*`.
+Ветку целиком не вливали: она от основной ветки и несёт 89 чужих коммитов с правками документации.
 
 ## Что выяснили
 
@@ -48,11 +49,14 @@ DEC, QA). Не хватало знаний Odoo 19 и автоматическо
 
 ## Открыто: продолжить отсюда
 
-1. **Разрешить запуск линтера.** Без разрешения `coder` пропускает шаг. Вариант: правило в `.claude/settings.json`,
-   разрешающее только `factory3d/tools/external/lens.sh`. Затем первый прогон на `factory3d_iot_sim`
-   (нужны исходники Odoo 19 в `ODOO_HOME`: `factory3d/tools/odoo/setup.sh` из ветки `claude/factory3d-build`).
-2. **Влить ветку в `claude/factory3d-build`** (PR или мерж), иначе лидеры модулей изменений не увидят.
-3. По желанию: сверить модули `OCA/maintenance` 19.0 со SPEC `td_genset` / `factory3d_bms` и решить,
+1. **Разрешить запуск линтера — решает пользователь.** Агенту правку `.claude/settings.json` классификатор
+   авто-режима не даёт (Self-Modification). Добавить вручную в `permissions.allow`:
+   `"Bash(factory3d/tools/external/lens.sh)"`, `"Bash(factory3d/tools/external/lens.sh *)"`.
+   Затем первый прогон на `td_iot_sim`: `factory3d/tools/odoo/setup.sh odoo` (исходники Odoo 19 в
+   `ODOO_HOME`, по умолчанию `/home/user/odoo19` — совпадает с `env.sh`), `fetch.sh odoo-lens`,
+   `lens.sh factory3d/odoo_addons/td_iot_sim`.
+2. **Влить `claude/bold-bell-5okjhm` в `claude/factory3d-build`** (PR), иначе лидеры модулей изменений не увидят.
+3. По желанию: сверить модули `OCA/maintenance` 19.0 со SPEC `td_genset` / `td_bms` и решить,
    что взять готовым.
 
 Промпт для нового чата: «Продолжи по `factory3d/build/HANDOFF_external_tools.md`, раздел „Открыто“».
