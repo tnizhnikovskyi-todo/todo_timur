@@ -1,3 +1,4 @@
 .claude/worktrees/
 *.egg-info/
 factory3d/services/iot_sim/state/
+factory3d/odoo_addons/.odoo-lens.json
