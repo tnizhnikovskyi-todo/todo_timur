@@ -16,6 +16,10 @@ You implement one scoped change and report back briefly.
 - Grep before Read; read only relevant line ranges of other code. Do not explore unrelated parts of the repo.
 - Limit command output (`| tail -30`, `grep -E "FAIL|ERROR|Traceback" -A 15`). Never print a full Odoo log.
 - Do not re-read files after editing them to verify; run the tests instead.
+- Before the tests, lint the module: `factory3d/tools/external/lens.sh factory3d/odoo_addons/<m>`. Fix problems
+  in your files; list the rest in your reply. If the linter is unavailable or not permitted, skip it and say so.
+- For Odoo 19 API doubts, Grep `factory3d/tools/external/vendor/odoo-skills/skills/odoo-19.0/references/`
+  by topic (fetch with `factory3d/tools/external/fetch.sh` if missing); read only the matching section.
 - Run the test command you were given before replying. Commit only if the task says so.
 
 Reply in at most 15 lines:
