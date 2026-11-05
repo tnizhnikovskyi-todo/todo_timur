@@ -86,6 +86,22 @@ def _best_variant(variants, qty, load, shift_min, hot_wcs, overload, slowdown):
     return min(variants, key=score)
 
 
+def balance_factors(load, shift_min, hot_wcs=(), overload=1.5, cold_limit=COLD_LIMIT):
+    """Коефіцієнти стиснення тривалостей для перевантажених РЦ: ``{wc: k}``, 0 < k < 1.
+
+    РЦ без альтернативного маршруту (``plan_orders`` не має куди перекинути наряди) не повинен
+    накопичувати чергу понад межу, яку ``plan_orders`` і так закладає: ``shift_min * cold_limit``
+    для звичайного РЦ і ``shift_min * overload`` для гарячого. Повертаються лише РЦ, де
+    ``load[wc]`` перевищує межу; ``k = межа / load[wc]``.
+    """
+    factors = {}
+    for wc, minutes in load.items():
+        limit = shift_min * (overload if wc in hot_wcs else cold_limit)
+        if minutes > limit:
+            factors[wc] = limit / minutes
+    return factors
+
+
 def schedule(mos, shift, workdays, wc_free=None):
     """Розклад нарядів із кінцевою потужністю верстатів: один наряд на верстаті за раз, наряди МО — послідовно.
 

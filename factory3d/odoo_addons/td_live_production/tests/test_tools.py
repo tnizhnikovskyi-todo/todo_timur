@@ -85,6 +85,18 @@ def templates():
 
 @tagged("post_install", "-at_install", "td_live")
 class TestPlanner(BaseCase):
+    def test_balance_factors_cold_overload(self):
+        res = planner.balance_factors({1: 1584.0}, 960.0)
+        self.assertAlmostEqual(res[1], 0.85 * 960.0 / 1584.0)
+
+    def test_balance_factors_hot_threshold(self):
+        self.assertEqual(planner.balance_factors({20: 1.5 * 960.0}, 960.0, {20}, 1.5), {})
+        res = planner.balance_factors({20: 2 * 1.5 * 960.0}, 960.0, {20}, 1.5)
+        self.assertAlmostEqual(res[20], 0.5)
+
+    def test_balance_factors_within_limit_absent(self):
+        self.assertEqual(planner.balance_factors({1: 0.85 * 960.0, 2: 100.0}, 960.0), {})
+
     def test_plan_orders_deterministic(self):
         a = planner.plan_orders(templates(), 8, 20261021, 510.0, {20, 21}, 1.5, 2.5, (2, 3))
         b = planner.plan_orders(templates(), 8, 20261021, 510.0, {20, 21}, 1.5, 2.5, (2, 3))

@@ -152,6 +152,18 @@ class TdLiveEngine(models.AbstractModel):
                 ops_wc[wo.id] = wo.workcenter_id.id
                 minutes_of[wo.id] = (minutes, base)
             items.append({"id": mo.id, "release": release, "ops": ops})
+        # Балансування: РЦ без альтернативного маршруту не накопичує чергу понад межу плану.
+        load = {}
+        for item in items:
+            for op in item["ops"]:
+                load[op["wc"]] = load.get(op["wc"], 0.0) + op["minutes"]
+        factors = planner.balance_factors(load, clock.shift_minutes(shift), hot, OVERLOAD)
+        for item in items:
+            for op in item["ops"]:
+                k = factors.get(op["wc"])
+                if k:
+                    op["minutes"] = max(1.0, round(op["minutes"] * k, 1))
+                    minutes_of[op["id"]] = (op["minutes"], minutes_of[op["id"]][1])
         plan = planner.schedule(items, shift, data["workdays"], wc_free)
         day_end = clock.shift_window(clock.local_date(release), shift)[1]
         downtimes = self._td_plan_downtimes({"plan": plan, "ops_wc": ops_wc}, data["share"], data["seed"])
@@ -167,6 +179,7 @@ class TdLiveEngine(models.AbstractModel):
                 "spill": planner.spill_minutes(plan, day_end),
                 "downtimes": downtimes,
                 "mo_count": len(mos),
+                "balanced": {wc: round(k, 3) for wc, k in factors.items()},
             }
         )
         rec.write({"plan_json": json.dumps(data, ensure_ascii=False), "gen_phase": "apply", "gen_done": 0})
@@ -221,6 +234,8 @@ class TdLiveEngine(models.AbstractModel):
             ),
             seq=_(" Послідовності підсунуто: %s.", ", ".join("%s %s→%s" % tuple(f) for f in fixed)) if fixed else "",
         )
+        if data.get("balanced"):
+            note += _(" Розвантажено РЦ: %s.", len(data["balanced"]))
         rec.write(
             {
                 "margin_plan_pct": pricing.margin_pct(rec.revenue, rec.cost_plan),
