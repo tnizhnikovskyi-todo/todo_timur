@@ -7,4 +7,4 @@
 | клас кроку | alias |
 |---|---|
 | код/конфіг пакета | flow, test-<клієнт> |
-| D-01 collect | flow, prod-metrics-<код> (лише центральний агент) |
+| D-01 collect | flow (дані — вивантаження людини, params.upload_path) |

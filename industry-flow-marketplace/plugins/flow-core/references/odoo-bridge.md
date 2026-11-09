@@ -31,7 +31,6 @@
 | `project.gmail_label` | відображувана назва мітки Gmail (не Label ID; у `search_threads` `label:` збігається за назвою) | support-desk |
 | `project.contract_file_id` | file id договору на Drive | support-desk |
 | `project.go_live` | дата go-live | support-desk, usage-metrics |
-| `project.prod_alias` | застаріле поле (AI прод не використовує) | package-usage-metrics |
 | `project.aggregates_consent` | згода на агрегати (пункт SOW) | package-usage-metrics |
 | `project.ai_stop`, `project.ai_stop_reason` | ознака стоп-листа | runner, оркестратор |
 | `project.flow_agent_users` | перелік технічних користувачів агентів (§6) | flow-state-keeper |

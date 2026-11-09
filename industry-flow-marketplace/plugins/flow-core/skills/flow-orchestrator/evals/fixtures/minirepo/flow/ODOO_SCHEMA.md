@@ -11,7 +11,6 @@
 | task.lease_until | project.task | x_lease_until | datetime | |
 | task.step | project.task | x_step | char | |
 | task.scope | project.task | x_scope | char | |
-| project.prod_alias | project.project | x_prod_alias | char | лише `prod-metrics-<код>` |
 | project.flow_agent_users | res.users | група «Агенти флоу» | group | |
 | project.ai_stopped | project.project | x_ai_stopped | boolean | стоп-лист «AI зупинено» |
 | partner.ai_consent | res.partner | x_ai_consent | selection | `given` / `withdrawn` («AI-обробка: відкликано») |

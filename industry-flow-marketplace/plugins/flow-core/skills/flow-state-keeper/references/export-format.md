@@ -9,7 +9,7 @@
  "steps": [{"step": "B-09", "scope": "client/cl-03", "state": "done", "attempt": 1, "last_report": "<ISO>", "pr": "<url|null>", "task": "odoo:task/412"}],
  "clients": [{"client_id": "cl-03", "state": "супровід", "current_step": "B-10", "flags": ["підтверджено PM: ні"], "changed": "<дата>",
               "pilot": false, "package_tag": "", "candidate_tag": null, "go_live": "<дата>", "test_alias": "test-cl-03",
-              "prod_alias_set": true, "aggregates_consent": true, "ai_stop": false, "approve_sha": null, "gmail_label": null, "contract_file_id": null}],
+              "aggregates_consent": true, "ai_stop": false, "approve_sha": null, "gmail_label": null, "contract_file_id": null}],
  "decisions": [{"decision_id": "D-0007", "date": "", "gate": "B-08c", "scope": "", "decision": "затверджено", "returned_to": null, "role": "PM", "task": "odoo:task/398", "comment": "<=200 символів"}],
  "runs": [{"step": "", "scope": "", "attempt": 1, "result": "done", "finished": "<ISO>", "skill_versions": {"плагін:скіл": "0.1.0"}, "usage": {"cost_usd": 0, "tokens_in": 0, "tokens_out": 0}, "task": ""}],
  "open_questions": [{"date": "", "step": "", "question": "", "owner": "", "status": ""}],

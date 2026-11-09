@@ -213,7 +213,7 @@ def render_all(snap):
         files["flow/runs/%s.md" % m] = h + "\n# Запуски %s\n\n" % m + table(["step", "scope", "attempt", "result", "skill_versions", "usage", "задача"], rows)
     reg_cols = [("ідентифікатор клієнта", "client_id"), ("стан", "state"), ("пілот (так/ні)", "pilot"), ("package_tag", "package_tag"),
                 ("candidate_tag", "candidate_tag"), ("go-live (дата)", "go_live"), ("alias тест-бази", "test_alias"),
-                ("alias прод-підключення (є/немає)", "prod_alias_set"), ("згода на агрегати (так/ні)", "aggregates_consent"),
+                ("згода на агрегати (так/ні)", "aggregates_consent"),
                 ("стоп-лист (так/ні)", "ai_stop"), ("SHA останнього APPROVE B-04/B-11", "approve_sha"), ("мітка Gmail", "gmail_label"), ("file id договору", "contract_file_id")]
     files["clients/REGISTRY.md"] = h + "\n# Реєстр клієнтів\n\n" + table([c for c, _ in reg_cols], [{c: cl.get(k) for c, k in reg_cols} for cl in clients])
     return files
