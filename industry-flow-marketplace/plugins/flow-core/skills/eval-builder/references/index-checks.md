@@ -1,6 +1,10 @@
 # Автоперевірки eval-builder
 
-Скриптів `scripts/index_check.py` і `scripts/pii_scan.py` ще немає. Виконувати вручну (grep, `jq`, `python3 -I`), статус — у `checks[]` звіту.
+Скриптів `scripts/index_check.py` і `scripts/pii_scan.py` ще немає. Хто що виконує (`SKILL.md`, «Автоперевірка»):
+- шість механічних (`skills-covered`, `source-filled`, `incident-case`, `no-pii`, `json-schema`, `scope-evals-only`) — під runner'ом лише `flow-autocheck`
+  за `checks/<крок>.yaml`; на ручному запуску AI-інженера — скіл сам (`by: self`);
+- п'ять власних (`gates-covered`, `obs-closed`, `escalations-covered`, `init-complete`, `regress-recorded`) — завжди скіл, окремими рядками `checks[]`.
+Інструменти: grep, `jq`, `python3 -I`.
 Статуси: PASS / FAIL / SKIP (перевірка не для цього режиму) / MANUAL.
 
 | id | Режими | Перевірка |

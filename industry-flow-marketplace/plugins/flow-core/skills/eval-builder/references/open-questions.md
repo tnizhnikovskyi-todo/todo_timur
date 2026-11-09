@@ -2,6 +2,10 @@
 
 Нотатки проєктування для власників; агент їх не виконує й не вгадує.
 
+Стан: усі умови 1–4 лишаються відкритими; файли сусідніх скілів цей скіл не змінює. До їх закриття `done` під runner'ом недосяжний
+(шлях 1 -> `escalated` у Кроці 0), працює лише ручний запуск AI-інженера (шлях 2, `SKILL.md`). Рекомендація власникам: до закриття умов
+прибрати `weekly: [C-04]` з `dispatcher-config.md` і C-04 із `sweep-rules.md`, інакше щотижня виникатиме ескалація.
+
 ## Умови, без яких `done` недосяжний під runner'ом (власник — Власник продукту / AI-інженер)
 1. `flow-autocheck/references/checks/C-04.yaml` і `C-07.yaml`: механічні `scope-evals-only`, `json-schema`, `no-pii`, `source-filled`,
    `skills-covered`, `incident-case`; решта (`index-checks.md`) — MANUAL. Без них runner дає `INCOMPLETE (spec-missing)` = збій, ручні
@@ -13,7 +17,7 @@
 3. Картки C-04/C-07: `skillRef` -> `flow-core:eval-builder@<версія>` першим (C-07: `debug-root-cause` — вхід, розбір уже в
    `flow/ai-incidents/<id>.md`); `done` C-07: «пропозицію пониження сформовано, кейс інциденту є»; `where` без «картка кроку (maturity)»;
    `checkHow` авто: «`maturity_proposals` присутній, якщо умова виконана». Оновити CONCEPT (розклад).
-4. `naryad-format.md`: рядки `params.mode` для C-04 (`weekly|init|regress`) і C-07 (`incident`); `report-format.md`: блок `evals:`.
+4. `naryad-format.md`: ключ `params.manual: true` (ручний запуск AI-інженером, шлях 2 у Кроці 0 `SKILL.md`; ставить лише AI-інженер) і рядки `params.mode` для C-04 (`weekly|init|regress`) і C-07 (`incident`); `report-format.md`: блок `evals:`.
    До того носій пропозицій зрілості — `evals/INDEX.md` (таблиця 2).
 
 ## Інше

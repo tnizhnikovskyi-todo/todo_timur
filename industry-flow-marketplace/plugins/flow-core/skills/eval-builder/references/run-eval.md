@@ -8,6 +8,7 @@ claude plugin eval <tmp>/<плагін> --eval-dir flow-evals --case '<набі�
   --no-publish --mocks record --trust-plugin --ablation none --max-cost-usd 3 \
   --json <tmp>/res.json --threshold 0 --output-dir <tmp>/out
 ```
+- Бюджет `--max-cost-usd`: 3 для C-04, 1 для C-07 (решта ліміту запуску — на сам скіл; агент не бачить власних витрат). Єдине місце цього правила.
 - `<tmp>` — тимчасова тека поза репо; плагін — копія встановленої точної версії (`claude plugin list`); eval dir лежить під плагіном.
 - Нові кейси: `--runs 1`, `--threshold 0` (червоне очікуване). Регрес: `--runs 3`, рішення більшістю.
 - `--trust-plugin` — лише для плагінів каталогу організації; чужі плагіни не оцінювати.
