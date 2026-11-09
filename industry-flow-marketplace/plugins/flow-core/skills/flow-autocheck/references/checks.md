@@ -2,7 +2,7 @@
 
 Специфікація кроку — `references/checks/<step>.yaml` (синтаксис JSON, валідний YAML 1.2; рядки `#` на початку ігноруються). Виконує її лише
 `scripts/autocheck.py` (stdlib, `python3 -I`). Нових перевірок із тексту `checkHow` не додають: бракує перевірки — правиться YAML і скрипт разом
-(AI-інженер), потім `autocheck.py --selftest`. Станом на 2026-11-09 специфікації є для A-09, A-10, A-14, A-17, A-18, C-05; для решти кроків —
+(AI-інженер), потім `autocheck.py --selftest`. Станом на 2026-11-09 специфікації є для A-07, A-09, A-10, A-14, A-17, A-18, C-04, C-05, C-07, D-04, D-05 (A-07, D-04 — переважно `manual`: шлях результату змінний); для решти кроків —
 `ERROR spec-missing` + `MANUAL` (загальні C-06 виконуються завжди).
 
 ## Форма запису
@@ -29,13 +29,15 @@
 | `grep_clients` | — | ідентифікатори з `clients/REGISTRY.md` (колонка «ідентифікатор клієнта», ≥4 символів) у `package/` через `git grep`; `шлях:рядок` без витягу; немає клієнтів — `SKIP` |
 | `section_contains` | `ref`, `heading`, `patterns` | розділ містить усі патерни |
 | `signature_by_ai` | `file`, `heading` | блок змінено комітом, автор якого збігається з `--agent-pattern` → `FAIL`; патерну немає → `MANUAL` |
+| `evals_schema` | — | кожен `evals/**/evals.json` на head: JSON, `skill`, `cases[]` з унікальним kebab `id`, `source`, `status`, `prompt`, `expected.checks`, `expected.must_not` |
+| `pii_strict` | `paths` | PII-патерни (FAIL-типи) у доданих рядках diff за `paths`, FAIL незалежно від `client_data` |
 | `manual` | `text`, `who` | лише рядок для чек-листа |
 
 ## Перевірки за кроками (скорочено; повний перелік — YAML)
 - **A-09**: `vp-questionnaire`, `vp-extra`, `vp-schema-keys`, `question-variants`, `example-valid`, `rerun-stable`, `review-section` (за наявності входу A-05); `allowed-eq-tr` та узгодженість — `MANUAL`.
 - **A-10**: `ac-coverage` (актуальні AC ТР = рядки ALLOCATION; deprecated не дає FAIL), `ac-extra`, `track-enum` (`hybrid` = FAIL, один трек на AC), `module-col`, `ready-fields`, `install-section`, `rerun-stable`, `signature-by-ai`.
 - **A-14** (`--only allocation-coverage`, викликає `gates-aggregator`): `allocation-coverage`; `route_on_fail` — контур A-11/A-12/A-13.
-- **A-17**: `sha-eq`, `checks-ancestor`, `diff-checks-acc` (від SHA CHECKS.md ⊆ `package/CHECKS.md`, `package/demo/**`), `version-eq`, `ac-table`, `rejected-route` (код ∈ {A-08, A-14}), `profiles-list`, `regression-row` (`нова-версія`), `signature-by-ai`; вибіркова перевірка стенда й підпис — `MANUAL` (Власник продукту).
+- **A-17**: `sha-eq`, `checks-ancestor`, `diff-checks-acc` (від SHA CHECKS.md ⊆ `package/CHECKS.md`, `package/demo/**`), `version-eq`, `ac-table`, `rejected-route` (код ∈ {A-08, A-14, D-03}), `profiles-list`, `regression-row` (`нова-версія`), `signature-by-ai`; вибіркова перевірка стенда й підпис — `MANUAL` (Власник продукту).
 - **A-18** (кандидат-коміт; тег ставить `package-release-builder`/runner після гейта): `tag-descendant`, `diff-allowed-7`, `version-eq`, `changelog-headings`, `vp-changes`, `kit-vs-changelog`, `vendored-license`, `templates-exist`, `no-client-ids`, `upgrade-log`, `rerun-stable`; `odoo19-lint`, установка в чисту базу, тест оновлення — `MANUAL`. При `params.mode: hotfix` перевірки приймання й diff — `SKIP hotfix`.
   **7 дозволених файлів зафіксовано в специфікації** (не береться з тексту `done`): `package/demo/README.md`, `package/demo/scenarios.md`, `package/ACCEPTANCE.md`, `package/CHANGELOG.md`, `package/templates/migration-plan.md`, `package/templates/training.md`, `package/templates/CHANGELOG.md`.
   Заборонені (приклади): `package/addons/`, `package/config/`, `package/master-data/`, `package/templates/answers.yaml`, `package/questionnaire.md`, `package/SPEC.md`. Розбіжність зі змістом `done` наряду — `WARN diff-allowed-7-spec-vs-naryad`.

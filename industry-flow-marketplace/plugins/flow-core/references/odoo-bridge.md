@@ -31,7 +31,7 @@
 | `project.gmail_label` | відображувана назва мітки Gmail (не Label ID; у `search_threads` `label:` збігається за назвою) | support-desk |
 | `project.contract_file_id` | file id договору на Drive | support-desk |
 | `project.go_live` | дата go-live | support-desk, usage-metrics |
-| `project.prod_alias` | alias прод-підключення (лише `package-usage-metrics`) | package-usage-metrics |
+| `project.prod_alias` | застаріле поле (AI прод не використовує) | package-usage-metrics |
 | `project.aggregates_consent` | згода на агрегати (пункт SOW) | package-usage-metrics |
 | `project.ai_stop`, `project.ai_stop_reason` | ознака стоп-листа | runner, оркестратор |
 | `project.flow_agent_users` | перелік технічних користувачів агентів (§6) | flow-state-keeper |
@@ -65,8 +65,8 @@
 
 ## 7. Ідемпотентність і оренда
 - Ключ запуску: `(task_id, attempt, run.started)`. Перед `message_post` перевірити §4 (останній `run:`): якщо вже є звіт з тим самим `attempt` і `finished` — не постити вдруге, лише виправити стадію.
-- Оренда: перехід `stage.queue -> stage.in_progress` разом із записом `task.lease_until = now + limits.timeout_min`; робити в одному `odoo_write`. Читання стадії перед записом; стадія вже не `queue` — задачу взяв інший агент, зупинитися без запису.
-- `sweep` оркестратора: задачі в `stage.in_progress` з `lease_until < now` — повернути в `stage.queue` з `attempt+1` (якщо `attempt` ≤ `limits.max_attempts`), інакше `stage.escalation` і активність Тімліду.
+- Оренда: перехід `stage.queue -> stage.in_progress` разом із записом `task.lease_until = now + limits.timeout_min x limits.lease_factor` (фактор — з наряду, за замовчуванням 1,5 з `dispatcher-config.md`); робити в одному `odoo_write`. Читання стадії перед записом; стадія вже не `queue` — задачу взяв інший агент, зупинитися без запису.
+- `sweep` оркестратора: задачі в `stage.in_progress` з `lease_until < now` (лише це порівняння, без власної формули) — повернути в `stage.queue` з `attempt+1` (якщо `attempt` ≤ `limits.max_attempts`), інакше `stage.escalation` і активність Тімліду.
 - Створення задач оркестратором ідемпотентне за ключем `(step, scope.id, attempt, scope-ключ злиття)`: перед створенням `odoo_search_read` задач із тим самим ключем у будь-якій стадії, крім `stage.returned`.
 
 ## 8. Активності (`mail.activity`)

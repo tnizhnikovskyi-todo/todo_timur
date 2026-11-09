@@ -24,8 +24,7 @@
   (лише коли `inputs.sha` непорожній; `permissions: statuses: write`).
 - **Як споживач знаходить dispatch-прогін:** `actions_list` (`list_workflow_runs`, `event=workflow_dispatch`) і порівняння SHA із
   `run-name` (поле `display_title` прогону) — **не** з `head_sha`. Чи повертає MCP `github` це поле, не перевірено (відкрите В-7);
-  `c03-lookup.md` (`flow-package-build:gates-aggregator`) досі шукає за `head_sha` — розбіжність, поки там не оновлено. Потрібне оновлення `c03-lookup.md`: пошук за SHA в `run-name`/`display_title`,
-  запасний шлях — commit status `ci`. До того для SHA ≠ HEAD гілки A-14 прогін не знайде. Commit status
+  `c03-lookup.md` (`flow-package-build:gates-aggregator`) уже шукає за SHA в `run-name`/`display_title` (закрито); запасний шлях — commit status `ci`. Commit status
   через `actions_get` не читається; якщо MCP дає читання статусів коміту — його можна використати як запасний шлях (перевірити, не вигадувати).
 - `run-name` містить SHA, ідентифікатор клієнта й тег; без назв юросіб.
 

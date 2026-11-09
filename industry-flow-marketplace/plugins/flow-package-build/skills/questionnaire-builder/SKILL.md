@@ -1,23 +1,15 @@
 ---
 name: questionnaire-builder
 description: >
-  Запускай на кроці A-09 флоу галузевого пакета, коли ТР галузі (A-08) затверджено і точки
-  варіативності винесені в перелік VP-xx, або коли вийшла нова версія ТР («Зміни версії X.Y»).
-  Будує package/questionnaire.md — анкету мовою клієнта, де кожне питання має закритий список
-  варіантів і прив'язане до VP-xx з параметром і значенням з ТР; схему відповідей
-  package/templates/answers.yaml (ключ на кожну VP-xx: тип, допустимі значення, default,
-  deprecated) і package/templates/answers.example.yaml (усі VP = default). Режими: перший запуск,
-  повтор за зауваженням гейта, «рев'ю еталонних клієнтів» (K-xx; очікує людину через waiting_human), «нова версія» (лише змінені VP).
-  Тригерні фрази — "анкета параметрів пакета", "A-09", "схема answers.yaml", "питання до VP-xx",
-  "онови анкету під нову версію ТР", "анкета параметров пакета", "схема ответов answers.yaml",
-  "вопросы по точкам вариативности".
-  НЕ використовуй для заповнення анкети конкретного клієнта (це flow-client-delivery:package-fit-gap,
-  B-02), для перевірки самого ТР (це odoo19-tr-authoring:tr-review, гейт A-08), для перетворення VP-xx
-  у параметри конфігу (це flow-package-build:config-as-code, A-12), для демо-відповідей і профілів
-  (це flow-package-build:demo-base-builder, A-15), для питань на сесії discovery (це
-  odoo19-discovery-sessions:session-question-builder), для анкети продажів (це
-  odoo19-sales-prep:data-completeness-scorer). Результат — package/questionnaire.md,
-  package/templates/answers.yaml, package/templates/answers.example.yaml.
+  Запускай на кроці A-09 флоу галузевого пакета, коли ТР галузі (A-08) затверджено і точки варіативності винесені в VP-
+  xx, або коли вийшла нова версія ТР. Будує package/questionnaire.md — анкету мовою клієнта із закритими списками
+  варіантів, прив'язану до VP-xx; схему відповідей package/templates/answers.yaml (тип, допустимі значення, default,
+  deprecated) і answers.example.yaml (усі VP = default). Режими: перший запуск, повтор за зауваженням гейта, «рев'ю
+  еталонних клієнтів» (K-xx; очікує людину через waiting_human), «нова версія» (лише змінені VP). Тригери — «анкета
+  параметрів пакета», «A-09», «схема answers.yaml», «онови анкету під нову версію ТР». НЕ для написання/ревʼю ТР (tr-*,
+  гейт A-08), перетворення VP-xx у конфіг (config-as-code, A-12), демо-відповідей (demo-base-builder, A-15), питань
+  discovery (session-question-builder), анкети продажів (data-completeness-scorer). Результат — questionnaire.md,
+  answers.yaml, answers.example.yaml.
 ---
 
 # Questionnaire Builder — анкета параметрів пакета (A-09)
@@ -129,7 +121,7 @@ description: >
 ## Крок 7. Режим `return`
 Виправляти лише пункти з `returned_from`; `Q-NN` і порядок ключів не змінювати; решта файлів без змін.
 
-## Перевірки
+## Автоперевірка
 **(а) Виконує `flow-autocheck`** (`checks/A-09.yaml`; ID дослівно; у `checks[]` без позначки джерела):
 | ID | Що реально перевіряє |
 |---|---|

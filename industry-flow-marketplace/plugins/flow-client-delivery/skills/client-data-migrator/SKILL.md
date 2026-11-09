@@ -23,7 +23,7 @@ description: >
 ## Наряд і звіт
 Вхід — наряд задачі Odoo (поля — `flow-core/references/naryad-format.md`), читає `flow-core:flow-step-runner`.
 Результат — файли за `where` наряду в гілці кроку. Звіт у задачу й PR пише `flow-step-runner`, цей скіл
-його не пише: лише передає `checks`, `data_sources` (`repo:package/master-data@<тег>`, `odoo-mcp:test-<к>`,
+його не пише: лише передає `checks`, `data_sources` (`repo:package/master-data@<тег>`, `odoo-mcp:test-<клієнт>`,
 `drive:<folder_id>`) і `memo` (формат — `flow-core/references/report-format.md`). Усі виклики `odoo-mcp` —
 з `connection_id` з наряду (правила — `flow-core/references/data-and-connections.md`).
 
@@ -39,13 +39,14 @@ description: >
 | `odoo19-mvp-build:track-convergence`, `config-review` | завантажені дані не перевіряють — не викликати |
 
 ## Інструменти та доступи
+- **Запис/execute в Odoo — через runner.** Виконавець (`flow-core:flow-executor`) має лише читання odoo-mcp: виклики `odoo_write/create/execute` (і `search_count`) він повертає рядками «ODOO: {tool, connection_id, model, method, args}»; runner виконує їх лише для підключень наряду класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису (`flow-core/references/naryad-format.md`).
 - **odoo-mcp:** `list_odoo_connections`, `odoo_execute` (`load`, лічильники, агрегати), `odoo_get_fields`,
   `odoo_search_read` — лише `count`/службові моделі. Підключення з `odoo_connections` наряду: `flow` (через
   runner) і `test-<клієнт>`.
 - **Читання:** `Read`/`Grep`/`Bash` (git) для `package/master-data/` на тегу з наряду (`git show <тег>:…` або
   worktree, не поточний `package/`), `clients/<к>/` (`sow.md`, `fit-gap.md`, `config-log.md`, `addons/*/models`
   — grep `_name`/`fields.`), `_input/sample/`. ТР галузі — лише розділи довідників, залишків, НФВ (grep).
-- **Запис:** `clients/<к>/migration-plan.md`, `clients/<к>/migration/{mapping.yaml,transform.py}`; у `test-<к>` —
+- **Запис:** `clients/<к>/migration-plan.md`, `clients/<к>/migration/{mapping.yaml,transform.py}`; у `test-<клієнт>` —
   `load` за external ID; у режимі повернення — поле статусу рядка інциденту. Акт звірки — тека клієнта на Drive.
 - **Заборонено:** прод клієнта; виклик `odoo_*` без `connection_id`; `search_read` з полями контрагентів чи
   співробітників; читання повного вивантаження (`_input/data/`); коміт даних і згенерованих CSV; `unlink` і
@@ -57,7 +58,7 @@ description: >
 1. Прочитати YAML наряду: `step`, `scope`, `executor`, `client_data`, `inputs` (SHA/тег), `where`, `limits`,
    `attempt`, `returned_from`, `odoo_connections`.
 2. `executor` не `central` або `client_data` не `personal` -> `stopped` («крок personal — лише центральний агент»).
-3. `list_odoo_connections` -> `test-<к>` є в allow-list наряду; клас бази не `prod` за `package/DATA_POLICY.md`
+3. `list_odoo_connections` -> `test-<клієнт>` є в allow-list наряду; клас бази не `prod` за `package/DATA_POLICY.md`
    («Класи доступу до баз Odoo»). Перший виклик — з явним `connection_id`, звірити `connection.db`.
    Не те підключення -> СТОП, memo «підключення не те», ескалація AI-інженеру, жодного запису.
 4. Перевіряти `connection` у відповіді після КОЖНОГО виклику.
@@ -88,7 +89,7 @@ SOW підписано; B-04 «Готово»; згода клієнта на п
 Його файл — у робочу теку поза git. Зібрати `clients/<к>/migration-plan.md` за `<тег>:package/templates/migration-plan.md`
 (немає -> `references/migration-plan-template.md` + memo «шаблон не в пакеті»): перенести джерела, обсяги, маппінг,
 ризики; додати обов'язкові розділи. Є план -> лише доповнити відсутні розділи. «База клієнта» — посилання на поля
-проєкту й alias `test-<к>`, тег, id теки Drive; без host/логіна/пароля і без копії реєстру.
+проєкту й alias `test-<клієнт>`, тег, id теки Drive; без host/логіна/пароля і без копії реєстру.
 
 ## Крок 5. Маппінг (`migration/mapping.yaml`)
 Для кожного файлу вибірки — шаблон A-13: усі обов'язкові колонки покриті (колонка джерела або константа з
@@ -103,9 +104,9 @@ external ID — `mig_<к>.<model_slug>_<ключ джерела>` (ІПН/ЄДР
 (DUP, INVALID, OUT_OF_SCOPE, MISSING_REF); `totals.json` з кількостями й контрольними сумами. Вихід — поза git
 (`_input/out/`). Запустити на вибірці з `--ns migtest_<к>` і виправити помилки скрипта.
 
-## Крок 7. Пробне завантаження вибірки в `test-<к>` (лише основний режим при першому запуску)
+## Крок 7. Пробне завантаження вибірки в `test-<клієнт>` (лише основний режим при першому запуску)
 Вибірка вантажиться під окремим простором імен `migtest_<к>.` (`--ns migtest_<к>`): ці записи не перетинаються з повним
-завантаженням BA (`mig_<к>.`) і не потрапляють у домен звірки. Знімок `test-<к>` після B-04 і до пробного завантаження робить BA (`ba-runbook.md`); відновлення знімка — дія BA при конфлікті унікальності. Пробні записи `migtest_<к>.*` людина прибирає або знімок відновлює перед UAT (B-07/B-08) — пункт у плані.
+завантаженням BA (`mig_<к>.`) і не потрапляють у домен звірки. Знімок `test-<клієнт>` після B-04 і до пробного завантаження робить BA (`ba-runbook.md`); відновлення знімка — дія BA при конфлікті унікальності. Пробні записи `migtest_<к>.*` людина прибирає або знімок відновлює перед UAT (B-07/B-08) — пункт у плані.
 Порядок фіксований: довідники -> контрагенти -> номенклатура -> техкарти -> **залишки останніми** (складські
 залишки, сальдо контрагентів і рахунків). `odoo_execute(<model>, "load", [fields, rows])` з явним
 `connection_id`; після кожного — `connection.db` і `messages` відповіді. Повтор після виправлення — upsert за
@@ -131,7 +132,7 @@ params: {mode: reconcile}}}` (не невдача, спроба не рахує�
 
 ## Крок 10. Режим повернення (B-08c / B-09 / B-10)
 Прочитати лише рядок інциденту за ID; визначити об'єкт (модель, external ID, кількість); виправити точковим
-`load`/`write` у `test-<к>` (вибірка — лише якщо потрібна нова структура); дописати рядок у «Виправлення даних»;
+`load`/`write` у `test-<клієнт>` (вибірка — лише якщо потрібна нова структура); дописати рядок у «Виправлення даних»;
 статус «виправлено на тесті — передано в B-12» у рядку інциденту (формат — `references/return-mode.md`).
 План, SOW, таблицю звірки й підпис тестового імпорту не чіпати. Підтвердження клієнта — людина.
 
@@ -171,7 +172,7 @@ PM (`checkMode: both`, SLA 3 р. д.), потім B-07 / B-08. Режим пов
 тесті — передано в B-12.» 3 невдалі перевірки -> PM (план + звірка з розбіжностями). Дефект шаблону A-13 ->
 «Запити в D-02». Немає значень джерела — «очікує людину».
 
-## Відкрите питання
+## Відкриті питання
 - Скрипт C-00 для імпорту CSV (спільний з A-13 `test-import.md`) існує? До появи — `odoo_execute load` або
   ручний режим BA через інтерфейс імпорту Odoo.
 - Як помічати записи міграції для доменів звірки: `ir.model.data` з модулем `mig_<к>` чи окреме поле — узгодити з A-13/C-00.

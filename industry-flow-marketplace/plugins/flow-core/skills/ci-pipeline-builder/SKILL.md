@@ -127,7 +127,7 @@ actions). До 3 проходів; не APPROVE після 3 → ескалац�
 ідентифікатори: `repo:...@sha`, `odoo-mcp:flow`, run id); `memo` — **спершу невпевненості** (формат підсумку `run_tests.sh`, розбіжності
 `REGISTRY.md` ↔ Odoo, N/A-job'и). У пам'ятці — що Тімлід робить руками: required status check `ci` для `main` (дату записати в PR), Environment `flow-report` із секретами
 `ODOO_FLOW_URL/DB/API_KEY` для `report-odoo` (лише dispatch з `odoo_task`; на push звіт у задачу Odoo іде через `flow-step-runner`/`flow-state-keeper`).
-Умова A-14 для SHA ≠ HEAD гілки — окремим пунктом пам'ятки Тімлідові: див. В-7 (`c03-lookup.md` треба оновити, інакше прогін не знайдеться). Це дії людини, скіл їх не виконує.
+Це дії людини, скіл їх не виконує.
 
 ## Pre-save верифікація
 - [ ] `ci.yml` без `{{...}}`; job `ci` існує, `if: always()`, перевіряє `needs.*.result`.
@@ -142,8 +142,7 @@ actions). До 3 проходів; не APPROVE після 3 → ескалац�
 ## Відкриті питання (для `memo`, поки не закриті)
 - В-1: формат підсумку `run_tests.sh` і лічильник skipped (C-00). В-2: `odoo_task`/`sha` у dispatch — звірити з B-11 і gates-aggregator.
 - В-3: місце фікстур self-test. В-4: прогін довший за `timeoutMin`. В-5: права технічного користувача — лише `message_post` на задачах.
-- В-7: `c03-lookup.md` (gates-aggregator) шукає dispatch-прогін за `head_sha` і не знайде його для `sha` ≠ HEAD гілки; потрібен пошук за
-  SHA в `run-name`. Власник файла — `flow-package-build`, цей скіл його не змінює.
+- ~~В-7~~ закрито: `c03-lookup.md` шукає dispatch-прогін за SHA в `display_title`; лишається лише питання, чи MCP `github` повертає `display_title`.
 - Джерело списку стандартних модулів Odoo для `config-check` (C-00); формат `REGISTRY.md` — `flow-core/references/flow-state.md`.
 
 ## Наступний крок

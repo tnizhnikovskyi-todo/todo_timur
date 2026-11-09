@@ -45,6 +45,7 @@ README з порядком імпорту й переліком модулів, 
 Трек довідника скіл **не вирішує й не перерозподіляє** — бере з ALLOCATION.md.
 
 ## Інструменти та доступи
+- **Запис/execute в Odoo — через runner.** Виконавець (`flow-core:flow-executor`) має лише читання odoo-mcp: виклики `odoo_write/create/execute` (і `search_count`) він повертає рядками «ODOO: {tool, connection_id, model, method, args}»; runner виконує їх лише для підключень наряду класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису (`flow-core/references/naryad-format.md`).
 - Файли: ТР `docs/industries/<галузь>/ТР.md`, `package/ALLOCATION.md`, умовно `package/config/CONFIG.md` і
   `package/CHECKS.md`, `package/DATA_POLICY.md` — кожен на SHA з `inputs` наряду. З DATA_POLICY читати лише розділи «Знеособлення»
   (правила вигаданих прикладів) і «Дозволено передавати в AI» (заборонені категорії значень). ТР і SPEC — не повністю: спершу

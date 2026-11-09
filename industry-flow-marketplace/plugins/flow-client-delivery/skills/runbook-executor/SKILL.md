@@ -1,18 +1,14 @@
 ---
 name: runbook-executor
 description: >
-  Запускай на кроці B-04 (а також B-13 -> B-04, B-11 -> B-04, звірка у B-08a/B-11) флоу галузевого
-  пакета, коли SOW підписано, пакет випущено (тег A-18), тестову базу клієнта зареєстровано в odoo-mcp,
-  є answers.yaml і fit-gap.md клієнта. Застосовує конфіг-пакет і runbook доналаштувань у ТЕСТОВІЙ базі
-  через odoo-mcp з read-back і веде config-log.md (режими: застосувати, виправлення, звірка; один на
-  запуск, з наряду). Тригерні фрази — "розгорни пакет у тестовій базі клієнта", "застосуй answers.yaml",
-  "B-04", "заповни config-log", "виправ баг конфігурації на тесті", "звір config-log з базою",
-  "дрейф конфігурації", "разверни пакет на тестовой базе", "сверь конфиг с базой".
-  НЕ використовуй для генерації runbook з CONFIG.md (odoo19-mvp-build:config-runbook), гейту конфігурації
-  (config-review), звіту готовності до UAT (track-convergence), оновлення на новий тег
-  (flow-client-delivery:package-upgrade-runner), багів коду (B-05), імпорту даних
-  (flow-client-delivery:client-data-migrator), package/config/ (flow-package-build:config-as-code)
-  і будь-яких дій у прод-базі. Результат — clients/<клієнт>/config-log.md (+ config-drift.md у звірці).
+  Запускай на кроці B-04 (а також B-13 -> B-04, B-11 -> B-04, звірка у B-08a/B-11) флоу галузевого пакета, коли SOW
+  підписано, пакет випущено (тег A-18), тестову базу клієнта зареєстровано в odoo-mcp, є answers.yaml і fit-gap.md.
+  Застосовує конфіг-пакет і runbook доналаштувань у ТЕСТОВІЙ базі через odoo-mcp з read-back і веде config-log.md
+  (режими: застосувати, виправлення, звірка). Тригери — «розгорни пакет у тестовій базі клієнта», «застосуй
+  answers.yaml», «B-04», «заповни config-log», «дрейф конфігурації». НЕ для генерації runbook з CONFIG.md (config-
+  runbook), гейту конфігурації (config-review), звіту UAT (track-convergence), оновлення на новий тег (package-upgrade-
+  runner), багів коду (B-05), імпорту даних (client-data-migrator), package/config/ (config-as-code) і будь-яких дій у
+  проді. Результат — clients/<клієнт>/config-log.md (+ config-drift.md).
 ---
 
 # Runbook Executor — застосування конфігурації в тестовій базі клієнта (B-04)
@@ -44,11 +40,12 @@ description: >
 | `boost:debug-root-cause` | у режимі «виправлення», якщо причина не очевидна з дрейфу (<=3 гіпотези) |
 
 ## Інструменти та доступи
+- **Запис/execute в Odoo — через runner.** Виконавець (`flow-core:flow-executor`) має лише читання odoo-mcp: виклики `odoo_write/create/execute` (і `search_count`) він повертає рядками «ODOO: {tool, connection_id, model, method, args}»; runner виконує їх лише для підключень наряду класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису (`flow-core/references/naryad-format.md`).
 - **odoo-mcp:** `list_odoo_connections`, `odoo_search_read`, `odoo_get_fields`, `odoo_write`, `odoo_execute`,
   `odoo_create`. Лише підключення з `odoo_connections` наряду: `flow` (поля проєкту клієнта) і `test-<клієнт>`.
 - **Читання:** `Read`/`Grep`/`Bash` (git) для `package/` на тегу з наряду і `clients/<к>/`. ТР галузі — лише розділ
   ролей (grep). `SPEC.md` не читати цілком.
-- **Запис:** `clients/<к>/config-log.md`, `config-drift.md`; у `test-<к>` — лише конфіг-моделі з мапи пакета
+- **Запис:** `clients/<к>/config-log.md`, `config-drift.md`; у `test-<клієнт>` — лише конфіг-моделі з мапи пакета
   й runbook, `button_immediate_install` модулів тегу (режим «застосувати»), поле статусу рядка інциденту,
   нічого в `flow`: тег тестової установки передається runner у `project_fields` (Крок 7).
 - **Заборонено:** прод клієнта; виклик `odoo_*` без `connection_id`; `res.users` create/write; `unlink` і
@@ -60,7 +57,7 @@ description: >
 ## Крок 0. Наряд, режим, передумови
 1. Прочитати YAML наряду: `step`, `executor`, `client_data`, `odoo_connections`, `inputs` (SHA), `limits`, `returned_from`.
    - `client_data: personal` і `executor` не `central` -> `stopped`.
-   - Виняток-посилення (будь-який режим): `odoo_connections` містить `test-<к>`, а клієнт уже пройшов B-06 (знеособлена копія; ознака — `project.state` у `flow` або `hypercare.md`) -> потрібен `executor: central`, інакше `escalated` (картка B-13 каже `commercial/any`; `references/open-questions.md`).
+   - Виняток-посилення (будь-який режим): `odoo_connections` містить `test-<клієнт>`, а клієнт уже пройшов B-06 (знеособлена копія; ознака — `project.state` у `flow` або `hypercare.md`) -> потрібен `executor: central`, інакше `escalated` (картка B-13 каже `commercial/any`; `references/open-questions.md`).
    - `params` читається за `odoo-bridge.md` §3; `params.mode`, якщо є, має збігатися з режимом із таблиці, інакше `escalated`.
 2. Режим — з наряду, не з тексту (деталі й таблиця — `references/modes.md`):
    `B-04` без `returned_from` -> «застосувати»; `B-13` або `returned_from` з B-09/B-10 (інцидент у `inputs`) ->
@@ -91,7 +88,7 @@ description: >
 ## Крок 3. Модулі (режим «застосувати»)
 `ir.module.module` за іменами з `package/addons/` тегу і «Модулі до установки» (`config/CONFIG.md`).
 - Модуля немає у списку -> код тегу не розгорнуто: «очікує: виконує Тімлід (розгортання тегу)», стоп до розгортання.
-- `uninstalled` -> `button_immediate_install` лише на `test-<к>`, по одному. Read-back: `state=installed` і
+- `uninstalled` -> `button_immediate_install` лише на `test-<клієнт>`, по одному. Read-back: `state=installed` і
   `latest_version` (збережене в БД поле, тобто версія, фактично встановлена) = `version` маніфесту модуля НА ТЕГУ
   (`git show <тег>:package/addons/<модуль>/__manifest__.py`), нормалізована як у Odoo: короткий `X.Y` -> `19.0.X.Y`
   (серія додається, якщо версія не починається з `19.0.`). td_* і вендоровані однаково; для вендорених версія з тегом

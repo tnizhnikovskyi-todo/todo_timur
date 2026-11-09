@@ -27,7 +27,7 @@ description: >
 
 `step` не з переліку -> `result: escalated` AI-інженеру, причина «крок не підтримано».
 
-## Наряд, звіт, межі запису
+## Наряд і звіт
 - Наряд — YAML-блок (`flow-core/references/naryad-format.md`), розбирає `flow-core:flow-step-runner`; ключі: `limits.max_attempts`,
   `limits.context_budget_tokens`, `params.mode` (A-17: `перша|нова-версія|hotfix`, немає -> `перша`), `params.pilot` (D-05),
   `git.base/head/prev_tag`, `date`. Скіл виконує наряд «чернетка» (`executor: any`); гейт (`executor: human`) ставить `flow-orchestrator`.
@@ -50,10 +50,7 @@ description: >
 3. Runner запускає `python3 -I <плагін flow-core>/skills/flow-autocheck/scripts/autocheck.py --mode result --naryad <f> --repo <тека>`.
 4. Рядки результату йдуть у `checks`; `FAIL` -> виправити й новий коміт у межах `limits.max_attempts`.
 
-Специфікація `flow-autocheck/references/checks/` є лише для **A-17**. Для A-07, D-04, D-05 режим `result` дає `ERROR spec-missing` і
-`INCOMPLETE`; за контрактом flow-autocheck runner рахує це збоєм виконання, а не PASS (перевірки зі `check.how` вручну не виконують).
-Тому до появи `checks/A-07.yaml`, `D-04.yaml`, `D-05.yaml` (В-5) для цих трьох режимів скіл після ручних PD повертає `result: escalated`
-AI-інженеру з причиною «немає checks/<крок>.yaml у flow-autocheck»; чернетка й `memo` лишаються в PR для Власника продукту.
+Специфікації `flow-autocheck/references/checks/` є для A-17, A-07, D-04, D-05. У A-07 і D-04 шлях результату змінний (галузь, версія), тож їхні рядки — `manual` (чек-лист); механічні лише `where-only`/`no-pii` і D-05 (`headings`, `signature-by-ai`). Ручні PD-xx скіл прогоняє сам, `MANUAL` не блокує `done`.
 Пріоритет, коли збігаються дві ескалації: спершу `spec-missing` (AI-інженеру), брак фактів (Власнику продукту) іде в `memo` і «Відкриті питання».
 `signature-by-ai` без `--agent-pattern` = `MANUAL`, не PASS.
 Коміт людини з рядком `Рішення:` після `git.head` зі звіту є штатним: HEAD гілки PR зсувається. Пропозиція до чек-листа гейта
@@ -163,8 +160,7 @@ FAIL -> виправити й повторити в межах `limits.max_attem
 | PD-08 | `flow-autocheck` `checks/A-17.yaml`: рядки в `checks`; кожен AC з ТР у таблиці; «пройшов» лише з посиланням; відхилений AC — тип і код; профілі `answers.yaml`; при `нова-версія` — «регрес» | A-17 |
 | PD-09 | Кожен ID плану є в `backlog.md` з «у продукт», без дублів; невключені в «Відкладені»; бюджет перевірено або «не перевірено» (WARN); відкритих `release/*` без тега немає (інакше `escalated`) | D-04 |
 | PD-10 | Години, доробки, інциденти — числа з джерелом-фактом; `no-pii` autocheck; «доопрацювати» має перелік для D-02 | D-05 |
-Після 2 невдалих спроб -> `escalated` Власнику продукту з чернеткою й переліком бракуючих даних. A-07/D-04/D-05 без `checks/<крок>.yaml` —
-`escalated` AI-інженеру (див. «Порядок з автоперевіркою»).
+Після 2 невдалих спроб -> `escalated` Власнику продукту з чернеткою й переліком бракуючих даних. Специфікації кроків є (див. «Порядок з автоперевіркою»).
 
 ## Pre-save верифікація
 - [ ] `step` підтримано; передумови виконано (або `returned`); змінено лише `where`.
@@ -206,7 +202,7 @@ A-07 «так» -> A-08, «ні» -> кінець; A-17 прийнято -> A-18
 - В-2. Чи названо в `flow/ODOO_SCHEMA.md` модель табеля пілота в базі `flow`? Без цього години лише з hypercare.md.
 - В-3. У `backlog-format.md` немає колонки оцінки рядка; D-04 бере години з файлів-джерел. Рішення власника `backlog-triage`.
 - В-4. Чи лишається груба вилка A-07 всередині скіла — після перших двох запусків.
-- В-5. Для flow-core: `checks/A-07.yaml`, `D-04.yaml`, `D-05.yaml` (headings, signature-by-ai; для D-04 id_set за backlog.md); у `A-17.yaml`
-  `rejected-route` додати код `D-03`. До того A-07/D-04/D-05 завершуються `escalated` AI-інженеру.
+- В-5 (закрито: `checks/A-07.yaml`, `D-04.yaml`, `D-05.yaml` існують, `D-03` є в `A-17.yaml`). Було: для flow-core: `checks/A-07.yaml`, `D-04.yaml`, `D-05.yaml` (headings, signature-by-ai; для D-04 id_set за backlog.md); у `A-17.yaml`
+  `rejected-route` додати код `D-03`. Тепер ці кроки перевіряються автоматично.
 - В-6. Для flow-core: оркестратор додає `template` до `where`, якщо шаблона немає на `base`. Для `backlog-triage`: статус «відкладено» (або
   значення в колонці «Версія») у `backlog-format.md`; до того «відкладені» лише в release-plan.

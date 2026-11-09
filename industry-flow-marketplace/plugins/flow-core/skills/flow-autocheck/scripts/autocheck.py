@@ -607,6 +607,45 @@ def p_signature_by_ai(ctx, c):
     ctx.add(c["id"], "FAIL" if ag else "PASS", "Поверни поля підпису/рішення людині: їх змінив коміт агента" if ag else "", lab)
 
 
+def p_evals_schema(ctx, c):
+    """кожен evals/**/evals.json на head: валідний JSON, обов'язкові поля (evals-format.md)"""
+    rc, out = git(ctx, "ls-tree", "-r", "--name-only", ctx.head, "evals/")
+    files = [x for x in out.split("\n") if x.endswith("/evals.json")] if rc == 0 else []
+    if not files:
+        return ctx.add(c["id"], "FAIL", "Немає жодного evals/**/evals.json на head", "evals/")
+    bad, ids_rx = [], re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+    for f in files:
+        try:
+            d = json.loads(read_rev(ctx, ctx.head, f) or "")
+            assert isinstance(d, dict) and d.get("skill") and isinstance(d.get("cases"), list)
+            seen = set()
+            for k in d["cases"]:
+                assert ids_rx.match(k.get("id", "")) and k["id"] not in seen
+                seen.add(k["id"])
+                assert k.get("source") and k.get("status") and k.get("prompt")
+                e = k.get("expected") or {}
+                assert e.get("checks") and e.get("must_not")
+        except Exception as ex:
+            bad.append(f"{f} ({type(ex).__name__})")
+    ctx.add(c["id"], "FAIL" if bad else "PASS", ("Невалідна схема: " + "; ".join(bad[:8])) if bad else "", ",".join(files)[:200])
+
+
+def p_pii_strict(ctx, c):
+    """PII у доданих рядках diff за шляхами args.paths: FAIL незалежно від client_data (pii-patterns.md)"""
+    rc, diff = git(ctx, "diff", "-U0", ctx.base, ctx.head, "--", *c["args"]["paths"])
+    hits, path, ln = [], "", 0
+    for l in diff.split("\n"):
+        if l.startswith("+++ "):
+            path = l[6:]
+        elif l.startswith("@@"):
+            m = re.search(r"\+(\d+)", l)
+            ln = int(m.group(1)) - 1 if m else 0
+        elif l.startswith("+") and not l.startswith("+++"):
+            ln += 1
+            hits += [(n, f"{path}:{ln}") for n, rx, st in PII if st == "FAIL" and rx.search(l)]
+    ctx.add(c["id"], "FAIL" if hits else "PASS", ("Прибери/знеособ ПДн (значення не наводимо): " + "; ".join(f"{n} {e}" for n, e in hits[:8])) if hits else "", ",".join(e for _, e in hits)[:200])
+
+
 def p_manual(ctx, c):
     ctx.add(c["id"], "MANUAL", c["args"]["text"] + f" ({c['args']['who']})")
 

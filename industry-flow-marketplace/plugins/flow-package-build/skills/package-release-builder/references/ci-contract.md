@@ -7,11 +7,12 @@ workflow C-03 можуть бути ще не створені — тоді ре
 | Input ci.yml | Значення в A-18 |
 |---|---|
 | `sha` | HEAD гілки runner (`git.head`) — лише коли коміт уже запушено (запуск 2) |
-| `ref` | гілка кроку (`flow/<крок>-...`), уже на GitHub |
 | `package_tag` | тег-кандидат `$TAG` (`package/$VER`) |
 | `odoo_version` | порожньо (із суфікса `-odoo<N>` тега) |
 | `client` | порожньо (лише пакет) |
 | `odoo_task` | id задачі Odoo з наряду |
+
+Параметр dispatch API (не input `ci.yml`): `ref` — гілка кроку (`flow/<крок>-...`), уже на GitHub.
 Режим установки — штатний прогін ci.yml. Входів `mode`/`prev_tag`/`instance` у контракті немає.
 
 ## Тест оновлення (R-11)

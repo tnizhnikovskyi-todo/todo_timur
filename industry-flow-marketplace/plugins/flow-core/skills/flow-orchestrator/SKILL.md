@@ -103,8 +103,8 @@ description: >
 - `model`, `effort`, `where`, `template`, `done`, `check`, `client_data`, `data_rule` — з картки; `inputs[].sha` — з кроку 2.
 - `limits` з картки; для кроків зі списку `per_unit_steps` у `dispatcher.yaml` множити на N (клієнтів/запитів), N → `units_N` у звіт.
 - `odoo_connections` — з класу кроку за DATA_POLICY «Класи доступу до баз Odoo (allow-list)»; крок без роботи з Odoo → порожньо. До цих баз C-01 сам не ходить.
-  **Прод-alias допустимий лише за всіх умов разом:** alias має вигляд `prod-metrics-<код>`, крок = D-01, `params.mode: collect` (+ `purpose: prod-metrics`),
-  `executor: central`. Будь-яка інша комбінація з прод-базою (D-01 `report`, D-01 з `executor: any`, інший крок) → FAIL: задачу не створювати, `skipped_precondition`, активність Тімліду.
+  **Прод-alias (`prod-*`) в `odoo_connections` заборонено без винятків** (AI не працює з продом клієнта): така комбінація → FAIL, задачу не створювати, `skipped_precondition`, активність Тімліду. D-01 `collect` — `odoo_connections`: лише `flow`, дані з вивантаження людини (`params.upload_path`).
+  Інакше (будь-який крок з прод-базою) → те саме.
 - `repo.branch = flow/<крок>-<scope>-<спроба>`, `attempt`, `returned_from` (код кроку/гейта + текст зауваження).
 - `executor: central` обов'язково для `client_data: personal`.
 - `params` — за `naryad-format.md` і `flow-map.md`: `mode`, `phase` (A-14: 1|2; A-18: `release`|`tag`), `flow_version`, `period`, `pilot`, `group`, `resume`; блок `git:` (`base`, `head`, `prev_tag`) заповнює runner, не диспетчер.
@@ -136,7 +136,7 @@ description: >
 
 ## Автоперевірка
 Після кроку 11 перечитати зі стану Odoo (не з пам'яті):
-- кожна створена задача має YAML з усіма ключами `naryad-format.md`, `skill_ref` з точним semver, `inputs[].sha`, `odoo_connections` без прод-баз (прод — лише `prod-metrics-<код>` + D-01 `mode: collect` + `executor: central`, усе інше FAIL і задачу не створено);
+- кожна створена задача має YAML з усіма ключами `naryad-format.md`, `skill_ref` з точним semver, `inputs[].sha`, `odoo_connections` без прод-баз (будь-який `prod-*` → FAIL і задачу не створено);
 - жодної задачі для scope зі стоп-листа; жодної AI-задачі понад слоти; жодного дубля за ключем ідемпотентності (`odoo-bridge.md` §7);
 - активності лише для гейтів/людських кроків/ескалацій, у кожної дедлайн = `humanSla`;
 - кожен перехід у звіті має рядок `flow-map.md`; для `attempt` > `maxAttempts` — ескалація, а не нова задача.
@@ -161,7 +161,7 @@ description: >
 - Не вигадувати переходи: немає рядка в `flow-map.md` — стоп і активність Тімліду.
 - Не вводити місячний бюджет AI і зупинки «бюджет вичерпано»: лише `costLimit`/`timeoutMin` на запуск.
 - Не ставити кроки зі стоп-листа; не знімати стоп-лист (Власник продукту + Юрист); не ухвалювати рішення щодо згоди клієнта.
-- Не викликати `odoo-mcp` без `connection_id`; не видавати прод-бази в `odoo_connections` (крім D-01 `collect`, `executor: central`, alias `prod-metrics-<код>`).
+- Не викликати `odoo-mcp` без `connection_id`; не видавати прод-бази (`prod-*`) в `odoo_connections` — без винятків.
 - Не видаляти задачі (лише стадії `Зупинено`/`Скасовано`); не змінювати картки й карту флоу (рішення Тімліда через PR).
 - Не підвищувати версію скіла в наряді «до останньої»; не перезапускати понад `maxAttempts`.
 - Не кликати людину на кроках без гейта; не дублювати відкриті активності.

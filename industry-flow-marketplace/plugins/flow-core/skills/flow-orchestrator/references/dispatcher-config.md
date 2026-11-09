@@ -21,7 +21,7 @@ periodic:
   monthly_first_workday: [D-01, B-01(b), D-02(a)]   # порядок обов'язковий
   monthly_per_client_on_support: [B-10]
   daily_per_client_in_hypercare: [B-09]
-  weekly: [C-04]
+  weekly: [C-04]   # лише якщо на base є evals/INDEX.md; інакше позначка «евали не ініціалізовано»
 lease_factor: 1.5                 # термін оренди = timeoutMin x factor
 unclaimed_after_minutes: 60
 parallelism: {per_package: 3, per_client: 1}

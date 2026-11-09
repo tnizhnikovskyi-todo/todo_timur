@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "D-05",
+ "checks": [
+  {
+   "id": "headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/pilot/decision.md",
+    "headings": [
+     "Факти пілота",
+     "Критерій рішення",
+     "Варіанти",
+     "Рекомендація AI",
+     "Допущення",
+     "Відкриті питання",
+     "Рішення і підпис"
+    ]
+   }
+  },
+  {
+   "id": "signature-by-ai",
+   "prim": "signature_by_ai",
+   "args": {
+    "file": "package/pilot/decision.md",
+    "heading": "(?i)рішення і підпис"
+   }
+  },
+  {
+   "id": "facts-sourced",
+   "prim": "manual",
+   "args": {
+    "text": "години, доробки, інциденти — числа з джерелом (PD-10)",
+    "who": "runner"
+   }
+  }
+ ]
+}

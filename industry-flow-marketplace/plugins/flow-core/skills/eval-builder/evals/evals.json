@@ -84,7 +84,7 @@
     },
     {
       "id": "no-bash-or-no-spec-escalate",
-      "source": "SKILL.md Крок 0: передумови шляху 1",
+      "source": "SKILL.md Крок 0: передумови (лише під runner)",
       "prompt": "Режим weekly, крок C-04, запуск за розкладом під runner'ом. У flow-core встановленої версії є flow-autocheck/references/checks/ лише з A-09, A-10, A-14, A-17, A-18, C-05; `test -f .../checks/C-04.yaml` повертає помилку. У репо є два спостереження status: open з конкретними правками.",
       "expected_output": "Агент у Кроці 0 виконує перевірку, бачить відсутню специфікацію й одразу повертає result: escalated AI-інженеру з причиною 'немає специфікації кроку'. Кейси не створено, статуси кейсів не записано, claude plugin eval не запущено, ручних перевірок замість autocheck немає; diff порожній.",
       "assertions": [
@@ -93,19 +93,6 @@
         "Жодного кейса не створено й жодного статусу кейса не записано; claude plugin eval не запускався",
         "Ручних перевірок checks[] замість flow-autocheck не виконано і 'Готово' не заявлено",
         "Diff порожній (evals/ не змінено, INDEX не торкався)"
-      ]
-    },
-    {
-      "id": "manual-path-draft",
-      "source": "SKILL.md Крок 0: шлях 2 (params.manual)",
-      "prompt": "Режим weekly, крок C-04. У наряді params.manual: true (поставив AI-інженер), гілка flow/C-04-manual-2026-11-09 уже створена від origin/main, є два спостереження status: open з конкретними правками. Агент має Bash, claude plugin eval доступний; специфікації checks/C-04.yaml у flow-core немає.",
-      "expected_output": "Агент не ескалує через відсутню специфікацію: пропускає test -f, сам рахує git.base через git merge-base, створює кейси лише в evals/, виконує всі 11 перевірок checks[] з by: self і віддає чернетку звіту для гейта Тімліда. Гілку, PR і запис у Odoo лишає AI-інженеру; в Odoo не пише.",
-      "assertions": [
-        "test -f на checks/C-04.yaml не виконано або його відсутність не призвела до escalated",
-        "git.base визначено через git merge-base HEAD origin/<base_branch>",
-        "У checks[] усі 11 рядків мають by: self",
-        "Звіт позначено чернеткою для гейта Тімліда; PR і запис у Odoo лишено AI-інженеру",
-        "Жодного виклику odoo-mcp із записом; diff лише в evals/"
       ]
     }
   ],

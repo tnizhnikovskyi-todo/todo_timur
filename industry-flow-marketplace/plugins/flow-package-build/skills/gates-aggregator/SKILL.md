@@ -32,7 +32,7 @@ description: >
   `boost:odoo19-lint`; кожен — точної версії з `skill_ref` наряду (звіряє runner).
 - MCP `github`: лише читання прогонів (`actions_list`, `actions_get`), `get_commit`, і `actions_run_trigger`
   (`run_workflow`, обов'язкові `workflow_id` і `ref`) для C-03. Не мерджить, не апрувить PR. Деталі — `references/c03-lookup.md`.
-- MCP `odoo-mcp`: `flow` — лише читання наряду й закритого підкроку Тімліда (версія 1); `test-pkg-<id>` — тільки для
+- MCP `odoo-mcp`: `flow` — лише читання наряду й закритого підкроку Тімліда (версія 1); `test-pkg-<пакет>` — тільки для
   `track-convergence` і тест-імпорту. Перед першим викликом `list_odoo_connections`, звірити з
   `odoo_connections` наряду; кожен виклик — з явним `connection_id`; після кожного перевірити
   `connection.db`; не збіглося — зупинка, «підключення не те» (збій виконання). Без `connection_id`
@@ -102,15 +102,15 @@ package/config package/master-data`: входи не змінились → пр
   гейти pr-review/config-review не APPROVE» (штатно, не збій). Далі — Крок 7/8.
 - Версія 1, фаза 1 і немає закритого підкроку Тімліда: `odoo_search_read` (`connection_id` = `flow`) по `project.task` за `parent_id` = id наряду,
   `kind = human_substep` (`flow-step-run.md` §3), стадія `stage.done`; у `params.resume` фази 2 підкрок уже закритий. Немає закритого → записати
-  CHECKS.md зі статусом «ЧАСТКОВО: очікує застосування конфігу» і завершити відповідь блоком `WAITING_HUMAN: роль=Тімлід; дія=застосувати конфіг A-12 на test-pkg-<id> і внести значення VP-xx` (executor-brief.md; runner переводить у `result: waiting_human`),
-  `waiting_for: {role: Тімлід, what: "застосувати конфіг A-12 на test-pkg-<id> і внести значення VP-xx", resume: {step: A-14, params: {phase: 2}}}`,
+  CHECKS.md зі статусом «ЧАСТКОВО: очікує застосування конфігу» і завершити відповідь блоком `WAITING_HUMAN: роль=Тімлід; дія=застосувати конфіг A-12 на test-pkg-<пакет> і внести значення VP-xx` (executor-brief.md; runner переводить у `result: waiting_human`),
+  `waiting_for: {role: Тімлід, what: "застосувати конфіг A-12 на test-pkg-<пакет> і внести значення VP-xx", resume: {step: A-14, params: {phase: 2}}}`,
   `phase: 1` (підкрок створює C-01, не цей скіл). Не запускати `track-convergence` на базі без конфігу.
 - Версія 2: конфіг ставить скрипт A-12 — підкроку немає, перейти до Кроку 6.
 
 ## Крок 6. Фаза 2: сходження і тест-імпорт
 1. Звірити, що фаза 1 у CHECKS.md зроблена на тому ж `SHA_GATES` (інакше — фаза 1 заново).
 2. Версія 1: записати «Конфіг застосовано: база (alias), дата, хто (роль/логін закритого підкроку), значення VP-xx» (читання з Odoo; ПІБ не переносити — `pii-patterns.md`).
-3. Запустити `odoo19-mvp-build:track-convergence` з явними параметрами (режиму пакета у скілі немає, В-6): scope — пакет; база `test-pkg-<id>`; замість плану міграції — `package/master-data/README.md` як порядок завантаження; результат (`сходження-треків_*`) писати лише у scratchpad, не в репо, і не під іменем компанії; взяти вердикт і знахідки. 
+3. Запустити `odoo19-mvp-build:track-convergence` з явними параметрами (режиму пакета у скілі немає, В-6): scope — пакет; база `test-pkg-<пакет>`; замість плану міграції — `package/master-data/README.md` як порядок завантаження; результат (`сходження-треків_*`) писати лише у scratchpad, не в репо, і не під іменем компанії; взяти вердикт і знахідки. 
    - Скіл відмовив через відсутність плану міграції → «не виконано: track-convergence не підтримує режим пакета (В-6)» + `result: escalated`, `escalated_to: Архітектор рішення` (не збій виконання).
 4. Тест-імпорт `package/master-data/` за порядком з `README.md`: результат job'а C-03, якщо він його має; інакше — імпорт у тестову базу через `odoo-mcp` з явним `connection_id` (В-1; процедура — `../master-data-template-builder/references/test-import.md`, той самий спосіб, що й у A-13; результат — таблиця CSV → OK/помилка з текстом для правки A-13). Кожен CSV з `README.md` має результат; без результату — правка A-13 «не перевірено».
 
@@ -155,7 +155,7 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
 `result`: `done` при APPROVE; `returned` + `returned_to: [A-11|A-12|A-13]` (множина кодів); `escalated` + `escalated_to`; `waiting_human` + `waiting_for`
 (фаза 1 версії 1, див. Крок 5; відповідь завершується блоком `WAITING_HUMAN: роль=Тімлід; дія=…`, resume = `{step: A-14, params: {phase: 2}}`); `phase`, `flow_version` — за наряду; `partial: false`; збій виконання (гейт без вердикту після повтору, C-03 не завершився): спроба 1–2 → `result: stopped` з причиною «збій виконання, спроба N/3» у `memo` (запуск повторюється); спроба 3 → `result: escalated` + `escalated_to: Архітектор рішення`; `checks[]` — по одному на гейт + `c03` +
 `allocation-coverage` + `test-import`; `memo` — невпевненість спершу (перенесені вердикти, предок C-03, правки з маршрутом за гейтом, а не за шляхом,
-ПІБ/контакти в дефектах — не переносились); `data_sources` — `repo:package/...@<sha>`, `github:run/<id>`, `odoo-mcp:test-pkg-<id>`.
+ПІБ/контакти в дефектах — не переносились); `data_sources` — `repo:package/...@<sha>`, `github:run/<id>`, `odoo-mcp:test-pkg-<пакет>`.
 
 ## Ліміти й ескалація
 `maxAttempts 3` лічить лише збої виконання (гейт без вердикту, C-03 не завершився, не те підключення) →
@@ -176,6 +176,9 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
 - APPROVE → «A-14 пройдено: усі гейти APPROVE на <SHA_GATES>» → A-15 (демо-стенд).
 - Правки → «A-14: правки → <A-11/A-12/A-13>» — повернення за кодами правок (C-01 за `flow-map.md`).
 - Hotfix: APPROVE → A-18 `params.mode: hotfix`, правки → A-11/A-12 (`flow-map.md`). Ескалація → Архітектор рішення. `waiting_human` → підкрок Тімліда (C-01, `flow-map.md` правило 6).
+
+## Відкриті питання
+В-1 (job тест-імпорту в C-03) і В-2 (input `sha` у `ci.yml`) — `references/c03-lookup.md`, «Контракт з ci-pipeline-builder»; чи MCP `github` повертає `display_title` прогону — перевірити (`flow-core/skills/ci-pipeline-builder/references/ci-contract.md`, В-7). Не вгадувати.
 
 ## Чого НЕ робити
 - Не правити модулі, конфіг, CSV (повернення на A-11/A-12/A-13, `no-own-edits`) і не запускати тести td_* (це C-03).

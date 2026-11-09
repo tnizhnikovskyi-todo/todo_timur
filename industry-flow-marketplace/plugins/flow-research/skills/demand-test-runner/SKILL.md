@@ -204,7 +204,7 @@ description: >
 - **flow-core (`naryad-format.md`, `flow-map.md`):** рядок A-23 у таблиці режимів (`список`, `адреси`, `prep`, `results`) і ключі `params.start_sha`, `params.final`, `params.round`.
 - **Юрист (`data-policy-template.md`):** розділ із текстом згоди й відписки; до того DT-consent завжди FAIL.
 
-## Відкрите питання
+## Відкриті питання
 1. До flow-core/flow-research: спільний `flow-research/references/demand-thresholds.md` не створено; визначення Р1–Р5б
    живуть у `references/demand-levels.md` цього скіла. Якщо потрібні іншим скілам — винести у спільний файл.
 2. Хто й коли запускає `results` (другий наряд з `params.mode: results` і `params.start_sha` = SHA мержу prep-PR, чи

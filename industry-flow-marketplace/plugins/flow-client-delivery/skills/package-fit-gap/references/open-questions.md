@@ -7,6 +7,6 @@
 - «Підписано обома сторонами» за md-файлом слабке: чи є джерело істини (PDF на Drive, позначка в CRM)?
 - Політика клієнта без згоди на AI не визначена в DATA_POLICY/business-case: до визначення відсутній пункт про AI
   → `escalated`, крок ручний.
-- Файл шаблону: `flow-client-delivery/references/fit-gap-template.md` згадує `product-decision-drafter`
+- Файл шаблону: `flow-client-delivery/skills/package-fit-gap/references/fit-gap-template.md` згадує `product-decision-drafter`
   (D-02); фактично файл у `references/` цього скіла — потрібен один спільний шлях.
 - Строк зберігання записів Fathom — за DATA_POLICY.

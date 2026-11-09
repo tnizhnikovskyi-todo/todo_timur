@@ -39,7 +39,7 @@ AI готує чернетку, рішення шлюзу приймає Кер�
 - **Запис:** лише `clients/<к>/fit-gap.md`, `questionnaire.md`, `answers.yaml`. `sales/` пише тільки
   `odoo19-sales-prep:data-completeness-scorer` (підкрок 9). `package/` не змінюється ніколи.
 - **odoo-mcp:** лише alias `flow` (наряд/звіт, через runner). Баз клієнта на цьому кроці не потрібно;
-  якщо в allow-list є `test-<к>` — не використовувати. Видалень немає.
+  якщо в allow-list є `test-<клієнт>` — не використовувати. Видалень немає.
 - **Дані:** `client_data: personal`, `executor: central`. Транскрипти й робочі витяги — не в git
   (тимчасова тека агента поза репо, інакше `clients/<к>/_input/`, але лише після `git check-ignore -q clients/<к>/_input/x`;
   не ігнорується → стоп, `escalated` Тімліду; теку видалити в Pre-save). Правила — `package/DATA_POLICY.md`.

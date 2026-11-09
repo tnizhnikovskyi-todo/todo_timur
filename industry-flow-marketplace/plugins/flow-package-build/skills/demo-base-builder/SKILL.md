@@ -1,17 +1,14 @@
 ---
 name: demo-base-builder
 description: >
-  Запускай на кроці A-15 флоу галузевого пакета (демо-стенд), коли A-14 дав APPROVE або A-16 повернув
-  сценарії з маршрутом A-15, і на кроці A-22 (емуляція в Odoo для гарячого ліда під час тесту попиту).
-  Режими: «стенд пакета» (A-15) — package/demo/: скрипти підйому й скидання за тегом, answers.yaml і
-  profiles/, синтетичні демо-дані, README.md з SHA, defects.md з поверненням на A-14; «емуляція» (A-22) —
-  окрема демо-база з x_-моделями, поданнями й автоматизаціями через odoo-mcp без коду, підставлені
-  результати, нічне скидання, prototype/emulation.md. Лише allow-list демо-баз. Тригерні фрази — "збери
-  демо-стенд", "підніми стенд пакета", "скинь демо-стенд", "емуляція для ліда", "собери демо-стенд",
-  "эмуляция в Odoo для лида". НЕ використовуй для плану демо під ліда (odoo19-sales-prep:demo-build-plan),
-  демо під ліда за план_демо-збірки (у 0.1 не реалізовано), правок модулів/конфігу/майстер-даних
-  (code-dev, config-as-code, master-data-template-builder), гейтів (gates-aggregator), сценаріїв
-  A-16, бази клієнта (B-04, runbook-executor). Результат — package/demo/ або prototype/emulation.md.
+  Запускай на кроці A-15 флоу галузевого пакета (демо-стенд), коли A-14 дав APPROVE або A-16 повернув сценарії з
+  маршрутом A-15, і на кроці A-22 (емуляція в Odoo для гарячого ліда). Режими: «стенд пакета» (A-15) — package/demo/:
+  скрипти підйому й скидання за тегом, answers.yaml і profiles/, синтетичні дані, README.md з SHA, defects.md з
+  поверненням на A-14; «емуляція» (A-22) — окрема демо-база з x_-моделями, поданнями й автоматизаціями через odoo-mcp
+  без коду, нічне скидання, prototype/emulation.md. Лише allow-list демо-баз. Тригери — «збери демо-стенд», «підніми
+  стенд пакета», «скинь демо-стенд», «емуляція для ліда». НЕ для плану демо (demo-build-plan), правок
+  модулів/конфігу/даних (code-dev, config-as-code, master-data-template-builder), гейтів (gates-aggregator), сценаріїв
+  A-16, бази клієнта (runbook-executor). Результат — package/demo/ або prototype/emulation.md.
 ---
 
 # Demo Base Builder — демо-стенд пакета (A-15) і емуляція для ліда (A-22)
@@ -33,6 +30,7 @@ description: >
 `pii-patterns.md`, `data-policy-template.md`. Не копіюються сюди. Звіт українською.
 
 ## Інструменти та доступи
+- **Запис/execute в Odoo — через runner.** Виконавець (`flow-core:flow-executor`) має лише читання odoo-mcp: виклики `odoo_write/create/execute` (і `search_count`) він повертає рядками «ODOO: {tool, connection_id, model, method, args}»; runner виконує їх лише для підключень наряду класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису (`flow-core/references/naryad-format.md`).
 - **odoo-mcp, allow-list** (звірити `list_odoo_connections` з `odoo_connections` наряду): `flow` — лише наряд (читання);
   `demo-<пакет>[-<instance>]` — A-15, лише читання; `emu-<галузь>[-<id>]` — A-22, створення. Alias береться з таблиці allow-list
   `package/DATA_POLICY.md` (розділ «Класи доступу до баз Odoo») і з `odoo_connections` наряду; шаблони імен — лише приклад, клас у

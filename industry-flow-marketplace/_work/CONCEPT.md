@@ -88,8 +88,8 @@
 | A-02, A-06, B-08b, B-08d, B-12, C-00, C-08 | людські кроки; AI — лише `flow-autocheck` форми й `flow-state-keeper` |
 | A-03 | `industry-briefing`, `competitor-mapper`, `client-web-researcher` |
 | A-08 | `tr-*`, `spec-writer`; шаблон ТР галузі — `package/templates/` (створює перший запуск) |
-| A-10 | `build-allocator` + розширений шаблон ALLOCATION (колонки «є в редакції», «модуль Odoo») у `flow-package-build/references/`; звірка AC ↔ рядки — `flow-autocheck` |
-| A-11 | `architecture`, `scaffolding`, `code-dev`, `testing`, `build-orchestrator`, `pr-review`, `odoo19-lint`; шаблон скелета модуля і правило вендорингу «готове» — `flow-package-build/references/module-skeleton.md` |
+| A-10 | `build-allocator` + розширений шаблон ALLOCATION (колонки «є в редакції», «модуль Odoo») — у розділі скіла `config-as-code`/картці A-10 (окремого файла `allocation-template.md` немає); звірка AC ↔ рядки — `flow-autocheck` |
+| A-11 | `architecture`, `scaffolding`, `code-dev`, `testing`, `build-orchestrator`, `pr-review`, `odoo19-lint`; правило вендорингу «готове» — у `config-as-code` (окремого `module-skeleton.md` немає) |
 | A-16 | `testing` (Odoo tours у CI) |
 | A-19, B-05, B-13 | існуючий ланцюг `tr-*` → `code-dev` → гейти; виправлення — `runbook-executor` режим виправлення |
 | B-01 | `odoo19-sales-prep:*` + `segment-selector` (режим «ліди») |
@@ -216,10 +216,10 @@ skills/<скіл>/
 ### 3.10 Спільні references (де лежать)
 
 - `flow-core/references/`: `conventions.md` (цей розділ стисло), `naryad-format.md`, `report-format.md`, `odoo-bridge.md` (моделі/виклики odoo-mcp для черги: пошук задач у стадії «Черга» за `executor`/`client_data`, оренда, `message_post`, зміна стадії, активності, читання полів проєкту; правила `connection_id`), `data-policy-template.md`, `flow-step-run.md`, `flow-state.md`, `pr-checklist.md`, `artifacts-registry.md` (шаблон `flow/ARTIFACTS.md`), `flow-map.md` (переходи між кроками з карток для оркестратора: наступний крок, шлюзи, коди повернення).
-- `flow-package-build/references/`: `allocation-template.md` (розширення `build-allocator`), `module-skeleton.md`, `checks-template.md`, `changelog-template.md`, `master-data-format.md` (спільно з `client-data-migrator` — копія з позначкою джерела).
+- `flow-package-build/references/` (фактично): `checks-template.md`, `demo-readme-template.md`, `master-data-format.md` (спільно з `client-data-migrator` — копія з позначкою джерела).
 - `flow-client-delivery/references/`: `fit-gap-template.md`, `sow-template.md`, `config-log-format.md`, `triage-routes.md` (єдина таблиця «тип → маршрут» для B-09/B-10/B-13), `support-report-template.md`.
 - `flow-package-evolution/references/`: `business-case.md`, `acceptance.md`, `release-plan.md`, `pilot-decision.md`, `backlog-format.md`, `metrics-format.md`.
-- `flow-research/references/`: `scoring-formula.md` (SQL до odb-catalog, дата знімка), `sources-format.md` (П-xx), `concept-templates.md`, `odoo19-ui-kit.md` (стилі для прототипу), `demand-thresholds.md`.
+- `flow-research/references/`: `scoring-formula.md` (SQL до odb-catalog, дата знімка), `sources-format.md` (П-xx), `concept-templates.md`, `odoo19-ui-kit.md` (стилі для прототипу); порогів попиту окремого файла немає (задаються в наряді `demand-test-runner`).
 
 ## 4. Відкинуто або злито (з причиною)
 

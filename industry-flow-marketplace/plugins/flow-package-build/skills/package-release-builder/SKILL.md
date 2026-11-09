@@ -1,18 +1,14 @@
 ---
 name: package-release-builder
 description: >
-  Запускай на кроці A-18 флоу галузевого пакета: приймання версії (package/ACCEPTANCE.md, A-17) підписано,
-  або після hotfix A-19 з APPROVE гейтів A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує
-  релізну гілку, package/CHANGELOG.md, шаблони package/templates/{migration-plan,training}.md, перевіряє
-  установку в чисту базу Odoo 19 і оновлення з попереднього тега, після затвердження формує git-тег
-  package/vX.Y | vX.Y.Z | vX.Y-odoo<N>; дефект пакета пише в package/demo/release-defects.md і
-  повертає в A-14. Тригери — "випусти версію пакета", "реліз пакета", "постав тег пакета",
-  "CHANGELOG пакета", "патч-тег після hotfix", "A-18", "выпусти версию пакета", "релиз пакета".
-  НЕ використовуй для виправлення дефекту (A-19), гейтів і CHECKS.md (A-14), підпису ACCEPTANCE.md
-  (A-17), оновлення в клієнта (B-11), міграції на нову Odoo (D-03), workflow CI (C-03), плану міграції
-  чи навчання клієнта (B-06/B-07) — див. «Що чиє».
-  Результат — CHANGELOG, шаблони, гілка й PR (фаза release), блок release з командою тега (фаза tag)
-  або release-defects.md.
+  Запускай на кроці A-18 флоу галузевого пакета: приймання версії (package/ACCEPTANCE.md, A-17) підписано, або після
+  hotfix A-19 з APPROVE гейтів A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує релізну гілку,
+  package/CHANGELOG.md, шаблони package/templates/{migration-plan,training}.md, перевіряє установку в чисту базу Odoo 19
+  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N>; дефект пакета
+  пише в package/demo/release-defects.md і повертає в A-14. Тригери — «випусти версію пакета», «реліз пакета», «постав
+  тег пакета», «CHANGELOG пакета», «A-18». НЕ для виправлення дефекту (A-19), гейтів (A-14), підпису ACCEPTANCE.md
+  (A-17), оновлення в клієнта (B-11), міграції на нову Odoo (D-03), workflow CI (C-03), плану міграції чи навчання
+  (B-06/B-07). Результат — CHANGELOG, шаблони, гілка й PR або блок release з командою тега.
 ---
 
 # Package Release Builder — випуск версії пакета (A-18)
@@ -248,9 +244,4 @@ ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEP
 2. Фаза `tag`: runner (14б) виконує `command`, лише якщо `sha` — вершина `base_branch`; потрібна умова «`sha` досяжний з `base_branch` і є merge-комітом затвердженого PR A-18» (до `flow-step-runner`/`flow-map.md`). Також наряд-тег має нести посилання на PR фази release.
 3. Код повернення — з `release-defects.md`; рядок карти A-18 -> A-14 є (`flow-map.md`), але `flow-orchestrator` (рядок про A-18) ще каже «код з CHANGELOG» — виправити на `returned_to` зі звіту (поза цим скілом). Стан «чекає CI» подано як `waiting_human` з `resume.params.ci: pending`; потрібне підтвердження, що оркестратор передає `params.resume` у повторний наряд.
 4. Тест оновлення (R-11): потрібен окремий вхід/job в `ci-pipeline-builder` (`prev_tag` + `instance`) — запит до нього; до появи R-11 = `NOT_RUN`.
-5. Клас бази «чиста база пакета» відсутній у `data-and-connections.md`/DATA_POLICY (напр. `ci-<пакет>`); потрібен у C-00.
-6. Скрипти C-00 (установка за тегом, smoke, імпорт шаблонів) ще не існують — maturity <= 1, режим «вручну».
-7. Шаблони migration-plan/training — сумісні розділи з `data-migration-planner`/`user-training-builder`, не дослівно.
-8. Патч зі зміною моделей td_* при незмінній `version` не підтримується; формат version патча — Архітектор.
-10. `flow-step-runner`: при `waiting_human` пушити гілку кроку; на resume з тим самим `attempt` робити checkout наявної `origin/flow/...`, а не створювати гілку від `base_branch` (інакше перевірка кроку 8, запуск 2, п.1 дає ескалацію «гілку не запушено» на кожному повторі). Також: автоматичний resume після push без підкроку людини (Тімлід «дочекатись push» — суто технічне очікування) — до `flow-orchestrator`.
-9. Планові спільні файли (§3.10): `flow-core/references/pr-checklist.md`, `module-skeleton.md` — до появи читати за описом.
+Решта — `references/open-questions.md`.

@@ -22,12 +22,12 @@ description: >
 
 ## Наряд і звіт
 Вхід — наряд задачі C-04 або C-07 у базі `flow` (`flow-core/references/naryad-format.md`). Результат — файли в `evals/` у гілці кроку
-(`repo.branch`) і блок `evals:` (нижче); PR і звіт в Odoo пише той, хто веде крок, цей скіл їх не пише. `result` — `done`/`escalated`
+(`repo.branch`) і блок `evals:` (нижче); PR і звіт в Odoo пише `flow-core:flow-step-runner`, цей скіл їх не пише; поза `flow-step-runner` скіл не запускати. `result` — `done`/`escalated`
 (`waiting_human` не використовується); `partial` — у блоці `evals`. Режим — `params.mode`; без ключа: C-07 -> `incident`, C-04 -> `weekly`.
 Значення `init|regress` ставить лише AI-інженер у наряді. Бази — лише `odoo_connections` наряду (`odoo-bridge.md`).
 
-**Виконання.** Скілу потрібен `Bash` (`git`, `jq`, `claude plugin eval`); умови, шлях і перевірки — Крок 0. Для C-07 розбір
-`flow/ai-incidents/<id>.md` — вхід, не окремий скіл. Для `done` на будь-якому шляху потрібен агент з Bash, який виконує крок сам.
+**Виконання.** Скіл сам Bash не має (`git`, `jq`, `claude plugin eval` виконує runner); умови, шлях і перевірки — Крок 0. Для C-07 розбір
+`flow/ai-incidents/<id>.md` — вхід, не окремий скіл. Bash у виконавця немає: CLI/git/jq виконує runner за рядком «КОМАНДИ:» (дозволений перелік — Крок 0).
 `checks[]` — за `references/index-checks.md`; умови для власників — `references/open-questions.md`.
 
 **Відповідність `done` картки C-07.** `done` вважається виконаним, коли є блок `maturity_proposals` + кейс `incident <id>` у
@@ -72,18 +72,13 @@ evals: {mode: weekly, cases_new: 3, cases_red_new: 2, not_reproduced: 1,
 Джерело правди кейса — `evals/<набір>/evals.json` (`references/evals-format.md`); формат CLI генерується в тимчасову теку.
 
 ## Крок 0. Передумови, наряд і межі
-1. **Шлях.** Ознака шляху — `params.manual: true` у наряді (ключ ставить лише AI-інженер; без нього завжди шлях 1; ключа ще немає в
-   `naryad-format.md` — `open-questions.md` §4).
-   **Шлях 1 — під runner'ом** (без `params.manual`). Перевірити: `skill_ref[0]` наряду = `flow-core:eval-builder@<версія>`; `claude plugin list`
-   (корінь flow-core, точна версія з наряду); `command -v git jq`; `claude plugin eval --help` (код 0);
-   `test -f <корінь flow-core>/skills/flow-autocheck/references/checks/<C-04|C-07>.yaml`. Не пройшло -> одразу `escalated` AI-інженеру
-   (причина: «немає специфікації кроку» / «немає Bash чи CLI» / «виконує не цей скіл»); кроки 1–10 не виконувати, CLI не запускати, кейсів і статусів не писати,
-   `evals/` не чіпати (diff порожній); ручних перевірок замість autocheck немає.
-   **Шлях 2 — ручний запуск AI-інженером** (`params.manual: true`; поза циклом C-06, `flow-autocheck` не викликається, тож його заборона ручних перевірок не діє).
-   Перевірки CLI/Bash з шляху 1 — ті самі, `test -f` специфікації — пропустити. Гілку `flow/C-04-manual-<дата>` (C-07: `flow/C-07-manual-<id>`) від `origin/<base_branch>`
-   створює AI-інженер; `git.base` = `git merge-base HEAD origin/<base_branch>` скіл бере сам (для `scope-evals-only`); PR відкриває AI-інженер; звіт у задачу Odoo
-   (база `flow`, явний `connection_id`) вносить AI-інженер за чернеткою скіла — скіл в Odoo не пише. Усі 11 рядків `checks[]` — `by: self`; чернетка звіту
-   має `result: done` лише як чернетка для гейта: приймає Тімлід (C-04) чи AI-інженер (C-07).
+1. **Умови (лише під flow-step-runner, цикл C-06).** Скіл виконується тільки як звичайний крок: гілку/PR/звіт в Odoo робить runner, скіл їх не робить.
+   Ручного запуску немає. Перевірити: `skill_ref[0]` наряду = `flow-core:eval-builder@<версія>`; `claude plugin list` (корінь flow-core, точна версія з наряду);
+   `git`, `jq`, `claude plugin eval --help` — **команди виконує runner** (виконавець без Bash: рядок «КОМАНДИ: …» з дозволеного переліку
+   `claude plugin eval|list`, `git`, `jq`; runner повертає вивід виконавцю, `flow-step-runner` крок 8); `test -f <корінь flow-core>/skills/flow-autocheck/references/checks/<C-04|C-07>.yaml`.
+   Не пройшло -> одразу `escalated` AI-інженеру (причина: «немає специфікації кроку» / «немає CLI» / «виконує не цей скіл»); кроки 1–10 не виконувати,
+   CLI не запускати, кейсів і статусів не писати, `evals/` не чіпати (diff порожній); ручних перевірок замість autocheck немає.
+   Два проходи (за `params.phase`, не спроба): `cases` (кейси й розкладка) -> runner запускає регрес за «КОМАНДИ:» -> `status` (статуси й INDEX).
 2. Режим — `params.mode` або за правилом з «Наряд і звіт»; невідоме значення -> `escalated`. Для `regress` — `params.git.prev_tag`/`git.base` з наряду.
 3. Версії скілів `skill_ref` — з наряду (точні, не `>=`); у `claude plugin list` лише переконатися, що встановлено саме їх.
 4. Записувати лише в `evals/`. Прочитати `evals/INDEX.md` (якщо є). Залишок бюджету не обчислювати.
@@ -172,9 +167,10 @@ below the plugin», `--help`), тому копія плагіна точної �
 евал-набори кроків, спостереження тижня, ескалації тижня, перелік на виправлення. Спостереження без кейса — лише з причиною зі списку `index-format.md` (таблиця 3). Рішення «відхилено» пише Тімлід; скіл лише пропонує причину.
 
 ## Автоперевірка
-Таблиця й регекси — `references/index-checks.md`. Скриптів `scripts/index_check.py` і `scripts/pii_scan.py` **ще не створено**.
-- **Механічні шість** (`scope-evals-only`, `json-schema`, `no-pii`, `source-filled`, `skills-covered`, `incident-case`) на шляху 1 виконує лише
-  `flow-autocheck` за `checks/<крок>.yaml`; скіл їх замість нього не робить. На шляху 2 — виконує сам (grep/jq/`python3 -I`), `by: self`.
+Таблиця й регекси — `references/index-checks.md`. Механічні перевірки описані в `flow-autocheck/references/checks/C-04.yaml`, `C-07.yaml`.
+- **Механічні** (`scope-evals-only`, `index-exists`, `json-schema`, `no-pii-evals` — примітиви `git_diff_allowed`, `exists`, `evals_schema`, `pii_strict`) виконує лише
+  `flow-autocheck` за `checks/<крок>.yaml` (`C-04.yaml`, `C-07.yaml`); скіл їх замість нього не робить.
+  Рядки `source-filled`, `skills-covered`, `incident-case` у yaml мають примітив `manual` (чек-лист для runner'а): скіл перевіряє їх сам, статус PASS/FAIL/SKIP/MANUAL.
 - **Власні п'ять** (`gates-covered`, `obs-closed`, `escalations-covered`, `init-complete`, `regress-recorded`) — завжди перевірки скіла зі статусом
   PASS/FAIL/SKIP/MANUAL; додаються в `checks[]` окремими рядками після рядків autocheck.
 Без перевіреного результату «Готово» не заявляти. Огляд `flow/open-questions.md` Власником продукту: лише наявність дати в `flow/decisions.md`;

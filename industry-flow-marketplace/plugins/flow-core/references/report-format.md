@@ -46,3 +46,26 @@ partial: false                  # true — звіт неповний (state-keep
 `returned` — крок повернув вихідну задачу попередникові (`returned_to`), `escalated` — виконати неможливо (ліміти, невідповідність наряду, немає прав/конфігу, невизначене технічне ім'я з `ODOO_SCHEMA`); `stopped` — стоп-лист.
 
 Звіт постить runner (`odoo-bridge.md` §4): YAML у `<pre><code class="language-yaml">`, екранований.
+
+## Блок `evals:` (eval-builder, C-04/C-07)
+```yaml
+evals: {mode: weekly|incident|init|regress, cases_new: <n>, cases_red_new: <n>, not_reproduced: <n>,
+        regress: {pass: <n>, fail: <n>, skipped_requires: <n>}, fix_list: ["<плагін:скіл@версія>"], declined_obs: [],
+        maturity_proposals: [{step, kind: downgrade|upgrade, from, to, reason, evidence, condition, regress_run}],
+        open_questions_review: <дата|null>, partial: false}
+```
+Блок пише скіл `eval-builder`, звіт постить runner; детальні поля — `eval-builder/SKILL.md`, «Наряд і звіт».
+
+## Доповнення runner
+Додаткові ключі звіту (пише runner):
+```yaml
+attempts_in_run: 1            # спроб у цьому запуску
+models_used: [sonnet]         # фактично задіяні моделі
+routing: {…}                  # вибір щабля моделі (flow-step-runner/references/routing-and-tag.md)
+audit: PASS|FAIL|null         # результат аудиту; audit_failed: <що не пройшло>
+untrusted_instructions: []    # інструкції з недовірених даних, які проігноровано
+lease: {until: <ISO>, agent: <id>}
+stop_reason: null             # для result: stopped
+cost_estimated: false         # true — вартість оцінена, а не виміряна
+base_sha: <sha>               # SHA бази, на якій працював runner
+```

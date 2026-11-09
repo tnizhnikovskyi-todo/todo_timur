@@ -43,6 +43,7 @@ description: >
 | `questionnaire-builder` (A-09) | Власник схеми `answers.yaml`; тут лише читається |
 
 ## Інструменти та доступи
+- **Запис/execute в Odoo — через runner.** Виконавець (`flow-core:flow-executor`) має лише читання odoo-mcp: виклики `odoo_write/create/execute` (і `search_count`) він повертає рядками «ODOO: {tool, connection_id, model, method, args}»; runner виконує їх лише для підключень наряду класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису (`flow-core/references/naryad-format.md`).
 - `github` (через runner): читання ALLOCATION, ТР, SPEC, схеми, CHECKS.md; запис -- у гілку кроку, лише дозволені шляхи.
 - Скіли -- **лише з `skill_ref` наряду** з точною версією. Очікуваний набір: `config-as-code`, `odoo19-mvp-build:config-spec`,
   `odoo19-mvp-build:config-review`, `boost:odoo19-lint`, `boost:source-check`. Потрібного немає в `skill_ref` -> стоп,
@@ -240,7 +241,7 @@ config-review.
 - Ключ `td_param` (`td_<пакет>.vp_xx`) узгодити з A-11; A-11 читає той самий ключ.
 - Еталонні скрипти (`apply.py`, `validate.py`, `install.sh`) -- беклог AI-інженера; C-03 до їх появи конфіг не ставить.
 - Рішення людини до затвердження: чи допустимий `done` A-12 без install-one-command у версії 0.1 (картка вимагає «однією командою»; поки не зафіксовано, розбіжність відкрита).
-- Узгодити написання `test-pkg-<пакет>` (цей скіл) і `test-pkg-<id>` (A-13/A-14); клас додати в `data-and-connections.md` §3.5 -- файл не цього скіла.
+- Узгодити написання `test-pkg-<пакет>` (цей скіл) і `test-pkg-<пакет>` (A-13/A-14); клас додати в `data-and-connections.md` §3.5 -- файл не цього скіла.
 - Штатний механізм доставки `package/addons` гілки кроку в тестову базу пакета (C-00 чи CI) -- рішення AI-інженера; до того кожен пакет із «готовим» проходить через `waiting_human`.
 - Підтвердити через `boost:source-check`, що `default_get` на `res.config.settings` повертає лише `default_*`, `group_*`, `module_*`, `config_parameter` (Odoo 19).
 - Дозвіл агенту встановлювати модулі (`button_immediate_install`) у тестовій базі пакета -- підтвердити в C-05.

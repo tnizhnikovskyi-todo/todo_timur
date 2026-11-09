@@ -1,8 +1,8 @@
 # Автоперевірки eval-builder
 
-Скриптів `scripts/index_check.py` і `scripts/pii_scan.py` ще немає. Хто що виконує (`SKILL.md`, «Автоперевірка»):
-- шість механічних (`skills-covered`, `source-filled`, `incident-case`, `no-pii`, `json-schema`, `scope-evals-only`) — під runner'ом лише `flow-autocheck`
-  за `checks/<крок>.yaml`; на ручному запуску AI-інженера — скіл сам (`by: self`);
+Механічні перевірки — `flow-autocheck/references/checks/C-04.yaml`, `C-07.yaml`. Хто що виконує (`SKILL.md`, «Автоперевірка»):
+- шість механічних (`skills-covered`, `source-filled`, `incident-case`, `no-pii`, `json-schema`, `scope-evals-only`) — лише `flow-autocheck`
+  за `checks/<крок>.yaml`;
 - п'ять власних (`gates-covered`, `obs-closed`, `escalations-covered`, `init-complete`, `regress-recorded`) — завжди скіл, окремими рядками `checks[]`.
 Інструменти: grep, `jq`, `python3 -I`.
 Статуси: PASS / FAIL / SKIP (перевірка не для цього режиму) / MANUAL.
@@ -22,5 +22,5 @@
 | `scope-evals-only` | усі | `git diff --name-only <base>...HEAD` — лише `evals/` |
 
 Регекси `no-pii` — єдине джерело `flow-core/references/pii-patterns.md` (режим `strict`; той самий файл у `flow-core:flow-autocheck`). Для `evals/` збіг — FAIL
-незалежно від `client_data` наряду (у autocheck при `client_data: none` це може бути WARN). Скрипт `pii_scan.py` не створено — виконувати вручну за таблицею.
+незалежно від `client_data` наряду (у autocheck при `client_data: none` це може бути WARN).
 `maturity` не змінено: `git diff` по `flow/cards/` порожній.
