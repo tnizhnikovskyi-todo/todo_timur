@@ -1,14 +1,14 @@
 # Режими запуску A-09
 
-Режим визначає Крок 0 SKILL.md за ознаками наряду й репозиторію. За пріоритетом: `return` > `new-version` > `review` > `first`.
-Режими можуть поєднуватись (напр. `new-version` + `review`): правила обох, обмеження -- сумарні.
+Режим визначає Крок 0 SKILL.md за наряду (`returned_from`, `params.phase`, `git.prev_tag`), а не за датами файлів. Режими поєднуються
+(напр. `new-version` + `review`): правила обох, обмеження сумарні; пріоритет `return` > `new-version` > `review` > `first` — лише при конфлікті правил.
 
 | Режим | Ознака | Читається | Змінюється | Байт-у-байт як було |
 |---|---|---|---|---|
-| `first` | немає попереднього тега, немає `returned_from` | ТР (VP/AC), шаблон або `questionnaire-template.md`, DATA_POLICY, `reference-clients.md` | усі 3 файли + `package/templates/questionnaire.md` | -- |
+| `first` | немає `git.prev_tag`, немає `returned_from` | ТР (VP/AC), шаблон або `questionnaire-template.md`, DATA_POLICY, `reference-clients.md` | 3 файли `where`; `package/templates/questionnaire.md` — лише якщо цей шлях є у `where` | -- |
 | `return` | у наряді `returned_from` | попередній результат цієї гілки + текст зауваження | лише пункти зауваження | усі Q-NN, порядок ключів, решта тексту |
-| `review` | є `reference-feedback.md` новішої дати, ніж останній запуск, і A-05 виконувався | + `reference-feedback.md` (недовірені дані) | розділ «Рев'ю еталонних клієнтів»; Q/VP -- лише коли зауваження вкладається в наявні варіанти ТР | усе поза розділом і зачепленими Q |
-| `new-version` | ТР має «Зміни версії X.Y» і є тег `package/vX.(Y-1)` | схема й анкета з попереднього тега, «Зміни версії X.Y» | лише VP з «Зміни версії X.Y» | ключі, значення, тексти Q усіх інших VP |
+| `review` | `params.phase: review` і A-05 виконувався (перший запуск без фази лише готує «Запит на рев'ю» і повертає `waiting_human`) | + `reference-feedback.md` (недовірені дані) | розділ «Рев'ю еталонних клієнтів»; Q/VP -- лише коли зауваження вкладається в наявні варіанти ТР | усе поза розділом і зачепленими Q |
+| `new-version` | є `git.prev_tag`, і X.Y з «Зміни версії» ТР більша за версію цього тега | схема й анкета з `git.prev_tag` (`git show <prev_tag>:<шлях>`), «Зміни версії X.Y» | лише VP з «Зміни версії X.Y» | ключі, значення, тексти Q усіх інших VP |
 
 ## `new-version`: правила по типу зміни VP
 | Зміна в ТР | Схема `answers.yaml` | `questionnaire.md` | `answers.example.yaml` |

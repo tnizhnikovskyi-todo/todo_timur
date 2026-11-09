@@ -1,0 +1,144 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-09",
+ "checks": [
+  {
+   "id": "vp-questionnaire",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "in:A-08",
+     "regex": "VP-\\d{2,3}",
+     "drop_line_regex": "deprecated з версії"
+    },
+    "right": {
+     "ref": "head:package/questionnaire.md",
+     "table_col": [
+      "vp"
+     ],
+     "regex": "VP-\\d{2,3}"
+    },
+    "relation": "subset",
+    "msg_missing": "Додай питання в package/questionnaire.md для VP: {ids}"
+   }
+  },
+  {
+   "id": "vp-extra",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "head:package/questionnaire.md",
+     "table_col": [
+      "vp"
+     ],
+     "regex": "VP-\\d{2,3}"
+    },
+    "right": {
+     "ref": "in:A-08",
+     "regex": "VP-\\d{2,3}"
+    },
+    "relation": "subset",
+    "msg_missing": "Прибери з анкети VP, яких немає в ТР: {ids}"
+   }
+  },
+  {
+   "id": "vp-schema-keys",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "in:A-08",
+     "regex": "VP-\\d{2,3}",
+     "drop_line_regex": "deprecated з версії"
+    },
+    "right": {
+     "ref": "head:package/templates/answers.yaml",
+     "schema_keys": "active",
+     "regex": ""
+    },
+    "relation": "equal",
+    "msg_missing": "Додай у answers.yaml ключі: {ids}",
+    "msg_extra": "Прибери з answers.yaml (або познач deprecated) ключі: {ids}"
+   }
+  },
+  {
+   "id": "question-variants",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:package/questionnaire.md",
+    "require": [
+     [
+      "vp"
+     ],
+     [
+      "варіант"
+     ]
+    ],
+    "key": [
+     "vp"
+    ],
+    "rules": [
+     {
+      "col": [
+       "варіант"
+      ],
+      "kind": "nonempty",
+      "msg": "додай закритий список варіантів"
+     }
+    ]
+   }
+  },
+  {
+   "id": "allowed-eq-tr",
+   "prim": "manual",
+   "args": {
+    "text": "Допустимі значення answers.yaml = варіанти таблиці VP ТР",
+    "who": "Архітектор рішення"
+   }
+  },
+  {
+   "id": "example-valid",
+   "prim": "example_valid"
+  },
+  {
+   "id": "rerun-stable",
+   "prim": "stable_on_rerun",
+   "when": "prev",
+   "args": {
+    "kind": "yaml",
+    "file": "package/templates/answers.yaml",
+    "allowed": {
+     "ref": "in:A-08",
+     "section": "(?i)зміни версії",
+     "regex": "VP-\\d{2,3}"
+    }
+   }
+  },
+  {
+   "id": "review-section",
+   "prim": "headings",
+   "when": "in:A-05",
+   "args": {
+    "ref": "head:package/questionnaire.md",
+    "headings": [
+     "Рев'ю еталонних клієнтів"
+    ]
+   }
+  },
+  {
+   "id": "question-param-link",
+   "prim": "manual",
+   "args": {
+    "text": "Прив'язка питань до параметрів",
+    "who": "Архітектор рішення"
+   }
+  },
+  {
+   "id": "answer-unambiguity",
+   "prim": "manual",
+   "args": {
+    "text": "Однозначність відповідей",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

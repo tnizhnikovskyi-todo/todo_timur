@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
 """Автоперевірки hypercare.md / support-log.md (B-09, B-10). Вихід: JSON [{id, status, msg}]. Лише stdlib.
 Чого не можна перевірити без вхідних файлів чи --base — SKIP, не PASS.
-Використання: check_support.py <файл> [--base <sha>] [--mode intake|hypercare-close|sla-month] [--tr ТР.md]
-              [--delivery-log delivery-log.md] [--other <другий реєстр>] [--period РРРР-ММ]"""
-import argparse, json, re, subprocess
+Запускати з кореня репо; <файл> — репо-відносний шлях (інакше SD-protected -> SKIP з поясненням).
+Використання: check_support.py <файл> [--base <sha з git.base наряду>] [--mode intake|hypercare-close|sla-month]
+              [--tr ТР.md] [--delivery-log delivery-log.md] [--other <другий реєстр>] [--period РРРР-ММ]
+              [--routes flow-client-delivery/references/triage-routes.md]
+Шаблони ПДн узгоджені з flow-core/references/pii-patterns.md (змінювати разом)."""
+import argparse, json, os, re, subprocess
+from datetime import date, timedelta
 from pathlib import Path
 
 TYPES = {"баг конфіг", "баг код", "дані", "навчання", "дефект пакета", "нова вимога",
          "платформа-інфраструктура", "консультація"}
 SEV = {"критична", "висока", "середня", "низька"}
 STATUS_RE = re.compile(r"^(в роботі \(.+\)|виправлено на тесті|застосовано в прод( \(B-12\))?|закрито.*|передано в беклог \(D-02\)|"
-                       r"передано в D-02|очікує Підтримку|потрібен AC — Підтримка)")
-EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
-PHONE = re.compile(r"(\+380|\b0\d{2})[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}")
-IBAN = re.compile(r"\bUA\d{2}[\dA-Z]{10,}\b|\b\d{8}\b(?=\s*ЄДРПОУ)|ЄДРПОУ\s*\d{8,10}")
+                       r"передано в D-02|очікує Підтримку|потрібен AC — Підтримка)", re.I)
+EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+PHONE = re.compile(r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)")
+IBAN = re.compile(r"\bUA\d{2}[\s\d]{20,}|ЄДРПОУ\D{0,5}\d{8}\b")
+URL = re.compile(r"\bhttps?://[^\s)>\]]+")
+IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+SECRET = re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*\S+", re.I)
+FIO = re.compile(r"\b[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\b")
+HUMAN_COLS = ["застосування в прод", "реакція", "вирішення", "хто", "підтвердження клієнта", "надіслано"]
 QUOTE = re.compile(r"[«\"“]([^»\"”]{40,})[»\"”]")
 REQUIRED = {"hypercare": ["Заголовний блок", "Реєстр інцидентів", "Запити в D-02", "Журнал запусків"],
             "support-log": ["Умови SLA", "Реєстр звернень", "Запити в D-02", "Зміни умов", "Журнал запусків"]}
@@ -39,7 +48,7 @@ def table(lines):
         cells = [c.strip() for c in re.split(r"(?<!\\)\|", l.strip().strip("|"))]
         if hdr is None:
             hdr = [c.lower() for c in cells]
-        else:
+        elif cells and cells[0]:  # рядок без першої клітинки (примітка після таблиці) — не рядок реєстру
             rows.append(dict(zip(hdr, cells)))
     return hdr or [], rows
 
@@ -60,16 +69,58 @@ def registry(text):
 
 
 def git_show(base, path):
+    """Працює з будь-якого cwd: репо-корінь і відносний шлях визначаються від самого файлу."""
     try:
-        return subprocess.run(["git", "show", f"{base}:{path}"], capture_output=True, text=True, check=True).stdout
+        d = os.path.dirname(os.path.abspath(path))
+        top = subprocess.run(["git", "-C", d, "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True).stdout.strip()
+        rel = os.path.relpath(os.path.abspath(path), top)
+        return subprocess.run(["git", "-C", top, "show", f"{base}:{rel}"], capture_output=True, text=True, check=True).stdout
     except Exception:
         return None
+
+
+def parse_routes(text):
+    """triage-routes.md: таблиця «Типи й маршрути» -> {тип: множина кодів кроків}; «Дефект пакета × серйозність» -> {серйозність: коди}."""
+    types, sev = {}, {}
+    for name, lines in sections_h3(text).items():
+        _, rows = table(lines)
+        for r in rows:
+            key = (col(r, "тип") or col(r, "серйозність")).lower()
+            val = col(r, "маршрут")
+            codes = set(re.findall(r"\b[A-D]-\d{2}[a-d]?\b", val))
+            words = {w for w in ("підтримк", "тімлід", "рішення") if w in val.lower()}
+            if name.startswith("Типи"):
+                types[key] = codes | words
+            elif name.startswith("Дефект"):
+                sev[key] = codes | words
+    return types, sev
+
+
+def sections_h3(text):
+    out, cur = {}, None
+    for l in text.splitlines():
+        m = re.match(r"^#{2,3}\s+(.*)", l)
+        if m:
+            cur = m.group(1).strip(); out[cur] = []
+        elif cur is not None:
+            out[cur].append(l)
+    return out
+
+
+def route_ok(route, types, sev, typ, severity):
+    allowed = set(types.get(typ, set()))
+    if typ == "дефект пакета":
+        allowed = set(sev.get(severity, set())) or allowed
+    r = route.lower()
+    if typ in {"баг конфіг", "баг код"}:
+        return "b-13" in r
+    return any(c.lower() in r for c in allowed) if allowed else True
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("file"); ap.add_argument("--base"); ap.add_argument("--mode", default="intake")
-    ap.add_argument("--tr"); ap.add_argument("--delivery-log"); ap.add_argument("--other"); ap.add_argument("--period")
+    ap.add_argument("--tr"); ap.add_argument("--delivery-log"); ap.add_argument("--other"); ap.add_argument("--period"); ap.add_argument("--routes")
     a = ap.parse_args()
     text = Path(a.file).read_text(encoding="utf-8")
     kind = "support-log" if "support" in Path(a.file).name else "hypercare"
@@ -92,7 +143,15 @@ def main():
             bad.append(rid)
     add("SD-enums", not bad, "значення поза переліком: " + ", ".join(bad) if bad else "")
 
-    add("SD-route", all(col(r, "маршрут") for r in rows), "порожній маршрут у рядках" if not all(col(r, "маршрут") for r in rows) else "")
+    empty = [col(r, "id") for r in rows if not col(r, "маршрут")]
+    add("SD-route", not empty, "порожній маршрут: " + ", ".join(empty) if empty else "")
+    if a.routes and Path(a.routes).exists():
+        types, sev = parse_routes(Path(a.routes).read_text(encoding="utf-8"))
+        badr = [col(r, "id") for r in rows if col(r, "маршрут") and
+                not route_ok(col(r, "маршрут"), types, sev, col(r, "тип").lower(), col(r, "серйозність", "пріоритет").lower())]
+        add("SD-route-table", not badr and bool(types), "маршрут не за triage-routes.md: " + ", ".join(badr) if badr else ("таблицю не розібрано" if not types else ""))
+    else:
+        add("SD-route-table", True, "не передано --routes (triage-routes.md)", skip=True)
 
     if a.tr and Path(a.tr).exists():
         tr = Path(a.tr).read_text(encoding="utf-8")
@@ -107,7 +166,8 @@ def main():
     badc = []
     for r in rows:
         if col(r, "статус").lower().startswith("закрито") and col(r, "тип").lower() not in {"консультація"}:
-            conf = col(r, "підтвердження клієнта") if kind == "hypercare" else col(r, "статус")
+            conf = col(r, "підтвердження клієнта") if kind == "hypercare" else (
+                col(r, "вирішення", "хто") or ("підтвердж" in col(r, "статус").lower() and "закрито" in col(r, "статус").lower()))
             if not conf:
                 badc.append(col(r, "id"))
             elif col(r, "тип").lower() in {"баг конфіг", "баг код"} and (dl is None or col(r, "id") not in dl):
@@ -119,13 +179,15 @@ def main():
             and col(r, "серйозність", "пріоритет").lower() in {"критична", "висока"}
             and (col(r, "id") not in d02 or "A-19" not in (col(r, "примітка ai", "маршрут") + col(r, "маршрут")))]
     add("SD-pkg-defect", not badp, "немає обходу/D-02/A-19: " + ", ".join(badp) if badp else "")
-    badd = [col(r, "id") for r in rows if col(r, "тип").lower() in {"нова вимога", "дефект пакета"} and col(r, "id") not in d02]
+    # середній дефект пакета -> «рішення Підтримки» (triage-routes.md), у D-02 без рішення не йде
+    badd = [col(r, "id") for r in rows if col(r, "id") not in d02 and (col(r, "тип").lower() == "нова вимога" or (
+            col(r, "тип").lower() == "дефект пакета" and col(r, "серйозність", "пріоритет").lower() != "середня"))]
     add("SD-d02", not badd, "не в «Запити в D-02»: " + ", ".join(badd) if badd else "")
 
     if a.base:
         old = git_show(a.base, a.file)
         if old is None:
-            add("SD-protected", True, "базового файлу немає в git", skip=True)
+            add("SD-protected", True, "базового файлу немає в git за цим шляхом (запуск з кореня репо, шлях репо-відносний, --base = git.base)", skip=True)
         else:
             oh, orows = registry(old)
             changed = []
@@ -133,6 +195,9 @@ def main():
             for r in rows:
                 o = om.get(col(r, "id"))
                 if not o:
+                    # новий рядок: людські колонки мають бути порожні
+                    changed += [f"{col(r, 'id')}:{k}(новий)" for k, v in r.items()
+                                if v and any(k.startswith(p) for p in HUMAN_COLS) and not v.lower().startswith("перенесено")]
                     continue
                 for k in r:
                     if any(k.startswith(p) for p in PROTECTED) and o.get(k, "") != r[k]:
@@ -174,16 +239,35 @@ def main():
     if a.mode == "hypercare-close" and kind == "hypercare":
         hb = "".join(secs.get("Заголовний блок", []))
         m = re.search(r"завершення hypercare[^|]*\|\s*(\d{4}-\d{2}-\d{2})", hb)
-        add("SD-14days", True, "дату завершення внесено: перевірити відлік скриптом sla_calc.py days-clean" if m else "дата завершення порожня (очікувано, якщо ще не done)", skip=True)
+        def hd(name):
+            mm = re.search(name + r"[^|]*\|\s*(\d{4}-\d{2}-\d{2})", hb, re.I)
+            return date.fromisoformat(mm.group(1)) if mm else None
+        g, lc, dl_, end = hd("дата go-live"), hd("дата останнього критичного"), hd("граничний строк"), hd("дата завершення hypercare")
+        if not end or not g:
+            add("SD-14days", True, "дата завершення або go-live порожні (очікувано, якщо ще не done)", skip=True)
+        else:
+            start = max(g, lc) if lc else g
+            probs = []
+            if end < start + timedelta(days=14):
+                probs.append(f"завершення {end} раніше за {start + timedelta(days=14)}")
+            if dl_ and end > dl_:
+                probs.append(f"завершення {end} пізніше за граничний строк {dl_} (потрібне рішення PM у flow/decisions.md)")
+            add("SD-14days", not probs, "; ".join(probs))
     else:
         add("SD-14days", True, "лише для hypercare-close", skip=True)
 
     pii = []
-    if EMAIL.search(text): pii.append("e-mail")
-    if PHONE.search(text): pii.append("телефон")
-    if IBAN.search(text): pii.append("IBAN/ЄДРПОУ")
+    norm = re.sub(r"(?<=\d)[\s()-]+(?=\d)", "", text)  # нормалізація телефонів із пробілами/дефісами
+    for name, rx, src in (("e-mail", EMAIL, text), ("телефон", PHONE, norm), ("IBAN/ЄДРПОУ", IBAN, text),
+                          ("url", URL, text), ("ip", IP, text), ("secret", SECRET, text)):
+        ln = [i + 1 for i, l in enumerate(src.splitlines()) if rx.search(l)]
+        if ln:
+            pii.append(f"{name}: рядки {ln[:5]}")  # значення збігу не друкуємо
     if any(len(q.split()) > 10 for q in QUOTE.findall(text)): pii.append("цитата >10 слів")
-    add("SD-pii", not pii, "знайдено: " + ", ".join(pii) if pii else "")
+    add("SD-pii", not pii, "знайдено: " + "; ".join(pii) if pii else "")
+    fio = [i + 1 for i, l in enumerate(text.splitlines()) if FIO.search(l)]
+    if fio:  # три слова з великої: можливі хибні спрацьовування -> MANUAL, не FAIL
+        res.append({"id": "SD-pii-name", "status": "MANUAL", "msg": f"можливе ПІБ, рядки {fio[:5]}: перевірити людиною"})
     res = [r for r in res if r]
     print(json.dumps(res, ensure_ascii=False, indent=1))
 

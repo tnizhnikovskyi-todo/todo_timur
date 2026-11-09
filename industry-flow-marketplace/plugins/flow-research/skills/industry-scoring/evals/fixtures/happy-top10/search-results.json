@@ -1,0 +1,38 @@
+[
+ {
+  "sec": "01",
+  "vendor": "Вендор 01",
+  "url": "https://example.com/01",
+  "date": "2026-11-09"
+ },
+ {
+  "sec": "02",
+  "vendor": "Вендор 02",
+  "url": "https://example.com/02",
+  "date": "2026-11-09"
+ },
+ {
+  "sec": "03",
+  "vendor": "Вендор 03",
+  "url": "https://example.com/03",
+  "date": "2026-11-09"
+ },
+ {
+  "sec": "05",
+  "vendor": "Вендор 05",
+  "url": "https://example.com/05",
+  "date": "2026-11-09"
+ },
+ {
+  "sec": "06",
+  "vendor": "Вендор 06",
+  "url": "https://example.com/06",
+  "date": "2026-11-09"
+ },
+ {
+  "sec": "07",
+  "vendor": "Вендор 07",
+  "url": "https://example.com/07",
+  "date": "2026-11-09"
+ }
+]

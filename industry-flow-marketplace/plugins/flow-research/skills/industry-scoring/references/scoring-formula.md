@@ -5,36 +5,39 @@
 
 ## 1. Діалект і обмеження `query`
 - СУБД — MySQL (не SQLite). Один `SELECT`/`WITH`, без `;`, ≤500 рядків у відповіді.
-- Назви колонок нижче — з опису плану; **ключ зв'язку `companies` ↔ `fin_history` і назви колонок року/виручки
-  в `fin_history` звірити з `db_schema`** (тут позначено `<ключ>`, `<рік>`, `<виручка>`). Не звіривши — не запускати.
+- Колонки (за `db_schema` 2026-11-09; **на старті запуску звірити з відповіддю `db_schema`** — розбіжність →
+  стоп з ескалацією): `companies.code` (ЄДРПОУ, ключ), `status`, `has_financials`, `kved_2010`, `kved_ambig`,
+  `source`; `fin_history.code`, `year`, `revenue`, `profit` (грн).
 - Галузь — лише `kved_2010` (нормалізований). `activities` — суміш редакцій, не групувати. `kved_ambig=1` —
   приблизний переклад редакції.
 - `companies.revenue` — за власним `revenue_year` компанії; сумувати між компаніями не можна.
 
 ## 2. Фільтр (у кожному запиті)
-`c.status = 'зареєстровано' AND c.has_financials = 1 AND c.kved_2010 IS NOT NULL`
-плюс `AND LEFT(c.kved_2010,2) NOT IN (<виключені розділи з параметра>)`. Рівень групування за замовчуванням —
-`LEFT(c.kved_2010,2)`; формат коду (з крапкою чи без) перевірити першим запитом.
+`c.status = 'зареєстровано' AND c.has_financials = 1 AND c.source IS NULL AND c.kved_2010 IS NOT NULL`
+(той самий базовий фільтр, що в `segment-selector/references/segment-sql.md`: пул = Opendatabot, `source IS NULL`;
+записи `edr_dump` без `kved_2010`/`activities` у скоринг не входять) плюс `AND LEFT(c.kved_2010,2) NOT IN (<виключені розділи з параметра>)`. Рівень групування за замовчуванням —
+`LEFT(c.kved_2010,2)`; формат коду (з крапкою чи без) перевірити першим запитом. Виключення в параметрі,
+задані літерами секцій, спершу розгорнути в двознакові розділи (`kved-2010-sections.md`).
 
 ## 3. Шаблони (зберігати дослівно в «SQL-запити» з номером)
 ```sql
 -- Q1 покриття fin_history за роками (щоразу; db_schema застаріває)
-SELECT <рік> AS y, COUNT(*) AS n FROM fin_history GROUP BY <рік> ORDER BY <рік>
+SELECT year AS y, COUNT(*) AS n FROM fin_history GROUP BY year ORDER BY year
 
 -- Q2 кількість компаній за розділом
 SELECT LEFT(c.kved_2010,2) AS sec, COUNT(*) AS companies
 FROM companies c WHERE <фільтр §2> GROUP BY sec
 
 -- Q3 виручка за останній повний рік (одна й та сама для всіх)
-SELECT LEFT(c.kved_2010,2) AS sec, SUM(f.<виручка>) AS revenue
-FROM companies c JOIN fin_history f ON f.<ключ> = c.<ключ> AND f.<рік> = <останній_рік>
+SELECT LEFT(c.kved_2010,2) AS sec, SUM(f.revenue) AS revenue
+FROM companies c JOIN fin_history f ON f.code = c.code AND f.year = <останній_рік>
 WHERE <фільтр §2> GROUP BY sec
 
 -- Q4 зростання: панель компаній з виручкою >0 і в базовому, і в останньому році
-SELECT LEFT(c.kved_2010,2) AS sec, SUM(l.<виручка>) AS r_last, SUM(b.<виручка>) AS r_base, COUNT(*) AS panel_n
+SELECT LEFT(c.kved_2010,2) AS sec, SUM(l.revenue) AS r_last, SUM(b.revenue) AS r_base, COUNT(*) AS panel_n
 FROM companies c
-JOIN fin_history l ON l.<ключ>=c.<ключ> AND l.<рік>=<останній_рік> AND l.<виручка> > 0
-JOIN fin_history b ON b.<ключ>=c.<ключ> AND b.<рік>=<базовий_рік>  AND b.<виручка> > 0
+JOIN fin_history l ON l.code=c.code AND l.year=<останній_рік> AND l.revenue > 0
+JOIN fin_history b ON b.code=c.code AND b.year=<базовий_рік>  AND b.revenue > 0
 WHERE <фільтр §2> GROUP BY sec
 -- growth = r_last / r_base - 1; CAGR = (r_last / r_base)^(1/(останній-базовий)) - 1
 
@@ -58,7 +61,19 @@ FROM companies c WHERE <фільтр §2> GROUP BY sec
 Приклад (ілюстрація, **не значення за замовчуванням**): `бал = 0.4·norm(companies) + 0.4·norm(revenue) + 0.2·norm(growth)`.
 
 ## 6. Дата знімка й тег
-- Дата знімка (`YYYY-MM`) — з опису сервера `odb-catalog`/`db_schema` (на 2026-11-09: серпень 2026, наступне
-  оновлення планується у 2027). Таблиці з датою немає — це відкрите питання до власника реєстру.
-- Тег числа: `<число> [odb YYYY-MM]`; регекс клітинки: `^\s*-?[\d\s.,]+%?\s\[odb \d{4}-(0[1-9]|1[0-2])\]\s*$`.
-- Ранг, код розділу й назва тегу не мають.
+- Дата знімка (`YYYY-MM`) **не міститься у відповіді `db_schema` і не в даних** (перевірено живим викликом
+  2026-11-09: лише таблиці, колонки, застаріле покриття). Порядок джерел:
+  1. опис/інструкції MCP-сервера `odb-catalog` (на 2026-11-09: «знімок станом на серпень 2026», наступне оновлення
+     у 2027), якщо агент їх бачить;
+  2. вхід наряду «Реєстр компаній (знімок з датою)» (`inputs`, `from: odb-catalog`) — оркестратор фіксує дату;
+  3. немає ні того, ні іншого → стоп, ескалація «дата знімка невідома», **дату з пам'яті не ставити**.
+  Джерело дати записати в «Знімок даних» і в `memo`.
+- Тег числа: `<число> [odb YYYY-MM]`. Тег мають лише метрики з реєстру: **компаній, виручка, зростання (Q2–Q4)**.
+  Ранг, код, назва й **бал** (обчислений) тегу не мають. Регекс клітинки: `^\s*-?[\d\s.,]+%?\s\[odb \d{4}-(0[1-9]|1[0-2])\]\s*$`.
+
+## 7. Перерахунок і округлення
+- Виручка в таблиці: `SUM(revenue)/1e6`, млн грн, 1 знак після коми; зростання: `(r_last/r_base-1)·100`, %, 1 знак;
+  компаній — ціле. Бал — 3 знаки. Розділювач — крапка або кома однаково в усьому файлі.
+- SC-repro порівнює цифру з повторного запиту **після того самого округлення**.
+- SC-repro на статичному знімку повторює той самий запит: він ловить помилки переписування/транскрипції, а не
+  помилки даних. У `memo` так і писати.

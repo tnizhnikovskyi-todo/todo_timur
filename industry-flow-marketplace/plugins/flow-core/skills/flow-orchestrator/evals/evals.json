@@ -12,7 +12,11 @@
         "odoo_connections не містить прод-баз, усі виклики odoo-mcp мають connection_id бази flow",
         "Активностей людям не створено",
         "У звіті кожен перехід має номер рядка flow-map"
-      ]
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/a14-not-approve/"
     },
     {
       "id": "sweep-gate-and-queue",
@@ -24,7 +28,11 @@
         "Задачу B-06 для cl-03 не створено, у звіті skipped_stoplist",
         "Для B-04 cl-01 не створено нової задачі, створено ескалацію за полем escalation картки",
         "Нова активність не дублює вже відкриту"
-      ]
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/sweep-gate-and-queue/"
     },
     {
       "id": "monthly-order",
@@ -36,6 +44,41 @@
         "D-02(а) не поставлено раніше за D-01 і до завершення B-01(б); відсутність funnel-файлу не названо причиною блокування",
         "B-10 створено окремою задачею на кожного клієнта, для клієнта з відкликаною згодою personal-частина має executor human",
         "У звіті немає згадок місячного бюджету AI чи зупинки бюджет вичерпано"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/monthly-order/"
+    },
+    {
+      "id": "no-map-row",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/no-map-row/",
+      "prompt": "Режим on-complete для задачі кроку A-99 (scope package/demo-1): звіт result: done. У flow-map.md немає рядка з from = A-99. Стан Odoo й карта — у фікстурі.",
+      "expected_output": "Задачу не створено, перехід не вигадано; створено активність Тімліду «перехід відсутній у карті флоу» з from = A-99 і результатом done; у звіті dispatch без created.",
+      "assertions": [
+        "Жодної нової задачі кроку не створено",
+        "Створено mail.activity Тімліду з from A-99 і result done",
+        "Код наступного кроку не вигадано",
+        "Усі виклики odoo-mcp мають connection_id бази flow"
+      ]
+    },
+    {
+      "id": "dispatch-a12",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/dispatch-a12/",
+      "prompt": "Режим dispatch A-12 package/demo-1. Входи A-10 готові, стоп-листа немає, слотів зайнято 1 з 3. Картки й карта — у фікстурі.",
+      "expected_output": "Створено одну задачу A-12 у Черга з повним YAML: skill_ref з точним semver з plugin.json каталогу, inputs[].sha, dispatch_key, attempt 1, odoo_connections без прод-баз; повторний запуск не дублює.",
+      "assertions": [
+        "Створено рівно одну задачу A-12 у стадії Черга",
+        "skill_ref має вигляд плагін:скіл@x.y.z, версія з plugin.json каталогу",
+        "inputs[].sha заповнено, ключ ідемпотентності (odoo-bridge §7) присутній у задачі",
+        "Повторний запуск дає skipped, а не другу задачу",
+        "Звіт має dispatch: з created і pr: null"
       ]
     }
   ]

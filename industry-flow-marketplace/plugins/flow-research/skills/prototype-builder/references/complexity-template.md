@@ -13,6 +13,8 @@
 | F-01 | … | стандарт / конфіг / код | … | URL або розділ довідника / «немає» | висока / середня / низька | CALC-xx або «немає» | … |
 
 ## Критерії (витяг із «Decision rule» build-allocator; версію вказати в шапці)
+Джерело правила — цей витяг. Оригінал читається лише для звірки версії: `grep -n 'Decision rule' $(find ~/.claude/plugins -path '*odoo19-mvp-build/skills/build-allocator/SKILL.md' | head -1)`
+і Read ~30 рядків від заголовка. Версія build-allocator береться з `inputs` наряду (запис `build-allocator Decision rule`), не з `skill_ref`.
 - **стандарт** — є з коробки Odoo 19 Enterprise без налаштувань поза активацією застосунку.
 - **конфіг** — досяжно UI-налаштуваннями: застосунок/модуль, налаштування, групи й права, Studio (поля, подання),
   шаблони листів, `base.automation` без Python, серверні дії з UI, заплановані дії, `ir.config_parameter`.

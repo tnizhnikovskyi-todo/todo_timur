@@ -4,7 +4,7 @@
 `package/config/`; нижче — типовий мінімум (не підтверджено проти реальної DATA_POLICY — звірити).
 
 ## Дозволено читати
-- `ir.module.module`: `name`, `state`, `installed_version`/`latest_version`.
+- `ir.module.module`: `name`, `state`, `latest_version` (версія в БД; порівнювати з тегом), `installed_version` (лише ознака коду на диску).
 - `res.groups` (існування за xml_id через `ir.model.data`) + `search_count` внутрішніх користувачів (`share=False`)
   без читання самих записів користувачів.
 - `ir.config_parameter` — лише ключі з мапи пакета; ключі з ознаками секретів (`key`, `secret`, `token`,

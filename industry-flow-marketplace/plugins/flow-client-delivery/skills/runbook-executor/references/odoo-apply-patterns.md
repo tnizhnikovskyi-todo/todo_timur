@@ -17,8 +17,8 @@
   методу `execute`; read-back — з цільових моделей/параметрів, а не з wizard (його значення тимчасові).
 - **`ir.config_parameter`:** пошук за `key`, запис `value` (рядок); секретні ключі — «очікує: виконує людина».
 - **Установка модуля:** `odoo_execute` `button_immediate_install` на запису `ir.module.module` (лише `uninstalled`,
-  по одному); read-back `state`, `installed_version`.
-- **Групи:** `odoo_search_read` на `res.groups` + `search_count` на `res.users` з доменом групи і `share=False`.
+  по одному); read-back `state`, `latest_version` (версія в БД; `installed_version` — лише маніфест на диску).
+- **Групи:** `odoo_search_read` на `res.groups` (xml_id через `ir.model.data`). Ім'я поля груп на `res.users` у Odoo 19 перейменовано: ПЕРЕД першим викликом `odoo_get_fields` на `res.users` і підтвердити його (не вгадувати `groups_id`); далі `search_count([('<поле груп>','in',[gid]),('share','=',False)])`. Не підтвердилось — «очікує: виконує людина».
 
 ## НЕ через ORM
 Секрети й ключі інтеграцій; майстри з побічними діями (імпорт, розсилки, закриття періодів); створення/зміна

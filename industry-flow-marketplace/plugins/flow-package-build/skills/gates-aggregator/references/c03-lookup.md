@@ -5,13 +5,15 @@ C-03 тестує пакет і модулі; A-14 тести не запуск�
 ## Алгоритм
 1. `BASE = git log -n1 --format=%H SHA_GATES -- package/addons/ package/config/` (останній коміт, що змінював код/конфіг).
 2. Кандидати: `git rev-list BASE^..SHA_GATES`, від найновішого. Якщо `BASE` кореневий — лише `BASE..SHA_GATES` і `BASE`.
-3. MCP `github` `actions_list` (workflow C-03, фільтр `head_sha`) для кандидатів; деталі — `actions_get`.
+3. MCP `github` `actions_list method=list_workflow_runs resource_id=ci.yml workflow_runs_filter={branch: <repo.branch або repo.base_branch>, status: completed}`
+   (`perPage` ≤ 30); фільтра `head_sha` немає — порівнювати поле `head_sha` кожного прогону з кандидатами з п. 2 (клієнтська фільтрація). Деталі — `actions_get`.
    Логи падіння — лише помилки/`tail`.
 4. Результат:
    - завершений `success` -> `SHA_C03`, run id, статус. `SHA_C03` ≠ `SHA_GATES` -> «предок без змін у addons/config: так».
    - `failure`/`cancelled` -> C-03 червоний, вердикт не APPROVE; правка (код за шляхом тесту), посилання на прогін.
-   - немає прогону або `in_progress` -> `actions_run_trigger` (workflow_dispatch C-03 з input `sha=SHA_GATES`),
-     потім опитування ~кожні 2 хв у межах `timeout_min`. Не дочекались -> «збій виконання: C-03 не завершився».
+   - немає прогону або `in_progress` -> `actions_run_trigger method=run_workflow workflow_id=ci.yml ref=<repo.branch> inputs={sha: SHA_GATES}`;
+     прогін шукати за `event=workflow_dispatch` і `head_sha`. Очікування — Monitor/until-loop на статус у межах `timeout_min`; середовище не дозволяє —
+     «збій виконання: C-03 in_progress, run id …», повтор у межах `maxAttempts`.
 5. workflow_dispatch лише якщо жодного прогону для кандидатів немає (захист від зависання на комітах лише з master-data/CHECKS).
 
 ## Що писати в CHECKS.md

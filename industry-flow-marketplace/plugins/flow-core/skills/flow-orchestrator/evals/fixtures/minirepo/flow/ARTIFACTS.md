@@ -1,0 +1,8 @@
+| артефакт | крок (from) | where | умова | споживачі |
+|---|---|---|---|---|
+| ALLOCATION.md | A-10 | package/ALLOCATION.md | | A-11, A-12, A-13 |
+| ТР галузі | A-08 | docs/industries/demo/ТР.md | | A-11, A-12, A-13 |
+| Модулі | A-11 | package/addons/ | | A-14, A-15 |
+| Конфіг-пакет | A-12 | package/config/ | | A-14, A-15 |
+| Майстер-дані | A-13 | package/master-data/ | | A-14, B-06 |
+| Метрики | D-01 | package/metrics/<YYYY-MM>.md | | D-02 |

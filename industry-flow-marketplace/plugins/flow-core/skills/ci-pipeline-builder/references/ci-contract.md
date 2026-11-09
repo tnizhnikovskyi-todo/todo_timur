@@ -3,7 +3,7 @@
 Споживачі: `flow-package-build:gates-aggregator` (A-14, `references/c03-lookup.md`), B-11 (`package-upgrade-runner`), D-03, Тімлід.
 
 ## Перевірка
-- Ім'я workflow `ci`, фінальний job `ci` — єдина required status check для `main` (вмикає Тімлід, не скіл).
+- Ім'я workflow `ci`, фінальний job `ci` — єдина required status check для `main` (вмикає Тімлід, не скіл). Workflow стартує на **кожен** PR/push (без фільтрів `paths`), інакше required check зависає в pending на PR поза зонами; обсяг прогону — job `resolve`; змін у зонах немає — `ci` зелений («нічого запускати»).
 - `ci` = агрегат: будь-який `failure`/`cancelled`, а також `skipped` там, де job мав іти, дає червоний статус.
 
 ## workflow_dispatch inputs
@@ -19,8 +19,14 @@
 
 ## Статус на SHA
 - push/PR — check-run на `head_sha`.
-- dispatch — `head_sha` прогону = HEAD гілки, тому job `ci` додатково ставить commit status `context: ci` на input-SHA
-  (`permissions: statuses: write`). A-14 шукає прогін через `actions_list` за SHA і читає `actions_get`.
+- dispatch з `sha` — `head_sha` прогону = HEAD гілки dispatch, а не input-SHA. Тому: (а) `run-name` починається з `ci <input-SHA>`;
+  (б) підсумок прогону (conclusion) дорівнює вердикту `ci`; (в) job `ci` додатково ставить commit status `context: ci` на input-SHA
+  (лише коли `inputs.sha` непорожній; `permissions: statuses: write`).
+- **Як споживач знаходить dispatch-прогін:** `actions_list` (`list_workflow_runs`, `event=workflow_dispatch`) і порівняння SHA із
+  `run-name` (поле `display_title` прогону) — **не** з `head_sha`. Чи повертає MCP `github` це поле, не перевірено (відкрите В-7);
+  `c03-lookup.md` (`flow-package-build:gates-aggregator`) досі шукає за `head_sha` — розбіжність, поки там не оновлено. Потрібне оновлення `c03-lookup.md`: пошук за SHA в `run-name`/`display_title`,
+  запасний шлях — commit status `ci`. До того для SHA ≠ HEAD гілки A-14 прогін не знайде. Commit status
+  через `actions_get` не читається; якщо MCP дає читання статусів коміту — його можна використати як запасний шлях (перевірити, не вигадувати).
 - `run-name` містить SHA, ідентифікатор клієнта й тег; без назв юросіб.
 
 ## Тег пакета для клієнта
@@ -30,6 +36,7 @@
 Формат `REGISTRY.md` у наряді не заданий: читай фактичний файл (автоекспорт `flow-state-keeper`); немає — відкрите питання в `memo`.
 
 ## Звіт у задачу Odoo
-Job `report-odoo`: SHA, URL прогону, вердикти job'ів, лічильники; без логів. id задачі — input `odoo_task` або рядок `Odoo-Task: <id>`
-в описі PR (`package/templates/pr-checklist.md`). Секрети `ODOO_FLOW_URL/DB/API_KEY` задає Тімлід; немає — notice без падіння
+Job `report-odoo`: SHA, URL прогону, вердикти job'ів, лічильники; без логів. id задачі — лише input `odoo_task` (dispatch). На push id задачі в CI
+немає (`PR_BODY` на push порожнє), тому `report-odoo` там дає лише notice: звіт у задачу Odoo з SHA пише `flow-step-runner`/`flow-state-keeper`;
+`Odoo-Task: <id>` в описі PR (`package/templates/pr-checklist.md`) читає вони, не CI. Секрети `ODOO_FLOW_URL/DB/API_KEY` задає Тімлід; немає — notice без падіння
 (відкрите В-5: права технічного користувача лише `message_post`). Джерело правди для гейтів — статус GitHub за SHA.

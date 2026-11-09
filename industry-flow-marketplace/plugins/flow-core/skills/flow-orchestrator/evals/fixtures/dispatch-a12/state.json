@@ -1,0 +1,16 @@
+{
+ "tasks": [
+  {
+   "step": "A-10",
+   "scope": "package/demo-1",
+   "stage": "Готово"
+  }
+ ],
+ "slots_used": {
+  "package/demo-1": 1
+ },
+ "stoplist": [],
+ "catalog": {
+  "flow-package-build": "0.1.0"
+ }
+}

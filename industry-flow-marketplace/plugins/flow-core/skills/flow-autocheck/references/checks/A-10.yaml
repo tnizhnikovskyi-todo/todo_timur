@@ -1,0 +1,261 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-10",
+ "checks": [
+  {
+   "id": "ac-coverage",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "in:A-08",
+     "regex": "AC-\\d{2,3}",
+     "drop_line_regex": "deprecated з версії"
+    },
+    "right": {
+     "ref": "head:package/ALLOCATION.md",
+     "table_col": [
+      "ac"
+     ],
+     "regex": "AC-\\d{2,3}",
+     "drop_line_regex": "deprecated"
+    },
+    "relation": "subset",
+    "msg_missing": "Додай рядок у package/ALLOCATION.md (трек і модуль Odoo) для: {ids}"
+   }
+  },
+  {
+   "id": "ac-extra",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "head:package/ALLOCATION.md",
+     "table_col": [
+      "ac"
+     ],
+     "regex": "AC-\\d{2,3}",
+     "drop_line_regex": "deprecated"
+    },
+    "right": {
+     "ref": "in:A-08",
+     "regex": "AC-\\d{2,3}"
+    },
+    "relation": "subset",
+    "msg_missing": "Прибери з ALLOCATION AC, яких немає в ТР: {ids}"
+   }
+  },
+  {
+   "id": "track-enum",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:package/ALLOCATION.md",
+    "require": [
+     [
+      "ac"
+     ],
+     [
+      "трек"
+     ]
+    ],
+    "key": [
+     "ac"
+    ],
+    "unique_key": true,
+    "drop_row_regex": "deprecated",
+    "rules": [
+     {
+      "col": [
+       "трек"
+      ],
+      "kind": "enum",
+      "values": [
+       "стандарт",
+       "конфіг",
+       "код",
+       "готове"
+      ],
+      "msg": "трек має бути один із {стандарт, конфіг, код, готове}"
+     }
+    ]
+   }
+  },
+  {
+   "id": "module-col",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:package/ALLOCATION.md",
+    "require": [
+     [
+      "ac"
+     ],
+     [
+      "трек"
+     ],
+     [
+      "модуль"
+     ]
+    ],
+    "key": [
+     "ac"
+    ],
+    "drop_row_regex": "deprecated",
+    "rules": [
+     {
+      "when": {
+       "col": [
+        "трек"
+       ],
+       "in": [
+        "стандарт",
+        "конфіг"
+       ]
+      },
+      "col": [
+       "модуль"
+      ],
+      "kind": "regex",
+      "pattern": "^[a-z0-9_]+(, ?[a-z0-9_]+)*$",
+      "msg": "колонка «модуль Odoo» — технічна назва (a-z0-9_ через кому)"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ready-fields",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:package/ALLOCATION.md",
+    "require": [
+     [
+      "ac"
+     ],
+     [
+      "трек"
+     ],
+     [
+      "модуль"
+     ]
+    ],
+    "key": [
+     "ac"
+    ],
+    "drop_row_regex": "deprecated",
+    "rules": [
+     {
+      "when": {
+       "col": [
+        "трек"
+       ],
+       "in": [
+        "готове"
+       ]
+      },
+      "col": [
+       "модуль"
+      ],
+      "kind": "nonempty",
+      "msg": "для «готове» вкажи модуль"
+     },
+     {
+      "when": {
+       "col": [
+        "трек"
+       ],
+       "in": [
+        "готове"
+       ]
+      },
+      "col": [
+       "посилання"
+      ],
+      "kind": "nonempty",
+      "msg": "для «готове» вкажи посилання"
+     },
+     {
+      "when": {
+       "col": [
+        "трек"
+       ],
+       "in": [
+        "готове"
+       ]
+      },
+      "col": [
+       "ліцензія"
+      ],
+      "kind": "nonempty",
+      "msg": "для «готове» вкажи ліцензію"
+     },
+     {
+      "when": {
+       "col": [
+        "трек"
+       ],
+       "in": [
+        "готове"
+       ]
+      },
+      "col": [
+       "спосіб установки",
+       "спосіб"
+      ],
+      "kind": "regex",
+      "pattern": "(?i)залежність td_|в складі конфіг-пакета",
+      "msg": "спосіб установки: «залежність td_* (A-11)…» або «в складі конфіг-пакета (A-12)»"
+     }
+    ]
+   }
+  },
+  {
+   "id": "install-section",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/ALLOCATION.md",
+    "headings": [
+     "Формат конфіг-пакета й команда установки"
+    ],
+    "or_text": "версія 1: вручну за runbook"
+   }
+  },
+  {
+   "id": "rerun-stable",
+   "prim": "stable_on_rerun",
+   "when": "prev",
+   "args": {
+    "kind": "table",
+    "file": "package/ALLOCATION.md",
+    "require": [
+     [
+      "ac"
+     ],
+     [
+      "трек"
+     ]
+    ],
+    "key": [
+     "ac"
+    ],
+    "allowed": {
+     "ref": "in:A-08",
+     "section": "(?i)зміни версії",
+     "regex": "AC-\\d{2,3}"
+    }
+   }
+  },
+  {
+   "id": "signature-by-ai",
+   "prim": "signature_by_ai",
+   "args": {
+    "file": "package/ALLOCATION.md",
+    "heading": "(?i)підпис|рішення|затверд"
+   }
+  },
+  {
+   "id": "module-exists",
+   "prim": "manual",
+   "args": {
+    "text": "Модуль існує для Odoo 19 у редакції A-07, ліцензія, посилання",
+    "who": "Архітектор рішення; source-check — runner"
+   }
+  }
+ ]
+}

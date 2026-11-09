@@ -11,15 +11,13 @@
 ## Параметри установки (VP-xx)
 | VP | Ключ (якір) | Трек | Ціль | AC |
 |---|---|---|---|---|
-| VP-02 | `res.config.settings:<поле>` | конфіг | значення за `transform` | AC-03 |
-| VP-04 | `td_param:<ключ>` | код | реалізує модуль td_* (A-11) | AC-05 |
+| VP-02 | `ir.config_parameter:[key=sale.x]:value` | конфіг | значення за `transform` | AC-03 |
+| VP-04 | `ir.config_parameter:[key=td_<пакет>.vp_04]:value` | код | реалізує модуль td_* (A-11) | AC-05 |
 Кожний ключ схеми `answers.yaml` -- рівно один рядок. Deprecated -- рядок з позначкою «deprecated з версії X.Y».
 
 ## Команда установки
-```
-package/config/install.sh --db <db> --answers <файл.yaml> [--addons-path <шляхи>]
-```
-Коди виходу й JSON-підсумок -- `config-package-format.md`. Поки команди немає -- «вручну за runbook (`config-runbook`)».
+Версія 0.1: команди немає -- «скриптів немає; застосовано через odoo-mcp за `apply-semantics.md`; вручну -- за runbook
+(`config-runbook`)». Майбутня команда -- `config-package-format.md` (CLI-контракт).
 
 ## Ручні кроки
 | Пункт CONFIG | Чому не дані (секрет / інтеграція / Studio / інше) | Хто виконує | Підтвердження |

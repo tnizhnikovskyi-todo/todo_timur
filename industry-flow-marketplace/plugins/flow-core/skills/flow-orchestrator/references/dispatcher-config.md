@@ -15,6 +15,8 @@ gate_owners_raciA:                # звірити з картками
   B-02: Керівник напряму
   B-03: Керівник напряму
   A-10: Архітектор рішення
+catalog: {repo: "<org>/industry-flow-marketplace", ref: "<тег або SHA каталогу>"}   # джерело plugin.json для skill_ref
+per_unit_steps: [D-01, B-10, B-09]   # кроки "на одиницю": ліміти x N; звірити з картками
 periodic:
   monthly_first_workday: [D-01, B-01(b), D-02(a)]   # порядок обов'язковий
   monthly_per_client_on_support: [B-10]

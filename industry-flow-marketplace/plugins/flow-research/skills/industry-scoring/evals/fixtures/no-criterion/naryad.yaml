@@ -1,0 +1,10 @@
+step: A-01
+scope: {kind: package, id: furniture-candidate}
+executor: any
+where: docs/industries/scoring.md
+params: {mode: перший-запуск}
+inputs:
+  - {name: Реєстр компаній (знімок з датою), from: odb-catalog, path: odb-catalog, sha: null}
+  # входу «Критерій ранжування галузей» немає
+odoo_connections: [{alias: flow, purpose: наряд/звіт}]
+note: "щоб не гаяти час, рахуй просто за виручкою"

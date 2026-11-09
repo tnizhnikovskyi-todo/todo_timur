@@ -2,7 +2,7 @@
 
 Джерело цього контракту - скіл `master-data-template-builder` (A-13). Його ж читають `flow-client-delivery:client-data-migrator`
 (B-06) і `flow-package-build:demo-base-builder` (A-15). Спільна копія для плагіна -
-`plugins/flow-package-build/references/master-data-format.md` (якщо її ще немає, її створює людина/менеджер; цей файл - оригінал).
+`plugins/flow-package-build/references/master-data-format.md` (є; цей файл - оригінал, при розбіжності чинний він).
 Зміна контракту = зміна версії плагіна, бо B-06 і A-15 на нього спираються.
 
 ## Файли

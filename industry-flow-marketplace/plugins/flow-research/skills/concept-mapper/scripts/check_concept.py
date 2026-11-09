@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Автоперевірки A-20 (CM-*). stdlib. Вивід: JSON [{id,status,msg}]. Код виходу 1, якщо є FAIL.
+Запускати з кореня клону; <concept_dir> — відносний шлях. --base = git.base наряду.
 Використання: check_concept.py <concept_dir> --input briefing.md=<шлях> [--input ...] [--base <SHA>]
 Ключ --input = ім'я файлу з колонки «Джерело» (наприклад past-projects.md); значення = шлях до файлу на SHA наряду."""
 import argparse, json, re, subprocess, sys
@@ -8,13 +9,17 @@ from pathlib import Path
 HEAD = {"features.md": ["Ролі", "Болі", "Функції", "Поза концепцією", "Відкриті питання"],
         "screens.md": ["Екрани"], "scenarios.md": ["Сценарії"]}
 PII = {"email": r"[\w.+-]+@[\w-]+\.[\w.-]+", "phone": r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)",
-       "sum": r"(\d[\d\s.,]*\s?(грн|₴|\$|€|USD|UAH|EUR|тис\.|млн|млрд))|([$€₴]\s?\d)",
+       "sum": r"(\d[\d\s.,]*\s?(грн|₴|\$|€|USD|UAH|EUR))|(\d\s?(тис\.?|млн|млрд)\s?(грн|₴|\$|€|USD|UAH|EUR))|([$€₴]\s?\d)",
+       "pib": r"\b[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\b",
        "edrpou_iban": r"\bUA\d{2}[\s\d]{20,}|ЄДРПОУ\D{0,5}\d{8}\b"}
 ID = re.compile(r"\b(?:ROLE|PAIN|F|S|SC)-\d{2,}\b")
 res = []
 
 def add(i, ok, msg=""):
-    res.append({"id": i, "status": "PASS" if ok else "FAIL", "msg": msg})
+    res.append({"id": i, "status": "PASS" if ok else "FAIL", "msg": "" if ok else msg})
+
+class GitError(Exception):
+    pass
 
 def norm(s):
     s = re.sub(r"[«»„“”\"]", '"', s); s = re.sub(r"[’ʼ`']", "'", s)
@@ -33,7 +38,10 @@ def rows(sec):
     return [r for r in out[1:]] if out else []  # без заголовка таблиці
 
 def git(*a):
-    return subprocess.run(["git", *a], capture_output=True, text=True).stdout
+    r = subprocess.run(["git", *a], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise GitError(r.stderr.strip()[:200])
+    return r.stdout
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("dir"); ap.add_argument("--input", action="append", default=[])
@@ -79,8 +87,13 @@ def main():
     scr = {m for m in re.findall(r"^\|\s*(S-\d+)\s*\|", txt["screens.md"], flags=re.M)}
     sc = re.split(r"^### (?=SC-)", txt["scenarios.md"], flags=re.M)[1:]
     sc_roles = [(re.findall(r"ROLE-\d+", b.split("\n", 1)[0]) or [None])[0] for b in sc]
-    ok = 10 <= len(scr) <= 15 and 4 <= len(sc) <= 6 and len(set(sc_roles)) == len(sc_roles) and None not in sc_roles
-    add("CM-count", ok, f"екранів {len(scr)} (10–15), сценаріїв {len(sc)} (4–6), ролі сценаріїв різні й задані")
+    why = []
+    if not 10 <= len(scr) <= 15: why.append(f"екранів {len(scr)} (потрібно 10-15)")
+    if not 4 <= len(sc) <= 6: why.append(f"сценаріїв {len(sc)} (потрібно 4-6)")
+    if None in sc_roles: why.append("у заголовку SC немає ROLE-xx")
+    dup = sorted({r for r in sc_roles if r and sc_roles.count(r) > 1})
+    if dup: why.append("ролі сценаріїв повторюються: " + ", ".join(f"{r} x{sc_roles.count(r)}" for r in dup))
+    add("CM-count", not why, "; ".join(why))
     fids = {r[0] for r in funcs}; sc_text = "\n".join(sc)
     used_s, used_f = set(re.findall(r"S-\d+", sc_text)), set(re.findall(r"F-\d+", sc_text))
     f_on_s = set(re.findall(r"F-\d+", "\n".join(l for l in txt["screens.md"].splitlines() if re.match(r"^\|\s*S-\d+", l))))
@@ -90,19 +103,25 @@ def main():
     add("CM-trace", not any(probs), "; ".join(p for p in probs if p))
     # CM-ids
     if a.base:
-        old = {}
-        for f in HEAD:
-            old[f] = git("show", f"{a.base}:{d.as_posix()}/{f}")
-        gone = sorted({i for t in old.values() for i in ID.findall(t)} - {i for t in txt.values() for i in ID.findall(t)})
-        add("CM-ids", not gone, "зникли ID: " + ", ".join(gone))
+        try:
+            top = Path(git("rev-parse", "--show-toplevel").strip())
+            rel = d.resolve().relative_to(top).as_posix()
+            old = {f: git("show", f"{a.base}:{rel}/{f}") for f in HEAD}
+            gone = sorted({i for t in old.values() for i in ID.findall(t)} - {i for t in txt.values() for i in ID.findall(t)})
+            add("CM-ids", not gone, "зникли ID: " + ", ".join(gone))
+        except (GitError, ValueError, OSError) as e:
+            add("CM-ids", False, f"не вдалось прочитати base {a.base}: {e}")
     # CM-pii
     hits = [f"{f}:{k}" for f, t in txt.items() for k, p in PII.items() if re.search(p, t, re.I)]
     add("CM-pii", not hits, ", ".join(hits))
     # CM-scope
     if a.base:
-        ch = [x for x in git("diff", "--name-only", a.base).splitlines() if x]
-        bad = [x for x in ch if "/concept/" not in x and "/_template/concept/" not in x]
-        add("CM-scope", not bad, "зачеплено: " + ", ".join(bad))
+        try:
+            ch = [x for x in git("diff", "--name-only", a.base).splitlines() if x]
+            bad = [x for x in ch if "/concept/" not in x and "/_template/concept/" not in x]
+            add("CM-scope", not bad, "зачеплено: " + ", ".join(bad))
+        except GitError as e:
+            add("CM-scope", False, f"не вдалось прочитати base {a.base}: {e}")
     print(json.dumps(res, ensure_ascii=False, indent=1))
     sys.exit(1 if any(r["status"] == "FAIL" for r in res) else 0)
 

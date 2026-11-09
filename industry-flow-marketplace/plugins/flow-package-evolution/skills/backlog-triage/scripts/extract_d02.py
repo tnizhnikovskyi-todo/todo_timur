@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Витяг розділу «Запити в D-02» (або іншого, `section`) з файлів-джерел у JSON. Лише stdlib.
 
-Використання: extract_d02.py manifest.json > extracted.json
+Використання: python3 -I extract_d02.py manifest.json > extracted.json
 manifest: [{"step":"B-09","client":"kl07","path":"clients/kl07/hypercare.md","sha":"a1b2c3d","section":"Запити в D-02"}]
 Читає лише потрібний розділ (від заголовка `## <section>` до наступного `##`). Файл цілком у вихід не потрапляє.
+`section_found` — заголовок розділу є; `table_found` — у розділі є шапка таблиці (розділ без таблиці = 0 запитів, не помилка).
+ID беруться лише з колонки «ID…» (воронка — «Посилання»); без такої колонки рядок без ID. Колонка типу: «Тип»; для воронки — «Причина».
+Лічильники (рядків у розділі / релевантних / без ID / розділ знайдено) друкуються в stderr: ними звіряють джерело
+з extracted.json без читання файлів цілком. `relevant` залежить лише від значення колонки «Тип» (B-09, B-10:
+«баг конфіг», «баг код», «навчання» -> false); без колонки «Тип» усі рядки релевантні (`type_column: false`).
 """
 import json, re, sys
 
@@ -18,11 +23,13 @@ def cells(line):
 def extract(entry):
     text = open(entry["path"], encoding="utf-8").read()
     want = entry.get("section", "Запити в D-02").lower()
-    out, inside, header = [], False, None
+    out, inside, header, tcol, icol, seen = [], False, None, None, None, False
     for line in text.splitlines():
-        if line.startswith("## "):
-            inside = line[3:].strip().lower().startswith(want)
-            header = None
+        if re.match(r"#{2,}\s", line):
+            if line.startswith("## "):
+                inside = line[3:].strip().lower().startswith(want)
+                seen = seen or inside
+                header = None
             continue
         if not inside or not line.lstrip().startswith("|"):
             continue
@@ -31,16 +38,30 @@ def extract(entry):
             continue
         if header is None:
             header = c
+            funnel = want.startswith("причини відмов")
+            tcol = None
+            for k in (("причин", "тип") if funnel else ("тип",)):
+                tcol = next((i for i, h in enumerate(c) if h.lower().startswith(k)), None)
+                if tcol is not None:
+                    break
+            idkey = "посилання" if funnel else "id"
+            icol = next((i for i, h in enumerate(c) if h.lower().startswith(idkey)), None)
             continue
         row = dict(zip(header, c))
-        m = next((ID_RE.search(x) for x in c if ID_RE.search(x)), None)
-        low = line.lower()
-        relevant = not (entry["step"] in ("B-09", "B-10") and any(e in low for e in EXCLUDE))
-        out.append({"id": m.group(1) if m else None, "relevant": relevant, "cells": row})
+        m = ID_RE.search(c[icol]) if icol is not None and icol < len(c) else None
+        typ = c[tcol].lower() if tcol is not None and tcol < len(c) else ""
+        relevant = not (entry["step"] in ("B-09", "B-10") and any(e in typ for e in EXCLUDE))
+        out.append({"id": m.group(1) if m else None, "type": typ, "relevant": relevant, "cells": row})
     return {**{k: entry.get(k) for k in ("step", "client", "path", "sha")}, "section": want,
-            "section_found": header is not None, "rows": out}
+            "section_found": seen, "table_found": header is not None, "type_column": tcol is not None, "rows": out}
 
 
 if __name__ == "__main__":
     manifest = json.load(open(sys.argv[1], encoding="utf-8"))
-    json.dump({"sources": [extract(e) for e in manifest]}, sys.stdout, ensure_ascii=False, indent=1)
+    res = [extract(e) for e in manifest]
+    json.dump({"sources": res}, sys.stdout, ensure_ascii=False, indent=1)
+    for s in res:
+        r = s["rows"]
+        print(f"{s['path']}@{s['sha']}: section_found={s['section_found']} table_found={s['table_found']} rows={len(r)} "
+              f"relevant={sum(x['relevant'] for x in r)} no_id={sum(not x['id'] for x in r)} "
+              f"type_column={s['type_column']}", file=sys.stderr)

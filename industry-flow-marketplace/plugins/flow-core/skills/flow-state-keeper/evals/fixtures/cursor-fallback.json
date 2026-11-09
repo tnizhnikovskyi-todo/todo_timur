@@ -1,0 +1,25 @@
+{
+ "_note": "Фікстура: курсор і події без params.event; 12 подій за курсором",
+ "cursor_messages": [
+  {
+   "id": 600,
+   "model": "project.task",
+   "res_id": 90,
+   "body": "c02:cursor 600"
+  }
+ ],
+ "events_ids_after_cursor": [
+  601,
+  602,
+  603,
+  604,
+  605,
+  606,
+  607,
+  608,
+  609,
+  610,
+  611,
+  612
+ ]
+}

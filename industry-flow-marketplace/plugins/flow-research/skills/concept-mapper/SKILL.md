@@ -1,20 +1,16 @@
 ---
 name: concept-mapper
 description: >
-  Запускай на кроці A-20 флоу галузевого пакета, коли галузь обрана (A-02), готові
-  docs/industries/<галузь>/briefing.md (A-03) і past-projects.md (A-04), а протоколи сесій з еталонними
-  клієнтами (A-06) — якщо були. Також при поверненні з A-23 «змінити концепцію». Складає концепцію пакета:
-  concept/features.md (роль → біль із джерелом і цитатою → функція), screens.md (10–15 ключових екранів) і
-  scenarios.md («день з життя» 4–6 ролей) зі стабільними ID ROLE/PAIN/F/S/SC для прототипу, тесту попиту й ТР.
-  Нічого не вигадує: функція без болю з джерела не потрапляє в концепцію. Тригерні фрази — "концепція
-  пакета", "карта функцій", "які екрани потрібні", "день з життя ролей", "A-20", "concept-mapper",
-  "концепция пакета", "карта функций по ролям", "ключевые экраны", "сценарии день из жизни". НЕ використовуй
-  для галузевої довідки й конкурентів (це odoo19-discovery-initiation:industry-briefing / competitor-mapper,
-  A-03), аналізу минулих проєктів (це flow-research:past-projects-analyzer, A-04), розбору сесії клієнта (це
-  odoo19-discovery-sessions:session-transcript-analyzer), прототипу й оцінки складності (це
-  flow-research:prototype-builder, A-21), use cases і AC (це odoo19-tr-authoring:tr-usecases-acceptance, A-08),
-  плану демо одному клієнту (це odoo19-sales-prep:demo-build-plan). Результат —
-  docs/industries/<галузь>/concept/ (features.md, screens.md, scenarios.md).
+  Запускай на кроці A-20 флоу галузевого пакета, коли галузь обрана (A-02), готові briefing.md (A-03) і
+  past-projects.md (A-04), а протоколи сесій з еталонними клієнтами (A-06) — якщо були; також при поверненні з
+  A-21/A-23 («змінити концепцію»). Складає концепцію пакета: concept/features.md (роль → біль із цитатою →
+  функція), screens.md (10–15 екранів), scenarios.md («день з життя» 4–6 ролей) зі стабільними ID
+  ROLE/PAIN/F/S/SC. Нічого не вигадує: функція без болю з джерела не потрапляє в концепцію. Тригери — "концепція
+  пакета", "карта функцій", "які екрани потрібні", "день з життя ролей", "A-20", "концепция пакета", "ключевые
+  экраны". НЕ для галузевої довідки (industry-briefing), минулих проєктів (past-projects-analyzer), розбору
+  сесії (session-transcript-analyzer), прототипу й складності (prototype-builder), use cases й AC
+  (tr-usecases-acceptance), демо одному клієнту (demo-build-plan). Результат —
+  docs/industries/<галузь>/concept/.
 ---
 
 # Concept Mapper — концепція пакета: функції, екрани, сценарії (A-20)
@@ -27,16 +23,16 @@ description: >
 не тут). Затверджує Власник продукту кнопкою в задачі Odoo; AI не пише в поля рішення.
 
 ## Наряд і звіт
-Вхід — наряд задачі Odoo (поля — `flow-core/references/naryad-format.md`), читає `flow-core:flow-step-runner`.
+Вхід — наряд задачі Odoo (поля — `flow-core/references/naryad-format.md`: `inputs`, `returned_from`, `params`, `git.base`/`git.head`), читає `flow-core:flow-step-runner` за `flow-core/references/odoo-bridge.md`.
 Результат — файли за `where` наряду в гілці кроку. Звіт у задачу й PR пише `flow-step-runner`, цей скіл його
-не пише: лише передає `checks`, `data_sources` і `memo` (формат — `flow-core/references/report-format.md`).
-Усі виклики `odoo-mcp` — з `connection_id` з наряду (правила — `flow-core/references/data-and-connections.md`).
+не пише: лише передає `checks`, `data_sources` і `memo` (формат — `flow-core/references/report-format.md`). Результати: `done`, `escalated` (Крок 8), `returned`; `waiting_human` скіл не повертає (людини посеред кроку немає), `phase`/`params.mode` для A-20 не задаються. Якщо звіт неповний — `partial: true` ставить `flow-state-keeper`.
+Усі виклики `odoo-mcp` — лише через runner, з `connection_id` наряду (`odoo-bridge.md` §1, `data-and-connections.md`).
 
 ## Інструменти та доступи
 - **Читання:** `Read`/`Grep`/`Bash` (git, grep) — лише файли репо на SHA з `inputs` наряду.
 - **Запис:** лише `docs/industries/<галузь>/concept/` і, якщо шаблону ще немає, `docs/industries/_template/concept/`.
 - **Заборонено:** Fathom, AIKB, odb-catalog, Gmail, веб-пошук — скіл нічого не досліджує сам. Дані минулих
-  проєктів — лише через `past-projects.md`; протоколи сесій — лише зі статусом «проведено» і перевіркою BA.
+  проєктів — лише через `past-projects.md`; протоколи сесій — лише за Кроком 0 (статус «проведена» у `sessions/README.md`).
 - **odoo-mcp:** лише через runner, alias `flow`, явний `connection_id`. Баз клієнта й прода тут не потрібно.
 - **Дані:** `client_data: none`, `executor: any`. У артефактах — ролі, ID, коди П-xx, ідентифікатори сесій за
   `package/DATA_POLICY.md` («Ідентифікатор клієнта в репозиторії»); без назв клієнтів, ПІБ, контактів, сум.
@@ -59,15 +55,15 @@ description: >
   (зайняті правилами SPEC, кодами кроків, реєстрами журналу продажу). Номери наскрізні, двозначні й більше.
 - ID не перенумеровуються між версіями: на них посилаються `complexity.md`, карта інтересу, ТР.
 - Джерело болю — `<файл>§<заголовок>`; допустимі форми й правило цитати — `references/source-anchors.md`.
-- Шаблони трьох файлів — `docs/industries/_template/concept/`; формат заголовків (grep-контракт) —
-  `flow-research/references/concept-templates.md`. Якщо шаблону в репо немає — створити з нього в тому ж PR;
-  якщо немає й `concept-templates.md` — зупинитися і записати це в `memo` та «Відкриті питання» (не вигадувати
-  заголовки; запасний мінімум — розділи з Кроків 2–6 нижче).
+- Шаблони трьох файлів — `docs/industries/_template/concept/`; детальні колонки — `plugins/flow-research/references/concept-templates.md`
+  (спільний з A-21/A-23/A-08). Якщо шаблону в репо немає — створити з нього в тому ж PR.
+- Обов'язкові `##`-заголовки (контракт скрипта, не залежить від наявності файлів): features.md — Ролі, Болі,
+  Функції, Поза концепцією, Відкриті питання; screens.md — Екрани; scenarios.md — Сценарії.
+- Протоколи сесій — `sessions/protocol-<ід>-<дата>.md`; джерела й ключі `--input` — `references/source-anchors.md`.
 
 ## Крок 0. Наряд і передумови
 Перевірити в наряді: `step: A-20`, `scope.kind: package`, `client_data: none`; у `inputs` є SHA для `briefing.md`
-і `past-projects.md`, обидва файли існують на цьому SHA. Протоколи сесій — лише ті, що названі в `inputs`
-і мають у `sessions/README.md` статус «проведено» та позначку перевірки BA. Немає обов'язкового входу →
+і `past-projects.md`, обидва файли існують на цьому SHA. Протокол сесії береться, якщо він названий в `inputs` і в `sessions/README.md` (реєстр A-06, його веде BA — це і є перевірка) є рядок зі статусом «проведена», де названо файл цього протоколу; «скасована» або немає рядка — не використовувати, `memo`. Немає обов'язкового входу →
 стоп «очікує A-03/A-04», нічого не писати. `past-projects.md` з 0 проєктів — валідний вхід.
 
 ## Крок 1. Оглавлення, а не цілі файли
@@ -87,8 +83,7 @@ description: >
 
 ## Крок 4. Функції (розділ «Функції»)
 Для кожного PAIN — 1–2 функції «дієслово + об'єкт» (що робить система для ролі). Рядок:
-`F-xx | функція | ROLE-xx | PAIN-xx[, …] | джерел N | S-xx | статус`. «Джерел N» — кількість різних джерел
-болю (briefing / П-xx / протоколи), це сила сигналу, а не оцінка. Функція без ROLE і PAIN не створюється.
+`F-xx | функція | ROLE-xx | PAIN-xx[, …] | джерел N | S-xx | статус`. «Джерел N» = кількість різних записів у колонці «Джерело» (розділених `;`) по всіх PAIN функції, а не файлів; приклад: `briefing.md§A; briefing.md§B; past-projects.md§Болі клієнтів/П-01` → 3. Це сила сигналу, а не оцінка. Функція без ROLE і PAIN не створюється.
 Можливості, яких немає в болях (AI-прогнози, мобільний застосунок, інтеграції, «на майбутнє»), — не додавати,
 навіть якщо вони «типові для галузі». Біль без функції — у «Поза концепцією» з причиною.
 
@@ -104,7 +99,7 @@ description: >
 екран і функцію, яких немає в реєстрах.
 
 ## Крок 7. Повтор і повернення
-`returned_from` не порожній → правити лише зачеплені рядки; ID з base SHA не видаляти й не змінювати зміст.
+`returned_from` не порожній → правити лише зачеплені рядки; ID з `git.base` не видаляти й не змінювати зміст (скрипт перевіряє лише, що ID не зникли; зміну змісту перевіряє людина).
 Знята функція — статус `знято: причина`, рядок лишається. При поверненні з A-23 — прочитати
 `docs/industries/<галузь>/demand/results.md` (SHA з `inputs`) і проставити в колонці «статус» функцій
 `інтерес: є / немає / не тестувалась`; нові функції — нові ID. У `memo` — таблиця «зауваження → що змінено».
@@ -117,21 +112,21 @@ description: >
 це очікувано, назвати його явно в `memo`.
 
 ## Автоперевірка
-Виконати `python3 -I scripts/check_concept.py <тека concept/> --input <файл>=<шлях> … --base <SHA>` (stdlib;
-вивід — JSON `[{id,status,msg}]` для `checks` звіту, код виходу 1 при FAIL). Усі FAIL виправити до здачі, ліміт
-спроб — `max_attempts` наряду.
+З кореня клону виконати (stdlib; вивід — JSON `[{id,status,msg}]` для `checks` звіту, `msg` лише для FAIL, код виходу 1 при FAIL):
+`python3 -I plugins/flow-research/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=docs/industries/<галузь>/briefing.md --input past-projects.md=docs/industries/<галузь>/past-projects.md --input protocol-<ід>-<дата>.md=docs/industries/<галузь>/sessions/protocol-<ід>-<дата>.md --base <git.base>`.
+Ключ `--input` = ім'я файлу з колонки «Джерело» (порівняння за basename); `<тека concept/>` — відносний шлях; `--base` — `git.base` наряду. Якщо git не прочитав base — CM-ids/CM-scope = FAIL з причиною. Усі FAIL виправити до здачі, ліміт спроб — `max_attempts` наряду.
 | ID | Перевірка | FAIL, коли |
 |---|---|---|
-| CM-files | три файли й заголовки `##` з шаблону | немає файлу/розділу |
+| CM-files | три файли й заголовки `##` (перелік у «Формат ID і джерела») | немає файлу/розділу |
 | CM-src | джерело кожного PAIN — файл із `inputs` наряду | джерело поза входами |
 | CM-quote | цитата PAIN — підрядок файлу-джерела (нормалізація — `source-anchors.md`) | цитати немає, > 25 слів |
 | CM-feat | кожен F має ≥1 ROLE і ≥1 PAIN, що є в реєстрах | функція без ролі/болю |
 | CM-count | S-xx: 10–15; SC-xx: 4–6, ролі SC різні | поза межами |
 | CM-trace | кожен F на ≥1 S; кожен S у ≥1 SC; ID у SC існують | висячі або неохоплені ID |
 | CM-signal | «джерел N» = кількість різних джерел у PAIN функції | розбіжність |
-| CM-ids | при повторі ID з base SHA не зникли | перенумерація/видалення без «знято» |
-| CM-pii | email, телефон, суми, ЄДРПОУ/IBAN, ПІБ-шаблон | збіг |
-| CM-scope | `git diff --name-only <base>` ⊆ `concept/`, `_template/concept/` | зачеплено зайве |
+| CM-ids | при повторі ID з `git.base` не зникли (зміст перевіряє людина) | ID зник або base не читається |
+| CM-pii | email, телефон, грошові суми (число + валюта), ЄДРПОУ/IBAN, ПІБ (три слова з великої) — `flow-core/references/pii-patterns.md` | збіг |
+| CM-scope | `git diff --name-only <git.base>` ⊆ `concept/`, `_template/concept/` | зачеплено зайве |
 
 «Готово, коли» картки: є `features.md`, `screens.md`, `scenarios.md`; кожна функція прив'язана до ролі й болю
 з briefing/past-projects; екранів 10–15; сценаріїв 4–6 ролей; Власник продукту затвердив (кнопка в Odoo, SLA

@@ -1,14 +1,14 @@
 # Скелет .github/workflows/ci.yml для C-03. Плейсхолдери {{...}} агент замінює фактами (кроки 2-3 SKILL.md).
 # Нерозв'язаний {{...}} у результаті = FAIL check_ci.py. Нічого не вигадувати: чого не знаєш - memo + ескалація.
+# Фільтрів paths у on: НЕМАЄ навмисно: required check `ci` не має зависати на PR поза зонами пакета/клієнтів;
+# обсяг прогону визначає job resolve (git diff); змін у зонах немає - ci зелений з текстом "нічого запускати".
 name: ci
 run-name: "ci ${{ inputs.sha || github.sha }} client=${{ inputs.client || '-' }} tag=${{ inputs.package_tag || '-' }}"
 
 on:
   push:
     branches: [main, "upgrade/**"]
-    paths: ["package/addons/**", "package/config/**", "clients/*/addons/**", ".github/workflows/ci.yml"]
   pull_request:
-    paths: ["package/addons/**", "package/config/**", "clients/*/addons/**", ".github/workflows/ci.yml"]
   workflow_dispatch:
     inputs:
       package_tag: {description: "Тег пакета; порожньо - тег клієнта з REGISTRY.md", required: false, default: ""}
@@ -18,8 +18,9 @@ on:
       odoo_task:   {description: "id задачі Odoo для звіту (необов'язково)", required: false, default: ""}
 
 concurrency:
-  group: ci-${{ github.ref }}-${{ inputs.client || 'all' }}
-  cancel-in-progress: true
+  # push і dispatch групуються за SHA й не скасовуються (A-14 не має прочитати cancelled як червоне); скасування лише старіших PR-прогонів
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || inputs.sha || github.sha }}-${{ inputs.client || 'all' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -51,8 +52,11 @@ jobs:
           # {{RESOLVE}}: (1) sha = IN_SHA або HEAD; (2) diff проти BASE_REF/BEFORE -> run_package/run_config/clients;
           # (3) клієнти: dispatch -> IN_CLIENT; тег = IN_TAG, інакше з clients/REGISTRY.md (тег-кандидат пріоритетний)
           #     {{REGISTRY_PARSE}} - за фактичним форматом файла; (4) odoo_version за references/odoo-version-resolve.md;
+          # BEFORE з одних нулів (перший push нової гілки upgrade/**) -> diff неможливий: run_package=true (повний прогін пакета).
           # (5) odoo_supported = чи вміє скрипт C-00 {{ODOO_VERSION_PARAM}} цю версію. Зміна ci.yml -> run_package=true.
-          # Зміна лише package/ НЕ додає клієнтів (тільки dispatch).
+          # Зміна лише package/ НЕ додає клієнтів (тільки dispatch). Значення за замовчуванням ЗАВЖДИ виставляти першими:
+          # run_package=false, run_config=false, clients=[] (порожнє значення зламає fromJSON), odoo_supported=false.
+          # Тег клієнта: ЯКЩО є clients/REGISTRY.md - тег-кандидат пріоритетний, інакше поточний (див. ci-contract.md).
           python3 -I - <<'PY'
           {{RESOLVE_PY}}
           PY
@@ -66,11 +70,13 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - name: Конфіг без установки в базу
         run: |
-          # {{CONFIG_CHECK}}: XML/CSV/YAML валідні; кожен модуль з «Модулі до установки» (CONFIG.md) є в package/addons або стандарті Odoo.
+          # {{CONFIG_CHECK}}: XML/CSV/YAML валідні; кожен модуль з «Модулі до установки» (CONFIG.md) є в package/addons АБО у списку
+          # стандартних модулів, який дає скрипт/образ C-00. Джерела списку немає - перевіряти лише package/addons, решту в memo
+          # (списку стандартних модулів не вигадувати).
 
   package-tests:
     needs: resolve
-    if: needs.resolve.outputs.run_package == 'true'
+    if: needs.resolve.outputs.run_package == 'true' && needs.resolve.outputs.odoo_supported == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: {{TIMEOUT}}
     steps:
@@ -92,7 +98,7 @@ jobs:
 
   client-tests:
     needs: resolve
-    if: needs.resolve.outputs.clients != '[]'
+    if: needs.resolve.outputs.clients != '[]' && needs.resolve.outputs.odoo_supported == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: {{TIMEOUT}}
     strategy:
@@ -114,23 +120,35 @@ jobs:
         if: always()
         run: |
           {{VERDICT_STEP}}
+      - uses: {{PIN actions/upload-artifact}}
+        if: always()
+        with: {name: "client-tests-log-${{ matrix.client.id }}", path: run-tests.log}
 
   tours:
     needs: resolve
-    if: needs.resolve.outputs.run_package == 'true'
+    if: needs.resolve.outputs.run_package == 'true' && needs.resolve.outputs.odoo_supported == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: {{TIMEOUT}}
     steps:
       - uses: {{PIN actions/checkout}}
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - name: Тури зі scenarios.md (A-16)
         run: |
-          # {{TOURS_LIST}} - кожен тур окремо; результат кожного в лог з SHA; тур без результату = червоний
+          set -o pipefail
+          # {{TOURS_LIST}} - кожен тур окремо; результат кожного в tours.log з SHA; тур без результату = червоний
+      - name: Вердикт
+        if: always()
+        run: |
+          {{VERDICT_STEP}}   # tours.log: тур без результату -> exit 1
+      - uses: {{PIN actions/upload-artifact}}
+        if: always()
+        with: {name: tours-log, path: tours.log}
 
   # config-matrix: генерувати ЛИШЕ коли є package/demo/profiles/ і команда установки конфігу; інакше видалити job
-  # і записати у звіті config-matrix: N/A (причина).
+  # І його ім'я з ci.needs, записати у звіті config-matrix: N/A (причина). check_ci.py ловить needs на неіснуючий job.
   config-matrix:
     needs: resolve
-    if: needs.resolve.outputs.run_config == 'true'
+    if: needs.resolve.outputs.run_config == 'true' && needs.resolve.outputs.odoo_supported == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -149,6 +167,7 @@ jobs:
     permissions: {contents: read, statuses: write}
     steps:
       - name: Агрегація
+        id: agg
         env:
           NEEDS: ${{ toJSON(needs) }}
           SHA: ${{ needs.resolve.outputs.sha }}
@@ -157,15 +176,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          # failure/cancelled у будь-якому needs -> red; skipped допустимий лише там, де resolve не вимагав job
+          # failure/cancelled у будь-якому needs.*.result -> red; skipped допустимий лише там, де resolve не вимагав job
           # SUPPORTED != true -> red: "Odoo $ODOO: вибір образу не визначено, статус C-03 недійсний"
-          # commit status context=ci на $SHA (curl -> /repos/$REPO/statuses/$SHA через GH_TOKEN в env)
-          {{AGGREGATE}}
+          # run_package/run_config=false і clients=[] -> green з текстом "нічого запускати"
+          {{AGGREGATE}}      # exit 1 при red
+      - name: Commit status на input-SHA
+        # лише dispatch з input sha (push/PR мають власний check-run); у PR з форків токен read-only - крок не виконується
+        if: always() && inputs.sha != ''
+        env: {GH_TOKEN: "${{ github.token }}", REPO: "${{ github.repository }}", SHA: "${{ inputs.sha }}", NEEDS: "${{ toJSON(needs) }}"}
+        run: |
+          # context=ci, state за вердиктом кроку Агрегація (steps.agg.outcome); curl -> /repos/$REPO/statuses/$SHA; {{COMMIT_STATUS}}
 
   report-odoo:
     needs: [resolve, ci]
-    if: always() && github.event.pull_request.head.repo.fork != true
+    # лише push (main, upgrade/**) і dispatch, НЕ pull_request: секрети запису в базу флоу недоступні коду з PR (ci-security.md)
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    environment: flow-report   # захищений Environment з обмеженням гілок; секрети - на ньому (задає Тімлід)
     steps:
       - name: Звіт у задачу Odoo (лише база флоу)
         env:
@@ -173,7 +200,7 @@ jobs:
           ODOO_FLOW_DB: ${{ secrets.ODOO_FLOW_DB }}
           ODOO_FLOW_API_KEY: ${{ secrets.ODOO_FLOW_API_KEY }}
           TASK: ${{ inputs.odoo_task }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          # id задачі: TASK або рядок "Odoo-Task: <id>" з PR_BODY; немає секретів/id -> ::notice::, без падіння.
+          # id задачі: лише TASK (dispatch з odoo_task); на push поля з id задачі немає -> ::notice::, без падіння: на push звіт у задачу
+          # Odoo пише flow-step-runner/flow-state-keeper, не CI. Немає секретів/id -> ::notice::, без падіння.
           # Пост: SHA, URL прогону, вердикти job'ів, лічильники; без логів. {{REPORT_ODOO}}

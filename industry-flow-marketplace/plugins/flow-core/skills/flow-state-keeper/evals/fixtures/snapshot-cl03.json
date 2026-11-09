@@ -1,0 +1,7 @@
+{"schema_version":1,"taken":"2026-11-09T10:00:00Z","repo_sha":"abc1234",
+ "package":{"industry":"меблі","package_tag":"package/v1.0","candidate_tag":null,"phase":"A-18","flow_version":2},
+ "steps":[{"step":"B-09","scope":"client/cl-03","state":"done","attempt":1,"last_report":"2026-11-09T09:00:00Z","pr":null,"task":"odoo:task/412"}],
+ "clients":[{"client_id":"cl-03","state":"супровід","current_step":"B-10","flags":["підтверджено PM: ні"],"changed":"2026-11-09","pilot":false,"package_tag":"package/v1.0","go_live":"2026-10-01","test_alias":"test-cl-03","prod_alias_set":true,"aggregates_consent":true,"ai_stop":false}],
+ "decisions":[{"decision_id":"D-0007","date":"2026-11-08","gate":"B-08c","scope":"client/cl-03","decision":"затверджено","role":"PM","task":"odoo:task/398","comment":"go"}],
+ "runs":[{"step":"B-09","scope":"client/cl-03","attempt":1,"result":"done","finished":"2026-11-09T09:00:00Z","skill_versions":{"flow-client-delivery:support-desk":"0.1.0"},"usage":{"cost_usd":1.2,"tokens_in":1000,"tokens_out":200},"task":"odoo:task/412","memo":"секрет"}],
+ "open_questions":[],"ai_stop":[]}

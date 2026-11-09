@@ -1,0 +1,9 @@
+client: CL-02
+tag: package/v1.1
+period: {month: 2026-12, start: "2026-12-01T00:00:00Z", end: "2027-01-01T00:00:00Z"}
+go_live: 2026-05-15
+connection_alias: prod-metrics-CL-02
+active_internal_users: 8
+models:
+  - {model: td.order, source: td, created: 60, changed: 120, status: ok}
+  - {model: td.quality.check, source: td, created: 20, changed: 10, status: ok}

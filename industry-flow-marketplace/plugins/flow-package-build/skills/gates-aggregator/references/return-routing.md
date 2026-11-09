@@ -6,7 +6,7 @@
 | `package/addons/**` | A-11 |
 | `package/config/**`, `package/config/CONFIG.md` | A-12 |
 | `package/master-data/**` | A-13 |
-| у режимі `hotfix` — будь-який з вище | A-19 |
+| у режимі `hotfix` | так само за шляхом; маршрут повернення — `flow-core/references/flow-map.md` |
 
 Знахідка без шляху — за гейтом: pr-review / security-review / odoo19-lint (код) -> A-11;
 config-review -> A-12; тест-імпорт -> A-13. Позначити в `memo` «маршрут за гейтом, а не за шляхом».

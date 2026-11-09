@@ -1,0 +1,4 @@
+step: A-22
+industry: mebli
+odoo_connections: [flow, emu-mebli]
+client_data: none

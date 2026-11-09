@@ -1,0 +1,26 @@
+{
+ "tasks": [
+  {
+   "id": 900,
+   "step": "A-14",
+   "scope": "package/demo-1",
+   "stage": "Повернено",
+   "report": {
+    "result": "returned",
+    "checks": [
+     {
+      "id": "pr-review",
+      "status": "FAIL"
+     },
+     {
+      "id": "config-review",
+      "status": "FAIL"
+     }
+    ],
+    "returned_to": "A-11"
+   }
+  }
+ ],
+ "open_tasks": [],
+ "stoplist": []
+}

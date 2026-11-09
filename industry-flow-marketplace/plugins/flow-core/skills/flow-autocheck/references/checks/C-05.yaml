@@ -1,0 +1,26 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "C-05",
+ "checks": [
+  {
+   "id": "headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/DATA_POLICY.md",
+    "headings_from": "references/data-policy-template.md",
+    "exclude": [
+     "Перевірка заголовків (команда для autocheck)"
+    ],
+    "expect_count": 9
+   }
+  },
+  {
+   "id": "signature-by-ai",
+   "prim": "signature_by_ai",
+   "args": {
+    "file": "package/DATA_POLICY.md",
+    "heading": "(?i)підпис|затверд"
+   }
+  }
+ ]
+}

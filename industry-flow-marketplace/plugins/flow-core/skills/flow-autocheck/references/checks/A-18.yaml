@@ -1,0 +1,172 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-18",
+ "checks": [
+  {
+   "id": "tag-descendant",
+   "prim": "git_ancestor",
+   "when": "not_hotfix",
+   "route_on_fail": "контур A-14",
+   "args": {
+    "a": "extract:head:package/ACCEPTANCE.md",
+    "b": "head",
+    "msg": "SHA ACCEPTANCE {a} не предок кандидата {b}"
+   }
+  },
+  {
+   "id": "diff-allowed-7",
+   "prim": "git_diff_allowed",
+   "when": "not_hotfix",
+   "route_on_fail": "контур A-14",
+   "args": {
+    "from": "extract:head:package/ACCEPTANCE.md",
+    "to": "head",
+    "compare_done": true,
+    "allow": [
+     "package/demo/README.md",
+     "package/demo/scenarios.md",
+     "package/ACCEPTANCE.md",
+     "package/CHANGELOG.md",
+     "package/templates/migration-plan.md",
+     "package/templates/training.md",
+     "package/templates/CHANGELOG.md"
+    ]
+   }
+  },
+  {
+   "id": "version-eq",
+   "prim": "version_eq",
+   "when": "not_hotfix",
+   "route_on_fail": "контур A-14 (A-11)",
+   "args": {
+    "sources": [
+     {
+      "name": "тег/параметр",
+      "kind": "param",
+      "key": "version"
+     },
+     {
+      "name": "CHANGELOG",
+      "kind": "regex",
+      "ref": "head:package/CHANGELOG.md",
+      "pattern": "(?im)^#+\\s*v?(\\d+\\.\\d+)\\b",
+      "pick": "max"
+     },
+     {
+      "name": "ACCEPTANCE",
+      "kind": "regex",
+      "ref": "head:package/ACCEPTANCE.md",
+      "pattern": "(?i)(?:верс\\w*|package/v)[^\\n\\d]{0,30}(\\d+\\.\\d+)"
+     },
+     {
+      "kind": "manifests"
+     }
+    ]
+   }
+  },
+  {
+   "id": "changelog-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/CHANGELOG.md",
+    "headings": [
+     "re:\\d+\\.\\d+",
+     "Зміни анкети",
+     "Несумісні зміни",
+     "Міграція з попереднього тегу"
+    ]
+   }
+  },
+  {
+   "id": "vp-changes",
+   "prim": "keys_diff_eq",
+   "when": "prev",
+   "args": {
+    "file": "package/templates/answers.yaml",
+    "changelog": "package/CHANGELOG.md",
+    "heading": "зміни анкети"
+   }
+  },
+  {
+   "id": "kit-vs-changelog",
+   "prim": "addons_in_text",
+   "args": {
+    "ref": "head:package/CHANGELOG.md"
+   }
+  },
+  {
+   "id": "vendored-license",
+   "prim": "vendored_license"
+  },
+  {
+   "id": "templates-exist",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/templates/migration-plan.md",
+     "package/templates/training.md"
+    ]
+   }
+  },
+  {
+   "id": "no-client-ids",
+   "prim": "grep_clients"
+  },
+  {
+   "id": "upgrade-log",
+   "prim": "section_contains",
+   "when": "prev",
+   "args": {
+    "ref": "head:package/CHANGELOG.md",
+    "heading": "міграція з попереднього тегу",
+    "heading_name": "Міграція з попереднього тегу",
+    "patterns": [
+     "інстанс",
+     "лог"
+    ],
+    "names": [
+     "ідентифікатор інстанса",
+     "витяг логу оновлення"
+    ]
+   }
+  },
+  {
+   "id": "rerun-stable",
+   "prim": "stable_on_rerun",
+   "when": "prev",
+   "args": {
+    "kind": "yaml",
+    "file": "package/templates/answers.yaml",
+    "allowed": {
+     "ref": "head:package/CHANGELOG.md",
+     "section": "(?i)зміни анкети",
+     "regex": "VP-\\d{2,3}"
+    }
+   }
+  },
+  {
+   "id": "odoo19-lint",
+   "prim": "manual",
+   "args": {
+    "text": "boost:odoo19-lint по td_*",
+    "who": "Тімлід / runner"
+   }
+  },
+  {
+   "id": "clean-install",
+   "prim": "manual",
+   "args": {
+    "text": "Установка пакета в чисту базу (скрипт C-00)",
+    "who": "Тімлід / CI"
+   }
+  },
+  {
+   "id": "upgrade-test",
+   "prim": "manual",
+   "args": {
+    "text": "Тест оновлення з попереднього тегу (CI C-03)",
+    "who": "CI"
+   }
+  }
+ ]
+}

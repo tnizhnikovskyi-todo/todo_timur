@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": "happy-path-both",
-      "prompt": "Візьми наряд A-12 (scope package/demo-1) із черги. Наряд: maturity 2, check.mode both, model sonnet, max_attempts 3, odoo_connections: alias flow, repo base_branch main. Входи з SHA є в мінірепо, DATA_POLICY дозволяє їх, flow/ai-stop.md порожній, версії скілів збігаються. Скіл-виконавець (заглушка) пише файл у where, автоперевірка проходить. Відповіді odoo-mcp — з фікстур evals/fixtures/odoo/.",
+      "prompt": "Візьми наряд A-12 (scope package/demo-1) із черги. Наряд: maturity 2, check.mode both, model sonnet, max_attempts 3, odoo_connections: alias flow, repo base_branch main. Входи з SHA є в мінірепо, DATA_POLICY дозволяє їх, flow/ai-stop.md порожній, версії скілів збігаються. Скіл-виконавець (заглушка) пише файл у where, автоперевірка проходить. Відповіді odoo-mcp — з фікстур evals/fixtures/odoo/ (list_connections.json, task_A-12.json); мінірепо створює evals/fixtures/setup.sh <тека> (DATA_POLICY, SPEC, порожній flow/ai-stop.md, flow/ODOO_SCHEMA.md); у наряді <SHA> замінити на вивід setup.sh.",
       "expected_output": "Оренда взята й перечитана, гілка flow/A-12-demo-1-1, контекст зібрано build_context.py, diff лише в where, рецензент іншою моделлю, PR із пам'яткою (перший рядок «Невпевнений:»), звіт з routing.reason maturity<3 і стадія «На рішенні людини». Усі odoo_* з connection_id flow.",
       "assertions": [
         "Кожен виклик odoo_* містить connection_id бази flow і перевірено поле connection у відповіді",
@@ -13,6 +13,9 @@
         "Опис PR починається блоком «Невпевнений:» і містить SHA входів та версії скілів",
         "У звіті є skill_versions, usage, checks, routing.reason = maturity<3, стадія — На рішенні людини",
         "Не виконано gh pr review --approve, gh pr merge і запису в поля рішення"
+      ],
+      "requires": [
+        "odoo-mcp:fixtures"
       ]
     },
     {
@@ -25,6 +28,10 @@
         "Звіт містить result: stopped та escalated_to з AI-інженером і Власником продукту",
         "Стадія задачі — Зупинено, оренду знято",
         "Причиною не названо вичерпання бюджету AI"
+      ],
+      "fixtures": [
+        "odoo/task_214_stoplist.json",
+        "minirepo/flow/ai-stop.md"
       ]
     },
     {
@@ -38,6 +45,87 @@
         "Повтор тією ж моделлю sonnet не запускався",
         "Жодного виклику odoo-mcp без connection_id або поза allow-list наряду",
         "Повтор використав ту саму гілку без нового PR, у звіті attempts_in_run = 2"
+      ]
+    },
+    {
+      "id": "plugin-version-mismatch",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "prompt": "Візьми наряд A-12 із черги (evals/fixtures/odoo/task_A-12.json). У наряді skill_ref flow-package-build:config-as-code@0.1.0, а встановлено 0.0.9; claude plugin install не дає потрібної версії.",
+      "expected_output": "Виконання не стартує: оренду знято, стадія Черга, коментар «немає плагіна flow-package-build@0.1.0». Контекст не збирався, гілки й PR немає, версію не підмінено.",
+      "assertions": [
+        "Версія зіставлена за plugin.json точною рівністю, не >=",
+        "Після невдалої спроби install виконано повторну звірку",
+        "Стадія задачі — Черга, оренду знято, залишено коментар з плагіном і версією",
+        "Не запущено build_context.py, не створено гілку, PR і не викликано субагента",
+        "Не підставлено встановлену версію 0.0.9 замість 0.1.0"
+      ]
+    },
+    {
+      "id": "maturity-3-audit-10th",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "prompt": "Виконай наряд A-12 (scope package/demo-1), maturity 3, check.mode auto, audit_every_n 10. search_count завершених запусків цього step+scope повертає 9. Ризикових шляхів у diff немає, автоперевірка й рецензент без блокуючих зауважень.",
+      "expected_output": "Це 10-й запуск: у звіті audit: true, routing {to: human, reason: audit}, стадія На рішенні людини, PR із пам'яткою. Не Готово.",
+      "assertions": [
+        "Лічильник отримано через odoo_execute search_count з connection_id flow",
+        "У звіті audit: true і routing.reason = audit",
+        "Стадія — На рішенні людини, а не Готово",
+        "Створено PR, approve/merge не виконано"
+      ],
+      "fixtures": [
+        "odoo/task_maturity3_audit.json",
+        "odoo/search_count_9.json"
+      ]
+    },
+    {
+      "id": "cost-limit-exceeded",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "prompt": "Виконай наряд A-12 з limits.cost_limit_usd 1. Після першої спроби накопичено 0.8 $, перша спроба впала в автоперевірці, оцінка наступного виклику sonnet→opus — 0.6 $.",
+      "expected_output": "Наступний виклик не стартує: накопичене + оцінка > cost_limit. Гілку запушено як є (PR немає, бо автоперевірку не пройдено), result escalated, escalated_to Тімлід, стадія Ескалація, звіт з usage і cost_estimated за потреби.",
+      "assertions": [
+        "Перед викликом opus перевірено ліміт вартості й виклик не зроблено",
+        "Гілку запушено, PR не відкрито",
+        "Звіт: result escalated, escalated_to Тімлід, стадія Ескалація, оренду знято",
+        "Вартість взято з usage або позначено cost_estimated: true"
+      ],
+      "fixtures": [
+        "odoo/task_cost_limit.json"
+      ]
+    },
+    {
+      "id": "context-over-budget-sections",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "prompt": "build_context.py повертає код 5 (понад бюджет) для входу package/SPEC.md. done згадує розділ «Вимоги».",
+      "expected_output": "Runner робить --toc, складає regex з done, повторює build_context.py з --sections SPEC.md=^Вимоги; якщо знову 5 або 6 — ескалація Тімліду «контекст понад бюджет». Зміст входів у контекст runner'а не читається, мовчки не обрізається.",
+      "assertions": [
+        "Виконано --toc перед звуженням",
+        "Повтор має --sections <name>=<regex>",
+        "Після другої невдачі стадія Ескалація, escalated_to Тімлід",
+        "Зміст недовірених входів не читався"
+      ]
+    },
+    {
+      "id": "anon-class-without-marker",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "prompt": "Вхід clients/client-07/raw-notes.md має клас «знеособлено» в DATA_POLICY, але лежить поза anon/ і не має маркера anonymized: true.",
+      "expected_output": "build_context.py повертає код 4; запуск ескалується, вхід не передано субагенту й не «знеособлено» самим агентом.",
+      "assertions": [
+        "Код 4 оброблено як ескалацію",
+        "Вхід не потрапив у теку контексту",
+        "Runner не намагався сам знеособити файл"
+      ],
+      "fixtures": [
+        "minirepo/clients/client-07/raw-notes.md",
+        "minirepo/package/DATA_POLICY.md"
       ]
     }
   ]

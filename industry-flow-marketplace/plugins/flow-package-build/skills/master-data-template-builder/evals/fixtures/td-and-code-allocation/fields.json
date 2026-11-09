@@ -1,0 +1,8 @@
+{
+ "uom.uom": {"name": {"required": true, "selection": null, "default": false}, "relative_factor": {"required": false, "selection": null, "default": true}},
+ "product.category": {"name": {"required": true, "selection": null, "default": false}, "parent_id": {"required": false, "selection": null, "default": false}},
+ "product.template": {"name": {"required": true, "selection": null, "default": false}, "type": {"required": true, "selection": ["consu", "service", "combo"], "default": true}, "is_storable": {"required": false, "selection": null, "default": true}, "categ_id": {"required": true, "selection": null, "default": true}, "uom_id": {"required": true, "selection": null, "default": true}},
+ "mrp.workcenter": {"name": {"required": true, "selection": null, "default": false}},
+ "mrp.bom": {"product_tmpl_id": {"required": true, "selection": null, "default": false}, "product_qty": {"required": true, "selection": null, "default": true}},
+ "mrp.bom.line": {"bom_id": {"required": true, "selection": null, "default": false}, "product_id": {"required": true, "selection": null, "default": false}, "product_qty": {"required": true, "selection": null, "default": true}}
+}

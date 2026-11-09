@@ -4,7 +4,7 @@
 Розділи (заголовки обов'язкові):
 
 ## Тригери
-Які зміни що запускають (таблиця: шлях -> job). Гілки `main`, `upgrade/**`. Ручний `workflow_dispatch` і його inputs
+Які зміни що запускають (таблиця: шлях -> job; фільтрів `paths` у `on:` немає, обсяг визначає `resolve`). Гілки `main`, `upgrade/**`. Ручний `workflow_dispatch` і його inputs
 (`references/ci-contract.md`).
 
 ## Вибір версії Odoo
@@ -21,7 +21,7 @@
 Перелік умов, за яких `ci` зелений; N/A-job'и з причинами (`config-matrix`, `tours`, `self-test`).
 
 ## Дії людини
-Required status check `ci` для `main` (дата), секрети `ODOO_FLOW_*`, видалення пробних гілок `flow/C-03-probe-*`.
+Required status check `ci` для `main` (дата; без фільтрів `paths`, щоб чужі PR не зависали), Environment `flow-report` і секрети `ODOO_FLOW_*` на ньому (report-odoo лише push/dispatch), видалення пробних гілок `flow/C-03-probe-*`.
 
 ## Відкриті питання
-Формат підсумку run_tests.sh, параметр версії Odoo, формат REGISTRY.md, місце фікстур self-test.
+Формат підсумку run_tests.sh, параметр версії Odoo, формат REGISTRY.md, місце фікстур self-test, пошук dispatch-прогону за `run-name` (В-7), джерело списку стандартних модулів для `config-check`.

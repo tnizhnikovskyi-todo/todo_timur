@@ -1,0 +1,9 @@
+{"seed": 2026, "reference_date": "2026-01-15", "entities": {
+ "customer": [
+  {"id": "c1", "name": "Демо-Клієнт 01", "reg_code": "ДЕМО-0001", "email": "client01@example.com"},
+  {"id": "c2", "name": "Демо-Клієнт 02", "reg_code": "ДЕМО-0002", "email": "client02@example.com"}],
+ "order": [
+  {"id": "o1", "name": "Демо-Замовлення 001", "customer": "c1", "qty": 4, "unit_price": 3200, "total": 12800, "state": "нове", "due": "2026-01-29"},
+  {"id": "o2", "name": "Демо-Замовлення 002", "customer": "c2", "qty": 2, "unit_price": 5400, "total": 10800, "state": "у виробництві", "due": "2026-02-05"},
+  {"id": "o3", "name": "Демо-Замовлення 003", "customer": "c1", "qty": 9, "unit_price": 870, "total": 7830, "state": "готове", "due": "2026-01-20"}]
+}}

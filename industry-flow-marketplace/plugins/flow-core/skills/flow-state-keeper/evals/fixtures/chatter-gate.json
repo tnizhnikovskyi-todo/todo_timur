@@ -1,0 +1,147 @@
+{
+ "_note": "Фікстура: чаттер гейта A-07 і задач C-02, ростер, перелік агентів, ключі business-case.md",
+ "mail.message": [
+  {
+   "id": 501,
+   "model": "project.task",
+   "res_id": 398,
+   "message_type": "comment",
+   "author_id": [
+    21,
+    "PM"
+   ],
+   "date": "2026-11-08 09:00:00",
+   "body": "Затверджую, ціна 1200 $/міс",
+   "tracking_value_ids": []
+  },
+  {
+   "id": 502,
+   "model": "project.task",
+   "res_id": 398,
+   "message_type": "notification",
+   "author_id": [
+    22,
+    "Власник продукту"
+   ],
+   "date": "2026-11-08 09:05:00",
+   "body": "",
+   "tracking_value_ids": [
+    9001
+   ]
+  },
+  {
+   "id": 503,
+   "model": "project.task",
+   "res_id": 398,
+   "message_type": "notification",
+   "author_id": [
+    31,
+    "Агент центральний"
+   ],
+   "date": "2026-11-08 09:06:00",
+   "body": "",
+   "tracking_value_ids": [
+    9002
+   ]
+  },
+  {
+   "id": 412,
+   "model": "project.task",
+   "res_id": 77,
+   "message_type": "notification",
+   "author_id": [
+    22,
+    "x"
+   ],
+   "date": "2026-11-08 09:07:00",
+   "body": "c02:recorded 412;",
+   "tracking_value_ids": []
+  },
+  {
+   "id": 4127,
+   "model": "project.task",
+   "res_id": 77,
+   "message_type": "comment",
+   "author_id": [
+    31,
+    "x"
+   ],
+   "date": "2026-11-08 09:08:00",
+   "body": "run: ...",
+   "tracking_value_ids": []
+  }
+ ],
+ "mail.tracking.value": [
+  {
+   "id": 9001,
+   "mail_message_id": 502,
+   "field_id": [
+    7001,
+    "gate.decision"
+   ],
+   "old_value_char": "",
+   "new_value_char": "approve"
+  },
+  {
+   "id": 9002,
+   "mail_message_id": 503,
+   "field_id": [
+    7001,
+    "gate.decision"
+   ],
+   "old_value_char": "",
+   "new_value_char": "approve"
+  }
+ ],
+ "ir.model.fields": [
+  {
+   "id": 7001,
+   "model": "project.task",
+   "name": "x_gate_decision"
+  }
+ ],
+ "res.users(flow_agent_users)": [
+  {
+   "id": 8,
+   "partner_id": [
+    31,
+    "Агент центральний"
+   ]
+  }
+ ],
+ "roster": [
+  {
+   "user": "res.users/5",
+   "partner_id": [
+    22,
+    "Власник продукту"
+   ],
+   "role": "Власник продукту"
+  },
+  {
+   "user": "res.users/6",
+   "partner_id": [
+    21,
+    "PM"
+   ],
+   "role": "PM"
+  }
+ ],
+ "business-case.md keys": [
+  "ціна_пакета",
+  "собівартість_ai"
+ ],
+ "params": [
+  {
+   "name": "ціна пакета",
+   "kind": "економічний",
+   "key": "ціна_пакета"
+  },
+  {
+   "name": "поріг у продукт",
+   "kind": "операційний",
+   "consumer": "D-02",
+   "value": "3"
+  }
+ ]
+}

@@ -12,13 +12,13 @@ go_live: 2026-10-05
 connection_alias: prod-metrics-CL-01   # без хоста, бази й логіна
 active_internal_users: 14        # або null, якщо домен не підтверджений (тоді поле note)
 models:
-  - {model: td_order, source: td, in_tag: true, created: 120, changed: 340, status: ok}
-  - {model: sale.order, source: key, in_tag: true, created: 80, changed: 210, status: ok}
-  - {model: td_quality_check, source: td, in_tag: true, created: null, changed: null, status: absent}
-  - {model: td_report_log, source: td, in_tag: true, created: null, changed: null, status: error}
-errors: [{model: td_report_log, code: access_denied}]   # лише код з collect-recipes.md, без тексту проду
+  - {model: td.order, source: td, created: 120, changed: 340, status: ok}
+  - {model: sale.order, source: key, created: 80, changed: 210, status: ok}
+  - {model: td.quality.check, source: td, created: null, changed: null, status: absent}
+  - {model: td.report.log, source: td, created: null, changed: null, status: error}
+errors: [{model: td.report.log, code: access_denied}]   # лише код з collect-recipes.md, без тексту проду
 ```
-Правила: лише числа, коди й ідентифікатори; `created`/`changed` = `null` для `absent`/`error`; `source`: `td` | `key`.
+Правила: моделі, яких немає в тегу клієнта, у файлі не перелічуються (у звіті — «—»); `absent` — є в тегу, немає в проді; лише числа, коди й ідентифікатори; `created`/`changed` = `null` для `absent`/`error`; `source`: `td` (нова модель з `package/addons/`) | `key` (`key-models.yaml`).
 
 ## `package/metrics/<YYYY-MM>.md` (report)
 Обов'язкові заголовки (точні):

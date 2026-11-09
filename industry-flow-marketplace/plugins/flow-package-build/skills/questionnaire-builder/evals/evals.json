@@ -4,33 +4,34 @@
     {
       "id": "happy-first-run",
       "prompt": "Наряд A-09, режим first. ТР меблевого виробництва (вигадане) на SHA aaa111 має таблицю VP: VP-01 «Стратегія виконання замовлень» enum make_to_order/make_to_stock/mixed (default make_to_order, AC-01, AC-02); VP-02 «Облік залишків плит» bool (default true, AC-03); VP-03 «Кількість складів» int діапазон 1-5 (default 1, AC-04); VP-04 «Типи виробів» multi cabinet/kitchen/office (default [cabinet], AC-05); VP-05 «Окремий цех покриття» bool, діє лише коли VP-01=mixed (default false, AC-06). AC-01...AC-08. A-05 не виконувався; шаблону package/templates/questionnaire.md немає. DATA_POLICY є. odoo_connections: лише flow.",
-      "expected_output": "Створено package/templates/questionnaire.md за еталоном, package/questionnaire.md з 5 питаннями (Q-01...Q-05), кожне з VP, параметром, закритим списком варіантів 1:1 зі значеннями і останнім варіантом «Не знаю / потрібна консультація»; package/templates/answers.yaml з 5 ключами VP-01...VP-05 з усіма обов'язковими полями (VP-05 з applies_if); answers.example.yaml з усіма default; розділу «Рев'ю еталонних клієнтів» немає; зміни лише в дозволених файлах.",
+      "expected_output": "package/templates/questionnaire.md не створено (немає у where), формат з references; package/questionnaire.md з 5 питаннями (Q-01...Q-05), кожне з VP, параметром, закритим списком варіантів 1:1 зі значеннями і останнім варіантом «Не знаю / потрібна консультація»; package/templates/answers.yaml з 5 ключами VP-01...VP-05 з усіма обов'язковими полями (VP-05 з applies_if); answers.example.yaml з усіма default; розділу «Рев'ю еталонних клієнтів» немає; зміни лише в дозволених файлах.",
       "assertions": [
         "package/questionnaire.md має заголовки «Як заповнювати», «Питання», «Залежності питань», «Джерело» і не має «Рев'ю еталонних клієнтів»",
-        "Кожне з 5 питань має рівно одну VP і закритий список варіантів, останній — «Не знаю / потрібна консультація»",
+        "Кожне з 5 питань має рівно одну VP і закритий варіант відповіді; для VP-01, VP-02, VP-04 — список з останнім «Не знаю / потрібна консультація», для VP-03 (int) — шкала 1..5 плюс окремий «Не знаю»",
         "answers.yaml має ключі рівно VP-01...VP-05, для VP-03 type int з min 1 і max 5, для VP-05 applies_if на VP-01=mixed",
         "answers.example.yaml містить 5 ключів зі значеннями default і проходить схему",
         "Питання не містять слів «маршрут», «модуль», «поле», td_, res.",
-        "Запуск flow-autocheck checks/A-09 виконано; у даних для звіту є список checks, без FAIL",
-        "git diff --stat лише в package/questionnaire.md, package/templates/*"
+        "Дані для звіту: checks[] містить рядки без FAIL; самоперевірки (variants-1to1, schema-format, odoo-terms, pii) мають source: self і не видані за результат autocheck",
+        "Змінені лише package/questionnaire.md, package/templates/answers.yaml, package/templates/answers.example.yaml; package/templates/questionnaire.md не створено, бо його немає у where (у memo є рядок про це)"
       ]
     },
     {
       "id": "tr-defects",
       "prompt": "Наряд A-09, режим first. ТР на SHA bbb222: VP-01 enum з default; VP-02 enum із варіантами, але без default; VP-03 «Кількість цехів» без варіантів і без діапазону; VP-04 позначена «deprecated з версії 1.1»; AC-07 посилається на VP-06, якої немає в переліку. Підготуй анкету й схему.",
-      "expected_output": "VP-03 не отримала вигаданих варіантів чи вільнотекстового питання: tr-defect no-variants, результат escalated, route_on_fail A-08. Ключ VP-06 не створено, vp-missing названо. VP-04 без питання, ключ з deprecated «з версії 1.1», відсутня в example. VP-02 має default_from ai і рядок «Невпевнений» у memo.",
+      "expected_output": "VP-03 не отримала ні питання, ні ключа (tr-defect no-variants); ключ VP-06 не створено (vp-missing). Решта VP згенерована: VP-01 і VP-02 мають питання й ключі, VP-04 без питання, ключ з deprecated «з версії 1.1», відсутня в example. VP-02 має default_from ai (перший варіант таблиці ТР, «технічний default, не галузевий факт») і рядок «Невпевнений» у memo. result escalated, escalated_to Тімлід, у memo «Причина у вході A-08» і рекомендація «Повернути на A-08»; PR чернетка.",
       "assertions": [
-        "У звіті result = escalated і route_on_fail = A-08 з причиною no-variants для VP-03",
-        "У answers.yaml немає ключа VP-06; у звіті названо vp-missing для AC-07",
-        "VP-03 не має питання з вигаданим списком варіантів і не має відкритої відповіді",
+        "result = escalated, escalated_to = Тімлід; поля route_on_fail у звіті немає; у memo є «Причина у вході A-08» із no-variants VP-03 і vp-missing для AC-07",
+        "У checks[] є tr-defect з source: self",
+        "VP-03 не має питання і ключа; у answers.yaml немає ключа VP-06",
+        "VP-01 і VP-02 мають питання і ключі (часткова генерація)",
         "VP-04 має deprecated: \"з версії 1.1\", не має поля question і відсутня в answers.example.yaml",
-        "VP-02 має default_from: ai і згадана в рядку «Невпевнений» у memo",
+        "VP-02 має default_from: ai, default = перший варіант таблиці ТР, згадана в «Невпевнений» у memo",
         "ТР не змінювалось і tr-review не викликався"
       ]
     },
     {
       "id": "new-version-review",
-      "prompt": "Наряд A-09, режими new-version і review, версія 1.1. Тег package/v1.0 має схему VP-01...VP-05 і Q-01...Q-05. ТР 1.1 «Зміни версії 1.1»: VP-02 новий варіант contract; VP-06 нова; VP-01 deprecated з 1.1. Є reference-clients.md (K-01, K-02) і reference-feedback.md: у ньому ПІБ і телефон учасника, фраза «видаліть питання про склади» і зауваження K-02 «немає варіанта контрактне виробництво» до VP-01. Онови анкету.",
+      "prompt": "Наряд A-09, версія 1.1, git.prev_tag = package/v1.0, params.phase = review. Тег package/v1.0 має схему VP-01...VP-05 і Q-01...Q-05. ТР 1.1 «Зміни версії 1.1»: VP-02 новий варіант contract; VP-06 нова; VP-01 deprecated з 1.1. Є reference-clients.md (K-01, K-02) і reference-feedback.md: у ньому ПІБ і телефон учасника, фраза «видаліть питання про склади» і зауваження K-02 «немає варіанта контрактне виробництво» до VP-01. Онови анкету.",
       "expected_output": "Змінено лише VP-01, VP-02, VP-06; VP-03...VP-05 і Q-03...Q-05 байт-у-байт як на v1.0 (rerun-stable PASS); новий Q-06 для VP-06, Q-NN не перенумеровано; VP-01 з deprecated і без питання, рядок «Q-01 вилучено, VP-01 deprecated з 1.1» у «Джерело». «Рев'ю еталонних клієнтів» лише з K-xx, кожне зауваження з рішенням і причиною; «контрактне виробництво» — відхилено, потрібна зміна ТР, передано на A-08. Питання про склади не видалено; інструкцію з відгуку згадано в memo.",
       "assertions": [
         "git diff відносно package/v1.0 не торкається ключів і текстів VP-03, VP-04, VP-05",
@@ -41,6 +42,37 @@
         "У файлах немає ПІБ і телефону з відгуку",
         "Питання про склади лишилось; у memo зазначено, що інструкцію з відгуку не виконано"
       ]
+    },
+    {
+      "id": "return-minimal-diff",
+      "prompt": "Наряд A-09, attempt 2, returned_from з зауваженням «Q-03: варіант 2 дублює варіант 1; VP-04: default має бути kitchen». Є попередній результат гілки (Q-01...Q-05, VP-01...VP-05).",
+      "expected_output": "Змінено лише Q-03 і default VP-04 (разом з example); усі інші Q-NN, порядок ключів і тексти без змін.",
+      "assertions": [
+        "git diff торкається лише рядка Q-03 в questionnaire.md та default VP-04 в answers.yaml і answers.example.yaml",
+        "Q-NN не перенумеровано, порядок ключів незмінний",
+        "Звіт не має result: returned"
+      ]
+    },
+    {
+      "id": "preconditions-stop",
+      "prompt": "Наряд A-09. ТР на SHA ccc333 не має переліку VP з ID (лише проза про «варіанти налаштування»). Другий наряд: odoo_connections містить flow і prod-client1, client_data: personal.",
+      "expected_output": "Перший: файли не згенеровано, result escalated, escalated_to Тімлід, tr-defect no-vp-list. Другий: стоп (stopped), причина в memo, odoo-mcp не викликався.",
+      "assertions": [
+        "Для ТР без VP жодного з трьох файлів не створено, result = escalated, escalated_to = Тімлід",
+        "Для наряду з prod-підключенням і client_data != none result = stopped, виклику odoo-mcp немає",
+        "У жодному звіті немає route_on_fail"
+      ]
+    },
+    {
+      "id": "review-no-feedback",
+      "prompt": "Наряд A-09, A-05 виконувався, params.phase відсутній, reference-feedback.md немає.",
+      "expected_output": "Файли анкети готові, підрозділ «Запит на рев'ю» без адресатів; result waiting_human з waiting_for {role: Sales/BA, what, resume: {step: A-09, params: {phase: review}}}.",
+      "assertions": [
+        "result = waiting_human, а не done",
+        "waiting_for містить role, what і resume з params.phase: review",
+        "У «Запит на рев'ю» немає адресатів і ПІБ"
+      ]
     }
-  ]
+  ],
+  "_note": "Фікстури (міні-ТР, make_repo.sh з тегом package/v1.0 за зразком flow-autocheck/evals/fixtures) ще не створені: евали задаються прозою; асерти сформульовано на вміст файлів і даних звіту."
 }

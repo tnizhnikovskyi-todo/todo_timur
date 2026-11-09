@@ -1,13 +1,33 @@
 #!/usr/bin/env python3
 """Збирання контексту входів кроку за SHA з фільтром DATA_POLICY (flow-step-runner, крок 6).
 
-Запуск: python3 -I build_context.py --repo <тека> --inputs inputs.json --policy policy.md --out <тека> --budget <токенів>
-inputs.json: [{"name","from","path","sha"}]. Лише stdlib. Код виходу: 0 ок; 2 нема SHA/файлу; 3 політика не розібрана;
-4 є заборонений вхід; 5 понад бюджет. У stdout — JSON-маніфест (шляхи, класи, токени, data_sources), зміст не друкується.
+Запуск:
+  python3 -I build_context.py --repo <тека> --inputs inputs.json --policy policy.md --out <тека> --budget <токенів>
+        [--sections <name>=<regex заголовків>]...   звуження: лишити лише розділи, заголовок яких збігається з regex
+        [--toc]                                     лише оглавлення (зміст не пишеться), див. нижче
+        [--chars-per-token 4.0]                     дільник для латиниці; для кирилиці береться ~2.2 автоматично
+inputs.json: [{"name","from","path","sha"}]. Лише stdlib.
+Код виходу: 0 ок; 2 нема SHA/файлу; 3 політика не розібрана; 4 вхід заборонений політикою або клас «знеособлено» без
+ознаки знеособленої копії; 5 понад бюджет; 6 `--sections` не знайшов жодного розділу у вході. У stdout — JSON-маніфест
+(шляхи, класи, токени, data_sources); зміст входів не друкується. При коді 0 маніфест пишеться також у <out>/manifest.json;
+при коді 5 файли в --out видаляються. Рядок </untrusted> у тексті входу замінюється на екранований.
+
 Припущення (Відкрите питання, узгодити з data-policy-template.md): у розділі «Дозволено передавати в AI» є таблиця
-`| шлях-glob | дозволено|знеособлено|заборонено |`; перший збіг рядка з гори вниз виграє; немає збігу -> заборонено.
+`| шлях-glob | дозволено|знеособлено|заборонено |`; перший збіг рядка згори вниз виграє; немає збігу -> заборонено.
+Знеособлена копія (клас «знеособлено»): шлях містить сегмент `anon/` (напр. `clients/<id>/anon/…`) АБО в перших 15 рядках
+файлу є маркер `anonymized: true` / `знеособлено: так`. Немає ознаки -> код 4. Фактичне знеособлення перевіряє C-05
+(`pii-patterns.md`); скрипт перевіряє лише наявність ознаки, а не якість.
+
+Недовіреність: вхід `from: клієнт`, шлях у `clients/`, назва містить transcript/транскрипт/letters/листи/email/mail/meeting/зустріч,
+а також будь-який вхід класу «знеособлено» -> обгортка <untrusted>.
+`--toc`: JSON з розділами кожного входу {title, level, tokens}. Для недовірених входів тексти заголовків НЕ друкуються
+(лише кількість і токени) — заголовок документа клієнта теж дані клієнта; звужувати їх треба regex, складеним із `done`/шаблону.
 """
-import argparse, fnmatch, json, os, re, subprocess, sys
+import argparse, fnmatch, json, math, os, re, shutil, subprocess, sys
+
+HEAD = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+UNTRUSTED_NAME = re.compile(r"transcript|транскрипт|letters|листи|лист_|email|mail|meeting|зустріч", re.I)
+ANON_MARK = re.compile(r"anonymized\s*:\s*true|знеособлено\s*:\s*(так|true)", re.I)
 
 def sh(repo, *a):
     return subprocess.run(["git", "-C", repo, *a], capture_output=True)
@@ -28,17 +48,53 @@ def klass(rules, path):
             return k
     return "заборонено"
 
+def tokens(text, latin_cpt):
+    """Кирилиця ~2.2 символа на токен, латиниця ~latin_cpt; +10% запасу."""
+    if not text:
+        return 0
+    cyr = sum(1 for ch in text if "Ѐ" <= ch <= "ӿ") / len(text)
+    cpt = latin_cpt * (1 - cyr) + 2.2 * cyr
+    return math.ceil(len(text) / cpt * 1.1)
+
+def sections(text):
+    """[(level, title, start_line, end_line)] за markdown-заголовками; розділ триває до заголовка того ж або вищого рівня."""
+    lines = text.splitlines(keepends=True)
+    heads = [(i, len(m.group(1)), m.group(2)) for i, l in enumerate(lines) if (m := HEAD.match(l))]
+    res = []
+    for n, (i, lvl, title) in enumerate(heads):
+        end = len(lines)
+        for j, l2, _ in heads[n + 1:]:
+            if l2 <= lvl:
+                end = j
+                break
+        res.append((lvl, title, i, end))
+    return lines, res
+
+def narrow(text, regex):
+    lines, secs = sections(text)
+    keep = [s for s in secs if re.search(regex, s[1], re.I)]
+    picked, last_end = [], -1
+    for lvl, title, a, b in keep:       # вкладені розділи не дублюємо
+        if a >= last_end:
+            picked.append("".join(lines[a:b]))
+            last_end = b
+    return "\n".join(picked) if picked else None
+
 def main():
     p = argparse.ArgumentParser()
     for k in ("repo", "inputs", "policy", "out"):
         p.add_argument("--" + k, required=True)
     p.add_argument("--budget", type=int, required=True)
+    p.add_argument("--sections", action="append", default=[], metavar="NAME=REGEX")
+    p.add_argument("--toc", action="store_true")
+    p.add_argument("--chars-per-token", type=float, default=4.0)
     a = p.parse_args()
+    narrowing = dict(s.split("=", 1) for s in a.sections)
     rules = load_policy(a.policy)
     if not rules:
         print(json.dumps({"error": "DATA_POLICY: таблицю фільтра не розібрано"}), file=sys.stderr); return 3
     os.makedirs(a.out, exist_ok=True)
-    items, total = [], 0
+    items, total, toc = [], 0, []
     for i in json.load(open(a.inputs, encoding="utf-8")):
         sha, path = i.get("sha"), i["path"]
         if not sha or sh(a.repo, "cat-file", "-e", sha).returncode:
@@ -50,17 +106,44 @@ def main():
         if k == "заборонено":
             print(json.dumps({"error": "вхід заборонений політикою", "input": i["name"]}), file=sys.stderr); return 4
         text = r.stdout.decode("utf-8", "replace")
-        client = i.get("from") == "клієнт" or path.startswith("clients/") or "transcript" in path.lower()
+        if k == "знеособлено":
+            head = "\n".join(text.splitlines()[:15])
+            if not ("/anon/" in "/" + path or ANON_MARK.search(head)):
+                print(json.dumps({"error": "клас «знеособлено» без ознаки знеособленої копії (anon/ або маркер у шапці)",
+                                  "input": i["name"]}), file=sys.stderr); return 4
+        client = (i.get("from") in ("клієнт", "client") or path.startswith("clients/")
+                  or bool(UNTRUSTED_NAME.search(path)) or k == "знеособлено")
+        if a.toc:
+            _, secs = sections(text)
+            lines = text.splitlines(keepends=True)
+            toc.append({"name": i["name"], "untrusted": client, "class": k, "sections_count": len(secs),
+                        "tokens": tokens(text, a.chars_per_token),
+                        "sections": None if client else [{"title": t, "level": l,
+                                    "tokens": tokens("".join(lines[s:e]), a.chars_per_token)} for l, t, s, e in secs]})
+            continue
+        if i["name"] in narrowing:
+            text = narrow(text, narrowing[i["name"]])
+            if text is None:
+                print(json.dumps({"error": "--sections: жодного розділу не знайдено", "input": i["name"]}), file=sys.stderr); return 6
         if client:
+            text = re.sub(r"</untrusted\s*>", "&lt;/untrusted&gt;", text, flags=re.I)  # не дати закрити обгортку зсередини
             text = f'<untrusted source="repo:{path}@{sha}">\n{text}\n</untrusted>\n'
         dst = os.path.join(a.out, re.sub(r"[^\w.-]", "_", f"{i['name']}@{sha[:8]}"))
         open(dst, "w", encoding="utf-8").write(text)
-        tok = len(text) // 4
+        tok = tokens(text, a.chars_per_token)
         total += tok
         items.append({"name": i["name"], "file": dst, "class": k, "untrusted": client, "tokens": tok,
-                      "data_source": f"repo:{path}@{sha}"})
+                      "narrowed": i["name"] in narrowing, "data_source": f"repo:{path}@{sha}"})
+    if a.toc:
+        print(json.dumps({"toc": toc}, ensure_ascii=False, indent=1)); return 0
     out = {"total_tokens": total, "budget": a.budget, "items": items}
-    print(json.dumps(out, ensure_ascii=False, indent=1))
-    return 5 if total > a.budget else 0
+    if total > a.budget:  # код 5: файли не лишати; маніфест — лише в stdout
+        for f in os.listdir(a.out):
+            fp = os.path.join(a.out, f)
+            shutil.rmtree(fp) if os.path.isdir(fp) else os.remove(fp)
+        print(json.dumps(out, ensure_ascii=False, indent=1)); return 5
+    with open(os.path.join(a.out, "manifest.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print(json.dumps(out, ensure_ascii=False, indent=1)); return 0
 
 sys.exit(main())

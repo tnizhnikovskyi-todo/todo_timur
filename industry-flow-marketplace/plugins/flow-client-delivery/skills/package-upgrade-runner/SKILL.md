@@ -1,21 +1,16 @@
 ---
 name: package-upgrade-runner
 description: >
-  Запускай на кроці B-11 флоу галузевого пакета, коли надійшло повідомлення «Нова версія пакета»
-  (тег A-18, патч-тег A-19) і треба оновити одного клієнта. Фаза 0: нові й змінені VP-xx з розділу
-  CHANGELOG «Зміни анкети» -> чернетка додатка до SOW (через package-sow-builder) і перелік кандидатів
-  «Зняті відхилення й кастом» для рішення PM з Клієнтом. Фаза 1: перевірка «тег-кандидат», ручний запуск CI
-  з тегом-кандидатом для пакета й доробок, odoo19-lint доробок, стан модулів тестової бази через odoo-mcp,
-  чернетка звірки конфігу, план відкату на тесті, передача в B-12. Хвилями по одному клієнту, пілотний першим.
+  Запускай на кроці B-11 флоу галузевого пакета, коли надійшло повідомлення «Нова версія пакета» (тег A-18,
+  патч-тег A-19) і треба оновити одного клієнта. Фаза 0: нові й змінені VP-xx з CHANGELOG -> чернетка додатка до SOW
+  і кандидати «Зняті відхилення й кастом» для рішення PM. Фаза 1: перевірка «тег-кандидат», CI з тегом-кандидатом,
+  odoo19-lint доробок, стан модулів тестової бази через odoo-mcp, план відкату на тесті, передача в B-12.
   Тригерні фрази — "онови пакет у клієнта", "B-11", "нова версія пакета для [клієнт]", "прогони клієнта на
-  тегу-кандидаті", "склади upgrade-log", "що зняти після оновлення", "обнови пакет у клиента",
-  "прогони CI на новом теге", "сверь доработки с новой версией". НЕ використовуй для поставки в прод (B-12 —
-  людина, скіла немає), для міграції клієнта на нову мажорну Odoo (окремий сценарій не спроєктовано; пакет на
-  нову Odoo — flow-package-evolution:odoo-version-migrator), для застосування чи виправлення конфігу
-  (flow-client-delivery:runbook-executor), для тексту додатка до SOW (flow-client-delivery:package-sow-builder),
-  для випуску тегу (flow-package-build:package-release-builder), для налаштування CI
-  (flow-core:ci-pipeline-builder), для виправлення доробок (B-05, odoo19-mvp-build:code-dev), для тріажу
-  звернень (flow-client-delivery:support-desk). Результат — clients/<клієнт>/upgrade-log.md.
+  тегу-кандидаті", "склади upgrade-log", "обнови пакет у клиента". НЕ використовуй для поставки в прод (B-12,
+  людина), мажорної Odoo (flow-package-evolution:odoo-version-migrator), застосування конфігу
+  (flow-client-delivery:runbook-executor), тексту додатка до SOW (flow-client-delivery:package-sow-builder),
+  виправлення доробок (B-05, odoo19-mvp-build:code-dev). Інші межі — таблиця «Що чиє». Результат —
+  clients/<клієнт>/upgrade-log.md.
 ---
 
 # Package Upgrade Runner — оновлення пакета в клієнта (B-11)
@@ -29,12 +24,16 @@ description: >
 Фаза 2 (прод) — це B-12, скіл її не торкається.
 
 ## Наряд і звіт
-Вхід — наряд задачі Odoo (поля — `flow-core/references/naryad-format.md`), читає `flow-core:flow-step-runner`.
-Результат — файли за `where` наряду в гілці кроку. Звіт і PR пише `flow-step-runner`, цей скіл його не пише:
-лише передає `checks` (U-01…U-12), `memo`, `data_sources` і блок `upgrade: {from_tag, to_tag, phase, ci_run,
-pilot, returned_to}` (формат — `flow-core/references/report-format.md`). Усі виклики `odoo-mcp` — з `connection_id`
-з наряду (правила — `flow-core/references/data-and-connections.md`).
-Ключ наряду цього скіла: `mode: phase0|phase1` (Відкрите питання В-1).
+Вхід — наряд задачі Odoo (формат і блок `params` — `flow-core/references/naryad-format.md`; читання —
+`flow-core/references/odoo-bridge.md` §3), розбирає `flow-core:flow-step-runner`. Ключі цього скіла:
+`params.phase: 0|1` (інші значення або відсутність -> `escalated` Тімліду; старий верхній `mode: phase0|phase1`
+читати як `params.phase` 0/1), `params.pilot: true|false`, `params.resume` після `waiting_human`,
+`git.prev_tag` (поточний тег клієнта), `git.head`, `date`. Результат — файли за `where` наряду в гілці кроку.
+Звіт і PR пише `flow-step-runner`: скіл передає `checks` (U-01…U-12), `memo`, `data_sources`, `phase`, `partial`
+і блок `upgrade: {from_tag, to_tag, phase, ci_run, pilot, returned_to}` (`flow-core/references/report-format.md`).
+Результат `waiting_human` — лише з `waiting_for: {role, what, resume: {step: B-11, params: {phase: N}}}`; `attempt`
+він не витрачає. Усі виклики `odoo-mcp` — з `connection_id` з наряду (`flow-core/references/data-and-connections.md`,
+`odoo-bridge.md` §1).
 
 ## Інструменти та доступи
 - **Читання:** `Read`/`Grep`/`Bash` (git) для `clients/<к>/`, `package/` на тегу (`git show <тег>:<шлях>`),
@@ -42,11 +41,12 @@ pilot, returned_to}` (формат — `flow-core/references/report-format.md`).
 - **Запис:** лише `clients/<к>/upgrade-log.md`. Не пише: `answers.yaml`, `config-log.md`, `addons/`, `sow.md`
   (його пише `package-sow-builder`), `delivery-log.md`, поля проєкту Odoo («тег-кандидат», тег у проді), колонку
   рішень D-02.
-- **github (MCP):** `get_tag`, `actions_run_trigger` (лише workflow C-03), `actions_get`, `get_job_logs`
+- **github (MCP):** `get_tag`, `actions_list` (лише пошук прогону цього кроку), `actions_run_trigger` (лише workflow C-03), `actions_get`, `get_job_logs`
   (лише хвіст/grep `FAIL|ERROR`). Без merge, без створення тегів.
-- **odoo-mcp:** лише `odoo_search_read` і `odoo_search_count`-подібне читання; alias `flow` (поля проєкту:
-  тег, кандидат, пілот) і `test-<к>` (версія 1) або `anon-<к>` (версія 2). Кожен виклик з явним `connection_id`,
-  після кожного звірити `connection.db`. `odoo_write/create/execute` не викликати. Деталі — `references/module-state-check.md`.
+- **odoo-mcp:** лише `odoo_search_read`; alias `flow` (поля проєкту через логічні імена `project.*` з
+  `flow/ODOO_SCHEMA.md`, задачі B-11 пілота) і `test-<к>` (версія 1; `anon-<к>` — версія 2, див. В-9). Кожен виклик з
+  явним `connection_id`, після кожного звірити `connection.db`. `odoo_write/create/execute` не викликати, лічильників
+  (`search_count`) цей скіл не знімає. Деталі — `references/module-state-check.md`.
 - **Дані:** `client_data: personal`, `executor: central`; інший виконавець -> стоп. Лише тестова база або знеособлена
   копія; прод заборонено. Правила — `package/DATA_POLICY.md` («Класи доступу до баз Odoo (allow-list)»,
   «Ідентифікатор клієнта в репозиторії»).
@@ -57,30 +57,45 @@ pilot, returned_to}` (формат — `flow-core/references/report-format.md`).
 | Питання | Власник |
 |---|---|
 | Текст додатка «Відповіді анкети (доповнення версії X.Y)» у `sow.md` | `package-sow-builder` (режим «додаток», `addendum_source: changelog`); тут лише передача переліку VP і читання наявності підпису |
-| Звірка конфігу з базою | `runbook-executor`, режим «звірка» (read-only) -> `config-drift.md`; виправлення — його режим «виправлення» після повернення B-11 -> B-04 |
+| Звірка конфігу з базою (лише за `params.reconcile: true`) | `runbook-executor`, режим «звірка» (read-only) -> `config-drift.md`; виправлення — його режим «виправлення» після повернення B-11 -> B-04 |
 | `ci.yml` і контракт dispatch | `flow-core:ci-pipeline-builder` / C-03; тут лише запуск і читання результату |
 | Тег і CHANGELOG | `flow-package-build:package-release-builder` (A-18); тут лише читання на тегу |
 | Рядки «Запити в D-02» | `support-desk`, `hypercare-tracker`, `package-fit-gap`; тут лише читання |
 | Гейти pr-review / config-review, `boost:odoo19-lint` | самі гейти; вердикт скіл не ставить |
 
-## Крок 0. Наряд і доступи
-Прочитати наряд. `executor` не `central` при `client_data: personal` -> стоп. `mode` відсутній або неоднозначний ->
-`escalated` Тімліду. `list_odoo_connections`: allow-list наряду має містити лише `flow` і `test-<к>` або `anon-<к>`;
-будь-який інший alias (прод, інший клієнт, demo) -> стоп «недозволене підключення». Check U-01.
+## Крок 0. Наряд, доступи, джерела
+Прочитати наряд. `executor` не `central` при `client_data: personal` -> стоп. `params.phase` відсутня або не 0/1 ->
+`escalated`. `list_odoo_connections`: allow-list наряду має містити лише `flow` і `test-<к>` (або `anon-<к>`, В-9);
+будь-який інший alias (прод, інший клієнт, demo) -> U-01 FAIL «недозволене підключення». Клас бази, якого немає в
+«Класи доступу до баз Odoo» `package/DATA_POLICY.md`, -> стоп «клас бази не визначено».
+Джерела полів проєкту: `flow/ODOO_SCHEMA.md` на SHA наряду (логічні імена `project.package_tag`, `project.candidate_tag`,
+`project.pilot`, `project.test_tag`, `task.step`, `task.scope_id`, `stage.done` — `odoo-bridge.md` §2); немає файлу або
+імені `project.*` -> до C-00 читати відповідну колонку `clients/REGISTRY.md` на SHA наряду (автоекспорт, формат —
+`flow-core/references/flow-state.md`, лише читання) з позначкою в `memo`; `escalated` Тімліду «визначає C-00: <ім'я>» лише
+коли в REGISTRY `н/д` або бракує `task.*`/`stage.*` для пошуку задачі пілота (для них запасного шляху немає).
+**U-01 FAIL -> нових викликів odoo-mcp не робити.** Зібрати лише перевірки без odoo-mcp (тег з наряду й `get_tag`,
+рядок `REGISTRY.md` на SHA наряду, зокрема `candidate_tag`: U-02 за REGISTRY з позначкою «не за полем Odoo»), решту
+позначити «не перевірено (стоп на U-01)» і завершити `escalated` Тімліду.
 
-## Крок 1. Тег і хвиля
-1. Тег з `inputs` (from A-18) існує (`get_tag`). Тег виду `vX.Y-odoo<N>`, де N не збігається з версією Odoo клієнта ->
-   стоп, `escalated` Тімліду й Власнику продукту: «міграція клієнта на нову мажорну Odoo: окремий сценарій не спроєктовано».
-2. Поточний тег клієнта в полях проєкту (`flow`) і в `clients/REGISTRY.md` на SHA наряду збігаються, інакше стоп
-   «реєстр розійшовся». Новий тег старший за поточний (semver), інакше стоп.
-3. Клієнт не пілотний -> у пілотного клієнта цього пакета B-11 на цей тег має бути «Готово» (APPROVE фази 1), інакше
-   `returned` з причиною «чекає пілот». Звідки береться ознака «пілот» — Відкрите питання В-3.
+## Крок 1. Тег і хвиля (фази 0 і 1; у фазі 1 повторити, пілот міг відкотитися)
+1. Тег з `inputs` (from A-18) існує (`get_tag`; формат — `flow-core/references/id-patterns.md`: `package/vX.Y`; `vX.Y` у цьому скілі — скорочення цього тегу, суфікс `-odoo<N>` у id-patterns не заданий, див. В-9). Тег виду `vX.Y-odoo<N>`,
+   де N не збігається з версією Odoo клієнта -> стоп, `escalated` Тімліду й Власнику продукту: «міграція клієнта на нову
+   мажорну Odoo: окремий сценарій не спроєктовано».
+2. Поточний тег клієнта: `project.package_tag` (`flow`), `git.prev_tag` наряду й `clients/REGISTRY.md` на SHA наряду
+   збігаються, інакше стоп «реєстр розійшовся». Новий тег старший за поточний (semver), інакше стоп.
+3. `params.pilot` не true -> пілотний клієнт пакета (`project.pilot` = true) має мати задачу B-11 на цей тег у стадії
+   `stage.done`: `odoo_search_read` `project.task` у `flow`, `task.step = B-11`, `task.scope_id = <пілот>`, стадія
+   `stage.done`, тег у YAML-блоці `description` (розбір — `odoo-bridge.md` §3). Немає -> `waiting_human`
+   (role PM, what «дочекатися B-11 пілота на <тег>», resume цього ж кроку).
 
 ## Крок 2 (фаза 0). Зміни анкети
 Зібрати «Зміни анкети», «Несумісні зміни», «Міграція з попереднього тегу» з **усіх** розділів CHANGELOG між поточним і
 новим тегом (стрибок через версії — накопичувально, не лише останній розділ). Порівняти ключі VP-xx зі `answers.yaml`:
-нові, змінені допустимі значення, видалені. Передати перелік `package-sow-builder` (режим «додаток», `changelog`);
-значення за замовчуванням з CHANGELOG — лише як «потребує підтвердження Клієнтом», не як відповідь.
+нові, змінені допустимі значення, видалені. Викликати `flow-client-delivery:package-sow-builder` у цьому ж запуску й гілці: `params: {mode: addendum,
+addendum_source: changelog}`, `inputs` = перелік VP (нові/змінені/видалені; значення за замовчуванням з CHANGELOG — лише
+як «потребує підтвердження Клієнтом», не як відповідь) із SHA, `where: clients/<к>/sow.md`, `odoo_connections` і `attempt`
+наряду. Результат лишається в гілці кроку. Немає `sow.md` або підписаного основного SOW -> `returned` PM
+(`returned_to: B-03`).
 
 ## Крок 3 (фаза 0). Кандидати на зняття
 За `references/deviation-reconcile.md`: рядки `config-log.md` зі статусом «відхилення»; рядки «Запити в D-02» чотирьох
@@ -92,32 +107,41 @@ pilot, returned_to}` (формат — `flow-core/references/report-format.md`).
 ## Крок 4 (фаза 0). Здача
 `upgrade-log.md` за `references/upgrade-log-template.md` з розділами фази 0. У `memo`: скільки VP і кандидатів, що PM має
 вирішити з Клієнтом, наступні дії (підпис додатка -> `answers.yaml` -> рішення в колонці -> «Затвердити»). Результат
-іде на рішення PM; фазу 1 ставить оркестратор після «Затвердити» і запису «тег-кандидат» Тімлідом (В-1).
+`done` іде на рішення PM; фазу 1 ставить оркестратор після «Затвердити» (`params.phase: 1`).
 
 ## Крок 5 (фаза 1). Передумови
 Кожна — check; порушення -> `returned`/`escalated`, **CI не запускати**:
+- Тімлід закомітив «Лог установки» в гілку фази 1 і записав «тег-кандидат» (В-1); не зроблено -> `waiting_human` (Тімлід);
 - додаток «доповнення версії X.Y» у `sow.md` має підпис (ім'я або роль + дата) і покриває всі VP з кроку 2;
 - `answers.yaml` містить кожен такий VP і валідний за схемою нового тегу (`references/answers-validate.md`);
 - кожен рядок «Зняті відхилення й кастом» має рішення з дозволеного списку;
 - «тег-кандидат» у полях проєкту = тег A-18 = рядок `REGISTRY.md` на SHA наряду (U-02);
-- розділ «Лог установки» заповнено Тімлідом; AI його не створює й не доповнює (U-07).
+- розділ «Лог установки» заповнено Тімлідом; AI його не створює й не доповнює (U-07). Не заповнено -> `waiting_human`.
+Дія людини (підпис, `answers.yaml`, рішення, лог, кандидат) не виконана -> `waiting_human` з `waiting_for.role` за RACI
+(PM або Тімлід); розбіжність тегів/невалідний файл -> `escalated`/`returned` з причиною.
 
 ## Крок 6 (фаза 1). CI
-Через `actions_run_trigger` запустити workflow C-03 з `package_tag` = тег-кандидат, `client` = <к>, `sha` = HEAD гілки
-кроку, `odoo_task` = id задачі (імена inputs — за `references/ci-dispatch.md`, В-2). Чекати через `actions_get` у межах
-таймауту; логи — лише хвіст або grep `FAIL|ERROR`. Зелено = усі модулі пакета **і** кожен `td_<к>_*` мають pass;
-skipped або відсутній job клієнта = FAIL. CI не завершився за ліміт -> U-05 = PENDING з run id (В-4). Далі
-`boost:odoo19-lint` по `clients/<к>/addons/`.
+Через `actions_run_trigger` запустити workflow C-03: `package_tag` = тег-кандидат, `client` = <к>, `odoo_version` = 19
+(або з суфікса `-odoo<N>`), `sha` = `git.head`, `odoo_task` = id задачі (контракт —
+`flow-core/skills/ci-pipeline-builder/references/ci-contract.md`; витяг і пошук прогону — `references/ci-dispatch.md`).
+Чекати через `actions_get` у межах таймауту; логи — лише хвіст або grep `FAIL|ERROR`. Зелено = усі модулі пакета **і**
+кожен `td_<к>_*` мають pass; skipped або відсутній job клієнта = FAIL. CI не завершився за ліміт -> U-05 = PENDING з run id,
+результат `waiting_human` (`waiting_for`: role Тімлід, what «дочекатися CI <run id>», resume цього ж кроку з `ci_run`),
+`attempt` не витрачається; «Передача в B-12» не заповнювати й не здавати як «Готово», доки U-05 не PASS/FAIL (В-4).
+Далі `boost:odoo19-lint` по `clients/<к>/addons/`.
 
 ## Крок 7 (фаза 1). Стан модулів
 `odoo_search_read` по `ir.module.module` з allow-list полів (`references/module-state-check.md`): модулі «Склад пакета»
-нового тегу + `td_<к>_*`. Очікувано `state = installed`, `installed_version` = версія з маніфесту на тегу. Читання
-бізнес-моделей заборонено; лічильники — лише `search_count` з allow-list.
+нового тегу + `td_<к>_*`. Очікувано `state = installed` і **`latest_version`** (версія, збережена в БД, тобто реально
+встановлена) = версія з маніфесту на тегу. `installed_version` в Odoo — версія з маніфесту на диску: `installed_version !=
+latest_version` означає «код розгорнуто, оновлення модулів (-u) не виконано» -> FAIL. Читання бізнес-моделей заборонено.
 
-## Крок 8 (фаза 1). Чернетка звірки конфігу
-Викликати `runbook-executor` у режимі «звірка» з тегом-кандидатом; `config-drift.md` перенести в розділ «Чернетка звірки
-(метадані)» з позначкою «чернетка, не перелік втраченого конфігу». Розділ «Перелік втраченого конфігу» лишається порожнім
-з позначкою «склав: Тімлід» (U-07).
+## Крок 8 (фаза 1, умовний). Чернетка звірки конфігу
+Виконувати лише за явним ключем `params.reconcile: true`, який ставить людина після рішення В-7 (звірка читає
+`ir.config_parameter`, групи й конфіг-моделі — ширше за dataRule картки B-11). Ключа немає (за замовчуванням) -> крок
+пропустити: у «Чернетка звірки (метадані)» рядок «не виконано: очікує рішення В-7», U-08/U-09 для дрейфу — SKIP (не PASS).
+Ключ є -> викликати `runbook-executor` у режимі «звірка» з тегом-кандидатом; `config-drift.md` перенести в розділ з
+позначкою «чернетка, не перелік втраченого конфігу». «Перелік втраченого конфігу» лишається порожнім, «склав: Тімлід» (U-07).
 
 ## Крок 9 (фаза 1). Розбір і маршрути
 | Знахідка | Куди |
@@ -128,35 +152,38 @@ skipped або відсутній job клієнта = FAIL. CI не завер�
 Розділ «Відкат» (на тесті, `references/rollback.md`) заповнити, якщо є зламані доробки або дрейф; для B-12 — лише опис, не дії.
 
 ## Крок 10 (фаза 1). Гейти
-`git log <SHA останнього APPROVE B-04/B-11>..HEAD -- clients/<к>/addons/` непорожній -> потрібен pr-review (перелік PR B-05).
-Зміни `config-log.md` у цьому оновленні -> потрібен config-review. Інакше «не застосовно» + команда й порожній вивід як
-доказ (U-10).
+База порівняння — «SHA останнього APPROVE B-04/B-11» з рядка клієнта в `clients/REGISTRY.md` (`flow-state.md`); немає —
+merge-коміт останнього PR B-04/B-05: `git log --merges --grep 'B-0[45]' -n1 --format=%H -- clients/<к>/`. Джерела немає ->
+`escalated` Тімліду «джерело SHA не визначено» (не «не застосовно»).
+`git log <SHA>..HEAD -- clients/<к>/addons/` непорожній -> потрібен pr-review (перелік PR B-05). Зміни `config-log.md` у
+цьому оновленні -> потрібен config-review. Інакше «не застосовно» + команда й порожній вивід як доказ (U-10).
 
 ## Крок 11 (фаза 1). Здача
-Автоперевірка -> `upgrade-log.md` (підпис Тімліда порожній, «Передача в B-12» заповнена) -> `checks`, `memo`, блок `upgrade`.
+Автоперевірка (U-11 — `flow-core/references/pii-patterns.md`, режим `+sums`) -> `upgrade-log.md` (підпис Тімліда порожній,
+«Передача в B-12» заповнена) -> `checks`, `memo`, `phase`, блок `upgrade`; `partial: true` лише якщо частину не записано.
 `memo` починається з невпевненості: чого AI не бачив (вміст записів, UI доробок, лог установки). «Тег-кандидат» не знімати
 (це B-12; у «Передачі в B-12» — пункт для Тімліда).
 
 ## Автоперевірка
 | ID | Перевірка | Фаза |
 |---|---|---|
-| U-01 | підключення лише з allow-list, кожен виклик з `connection_id`, `connection.db` збігся | 0, 1 |
+| U-01 | підключення лише з allow-list, кожен виклик з `connection_id`, `connection.db` збігся; журнал викликів: лише `odoo_search_read` | 0, 1 |
 | U-02 | тег A-18 = тег-кандидат (Odoo) = `REGISTRY.md` = `package_tag` CI; тег не `-odoo<N>` чужої версії | 1 |
 | U-03 | кожен новий/змінений VP з усіх проміжних CHANGELOG є в додатку з підписом і в `answers.yaml`; `answers.yaml` валідний | 0 (у додатку), 1 |
 | U-04 | кожен кандидат є в «Зняті відхилення й кастом»; у фазі 1 рішення з дозволеного списку | 0, 1 |
 | U-05 | CI: run на SHA гілки, тег = кандидат, job кожного `td_<к>_*` є і pass; skipped = FAIL | 1 |
-| U-06 | `ir.module.module`: усі модулі тегу й доробок `installed`, версія = маніфест тегу | 1 |
-| U-07 | «Лог установки» заповнено не AI; «Перелік втраченого конфігу» не заповнено AI | 1 |
+| U-06 | `ir.module.module`: усі модулі тегу й доробок `installed`, `latest_version` (БД) = маніфест тегу, `installed_version` = `latest_version` | 1 |
+| U-07 | «Лог установки» заповнено не AI (`git log --format='%an %H' -- clients/<к>/upgrade-log.md` і `git blame -L '/## Лог установки/,/## Автотести/'`: автор ≠ технічний користувач агента, `odoo-bridge.md` §6); «Перелік втраченого конфігу» не заповнено AI | 1 |
 | U-08 | кожна зламана доробка й дефект пакета мають маршрут; дефект пакета — рядок «Запити в D-02» | 1 |
 | U-09 | «Відкат» непорожній, якщо є зламані доробки або дрейф | 1 |
 | U-10 | гейти: «потрібен» з PR або «не застосовно» з доказом diff | 1 |
-| U-11 | у `upgrade-log.md` і лозі установки немає ПІБ, email, телефонів, ІПН, сум (regex — `data-and-connections.md`) | 0, 1 |
-| U-12 | усі заголовки шаблону на місці (grep-контракт для B-12 і D-02) | 0, 1 |
+| U-11 | у `upgrade-log.md` і лозі установки немає ПІБ, email, телефонів, ІПН, сум (regex — `flow-core/references/pii-patterns.md`, `+sums`; у звіт лише тип і рядок) | 0, 1 |
+| U-12 | усі заголовки шаблону на місці, зокрема «Відтворення доробок (Тімлід)» (grep-контракт для B-12 і D-02) | 0, 1 |
 Рішення людини: підпис додатка, значення в `answers.yaml`, рішення по кандидатах, «Перелік втраченого конфігу», підпис Тімліда —
-позначати «очікує людини», не PASS. Фаза, стоп-умови й маршрути повернення — `references/phases.md`.
+позначати «очікує людини», не PASS (результат `waiting_human`, коли без них крок не рухається). Фаза, стоп-умови й маршрути повернення — `references/phases.md`.
 
 ## Pre-save верифікація
-- [ ] Режим і фаза з наряду; жодного звернення до прод-alias, жодного виклику без `connection_id`;
+- [ ] Фаза з `params.phase`; крок 8 лише за `params.reconcile: true`; жодного звернення до прод-alias, жодного виклику без `connection_id`;
 - [ ] CHANGELOG прочитано по всіх проміжних тегах, VP-xx з проміжних версій не пропущено;
 - [ ] Колонка «рішення PM» порожня у фазі 0 і не змінена AI у фазі 1;
 - [ ] Тег у CI, у полях проєкту й у `REGISTRY.md` один і той самий;
@@ -176,14 +203,17 @@ skipped або відсутній job клієнта = FAIL. CI не завер�
 Очікування CI довше таймауту — В-4.
 
 ## Відкриті питання
-- В-1. Ключ `mode: phase0|phase1` — розширення `naryad-format.md`; хто ставить задачу фази 1 — узгодити з `flow-orchestrator`.
-- В-2. Імена inputs `workflow_dispatch` (`package_tag`, `client`, `sha`, `odoo_task`) і режим upgrade у CI — не зафіксовані в `ci-contract.md`.
-- В-3. Ознака «пілотний клієнт» і номер хвилі — поле проєкту (C-00) чи рішення PM у наряді.
-- В-4. CI довший за `timeoutMin` 60: потрібна стадія «очікує зовнішнього» або вищий таймаут.
+- В-9. Шаблон тегу `package/vX.Y-odoo<N>` відсутній у `flow-core/references/id-patterns.md`; додати або відмовитися від суфікса.
+- В-1. `params.phase: 0|1`, `params.reconcile` (крок 8) не описані в таблиці `params` `naryad-format.md`; хто ставить наряд фази 1 — узгодити з `flow-orchestrator`.
+- В-2. Розбіжність `ci-contract.md` двох скілів: `flow-core/.../ci-pipeline-builder` (фактичний) і `package-release-builder` (`tag_candidate`, `mode`, `prev_tag`); режим upgrade у CI (попередній тег -> новий -> smoke) не підтверджено.
+- В-3. Номер хвилі: ознака пілота — `project.pilot`/`params.pilot`; номер хвилі — рішення PM у наряді (поля немає).
+- В-4. CI довший за `timeoutMin` 60: `waiting_human` покриває очікування, але SLA на цю паузу не задано.
 - В-5. Де PM фіксує рішення «Зняті відхилення й кастом»: колонка файлу в PR чи чаттер задачі.
 - В-6. Розбіжність картки: `hours` 3 vs «8 покриває фази 0–1»; `answers.yaml` vs `questionnaire.md` у B-04.
-- В-7. failureMode B-11 «AI звірив конфіг» суперечить режиму «звірка»; прийнято: лише метадані й чернетка, потрібне підтвердження людини.
+- В-7. failureMode B-11 «AI звірив конфіг» суперечить режиму «звірка»; крок 8 вимкнено за замовчуванням до рішення людини й оновлення dataRule картки.
 - В-8. Сценарій міграції клієнта на нову мажорну Odoo не спроєктовано.
+- В-9. Клас бази `anon-<к>` відсутній у `data-and-connections.md` і DATA_POLICY «Класи доступу до баз Odoo»; крок-виробник знеособленої копії (C-09) не існує. До узгодження версія 2 не запускається (стоп «клас бази не визначено»).
+- В-10. Семантику `installed_version`/`latest_version` у `ir.module.module` Odoo 19 взято зі звіту рецензента (`base/models/ir_module.py`); вихідного коду в середовищі немає, формулювання підтвердити через `boost:source-check`.
 
 ## Чого НЕ робити
 - Не встановлювати тег, не застосовувати конфіг, не писати в базу клієнта й у поля проєкту Odoo; не торкатися прод.

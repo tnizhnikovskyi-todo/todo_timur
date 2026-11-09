@@ -1,0 +1,9 @@
+step: A-01
+scope: {kind: package, id: furniture-candidate}
+executor: any
+where: docs/industries/scoring.md
+params: {mode: перший-запуск}
+inputs:
+  - {name: Критерій ранжування галузей, from: odoo-param, path: "A-01: критерій ранжування галузей", sha: null}
+  # входу «Реєстр компаній (знімок з датою)» немає
+odoo_connections: [{alias: flow, purpose: наряд/звіт}]

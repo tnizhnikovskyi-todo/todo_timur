@@ -13,7 +13,7 @@ import argparse, csv, json, os, re, sys
 
 HEADERS = ["файли", "порядок імпорту", "залежності між файлами", "трасування тр",
            "потребують модулів a-11", "тест-імпорт", "зміни версії"]
-PII = [(r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)|\(0\d{2}\)\s?\d{3}", "телефон"), (r"ЄДРПОУ\D{0,5}\d{8}\b", "ЄДРПОУ"), (r"[\w.+-]+@[\w-]+\.[\w.-]+", "email"),
+PII = [(r"(?<![\w:])(\+?380\d{9}|0(?:39|50|63|66|67|68|73|9[1-9])\d{7})(?!\w)|\(0\d{2}\)\s?\d{3}", "телефон"), (r"ЄДРПОУ\D{0,5}\d{8}\b", "ЄДРПОУ"), (r"[\w.+-]+@[\w-]+\.[\w.-]+", "email"),
        (r"\bUA\d{27}\b", "IBAN"), (r"\b[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+(ович|евич|ївна|івна|ична)\b", "ПІБ")]
 FILE_RE = re.compile(r"^(\d{2}b?)_(.+)\.csv$")
 
@@ -123,7 +123,7 @@ def main():
                     for r in f["rows"]:
                         if len(r) > i and r[i] and r[i] not in sel:
                             ce.append(f"{f['name']}: {n}={r[i]} недопустиме")
-                if (spec.get(n) or {}).get("required") and any(len(r) <= i or not r[i].strip() for r in f["rows"]):
+                if (spec.get(n) or {}).get("required") and not (spec.get(n) or {}).get("default") and any(len(r) <= i or not r[i].strip() for r in f["rows"]):
                     re_.append(f"{f['name']}: порожнє обов'язкове {n}")
         add("MD-cols", not ce, "; ".join(ce[:10]))
         add("MD-req", not re_, "; ".join(re_[:10]))

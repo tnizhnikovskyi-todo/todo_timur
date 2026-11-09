@@ -27,9 +27,14 @@
 Значення — синтетичні й правдоподібні, не з даних клієнта.
 
 ## Строк доступу ліда
-Користувач-заглушка `lead-<id>` без контактів з `x_access_until` (дата). Деактивація — `base.automation` за часом з простою серверною дією
-(зняття активності користувача). Чи можна так змінювати користувача, звірити в Odoo 19 (`boost:source-check`); не виходить без коду — підкрок Тімліда
-(ручна деактивація за календарем), не Python.
+Перед створенням — `odoo_get_fields` для `res.users`, `base.automation`, `ir.model.fields` з `connection_id` демо-бази і `boost:source-check`.
+1. `x_access_until` — поле типу `date` **на `res.users`**: `odoo_create` на `ir.model.fields` з `model_id` = id моделі `res.users`, `name: x_access_until`.
+2. Користувач-заглушка: `odoo_create` на `res.users` з обов'язковими `login: lead-<id>`, `name: Демо Лід <id>` (інших обов'язкових полів — за
+   `odoo_get_fields('res.users')`); **без** email/phone; групи лише демо-ролі; `x_access_until` = дата за нарядом.
+3. Деактивація (**UNVERIFIED до `boost:source-check`**): `base.automation` на моделі `res.users`, тригер за часом від поля `x_access_until`, проста серверна дія «оновити запис»
+   (`active = False`), без Python.
+Чи можна так змінювати користувача в Odoo 19 — звірити (`boost:source-check`); не виходить без коду — підкрок Тімліда (ручна деактивація
+за календарем), не Python.
 
 ## Скидання: «золота копія»
 1. Після збірки і проходу сценаріїв Тімлід через менеджер баз дублює базу в `emu-<галузь>-golden` (майстер-пароль — лише в людини).

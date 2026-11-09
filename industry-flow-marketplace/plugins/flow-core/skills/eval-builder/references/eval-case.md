@@ -6,7 +6,7 @@
 # Кейс: <id>
 - Скіл / крок: <плагін:скіл@версія> / <код кроку>
 - Джерело: failureMode картки <код> | observation <файл> | incident <id>
-- Статус: regress | new-red | not-reproduced | queued
+- Статус: regress | new-red | not-reproduced | queued | skipped | declined-proposed
 
 ## Вхід
 <наряд або запит, як у реальному запуску; фікстури: evals/<набір>/fixtures/<id>/>

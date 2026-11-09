@@ -1,0 +1,9 @@
+client: demo
+package_tag: package/v0.1
+files:
+  - source: contractors.csv
+    template: 03_res.partner.csv
+    key: {column: "Код", prefix: "{ns}.res_partner_", hash: false}
+    columns:
+      name: {from: "Назва", transform: strip}
+      country_id/id: {const: "base.ua", why: "усі в Україні"}

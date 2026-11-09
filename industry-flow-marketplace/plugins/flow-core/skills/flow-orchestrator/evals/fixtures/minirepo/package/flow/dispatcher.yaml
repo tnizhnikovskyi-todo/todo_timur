@@ -1,0 +1,5 @@
+catalog: {repo: industry-flow-marketplace, tag: v0.1.0}
+lease_factor: 1.5
+per_unit_steps: [D-01, B-10]
+periodic: {monthly: [D-01, B-01b, D-02a], B-10: monthly}
+calendar: {holidays: []}

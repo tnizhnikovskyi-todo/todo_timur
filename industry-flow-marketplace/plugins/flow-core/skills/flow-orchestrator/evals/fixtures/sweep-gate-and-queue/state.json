@@ -1,0 +1,51 @@
+{
+ "tasks": [
+  {
+   "id": 901,
+   "step": "A-12",
+   "stage": "Черга",
+   "age_min": 70,
+   "executor": "any"
+  },
+  {
+   "id": 902,
+   "step": "A-07",
+   "kind": "gate",
+   "overdue_x_humanSla": 2.5,
+   "raciA": "Власник продукту"
+  },
+  {
+   "id": 903,
+   "step": "B-04",
+   "scope": "client/cl-01",
+   "stage": "В роботі",
+   "lease_expired": true,
+   "attempt": 3,
+   "maxAttempts": 3
+  },
+  {
+   "id": 904,
+   "step": "C-01",
+   "kind": "report",
+   "stage": "Готово",
+   "report": {
+    "dispatch": {
+     "mode": "on-complete",
+     "partial": false,
+     "actions": [
+      {
+       "action": "held_slot",
+       "step": "B-06",
+       "scope": "client/cl-03",
+       "reason": "слот 1/1"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "stoplist": [
+  "client/cl-03"
+ ],
+ "note": "B-06 cl-03 відомий sweep лише через held_slot у звіті задачі 904"
+}
