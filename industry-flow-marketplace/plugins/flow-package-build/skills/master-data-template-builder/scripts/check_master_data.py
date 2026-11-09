@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Автоперевірки A-13 без бази: MD-rows, MD-readme, MD-pii, MD-td, MD-ref, MD-order, MD-cols, MD-req.
+"""Автоперевірки A-13 без бази: MD-rows, MD-readme, MD-pii, MD-td, MD-ref, MD-order (+ MD-cols, MD-req з --fields).
+Агент перевіряє сам: MD-trace, MD-modules, MD-import, MD-scope, lint (скрипт їх не робить).
 Запуск: python3 -I check_master_data.py --dir package/master-data [--fields fields.json]
 fields.json: {"<model>": {"<field>": {"required": bool, "selection": [..]|null, "default": bool}}}
+Побудова fields.json (агент, через odoo-mcp з явним connection_id):
+  1) odoo_get_fields(model, attributes=["type","required","relation","selection"]);
+  2) selection у fields_get - пари [value, label]: у файл класти лише value (перші елементи пар);
+  3) odoo_execute(model, "default_get", args=[[<імена обов'язкових полів>]]): default=true, якщо ключ є у відповіді,
+     інакше false. Не проставляти default=false усім - MD-req дасть хибні FAIL (type, uom_id, categ_id, product_qty).
 Вихід: JSON [{id,status,msg}]. Код повернення 1, якщо є FAIL."""
 import argparse, csv, json, os, re, sys
 
 HEADERS = ["файли", "порядок імпорту", "залежності між файлами", "трасування тр",
            "потребують модулів a-11", "тест-імпорт", "зміни версії"]
-PII = [(r"\+?380\d{9}|\(0\d{2}\)\s?\d{3}", "телефон"), (r"[\w.+-]+@[\w-]+\.[\w.-]+", "email"),
+PII = [(r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)|\(0\d{2}\)\s?\d{3}", "телефон"), (r"ЄДРПОУ\D{0,5}\d{8}\b", "ЄДРПОУ"), (r"[\w.+-]+@[\w-]+\.[\w.-]+", "email"),
        (r"\bUA\d{27}\b", "IBAN"), (r"\b[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+(ович|евич|ївна|івна|ична)\b", "ПІБ")]
 FILE_RE = re.compile(r"^(\d{2}b?)_(.+)\.csv$")
 
@@ -50,7 +56,7 @@ def main():
     # MD-td
     errs = []
     for f in files:
-        has_td = "td_" in f["model"] or any(h.startswith("td_") for h in f["header"])
+        has_td = bool(re.match(r"^td[._]", f["model"])) or any(re.match(r"^td[._]", h) for h in f["header"])
         if has_td and not f["td"]:
             errs.append(f["name"] + " має td_* поза td/")
         if f["td"] and f["name"] not in readme:
@@ -77,7 +83,6 @@ def main():
                 if r:
                     owner[r[0]] = f
     dangling, late = [], []
-    order = {f["path"]: i for i, f in enumerate(sorted(files, key=lambda x: (x["td"], x["nn"])))}
     for f in files:
         for ci, h in enumerate(f["header"]):
             if not h.endswith("/id"):
