@@ -19,7 +19,7 @@
 
 ## Конвенції
 
-Цей плагін і є джерелом спільних конвенцій: `references/conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`.
+Цей плагін і є джерелом спільних конвенцій: `conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`, `odoo-bridge.md`, `flow-map.md`, `flow-step-run.md`, `flow-state.md`, `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`.
 
 Коротко: кожен крок — наряд (задача Odoo) із YAML-блоком у `description`; результат — PR у GitHub; звіт — у задачу Odoo; рішення людини — кнопка в задачі; кожен виклик `odoo-mcp` — з явним `connection_id` з наряду; дані клієнта — лише тестові бази й знеособлені копії.
 
@@ -28,3 +28,6 @@
 ```
 claude plugin install flow-core@industry-flow
 ```
+
+## Спільні references
+`references/`: `conventions.md` (конвенції), `naryad-format.md` і `report-format.md` (наряд і звіт, `params`, `waiting_human`), `odoo-bridge.md` (читання/запис задач, рішення vs коментар, активності), `flow-map.md` (карта переходів), `flow-step-run.md` (шаблони задач), `flow-state.md` (стан і автоекспорт), `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`, `data-and-connections.md`. Технічні імена кастомних полів Odoo визначає C-00 (`flow/ODOO_SCHEMA.md`); до того — стоп і питання Тімліду.

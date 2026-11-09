@@ -19,7 +19,7 @@ A-01, A-04, A-05, A-20, A-21, A-23 (+ список лідів B-01).
 
 ## Конвенції
 
-Конвенції пакета (формат наряду, формат звіту, правила даних і `connection_id`) лежать у `flow-core/references/` (`conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`) і тут не дублюються. Потрібен встановлений `flow-core`.
+Конвенції пакета (формат наряду, формат звіту, правила даних і `connection_id`) лежать у `flow-core/references/` (`conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`, `odoo-bridge.md`, `flow-map.md`, `flow-step-run.md`, `flow-state.md`, `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`) і тут не дублюються. Потрібен встановлений `flow-core`.
 
 Коротко: кожен крок — наряд (задача Odoo) із YAML-блоком у `description`; результат — PR у GitHub; звіт — у задачу Odoo; рішення людини — кнопка в задачі; кожен виклик `odoo-mcp` — з явним `connection_id` з наряду; дані клієнта — лише тестові бази й знеособлені копії.
 
@@ -28,3 +28,6 @@ A-01, A-04, A-05, A-20, A-21, A-23 (+ список лідів B-01).
 ```
 claude plugin install flow-research@industry-flow
 ```
+
+## Спільні references
+`references/`: `sources-format.md` (формат `_input/sources.md`), `concept-templates.md` (A-20), `odoo19-ui-kit.md` (A-21).

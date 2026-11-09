@@ -19,7 +19,7 @@ B-02, B-03, B-04, B-06, B-09/B-10, B-11 (+B-13).
 
 ## Конвенції
 
-Конвенції пакета (формат наряду, формат звіту, правила даних і `connection_id`) лежать у `flow-core/references/` (`conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`) і тут не дублюються. Потрібен встановлений `flow-core`.
+Конвенції пакета (формат наряду, формат звіту, правила даних і `connection_id`) лежать у `flow-core/references/` (`conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`, `odoo-bridge.md`, `flow-map.md`, `flow-step-run.md`, `flow-state.md`, `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`) і тут не дублюються. Потрібен встановлений `flow-core`.
 
 Коротко: кожен крок — наряд (задача Odoo) із YAML-блоком у `description`; результат — PR у GitHub; звіт — у задачу Odoo; рішення людини — кнопка в задачі; кожен виклик `odoo-mcp` — з явним `connection_id` з наряду; дані клієнта — лише тестові бази й знеособлені копії.
 
@@ -28,3 +28,6 @@ B-02, B-03, B-04, B-06, B-09/B-10, B-11 (+B-13).
 ```
 claude plugin install flow-client-delivery@industry-flow
 ```
+
+## Спільні references
+`references/`: `triage-routes.md` (тип -> маршрут для B-09/B-10/B-13), `support-report-template.md` (звіт SLA B-10).
