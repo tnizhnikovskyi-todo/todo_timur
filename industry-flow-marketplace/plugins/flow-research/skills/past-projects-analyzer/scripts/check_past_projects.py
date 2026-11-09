@@ -6,7 +6,7 @@ Denylist назв клієнтів = ЛИШЕ колонка «назва клі
 в denylist не потрапляють (flow-core/references/pii-patterns.md, flow-research/references/sources-format.md).
 
 Запуск: check_past_projects.py --doc <past-projects.md> --sources <_input/sources.md> --repo <корінь репо>
-        [--repo alias=<шлях іншого репо>] [--scope-files <where>[,<where2>]] [--base <git.base>] [--head <git.head>] [--stdin]
+        [--repo alias=<шлях іншого репо>] [--scope-files <where>[,<where2>]] [--base <git.base>] [--head <git.head>] [--stdin] [--no-fathom]
         check_past_projects.py --self-test   (шаблон із references/ + приклад sources має давати всі PASS)
 Шлях у repo:<шлях>@<sha>: перший --repo без alias — основний; `repo:<alias>/<шлях>@<sha>` — репо з `--repo alias=<шлях>`."""
 import argparse, json, os, re, subprocess, sys, tempfile
@@ -129,7 +129,16 @@ def changed_files(repo, base, head):
     return names
 
 
-def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_names=()):
+ALWAYS_OK = ("observations/",)  # runner комітить сюди окремим комітом (flow-step-runner); завжди дозволено
+
+
+def stray_inputs(sources):
+    """Видимі сторонні файли в _input/ (приховані .*, *.bak, *~ ігноруються)."""
+    return sorted(f for f in os.listdir(Path(sources).parent)
+                  if f != Path(sources).name and not f.startswith(".") and not f.endswith((".bak", "~")))
+
+
+def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_names=(), no_fathom=False):
     out = []
 
     def add(i, ok, msg=""):
@@ -168,8 +177,20 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
             line = " | ".join(r)
             cs_ = set(CODE.findall(line))
             if "fathom:" in line:
-                viol += [c for c in cs_ if modes.get(c) == "only_reports" and len(cs_) == 1]
-    add("PP-mode", not viol, f"fathom: для режиму «лише звіти»: {sorted(set(viol))}")
+                if no_fathom:
+                    viol.append("fathom заборонено DATA_POLICY")
+                elif len(cs_) == 1:
+                    viol += [c for c in cs_ if modes.get(c) == "only_reports"]
+                else:  # кілька кодів: потрібен формат «П-xx fathom:…» для кожного fathom:
+                    pairs = re.findall(r"(П-\d{2})\s+fathom:", line)
+                    if len(pairs) < line.count("fathom:"):
+                        viol.append(f"рядок з кількома П-xx без пар «П-xx fathom:…» ({r[0][:30]})")
+                    viol += [c for c in pairs if modes.get(c) == "only_reports"]
+    if no_fathom:
+        for r in rows(secs.get(SECTIONS[0], "")):
+            if "fathom:" in " | ".join(r):
+                viol.append("fathom заборонено DATA_POLICY")
+    add("PP-mode", not viol, f"fathom: проти режиму/політики: {sorted(set(viol))}")
 
     def repo_for(p):
         for alias, path in repos.items():
@@ -216,13 +237,13 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
         allowed = [x for x in scope_files.split(",") if x]
         changed = changed_files(main_repo, base, head)
         extra = sorted(c for c in changed
-                       if not any(c == a or (a.endswith("/") and c.startswith(a)) for a in allowed))
+                       if not any(c == a or (a.endswith("/") and c.startswith(a)) for a in allowed + list(ALWAYS_OK)))
         inp = sorted(c for c in changed if "/_input/" in "/" + c)
-        stray = sorted(f for f in os.listdir(Path(sources).parent) if f != Path(sources).name)
-        add("PP-scope", not extra and not inp and not stray,
+        add("PP-scope", not extra and not inp,
             "; ".join(filter(None, ["зайве: " + ", ".join(extra[:5]) if extra else "",
-                                    "_input/ змінено/додано до git: " + ", ".join(inp[:3]) if inp else "",
-                                    "сторонні файли в _input/: " + ", ".join(stray[:3]) if stray else ""])))
+                                    "_input/ змінено/додано до git: " + ", ".join(inp[:3]) if inp else ""])))
+    stray = stray_inputs(sources)
+    add("PP-input", not stray, "сторонні файли в _input/ (агент не прибирає; waiting_human): " + ", ".join(stray[:3]))
     return out
 
 
@@ -265,6 +286,25 @@ def self_test():
         (d / "docs/industries/test/stray.md").write_text("x")
         if [o for o in run() if o["id"] == "PP-scope"][0]["status"] != "FAIL":
             errs.append("PP-scope має ловити новий (untracked) сторонній файл")
+        # observations/ коммітить runner - дозволено; прихований файл у _input/ ігнорується; видимий - PP-input FAIL
+        (d / "docs/industries/test/stray.md").unlink()
+        (d / "observations").mkdir(); (d / "observations/2026-01-01-x.md").write_text("x")
+        sh("add", "-A"); sh("commit", "-qm", "obs")
+        (inp / ".DS_Store").write_text("x")
+        bad = [o for o in run(base=sha) if o["status"] != "PASS"]
+        if bad:
+            errs.append(f"observations/ і .DS_Store не мають давати FAIL: {bad}")
+        (inp / "backup.txt").write_text("x")
+        if [o for o in run() if o["id"] == "PP-input"][0]["status"] != "FAIL":
+            errs.append("PP-input має ловити видимий сторонній файл")
+        (inp / "backup.txt").unlink()
+        # fathom: --no-fathom і рядок з кількома кодами без пар
+        base_doc = tpl.replace("abc1234", sha)
+        if [o for o in run_checks(str(doc), str(inp / "sources.md"), {"": str(d)}, no_fathom=True) if o["id"] == "PP-mode"][0]["status"] != "FAIL":
+            errs.append("--no-fathom має давати FAIL PP-mode (шаблон містить fathom:)")
+        doc.write_text(base_doc.replace("1 (П-01) | fathom:rec_0001", "2 (П-01, П-02) | fathom:rec_0001"), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-mode"][0]["status"] != "FAIL":
+            errs.append("рядок з кількома П-xx і fathom: без пар «П-xx fathom:» має давати FAIL PP-mode")
     print(json.dumps({"self_test": "PASS" if not errs else "FAIL", "errors": errs}, ensure_ascii=False, indent=1))
     sys.exit(1 if errs else 0)
 
@@ -274,6 +314,7 @@ def main():
     ap.add_argument("--doc"); ap.add_argument("--sources")
     ap.add_argument("--repo", action="append", default=[])
     ap.add_argument("--scope-files", default=""); ap.add_argument("--base", default=""); ap.add_argument("--head", default="")
+    ap.add_argument("--no-fathom", action="store_true", help="DATA_POLICY забороняє Fathom: будь-який fathom: у документі = FAIL PP-mode")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--stdin", action="store_true", help="читати імена учасників Fathom зі stdin (по одному в рядку)")
     a = ap.parse_args()
@@ -289,7 +330,7 @@ def main():
         else:
             repos.setdefault("", r)
     names = sys.stdin.read().splitlines() if a.stdin else []
-    out = run_checks(a.doc, a.sources, repos, a.scope_files, a.base, a.head, names)
+    out = run_checks(a.doc, a.sources, repos, a.scope_files, a.base, a.head, names, a.no_fathom)
     print(json.dumps(out, ensure_ascii=False, indent=1))
     sys.exit(1 if any(o["status"] == "FAIL" for o in out) else 0)
 

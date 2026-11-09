@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Автоперевірки A-20 (CM-*). stdlib. Вивід: JSON [{id,status,msg}]. Код виходу 1, якщо є FAIL.
-Запускати з кореня клону; <concept_dir> — відносний шлях. --base = git.base наряду.
+Запускати з кореня клону; <concept_dir> — відносний шлях. --base = git.base наряду (без нього CM-ids/CM-scope = SKIP).
+CM-pii: ПІБ (три слова з великої) дає MANUAL, а не FAIL (pii-patterns.md): людина перевіряє збіг; решта шаблонів — FAIL.
 Використання: check_concept.py <concept_dir> --input briefing.md=<шлях> [--input ...] [--base <SHA>]
 Ключ --input = ім'я файлу з колонки «Джерело» (наприклад past-projects.md); значення = шлях до файлу на SHA наряду."""
 import argparse, json, re, subprocess, sys
@@ -15,8 +16,8 @@ PII = {"email": r"[\w.+-]+@[\w-]+\.[\w.-]+", "phone": r"(?<![\w:])(\+?380\d{9}|0
 ID = re.compile(r"\b(?:ROLE|PAIN|F|S|SC)-\d{2,}\b")
 res = []
 
-def add(i, ok, msg=""):
-    res.append({"id": i, "status": "PASS" if ok else "FAIL", "msg": "" if ok else msg})
+def add(i, ok, msg="", status=None):
+    res.append({"id": i, "status": status or ("PASS" if ok else "FAIL"), "msg": "" if ok else msg})
 
 class GitError(Exception):
     pass
@@ -106,21 +107,33 @@ def main():
         try:
             top = Path(git("rev-parse", "--show-toplevel").strip())
             rel = d.resolve().relative_to(top).as_posix()
-            old = {f: git("show", f"{a.base}:{rel}/{f}") for f in HEAD}
+            # файлу ще не було на base (перший запуск) — порожня база, ID не могли зникнути
+            old = {f: (git("show", f"{a.base}:{rel}/{f}") if git("ls-tree", a.base, f"{rel}/{f}").strip() else "") for f in HEAD}
             gone = sorted({i for t in old.values() for i in ID.findall(t)} - {i for t in txt.values() for i in ID.findall(t)})
             add("CM-ids", not gone, "зникли ID: " + ", ".join(gone))
         except (GitError, ValueError, OSError) as e:
             add("CM-ids", False, f"не вдалось прочитати base {a.base}: {e}")
     # CM-pii
-    hits = [f"{f}:{k}" for f, t in txt.items() for k, p in PII.items() if re.search(p, t, re.I)]
-    add("CM-pii", not hits, ", ".join(hits))
+    flags = {"email": re.I, "sum": re.I}  # ПІБ — лише з урахуванням регістру (три слова З ВЕЛИКОЇ)
+    hits = [f"{f}:{k}" for f, t in txt.items() for k, p in PII.items() if k != "pib" and re.search(p, t, flags.get(k, 0))]
+    pib = [f"{f}:{k}" for f, t in txt.items() for k, p in PII.items() if k == "pib" and re.search(p, t)]
+    if hits:
+        add("CM-pii", False, ", ".join(hits + pib))
+    elif pib:
+        add("CM-pii", False, "ПІБ? перевірити вручну (назва посади/процесу — ок): " + ", ".join(pib), status="MANUAL")
+    else:
+        add("CM-pii", True)
     # CM-scope
-    if a.base:
+    if not a.base:
+        res.append({"id": "CM-ids", "status": "SKIP", "msg": "немає --base"}); res.append({"id": "CM-scope", "status": "SKIP", "msg": "немає --base"})
+    else:
         try:
             ch = [x for x in git("diff", "--name-only", a.base).splitlines() if x]
-            bad = [x for x in ch if "/concept/" not in x and "/_template/concept/" not in x]
+            rel = d.resolve().relative_to(Path(git("rev-parse", "--show-toplevel").strip())).as_posix()
+            own = rel + "/"; tpl = "docs/industries/_template/concept/"
+            bad = [x for x in ch if not x.startswith(own) and not x.startswith(tpl)]
             add("CM-scope", not bad, "зачеплено: " + ", ".join(bad))
-        except GitError as e:
+        except (GitError, ValueError) as e:
             add("CM-scope", False, f"не вдалось прочитати base {a.base}: {e}")
     print(json.dumps(res, ensure_ascii=False, indent=1))
     sys.exit(1 if any(r["status"] == "FAIL" for r in res) else 0)
