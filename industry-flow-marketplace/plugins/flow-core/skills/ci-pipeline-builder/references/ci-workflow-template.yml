@@ -1,0 +1,179 @@
+# Скелет .github/workflows/ci.yml для C-03. Плейсхолдери {{...}} агент замінює фактами (кроки 2-3 SKILL.md).
+# Нерозв'язаний {{...}} у результаті = FAIL check_ci.py. Нічого не вигадувати: чого не знаєш - memo + ескалація.
+name: ci
+run-name: "ci ${{ inputs.sha || github.sha }} client=${{ inputs.client || '-' }} tag=${{ inputs.package_tag || '-' }}"
+
+on:
+  push:
+    branches: [main, "upgrade/**"]
+    paths: ["package/addons/**", "package/config/**", "clients/*/addons/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["package/addons/**", "package/config/**", "clients/*/addons/**", ".github/workflows/ci.yml"]
+  workflow_dispatch:
+    inputs:
+      package_tag: {description: "Тег пакета; порожньо - тег клієнта з REGISTRY.md", required: false, default: ""}
+      client:      {description: "Ідентифікатор клієнта (DATA_POLICY)", required: false, default: ""}
+      odoo_version: {description: "Версія Odoo; порожньо - із суфікса тега/гілки, інакше 19", required: false, default: ""}
+      sha:         {description: "SHA для перевірки; порожньо - HEAD гілки", required: false, default: ""}
+      odoo_task:   {description: "id задачі Odoo для звіту (необов'язково)", required: false, default: ""}
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ inputs.client || 'all' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.r.outputs.sha }}
+      run_package: ${{ steps.r.outputs.run_package }}
+      run_config: ${{ steps.r.outputs.run_config }}
+      clients: ${{ steps.r.outputs.clients }}        # JSON: [{"id":"k01","tag":"v1.1"}]
+      odoo_version: ${{ steps.r.outputs.odoo_version }}
+      odoo_supported: ${{ steps.r.outputs.odoo_supported }}
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ inputs.sha || github.sha }}", fetch-depth: 0}
+      - id: r
+        env:   # event-поля лише через env, не в тексті run:
+          IN_TAG: ${{ inputs.package_tag }}
+          IN_CLIENT: ${{ inputs.client }}
+          IN_ODOO: ${{ inputs.odoo_version }}
+          IN_SHA: ${{ inputs.sha }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # {{RESOLVE}}: (1) sha = IN_SHA або HEAD; (2) diff проти BASE_REF/BEFORE -> run_package/run_config/clients;
+          # (3) клієнти: dispatch -> IN_CLIENT; тег = IN_TAG, інакше з clients/REGISTRY.md (тег-кандидат пріоритетний)
+          #     {{REGISTRY_PARSE}} - за фактичним форматом файла; (4) odoo_version за references/odoo-version-resolve.md;
+          # (5) odoo_supported = чи вміє скрипт C-00 {{ODOO_VERSION_PARAM}} цю версію. Зміна ci.yml -> run_package=true.
+          # Зміна лише package/ НЕ додає клієнтів (тільки dispatch).
+          python3 -I - <<'PY'
+          {{RESOLVE_PY}}
+          PY
+
+  config-check:
+    needs: resolve
+    if: needs.resolve.outputs.run_config == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - name: Конфіг без установки в базу
+        run: |
+          # {{CONFIG_CHECK}}: XML/CSV/YAML валідні; кожен модуль з «Модулі до установки» (CONFIG.md) є в package/addons або стандарті Odoo.
+
+  package-tests:
+    needs: resolve
+    if: needs.resolve.outputs.run_package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: {{TIMEOUT}}
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - name: Тести пакета на чистій базі
+        env: {ODOO_VERSION: "${{ needs.resolve.outputs.odoo_version }}"}
+        run: |
+          set -o pipefail
+          # {{RUN_TESTS_CMD}} - лише з tools/odoo/ (C-00); addons-path = package/addons (увесь каталог)
+          {{RUN_TESTS_CMD}} 2>&1 | tee run-tests.log
+      - name: Вердикт
+        if: always()
+        run: |
+          {{VERDICT_STEP}}   # references/test-verdict-rules.md; exit != 0 при червоному
+      - uses: {{PIN actions/upload-artifact}}
+        if: always()
+        with: {name: package-tests-log, path: run-tests.log}
+
+  client-tests:
+    needs: resolve
+    if: needs.resolve.outputs.clients != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: {{TIMEOUT}}
+    strategy:
+      fail-fast: false
+      matrix:
+        client: ${{ fromJSON(needs.resolve.outputs.clients) }}
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ needs.resolve.outputs.sha }}", path: repo}
+      - uses: {{PIN actions/checkout}}      # пакет на ТЕЗІ клієнта, не HEAD
+        with: {ref: "${{ matrix.client.tag }}", path: package-at-tag}
+      - name: Тести клієнта
+        env: {ODOO_VERSION: "${{ needs.resolve.outputs.odoo_version }}", CLIENT: "${{ matrix.client.id }}"}
+        run: |
+          set -o pipefail
+          # addons-path = package-at-tag/package/addons + repo/clients/$CLIENT/addons; команда - C-00
+          {{RUN_TESTS_CMD_CLIENT}} 2>&1 | tee run-tests.log
+      - name: Вердикт
+        if: always()
+        run: |
+          {{VERDICT_STEP}}
+
+  tours:
+    needs: resolve
+    if: needs.resolve.outputs.run_package == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - name: Тури зі scenarios.md (A-16)
+        run: |
+          # {{TOURS_LIST}} - кожен тур окремо; результат кожного в лог з SHA; тур без результату = червоний
+
+  # config-matrix: генерувати ЛИШЕ коли є package/demo/profiles/ і команда установки конфігу; інакше видалити job
+  # і записати у звіті config-matrix: N/A (причина).
+  config-matrix:
+    needs: resolve
+    if: needs.resolve.outputs.run_config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: {{PROFILES_JSON}}
+    steps:
+      - uses: {{PIN actions/checkout}}
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - run: |
+          # {{INSTALL_CONFIG_CMD}} --answers package/demo/profiles/${{ matrix.profile }}
+
+  ci:
+    needs: [resolve, config-check, package-tests, client-tests, tours, config-matrix]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {contents: read, statuses: write}
+    steps:
+      - name: Агрегація
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          SUPPORTED: ${{ needs.resolve.outputs.odoo_supported }}
+          ODOO: ${{ needs.resolve.outputs.odoo_version }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          # failure/cancelled у будь-якому needs -> red; skipped допустимий лише там, де resolve не вимагав job
+          # SUPPORTED != true -> red: "Odoo $ODOO: вибір образу не визначено, статус C-03 недійсний"
+          # commit status context=ci на $SHA (curl -> /repos/$REPO/statuses/$SHA через GH_TOKEN в env)
+          {{AGGREGATE}}
+
+  report-odoo:
+    needs: [resolve, ci]
+    if: always() && github.event.pull_request.head.repo.fork != true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Звіт у задачу Odoo (лише база флоу)
+        env:
+          ODOO_FLOW_URL: ${{ secrets.ODOO_FLOW_URL }}
+          ODOO_FLOW_DB: ${{ secrets.ODOO_FLOW_DB }}
+          ODOO_FLOW_API_KEY: ${{ secrets.ODOO_FLOW_API_KEY }}
+          TASK: ${{ inputs.odoo_task }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # id задачі: TASK або рядок "Odoo-Task: <id>" з PR_BODY; немає секретів/id -> ::notice::, без падіння.
+          # Пост: SHA, URL прогону, вердикти job'ів, лічильники; без логів. {{REPORT_ODOO}}

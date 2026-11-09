@@ -31,10 +31,10 @@ A-09 (n21), A-10 (n06), A-17 (n11), A-18 (n12), C-01 (n31, рішення q43); 
 
 ```yaml
 name: flow-autocheck
-description: "Запускай, коли треба автоматично перевірити артефакт або входи кроку флоу галузевого пакета Odoo 19 за карткою: перед запуском кроку — звірка входів наряду з flow/ARTIFACTS.md і SHA (q43, режим inputs); після виконавця — автоперевірка C-06 крок 5 (зміни лише в where, форма за шаблоном, перевірки кроку: AC ↔ рядки ALLOCATION.md (A-10), VP-xx ТР ↔ питання questionnaire.md і ключі answers.yaml (A-09), Сценарій N ↔ scenarios.md, SHA-ланцюжок і дозволений git diff для ACCEPTANCE.md (A-17) і тега package/vX.Y (A-18), заголовки CHANGELOG і DATA_POLICY). Вихід — таблиця PASS/FAIL/ERROR з текстом помилки для повтору. Тригерні фрази — \"автоперевірка кроку\", \"перевір артефакт за карткою\", \"звір входи з ARTIFACTS\", \"чи всі AC в ALLOCATION\", \"перевір SHA і diff перед тегом\", \"проверь шаг по карточке\", \"сверь входы наряда\", \"autocheck\". НЕ використовуй для виконання кроку чи PR і звіту (це flow-core:flow-step-runner), для постановки задач (flow-core:flow-orchestrator), для рев'ю коду/конфігу/безпеки (odoo19-mvp-build:pr-review, config-review, security-review, boost:odoo19-lint), для зведення гейтів A-14 (flow-package-build:gates-aggregator), для рішення про приймання (flow-package-evolution:product-decision-drafter). Результат — таблиця перевірок (md + JSON checks[]) викликачу; файли в репо й Odoo не змінює."
+description: "Запускай для автоперевірок кроку флоу галузевого пакета Odoo 19 за карткою: inputs — до запуску звіряє входи наряду з flow/ARTIFACTS.md і SHA (q43); result — після виконавця (C-06 крок 5): diff у where, заголовки, AC ↔ ALLOCATION.md, VP-xx ↔ answers.yaml, SHA і версії A-17/A-18; form — заголовки людських документів. Тригерні фрази — \"автоперевірка кроку\", \"звір входи з ARTIFACTS\", \"проверь шаг по карточке\", \"autocheck\". НЕ використовуй для виконання кроку (це flow-core:flow-step-runner), рев'ю коду/конфігу (odoo19-mvp-build:pr-review, config-review), зведення гейтів A-14 (flow-package-build:gates-aggregator). Результат — таблиця PASS/FAIL (md + JSON checks[])."
 ```
 
-Межа з сусідами (абзац у SKILL.md): runner і orchestrator — викликачі; `gates-aggregator` викликає режим `result` з
+Довжина ≤ ~900 символів (CONCEPT §3.9); решта меж — у тілі SKILL.md. Межа з сусідами (абзац у SKILL.md): orchestrator (постановка задач), product-decision-drafter (рішення A-17), security-review — не цей скіл; runner і orchestrator — викликачі; `gates-aggregator` викликає режим `result` з
 `--only allocation-coverage`; `questionnaire-builder` (A-09), `package-release-builder` (A-18), `product-decision-drafter` (A-17) —
 викликають `result` для самоперевірки перед здачею. Цей скіл не дублює їхній зміст і їхні гейти.
 
@@ -222,6 +222,9 @@ External (не виконує, `MANUAL`/посилання): `odoo19-lint` по 
    вхід «попередній ALLOCATION на тегу» при першому запуску, вхід від «клієнт».
    expected: `input-path` FAIL з обома шляхами, `input-unmerged` FAIL, умовний вхід — SKIP conditional, зовнішній — SKIP external, вердикт FAIL.
    must_not: використання HEAD замість SHA; виклик odoo-mcp.
+
+4. **`a18-happy`** (щасливий шлях, CONCEPT §3.8): та сама фікстура, кандидат змінює лише 7 дозволених файлів, версії `1.2` = `19.0.1.2` усіх `td_*`, CHANGELOG з 3 розділами.
+   expected: вердикт PASS; `odoo19-lint`, установка в чисту базу — MANUAL/external; `git status --porcelain` порожній. must_not: FAIL на легальних файлах; тег поставлено.
 
 Резервні кейси (для C-04): A-09 — VP без ключа в answers.yaml і example з значенням поза допустимими; A-17 — SHA CHECKS.md не предок; PyYAML відсутній → `INCOMPLETE`;
 крок без специфікації → `spec-missing`; `form` DATA_POLICY без «Пункт про AI у договорі».

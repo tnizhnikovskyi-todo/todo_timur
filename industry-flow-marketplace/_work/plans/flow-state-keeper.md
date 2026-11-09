@@ -57,6 +57,7 @@ description: >
 | Наряд C-02 (режим, `task_id` події, `scope`) | задача C-02 у базі `flow` (ставить C-01) | `odoo_search_read`, `connection_id` = alias `flow`; YAML у `description` |
 | Звіт запуску `run:` (`report-format.md` + доповнення runner'а: `attempts_in_run`, `returns`, `models_used`, `audit`, `stop_reason`) | C-01/C-06: чаттер задачі кроку | останній YAML-блок `run:`; ключ — `message_id` |
 | Блок `dispatch:` звіту C-01 (`created/requeued/escalated/blocked/held_slot/skipped_*`, `units_N`) | C-01: чаттер задачі C-01 | лише рядки зі `step`, `scope`, `task_id`, `reason` |
+| Результат CI (C-03): запис job `report-odoo` (SHA, URL прогону, вердикти job'ів, лічильники) + статус GitHub за SHA | C-03 (`ci-pipeline-builder`): чаттер задачі кроку; `github` | джерело правди — статус GitHub за SHA; запис у чаттері лише звіряється з ним; логи не читати |
 | Рішення людини на гейті | людина (роль за `raciA` картки): запис кнопки в чаттері + поля гейта («що виправлено в результаті AI», «зауваження до скіла») | запис типу «кнопка»: `author_id`, `date`; для коду — approve PR через `github` (лише факт і URL) |
 | Табель (години людей і агента) | Odoo `account.analytic.line` на задачі | лише суми годин за задачею й роллю, без коментарів |
 | Поля проєкту пакета/клієнта (стан, прапорці, «AI зупинено», «Параметри флоу», ростер, відкриті питання, `last_export`) | Odoo `flow` | технічні імена — з `flow/ODOO_SCHEMA.md` (C-00) через `references/state-model.md` |
@@ -86,7 +87,8 @@ MCP: `odoo-mcp` (лише alias `flow`), `github` (читання PR/approve, PR
   `flow/runs/<YYYY-MM>/<step>-<scope>-a<attempt>.yaml`, `flow/open-questions.md`, `flow/ai-stop.md`, `clients/REGISTRY.md`.
   `flow/runs/` — лише білий список полів (без `memo`, без `checks[].msg`, без текстів зауважень).
 - **PR до картки** (лише `reconcile`): у `flow/cards/<code>.json` поле `notes` — «Відкрите питання: …» → посилання на рішення
-  після закриття питання в Odoo. Інших полів карток не змінювати. Рецензія Тімліда.
+  після закриття питання в Odoo; поле `maturity` — лише після рішення AI-інженера кнопкою (C-07, пропозиція від `eval-builder`),
+  значення з поля гейта, у PR — посилання на запис журналу. Інших полів карток не змінювати. Рецензія Тімліда.
 - **Шаблон:** `package/templates/flow-state.md` (з `flow-core/references/flow-state.md`) — створюється першим запуском пакета (PR).
 
 ## 4. Алгоритм (для `SKILL.md`, Крок 0…N)
@@ -110,6 +112,10 @@ result, skill_versions (точний semver), usage.cost_usd, usage.tokens_in/ou
 
 **Крок 4. Блок `dispatch:`** — кожен рядок у стан кроку (створено/відкладено/заблоковано рішенням <роль>/стоп-лист);
 `units_N` — у поле запуску для «на одиницю». Нічого не ставити в чергу.
+
+**Крок 4a. Результат CI (C-03).** Запис `report-odoo` у задачі кроку → поле `ci: {sha, run_url, verdict}` запуску, вердикт
+брати зі статусу GitHub за тим самим SHA (розбіжність із записом у чаттері → статус GitHub, позначка «розбіжність CI» + Тімлід).
+Немає запису, але є статус за SHA з PR запуску → записати зі статусу. Логи прогону не копіювати.
 
 **Крок 5. Рішення гейта.** Прийняти лише запис кнопки з користувачем і часом; роль користувача — з ростера (немає в ростері →
 запис з «роль не визначена» + активність Керівнику напряму, рішення не відкидати, бо воно вже відбулось). Записати рядок журналу
@@ -195,8 +201,9 @@ B-09 «Готово» → «hypercare» до дати, «на супроводі
 
 | Файл | Де | Орієнтовний зміст |
 |---|---|---|
-| `flow-state.md` | `flow-core/references/` (спільний; копія → `package/templates/flow-state.md`) | Опис полів задачі/проєкту з картки `template`; типи записів журналу рішень; формат «Параметрів флоу»; формат кожного експортного файлу з шапкою |
-| `odoo-bridge.md` | `flow-core/references/` (спільний) | `message_post`, читання чаттера за типом (кнопка/коментар), `odoo_write` полів, `connection_id` |
+| `conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md` | `flow-core/references/` (вже є) | Читати §3.1–3.6; доповнення звіту runner'а (`attempts_in_run`, `returns`, `routing`, `audit`, `untrusted_instructions`, `stop_reason`) вносить автор `flow-step-runner` — state-keeper лише приймає їх як необов'язкові поля |
+| `flow-state.md` | `flow-core/references/` (ще немає — створює реалізація ЦЬОГО скіла; копія → `package/templates/flow-state.md`) | Опис полів задачі/проєкту з картки `template`; типи записів журналу рішень; формат «Параметрів флоу»; формат кожного експортного файлу з шапкою |
+| `odoo-bridge.md` | `flow-core/references/` (спільний; ще немає — створює реалізація `flow-orchestrator`/`flow-step-runner`, state-keeper лише посилається) | `message_post`, читання чаттера за типом (кнопка/коментар), `odoo_write` полів, `connection_id` |
 | `state-model.md` | `skills/flow-state-keeper/references/` | Подія → поля Odoo; обов'язкові поля запуску; білий список експорту `runs/`; ключі ідемпотентності; заборона полів клієнта в проєкті пакета |
 | `event-rules.md` | `skills/flow-state-keeper/references/` | Таблиця «подія → прапорець/поле → хто підтверджує»: B-08d, B-09, договір супроводу, стоп-лист (лише експорт), шлюз «Потрібні сесії?» |
 | `params-registry.md` | `skills/flow-state-keeper/references/` | Ключі «Параметрів флоу» з preconditions карток (A-01, A-05, D-02, …): ключ, крок-споживач, роль-власник; перелік економічних ключів A-07 (лише посилання) |
@@ -231,3 +238,14 @@ Odoo — `"requires": ["odoo-mcp:test"]`.
    «на супроводі» з датою, «підтверджено PM» = ні + активність PM — у проєкті клієнта; PR з `clients/REGISTRY.md`, `flow/state.md`,
    `flow/runs/…` (без `memo`) і шапкою автоекспорту; `verify` — порожній diff. `must_not`: пароль/URL з обліковими даними,
    прапорець у проєкті пакета, «бюджет AI».
+
+## 11. Стики з сусідніми скілами (узгоджено з їхніми планами)
+
+| Сусід | Що дає / бере | Правило для state-keeper |
+|---|---|---|
+| `flow-orchestrator` (C-01) | дає блок `dispatch:`; бере стан, «Параметри флоу», «AI зупинено», прапорці | state-keeper не ставить у чергу; відсутній параметр → лише FAIL у `reconcile`, крок-споживач блокує C-01 |
+| `flow-step-runner` (C-06) | дає звіт `run:` + доповнення (`routing`, `audit`, `returns`) | доповнення — необов'язкові поля; обов'язкові — лише Крок 2 |
+| `ci-pipeline-builder` (C-03) | дає запис `report-odoo` | Крок 4a; джерело правди — статус GitHub за SHA |
+| `eval-builder` (C-04/C-07) | бере тижневу статистику й журнал; дає `maturity_proposal` | статистика — `reconcile`; `maturity` у картку — лише після кнопки AI-інженера (PR до картки, §3) |
+| `industry-scoring` (A-01), `package-usage-metrics` (D-01), `package-sow-builder` (B-03), `backlog-triage` (D-02) | лише читають «Параметри флоу», `clients/REGISTRY.md`, Planning | ключі їхніх параметрів (A-01 «критерій ранжування», D-02 «поріг у продукт», …) — у `params-registry.md`; значення пишуться лише з рішення-кнопки |
+| `flow-autocheck` | колонка «умова» у `flow/ARTIFACTS.md` | не власник `ARTIFACTS.md`; відкрите питання — власник колонки (пропозиція: `flow-orchestrator`) |

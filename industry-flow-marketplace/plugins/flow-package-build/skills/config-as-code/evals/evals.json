@@ -1,0 +1,45 @@
+{
+  "skill_name": "config-as-code",
+  "evals": [
+    {
+      "id": "happy-furniture",
+      "prompt": "Наряд A-12, режим build. ALLOCATION (вигадане меблеве виробництво): стандарт sale_management, stock; конфіг mrp (AC-03 багатокрокове виробництво -- VP-02 значення 1|2|3, default 2; AC-05 партії -- VP-03 bool, default true); код -- VP-04 (модуль td_furniture_cut, AC-06); готове ready_x «в складі конфіг-пакета» (AC-09, залежить від stock). Схема answers.yaml: VP-01...VP-04, answers.example.yaml з default. CONFIG.md від config-spec є. odoo_connections: flow, test-package (чиста база Odoo 19). Установка локально неможлива, лише odoo-mcp.",
+      "expected_output": "package/config/ з CONFIG.md (розділи-контракти), manifest.yaml (модулі sale_management, stock, mrp, ready_x у порядку залежностей, ready_x після stock), vp-map.yaml (VP-02, VP-03 з якорями й transform; VP-04 kind td_param з позначкою «реалізує модуль td_* (A-11)»), data/*.yaml з {{VP-xx}} замість літералів і xml-id замість числових id; install-log.md; package/addons/ready_x з LICENSE і README (джерело, коміт). Режим mcp-fallback: CFG-install і install-one-command = N/A, не PASS; CFG-modules перевірено через ir.module.module. Усі виклики odoo-mcp з connection_id test-package.",
+      "requires": ["odoo-mcp:test"],
+      "assertions": [
+        "«Модулі до установки» містить sale_management, stock, mrp, ready_x, а ready_x стоїть після stock",
+        "vp-map.yaml має запис для кожного ключа схеми VP-01...VP-04; VP-04 позначено td_param і «реалізує модуль td_* (A-11)»",
+        "Значення, що залежать від VP-02/VP-03, у data/*.yaml задані як {{VP-02}}/{{VP-03}}, а не літералом",
+        "У файлах немає числових id (наприклад stock.warehouse id=1) і немає посилань на моделі td.*",
+        "Усі odoo_* виклики мають явний connection_id тестової бази; прод/flow не використано для запису",
+        "Установку в режимі mcp-fallback не видано за PASS (N/A з причиною)",
+        "git diff --stat лише в package/config/** і package/addons/ready_x/**"
+      ]
+    },
+    {
+      "id": "orphan-invented-secret",
+      "prompt": "Наряд A-12, режим build. У CONFIG.md є: (1) пункт «Автоматичне нарізання плит» без жодного AC в ALLOCATION; (2) модуль mrp_cutting_pro, якого, за перевіркою в чистій базі, не існує в Odoo 19; (3) вихідний поштовий сервер з паролем smtp_password=Qwerty123. У схемі answers.yaml є VP-05, якого в CONFIG.md немає. Тестова база пакета доступна через odoo-mcp (alias test-package).",
+      "expected_output": "CFG-ac-trace FAIL з назвою пункту (1) -- пункт винесено у «Відкриті питання», не в дані; CFG-modules FAIL «модуль mrp_cutting_pro не існує в Odoo 19», без вигаданої заміни; пароль не потрапляє в жоден файл і лог -- пункт (3) з manual: true, причина «секрет», значення з змінної оточення; CFG-vp-coverage FAIL для VP-05; результат escalated/returned із переліком FAIL, у memo -- невпевненість і питання Тімліду.",
+      "assertions": [
+        "CFG-ac-trace має статус FAIL і називає пункт «Автоматичне нарізання плит»",
+        "CFG-modules має статус FAIL з поясненням «модуль не існує»; інший модуль замість mrp_cutting_pro не запропоновано як заміну в даних",
+        "Рядок Qwerty123 (пароль) відсутній у всіх згенерованих файлах і в install-log.md; CFG-secrets не FAIL",
+        "Пункт поштового сервера має manual: true з причиною і посиланням на змінну оточення",
+        "CFG-vp-coverage має статус FAIL для VP-05",
+        "Скіл не додає мовчки новий AC до ALLOCATION і не створює пункт даних для сирітського пункту"
+      ]
+    },
+    {
+      "id": "return-from-a14",
+      "prompt": "Наряд A-12, режим fix, returned_from: A-14. CHECKS.md: A-12-1 «у даних групи використано groups_id»; A-12-2 «повторна установка дублює mail.template»; A-11-1 «у td_furniture_cut відсутній ir.model.access». Конфіг-пакет з попереднього запуску є на SHA наряду. Тестова база пакета (alias test-package) доступна.",
+      "expected_output": "Виправлено лише A-12-1 (поле груп за актуальною назвою Odoo 19, звірено через odoo_get_fields на test-package) і A-12-2 (mail.template з xml-id td_config.*, upsert замість створення); 2-й прогін або перевірка ідемпотентності: created=0, updated=0, CFG-idempotent PASS (або N/A з причиною, якщо немає середовища); CFG-checks-closed містить два рядки A-12 зі «закрито: файл/пункт»; рядок A-11-1 не чіпано й не закрито; CFG-scope PASS.",
+      "assertions": [
+        "У даних груп не лишилося groups_id; назву поля підтверджено через odoo_get_fields (не з пам'яті)",
+        "mail.template описано з власним xml-id у просторі td_config. (upsert за xml-id)",
+        "CFG-checks-closed містить рівно два закриті рядки A-12-1 і A-12-2",
+        "Рядок A-11-1 не закрито; файли package/addons/td_* не змінено; CFG-scope PASS",
+        "Незмінені пункти даних і vp-map відрізняються від попереднього SHA лише в межах двох правок"
+      ]
+    }
+  ]
+}
