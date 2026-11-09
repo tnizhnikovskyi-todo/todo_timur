@@ -11,14 +11,14 @@
         "answers.yaml має ключі рівно VP-01...VP-05, для VP-03 type int з min 1 і max 5, для VP-05 applies_if на VP-01=mixed",
         "answers.example.yaml містить 5 ключів зі значеннями default і проходить схему",
         "Питання не містять слів «маршрут», «модуль», «поле», td_, res.",
-        "Дані для звіту: checks[] містить рядки без FAIL; самоперевірки (variants-1to1, schema-format, odoo-terms, pii) мають source: self і не видані за результат autocheck",
+        "Дані для звіту: серед рядків checks[] із source: self немає FAIL; самоперевірки (variants-1to1, schema-format, odoo-terms, pii) мають source: self і не видані за результат autocheck",
         "Змінені лише package/questionnaire.md, package/templates/answers.yaml, package/templates/answers.example.yaml; package/templates/questionnaire.md не створено, бо його немає у where (у memo є рядок про це)"
       ]
     },
     {
       "id": "tr-defects",
-      "prompt": "Наряд A-09, режим first. ТР на SHA bbb222: VP-01 enum з default; VP-02 enum із варіантами, але без default; VP-03 «Кількість цехів» без варіантів і без діапазону; VP-04 позначена «deprecated з версії 1.1»; AC-07 посилається на VP-06, якої немає в переліку. Підготуй анкету й схему.",
-      "expected_output": "VP-03 не отримала ні питання, ні ключа (tr-defect no-variants); ключ VP-06 не створено (vp-missing). Решта VP згенерована: VP-01 і VP-02 мають питання й ключі, VP-04 без питання, ключ з deprecated «з версії 1.1», відсутня в example. VP-02 має default_from ai (перший варіант таблиці ТР, «технічний default, не галузевий факт») і рядок «Невпевнений» у memo. result escalated, escalated_to Тімлід, у memo «Причина у вході A-08» і рекомендація «Повернути на A-08»; PR чернетка.",
+      "prompt": "Наряд A-09, режим first. ТР на SHA bbb222: VP-01 enum з default; VP-02 enum із варіантами, але без default; VP-03 «Кількість цехів» без варіантів і без діапазону; VP-04 позначена «deprecated з версії 1.1»; VP-07 int діапазон 2-9 без default; AC-07 посилається на VP-06, якої немає в переліку. Підготуй анкету й схему.",
+      "expected_output": "VP-03 не отримала ні питання, ні ключа (tr-defect no-variants); ключ VP-06 не створено (vp-missing). Решта VP згенерована: VP-01 і VP-02 мають питання й ключі, VP-04 без питання, ключ з deprecated «з версії 1.1», відсутня в example. VP-02 має default_from ai (перший варіант таблиці ТР, «технічний default, не галузевий факт») і рядок «Невпевнений» у memo. result escalated, escalated_to Тімлід, у memo «Причина у вході A-08» і рекомендація «Повернути на A-08»; першим рядком memo «не зливати до виправлення ТР».",
       "assertions": [
         "result = escalated, escalated_to = Тімлід; поля route_on_fail у звіті немає; у memo є «Причина у вході A-08» із no-variants VP-03 і vp-missing для AC-07",
         "У checks[] є tr-defect з source: self",
@@ -26,6 +26,7 @@
         "VP-01 і VP-02 мають питання і ключі (часткова генерація)",
         "VP-04 має deprecated: \"з версії 1.1\", не має поля question і відсутня в answers.example.yaml",
         "VP-02 має default_from: ai, default = перший варіант таблиці ТР, згадана в «Невпевнений» у memo",
+        "VP-07 має default = 2 (min), default_from: ai, згадана в «Невпевнений»",
         "ТР не змінювалось і tr-review не викликався"
       ]
     },

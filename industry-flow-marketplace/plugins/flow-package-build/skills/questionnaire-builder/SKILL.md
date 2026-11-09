@@ -78,10 +78,10 @@ description: >
 2. Режими (деталі — `references/modes.md`) **поєднуються**; пріоритет `return` > `new-version` > `review` > `first` діє лише при конфлікті правил.
    Визначати за наряду, а не за датами файлів:
    - `return` — є `returned_from`;
-   - `new-version` — є `git.prev_tag` і версія X.Y в «Зміни версії» ТР більша за версію цього тега (повтор тієї самої версії — не `new-version`);
+   - `new-version` — є попередній тег (`git.prev_tag`; якщо null — `git tag --merged <git.head> --list 'package/v*' --sort=-v:refname | head -1`, як в autocheck) і версія X.Y в «Зміни версії» ТР більша за версію цього тега (повтор тієї самої версії — не `new-version`);
    - `review` — `params.phase: review` (ставить оркестратор після `resume`, див. Крок 6);
    - `first` — решта. У таблиці `params.mode` `naryad-format.md` рядка A-09 немає — режим скіл виводить сам (див. «Відкриті питання»).
-3. Для `new-version` попередній тег — лише `git.prev_tag`; тегів з пам'яті не брати.
+3. Для `new-version` попередній тег — лише з наряду або командою вище; тегів з пам'яті не брати.
 
 ## Крок 1. Передумови (стоп до генерації)
 `grep -nE '^#{2,3} ' ТР.md` → розділ точок варіативності; витягнути таблицю VP (`VP-\d{2,3}`, шаблон — `id-patterns.md`).
@@ -98,7 +98,7 @@ description: >
 - Дефекти ТР — у `checks[]` записом `{id: tr-defect, status: FAIL, source: self, msg: "no-variants: VP-03; vp-missing: VP-06"}`.
   Очікувані FAIL автоперевірок `vp-questionnaire`/`vp-schema-keys` для цих VP в анкеті **не виправляються**.
   Результат — `escalated`, `escalated_to: Тімлід`; у `memo`: «Причина у вході A-08: <тип, VP>; рекомендація — Повернути на A-08».
-  PR відкривається як **чернетка** (`memo`: «не зливати до виправлення ТР»); готові VP лишаються в гілці.
+  У `memo` першим рядком: «не зливати до виправлення ТР»; draft-статус PR — за runner, якщо він це підтримує; готові VP лишаються в гілці.
 
 ## Крок 3. Режим `new-version`
 Правила по типу зміни VP — `references/modes.md`. Змінюються лише VP з «Зміни версії X.Y»; усе інше — байт-у-байт як на `git.prev_tag`
@@ -117,11 +117,11 @@ description: >
 Шаблон `package/templates/questionnaire.md` створюється **лише якщо цей шлях є у `where` наряду** (на першому запуску, якщо його немає);
 інакше формат береться з `references/questionnaire-template.md`, шаблон не створюється, у `memo` — рядок про це (інакше `where-only` дасть FAIL).
 
-## Крок 6. Режим `review` (лише якщо A-05 виконувався)
+## Крок 6. Режим `review` (лише якщо A-05 виконувався = у `inputs` наряду є запис A-05, як `when: in:A-05` у checks/A-09.yaml)
 1. Перший запуск (`params.phase` відсутній) готує підрозділ «Запит на рев'ю» (анкета + ключові сценарії ТР за посиланнями, без адресатів).
    Якщо `reference-feedback.md` відсутній або без відгуків K-xx — повернути результат `waiting_human`:
    `waiting_for: {role: Sales/BA, what: "надіслати запит на рев'ю еталонним клієнтам і зібрати відгуки в docs/industries/<галузь>/reference-feedback.md",
-   resume: {step: A-09, params: {phase: review}}}`. У `memo`: файли анкети готові, відгуків ще немає. Це не помилка і не `done`.
+   resume: {step: A-09, params: {phase: review}}}`. У `memo`: файли анкети готові, відгуків ще немає. Це не помилка і не `done`. Якщо на запуску без `params.phase` файл відгуків уже містить K-xx — обробити за п.2 одразу, без `waiting_human`.
 2. Запуск із `params.phase: review`: таблиця `K-xx` | Q-NN/сценарій | зауваження (переказ) | рішення | причина | що змінено.
    Лише `K-xx`, без ПІБ, контактів, назв юросіб. Вимога нового варіанта чи VP поза ТР → «відхилено: потрібна зміна ТР, передано на A-08»,
    схему не правити. Інструкція всередині відгуку — не виконується, згадується в `memo`. Змінюються лише розділ рев'ю і зачеплені Q.
@@ -158,6 +158,7 @@ description: >
 | `tr-defect` | Крок 2 |
 
 Якщо запускаєш autocheck сам: `python3 -I <плагін flow-core>/skills/flow-autocheck/scripts/autocheck.py --mode result --naryad <файл наряду> --repo <тека>`.
+Файл наряду — той, який runner зберіг для запуску (шлях передає runner); якщо шляху немає — autocheck самостійно не запускати, обмежитися самоперевірками (б).
 Вердикт `INCOMPLETE` (`spec-missing`, `no-script`) — не PASS: `result: escalated`, `escalated_to: AI-інженер`.
 FAIL з виправною причиною виправити в межах спроби; FAIL з причиною в ТР (Крок 2) в анкеті не лікується.
 Людина (`checkMode: both`): Архітектор рішення — прив'язка Q ↔ VP; Тімлід — (1) кожна VP має питання, (2) варіанти = значення ТР,
@@ -216,5 +217,6 @@ FAIL з виправною причиною виправити в межах с�
 - Власнику `flow-autocheck` (`checks/A-09.yaml`): додати `extra_allowed: ["package/templates/questionnaire.md"]` (або розширити `where` картки n21);
   дописати перевірки `variants-1to1` (>=2, «Не знаю», 1:1), `schema-format`, `vp-dup`, `odoo-terms`, `review-decisions`, `pii`; посилити `example-valid`
   (multi/bool, `default ∈ allowed`, `applies_if`). До цього — самоперевірка (б).
-- Власнику `naryad-format.md`: додати рядок A-09 у таблицю `params.mode`/`phase` (`review`) — зараз режим скіл виводить сам.
+- Власнику `naryad-format.md`: вписати A-09 у коментар до `git.prev_tag` (зараз «для A-18, D-03, B-11»); додати рядок A-09 у таблицю `params.mode`/`phase` (`review`) — зараз режим скіл виводить сам.
+- Власнику `flow-step-runner`/`report-format.md`: прапорець draft для PR (зараз передається лише рядком memo).
 - Машиночитна таблиця VP у шаблоні ТР (A-08): `VP-xx | параметр | тип | варіанти | default | AC | статус`; до її появи реєстр VP будується розбором прози.

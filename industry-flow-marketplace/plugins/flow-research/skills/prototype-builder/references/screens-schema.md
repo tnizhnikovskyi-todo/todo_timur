@@ -58,7 +58,7 @@
 {"id": "S-02", "title": "Замовлення", "type": "form", "model": "order",
  "statusbar": ["нове", "у виробництві", "готове", "відвантажене"],
  "fields": [
-  {"name": "customer", "label": "Клієнт", "kind": "m2o"},
+  {"name": "customer", "label": "Клієнт", "kind": "m2o", "comodel": "customer"},
   {"name": "total", "label": "Сума", "kind": "number", "readonly": true,
    "calc": {"id": "CALC-01", "formula": "qty * unit_price", "inputs": ["qty", "unit_price"],
             "hint": "[Імітація] спрощений розрахунок суми"}}],

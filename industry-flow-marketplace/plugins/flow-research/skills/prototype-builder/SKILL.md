@@ -71,7 +71,9 @@ description: >
 Перевірити в наряді: `step: A-21`, `scope.kind: package`, `client_data: none`, `odoo_connections` = лише `flow`;
 у `inputs` є SHA для `features.md`, `screens.md`, `scenarios.md`. Існування на SHA: `git cat-file -e <sha>:<шлях>` для
 кожного (немає → `escalated`, «вхід відсутній на SHA»). Середовище: `scripts/assemble.mjs` і `scripts/record.mjs`
-існують; `npx playwright --version` і chromium (пробний запуск `record.mjs`). Немає браузера й не встановлюється →
+існують; `skill_ref[0]` наряду = `flow-research:prototype-builder@0.1.0` (інакше `escalated`, «картка A-21 не оновлена», див. В-4/В-7);
+`npx playwright --version`. Наявність chromium перевіряється на Кроці 7: статус ESCALATE (exit 2) від `record.mjs` = немає браузера
+(FAIL «немає index.html» до збірки — не про браузер). Немає браузера й не встановлюється →
 `result: escalated` AI-інженеру, відео руками не імітувати. При `attempt > 1` — прочитати `returned_from` і чек-лист гейта:
 що саме повернули (прототип чи концепцію); дані й екрани переробити за зауваженням, відео переписуються всі.
 
@@ -122,7 +124,7 @@ CSS/JS Odoo, у шапці — назва пакета і «Прототип, н
 ## Крок 7. Прогін і запис
 `node scripts/record.mjs <prototype-dir> | tail -30`: headless chromium, `recordVideo`, усі запити крім `file://`
 блокуються, збираються `console.error` і `pageerror`. В контекст — лише підсумок і помилки; HTML, логи й
-відео в контекст не читати. FAIL → виправити `screens.json`/дані/spec і повторити (у межах `maxAttempts`).
+відео в контекст не читати. FAIL → виправити `screens.json`/дані/spec і повторити (у межах `limits.max_attempts`).
 Відео пишеться **лише** цим прогоном; будь-яка зміна `index.html` → перезапис усіх відео. `video/index.md`
 фіксує sha256 `index.html`, на якому записано.
 
@@ -130,7 +132,7 @@ CSS/JS Odoo, у шапці — назва пакета і «Прототип, н
 Шаблон і критерії — `references/complexity-template.md` (там уже є витяг «Decision rule»). Версію `build-allocator`
 взяти з `inputs` наряду (запис «build-allocator Decision rule», `path`, `sha`), не з `skill_ref`; для звірки версії
 прочитати оригінал: `grep -n 'Decision rule' $(find ~/.claude/plugins -path '*odoo19-mvp-build/skills/build-allocator/SKILL.md' | head -1)`
-і Read ~30 рядків від заголовка. Записи в `inputs` немає — застосувати витяг із шаблону й зазначити в `memo`
+і Read ~30 рядків від заголовка (`find` порожній — каталог плагінів деінде: застосувати витяг із шаблону й записати це в `memo`). Записи в `inputs` немає — застосувати витяг із шаблону й зазначити в `memo`
 «версію build-allocator не зафіксовано». Застосувати до кожного F-xx у полегшеному режимі:
 - Рівні: **стандарт** (є з коробки Odoo 19 Enterprise) / **конфіг** (налаштування, Studio, `base.automation`
   без Python) / **код** (`td_*`). `hybrid` → **код** з приміткою про конфіг-частину.
@@ -147,7 +149,9 @@ SC → файл → тривалість → PASS → sha256.
 
 ## Автоперевірка
 Команда: `node scripts/check.mjs <prototype-dir> | tail -60` → JSON для `checks[]` (значення ПДн у вивід не потрапляють). Будь-який FAIL → виправити й
-повторити; на гейт не здавати.
+повторити; на гейт не здавати. `check.mjs` читає `concept/` з робочого дерева (`../concept`); якщо SHA з `inputs` не збігається з HEAD —
+вивантажити `concept/` через `git show <sha>:<шлях>` у тимчасову теку й передати `--concept <dir>`. Для рівня «стандарт»/«конфіг» джерело —
+URL на `odoo.com/documentation/19.0` або явний шлях довідника (текст зі словом «розділ»/«§» без шляху — недостатньо).
 
 | ID | Перевірка |
 |---|---|
@@ -185,6 +189,7 @@ complexity.md).» Далі за `flow-core/references/flow-map.md`: після `
 ## Обмеження й відкриті питання
 - В-1. Chromium для Playwright у контейнері агента не гарантований; до рішення AI-інженера крок без браузера завершується ескалацією.
 - В-2. Відео в git (кілька файлів по 2–15 MB на версію): Git LFS чи лише останній запуск — рішення Тімліда/AI-інженера.
+  До рішення: сумарний розмір `video/` ≤40 MB, інакше `escalated`; комітиться лише останній запуск.
 - В-3. `SC-xx.n` = номер рядка таблиці кроків `scenarios.md` — закріплено тут; `concept-mapper` має зберегти формат
   «№ | Час | Дія | Екран | Функція» (інакше — fallback на екрани зі стовпця «екрани»). Очікуваний текст на крок у `scenarios.md` не
   передбачений: потрібен він — розширення формату в `concept-mapper`.
