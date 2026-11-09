@@ -25,8 +25,8 @@ Write/Edit/Bash — gated tools: `allowed_tools` у frontmatter їх сам не
   лише в тимчасовій теці `<tmp>`. Такі кейси проганяти окремим викликом з `--case` на їхні id.
 - `--allow-tools Bash` — лише при прогоні власного набору `eval-builder` (його кейс 1 вимагає запуску `claude plugin eval`); решта наборів без Bash.
 
-## Зразок файлів кейса (вивід `claude plugin eval init --bare --eval-dir <tmp>/e <name>`)
-Першим кроком розкладки в `<tmp>` — перевірити формат тим самим `init --bare`. `<tmp>/e/<name>/prompt.md`:
+## Зразок файлів кейса (вивід `cd <tmp> && claude plugin eval init --bare --eval-dir e <name>`; `--eval-dir` для `init` — відносно поточної теки)
+Першим кроком розкладки в `<tmp>` — перевірити формат тим самим `init --bare` (він створює `graders/criteria.md`; файли `graders/01-check.md` скіл розкладає сам). `<tmp>/e/<name>/prompt.md`:
 ```
 ---
 max_turns: 10

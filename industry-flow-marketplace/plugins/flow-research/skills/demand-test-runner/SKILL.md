@@ -20,7 +20,7 @@ description: >
 кроку, між ними — людина: `prep` -> гейт Власника продукту (мерж PR; його SHA = `start_sha`) -> Sales публікує
 лендинг і надсилає листи -> `results`. Скіл нічого не надсилає, не публікує й не вирішує за людину: він
 рекомендує, рішення «Попит підтверджено?» — Власника продукту. Порядок A-23 загалом: `segment-selector` `список` ->
-`адреси` -> `prep` -> гейт -> `results` (пропозиція для flow-core — «Відкрите питання» 2).
+`адреси` -> `prep` -> гейт -> `results` (пропозиція для flow-core — див. «Передумови пакета»).
 
 ## Наряд і звіт
 Вхід — наряд задачі Odoo (`flow-core/references/naryad-format.md`, читання — `odoo-bridge.md` §3), розбирає
@@ -47,7 +47,7 @@ description: >
 | Питання | Власник |
 |---|---|
 | Хто отримує лист: `mailing-list.csv`, колонка `варіант`, «Досяжність розсилки» | `segment-selector` (A-23, `params.mode`: `список`, `адреси`); тут список не змінюється й не доповнюється |
-| Прототип, відео, `complexity.md` | `prototype-builder` (A-21); тут лише посилання (шлях за SHA) |
+| Прототип, відео, `complexity.md` | `prototype-builder` (A-21); тут лише посилання (шлях у репо за SHA) |
 | Функції F-xx | `concept-mapper` (A-20); нових функцій не вигадується |
 | Лист конкретному гарячому ліду після дзвінка | `odoo19-sales-prep:client-followup-writer` (B-01) |
 | Холодні листи й нагадування | цей скіл |
@@ -61,10 +61,10 @@ description: >
    явний `params.mode`» (повторний раунд не стартує сам). Вибір записати в `memo`.
 3. Усі `inputs` наряду є за своїми SHA; `features.md` має ≥ 1 F-xx (DT-inputs).
 4. `prep`, передумови з `flow/decisions.md` (колонки `№ | дата | гейт/крок | scope | рішення | …`, `flow-state.md` §3):
-   - затвердження A-21: `awk -F'|' '$4~/A-21/ && $5~/<галузь>/' flow/decisions.md | tail -1` — рядок є і в
-     «рішення» «затверджено» (останній рядок «повернено» = немає). Немає, як і ``demand/mailing-list.csv`` ->
-     `waiting_human`, `waiting_for.role: Власник продукту` (A-21) або `Тімлід` (немає списку від `segment-selector`),
-     `resume: {step: A-23, params: {mode: prep}}`.
+   - затвердження A-21: `grep -E 'A-21' flow/decisions.md | grep '<галузь>' | tail -1` (не залежить від провідної
+     риски й номера колонки); у рядку має бути слово «затверджено» («повернено» = немає). Немає затвердження ->
+     `waiting_human`, `waiting_for.role: Власник продукту` (A-21), `resume: {step: A-23, params: {mode: prep}}`.
+   - немає `demand/mailing-list.csv` -> `waiting_human`, role `Тімлід` (список від `segment-selector`), той самий `resume`.
    - `mailing-list.md` містить «Нестача корпоративних адрес»: шукати рішення — рядок A-23 зі scope галузі, де
      коментар містить «досяжн». Немає -> `waiting_human`, role `Власник продукту`, «рішення: досяжність», **тексти не
      писати**; у `memo` — лічильники з «Досяжності розсилки». Є рішення, три гілки: (а) «новий список» -> стоп до нового
@@ -91,11 +91,11 @@ description: >
 позначка «Прототип, не робочий продукт», «пілот з <місяць>; передоплата лише за пілот за договором», форма «Заявка на
 пілот» (назва компанії, ЄДРПОУ, роль, контакт, чекбокси F-xx, «коли готові почати», згода). Текст згоди й реквізити
 відправника — з `package/DATA_POLICY.md` (розділ із «згод»/«відписк» у заголовку: `grep -niE '^#+ .*(згод|відписк)'`);
-немає -> плейсхолдер «текст згоди — Юрист» і DT-consent = FAIL (на гейті виправляє Юрист; «Відкрите питання» 5).
+немає -> плейсхолдер «текст згоди — Юрист» і DT-consent = FAIL (на гейті виправляє Юрист; розділ згоди — «Передумови пакета»).
 Реквізити — плейсхолдер або «див. DATA_POLICY», не вписувати email/телефон. Ціни не називати (`forbidden-claims.md`).
 
 ## Крок 4 (prep). Листи — `<D>emails.md`
-За `references/email-template.md`: на варіант — тема ≤ 60 символів, тіло ≤ 120 слів, 1 CTA на лендинг з UTM,
+За `references/email-template.md`: на варіант — тема ≤ 60 символів, тіло ≤ 120 слів, 1 CTA на лендинг `https://{landing_url}/?utm_…` (плейсхолдер без кутових дужок; адресу підставляє Sales; справжній домен не підставляти — інакше DT-utm не перевіряє посилання),
 відписка (плейсхолдер `<посилання відписки>`), реквізити відправника; одне нагадування через 5–7 днів. Без
 персоналізації за ПІБ (лише `{компанія}`). Чернеток Gmail немає: тексти лише в `emails.md`, Sales переносить їх у
 свій канал після гейта.
@@ -104,15 +104,16 @@ description: >
 За `references/mailing-plan-template.md`: хвилі (напр. 3 × ~⅓ списку, усі варіанти в пропорції `mailing-list`),
 розклад із перевіркою DT-wave (остання хвиля + нагадування ≤ кінець періоду − 7 днів), UTM-схема
 (`utm_campaign=demand-<галузь>`, `utm_content=<варіант>`, `utm_term=F-xx`), канал (Odoo Email Marketing / Gmail —
-вирішує Sales), хто надсилає (Sales), де адреси (Drive із `mailing-list.md`, без адрес у репо), правила зупинки
+вирішує Sales), хто надсилає (Sales), де адреси (ідентифікатор теки Drive із `mailing-list.md`, не URL, без адрес у репо), правила зупинки
 (відмови доставки, скарги на спам — числа як оцінки), облік сигналів (`references/signals-format.md`). Розмір плану =
 рядків `mailing-list.csv` (або розмір за гілкою рішення з Кроку 0, DT-reach).
 
 ## Крок 6 (results). Цілісність порогів і період
 1. `<D>_input/signals.csv` немає -> `waiting_human`, role `Sales`, «передати signals.csv без контактів»,
    `resume: {step: A-23, params: {mode: results}}`.
-2. `start_sha` = `params.start_sha`. Немає -> `git log --diff-filter=A --format=%H -1 origin/<base_branch> -- <D>thresholds.md`,
-   у `memo` позначка «start_sha з git, не з наряду». Немає й цього -> `escalated`.
+2. `start_sha` = `params.start_sha`. Немає -> `git log --first-parent --diff-filter=A --format=%H -1 origin/<base_branch> -- <D>thresholds.md`
+   (мерж-коміт, яким файл потрапив у базову гілку); у `memo`: «start_sha з git, не з наряду; наближення, ескалація
+   DT-frozen можлива хибна». Немає й цього -> `escalated`.
 3. `git cat-file -e <start_sha>^{commit}`; не існує -> один раз `git fetch --deepen=500` і повтор; і далі ні ->
    `escalated` «start_sha недосяжний» (**не PASS**, порожній лог за помилки git не вважати).
 4. `git log --format='%H %an %s' <start_sha>..HEAD -- <D>thresholds.md` не порожній -> DT-frozen = FAIL: `results.md`
@@ -128,7 +129,7 @@ description: >
   `python3 -I scripts/demand_tool.py pii <D>_input/*` — email/телефон/ПІБ -> стоп, DT-no-pii = FAIL, `memo`: «вхід
   містить контакти — перевикласти без них» (тип і рядок, без значень); вміст у `results.md` не переносити.
 - Підрахунок — лише скриптом: `python3 -I scripts/demand_tool.py aggregate --signals … --calls … --list
-  <mailing-list.csv> --features <features.md> --start <старт> --end <кінець> [--hot 4]`. Він нормалізує події, бере
+  <mailing-list.csv> --features <features.md> --start <старт> --end <кінець> [--hot 4]` (`--hot` — номер рівня: `--hot 3` = від Р3, `--hot 4` = від Р4). Він нормалізує події, бере
   найвищий рівень на ЄДРПОУ, відсікає події поза періодом, виділяє «поза розсилкою» і «поза картою функцій». Рівень —
   лише з колонки `рівень` (Sales); не виводити з тексту відповіді. У контекст — лише JSON-підсумок.
 - Подія поза періодом — не рахується, показується окремим лічильником. `invalid` у виводі -> у `memo`.
@@ -165,7 +166,7 @@ description: >
 | DT-honesty | prep | `demand_tool.py honesty landing.md emails.md`: немає заборонених фраз, є «Прототип» і «пілот з» | збіг або немає позначок |
 | DT-complexity | prep | `demand_tool.py complexity --complexity … --landing …`: F-xx «код/складно» мають «у плані пілоту» | немає |
 | DT-consent | prep | у кожному листі відписка й відправник; у формі текст згоди, не плейсхолдер | немає/плейсхолдер |
-| DT-utm | prep | `demand_tool.py utm landing.md emails.md mailing-plan.md`: `utm_campaign`, `utm_content`; на `#F-xx` — `utm_term=F-xx` | немає параметра |
+| DT-utm | prep | `demand_tool.py utm landing.md emails.md` (лише посилання `https://{landing_url}/...`): `utm_campaign`, `utm_content`; на `#F-xx` — `utm_term=F-xx`; у `mailing-plan.md` є рядок UTM-схеми (`grep -c utm_campaign=demand-`) | немає параметра/схеми |
 | DT-reach | prep | розмір плану = рядків `mailing-list.csv` або за гілкою рішення Кроку 0 | розбіжність |
 | DT-wave | prep | остання хвиля + нагадування ≤ кінець періоду − 7 днів | порушення |
 | DT-levels | results | таблиці Р1–Р2 і Р3–Р5 окремі; числа збігаються з JSON `aggregate` | змішано або не збігається |
@@ -191,28 +192,28 @@ description: >
 
 ## Наступний крок
 - `prep`: «Пороги й тексти підготовлено, очікують гейт Власника продукту; SHA мержу — `start_sha`; Sales публікує
-  лендинг і надсилає за `mailing-plan.md`; `results` — після періоду тесту». Запуск `results` — «Відкрите питання» 3.
+  лендинг і надсилає за `mailing-plan.md`; `results` — після періоду тесту». Запуск `results` — «Відкрите питання» 2.
 - `results`: «Результати готові, рішення Власника продукту: A-07 / A-20 / "Галузь відкладено"». Гарячі ліди — B-01;
   кандидати з позначкою — A-22 (за запитом ліда).
 - Сигнали нижче порогів — не помилка, а `results.md` на рішення (flow-map.md: ескалація картки A-23 без автопереходу).
   Ескалація: DT-frozen FAIL -> Власник продукту; «Нестача корпоративних адрес» -> `waiting_human` Власнику продукту.
 
+## Передумови пакета (до першого запуску)
+Без цих правок скіл не стартує або дає FAIL; закрити при складанні пакета:
+- **Менеджер карток:** A-23 `skillRef` -> `flow-research:demand-test-runner@0.1.0` (зараз `client-followup-writer`, Крок 0.1 відхилить наряд); `where`/`inArtifacts`/`template` — додати `landing.md`, `emails.md`, `mailing-plan.md`, `mailing-list.csv`, `features.md`, `complexity.md`; те саме в `flow/ARTIFACTS.md`.
+- **flow-core (`naryad-format.md`, `flow-map.md`):** рядок A-23 у таблиці режимів (`список`, `адреси`, `prep`, `results`) і ключі `params.start_sha`, `params.final`, `params.round`.
+- **Юрист (`data-policy-template.md`):** розділ із текстом згоди й відписки; до того DT-consent завжди FAIL.
+
 ## Відкрите питання
 1. До flow-core/flow-research: спільний `flow-research/references/demand-thresholds.md` не створено; визначення Р1–Р5б
    живуть у `references/demand-levels.md` цього скіла. Якщо потрібні іншим скілам — винести у спільний файл.
-2. До `naryad-format.md`/`flow-map.md`: рядок A-23 у таблиці режимів: `список`, `адреси`, `prep`, `results`; порядок
-   `список -> адреси -> prep -> гейт -> results`; ключі `params.start_sha`, `params.final`, `params.round`.
-3. Хто й коли запускає `results` (другий наряд з `params.mode: results` і `params.start_sha` = SHA мержу prep-PR, чи
+2. Хто й коли запускає `results` (другий наряд з `params.mode: results` і `params.start_sha` = SHA мержу prep-PR, чи
    таймер) — рішення `flow-orchestrator`. Без `start_sha` у наряді діє запасний шлях Кроку 6.
-4. До менеджера карток: A-23 `skills`/`skillRef` -> `flow-research:demand-test-runner@0.1.0` (зараз
-   `client-followup-writer`; він лише для B-01); `where`, `inArtifacts`, `template` — додати `landing.md`, `emails.md`,
-   `mailing-plan.md`, `mailing-list.csv`, `features.md`, `complexity.md`; те саме в `flow/ARTIFACTS.md`.
-5. Текст згоди й відписки: у `data-policy-template.md` немає окремого розділу; потрібен розділ (Юрист) або вказівка, де
-   він живе. До того DT-consent = FAIL і на гейті виправляє Юрист.
-6. Джерело лічильників Р1–Р2 (кліки, відкриття, кліки по `#F-xx`): які UTM-поля й лічильники реально зберігає Email
+3. Джерело лічильників Р1–Р2 (кліки, відкриття, кліки по `#F-xx`): які UTM-поля й лічильники реально зберігає Email
    Marketing в Odoo 19 — звірити через `boost:source-check`; скіл на це не спирається, береться агрегат від Sales.
-7. Маркетингова база не має класу в allow-list C-05, тому `odoo-mcp` у скілі не використовується.
-8. Чи допустимий email юрособи з відкритого реєстру для B2B-розсилки (успадковано від `segment-selector`) — C-05 / Юрист.
+4. Маркетингова база не має класу в allow-list C-05, тому `odoo-mcp` у скілі не використовується.
+5. Чи допустимий email юрособи з відкритого реєстру для B2B-розсилки (успадковано від `segment-selector`) — C-05 / Юрист.
+
 ## Чого НЕ робити
 - Не змінювати `thresholds.md` у `results` і не «уточнювати» пороги після старту; не писати SHA мержу у файл.
 - Не рахувати кліки, відкриття й перегляди (Р1–Р2) як попит; не ранжувати функції за кліками.

@@ -53,13 +53,17 @@ Read-back знаходить запис через `odoo_search_read` (для `x
 | `settings` | алгоритм нижче -- якір на місце зберігання, не на `res.config.settings` |
 | `mail_template`, `cron`, `automation` | `<модель>:xml_id=td_config.<slug>:<поле>` |
 
-**`settings` -- `res.config.settings` transient: після `execute()` читати з неї не можна.** Алгоритм визначення якоря:
-через `odoo_get_fields res.config.settings` (і джерело з CONFIG.md) визначити, як поле зберігається:
-- `config_parameter=<ключ>` -> `ir.config_parameter:[key=<ключ>]:value`;
-- `related`/на `company_id` -> `res.company:xml_id=base.main_company:<поле компанії>`;
-- `implied_group`/`group_*` -> членство `implied_ids` групи в `base.group_user` (або відповідній);
-- `default_model`/`default_*` -> `ir.default` (`[field_id.model=..., field_id.name=...]`);
-- не визначено -> пункт `manual` або `CFG-readback: MANUAL`; **не PASS**.
+**`settings` -- `res.config.settings` transient: після `execute()` запис не читається, а `fields_get` не повертає `config_parameter`,
+`implied_group`, `default_model`.** Спосіб read-back залежить від типу поля (`odoo_get_fields` з фільтром `type, relation, related`):
+- поле `related` (`company_id.<поле>`) -> **лише** якір `res.company:xml_id=base.main_company:<поле компанії>` через `odoo_search_read`;
+  модель і запис якоря брати з ланцюжка `related`, який повертає `odoo_get_fields`; `base.main_company` -- лише типовий випадок для `company_id.*` в однокомпанійній тестовій базі; якщо ланцюжок веде не на компанію, якір вказати явно у `vp-map.yaml`;
+  `default_get` для нього не застосовується (він повертає лише `default_*`, `group_*`, `module_*` і `config_parameter`; `related` обчислюється при створенні запису);
+- решта полів (`group_*`, `module_*`, `default_*`, `config_parameter`) -> `odoo_execute` model `res.config.settings`, method `default_get`,
+  args `[[<поля пункту>]]`, `connection_id`; порівняти з `transform(answers.example.yaml)`. Додатково, коли місце зберігання відоме з CONFIG.md/вихідників:
+  - `config_parameter=<ключ>` -> `ir.config_parameter:[key=<ключ>]:value` (значення порівняти до й після `execute()`);
+  - `implied_group`/`group_*` -> членство `implied_ids` групи в `base.group_user`; `default_*` -> `ir.default`.
+`CFG-readback: FAIL` (не MANUAL) -- лише коли не спрацював жоден із двох способів для поля, крім пунктів `manual: true`.
+Поведінку `default_get` підтвердити через `boost:source-check` (відкрите питання).
 
 ## Пункт даних (`data/NN_*.yaml`)
 ```yaml

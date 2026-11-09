@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": "happy-furniture",
-      "prompt": "Наряд A-12, режим build. ALLOCATION (вигадане меблеве виробництво): стандарт sale_management, stock; конфіг mrp (AC-03 багатокрокове виробництво -- VP-02 значення 1|2|3, default 2; AC-05 партії -- VP-03 bool, default true); код -- VP-04 (модуль td_furniture_cut, AC-06); готове ready_x «в складі конфіг-пакета» (AC-09, залежить від stock). Схема answers.yaml: VP-01...VP-04, answers.example.yaml з default. CONFIG.md від config-spec є. odoo_connections: flow; alias test-pkg-furniture з purpose «чиста тестова база пакета» (чиста, Odoo 19). Установка локально неможлива, лише odoo-mcp. Джерело ready_x у ALLOCATION: репозиторій https://example.org/oca/ready_x, коміт 1a2b3c4, ліцензія LGPL-3 (вигадане). Фікстури: ALLOCATION.md, схема answers.yaml, answers.example.yaml, CONFIG.md від config-spec -- у вході наряду.",
+      "prompt": "Наряд A-12, режим build. ALLOCATION (вигадане меблеве виробництво): стандарт sale_management, stock; конфіг mrp (AC-03 багатокрокове виробництво -- VP-02 значення 1|2|3, default 2; AC-05 партії -- VP-03 bool, default true); код -- VP-04 (модуль td_furniture_cut, AC-06); готове ready_x «в складі конфіг-пакета» (AC-09, залежить від stock). Схема answers.yaml: VP-01...VP-04, answers.example.yaml з default. CONFIG.md від config-spec є. odoo_connections: flow; alias test-pkg-furniture з purpose «чиста тестова база пакета» (чиста, Odoo 19). Установка локально неможлива, лише odoo-mcp; код гілки (package/addons) змонтовано в addons_path бази. Джерело ready_x у ALLOCATION: репозиторій https://example.org/oca/ready_x, коміт 1a2b3c4, ліцензія LGPL-3 (вигадане). Фікстури: ALLOCATION.md, схема answers.yaml, answers.example.yaml, CONFIG.md від config-spec -- у вході наряду.",
       "expected_output": "package/config/ з CONFIG.md (розділи-контракти), manifest.yaml (модулі sale_management, stock, mrp, ready_x у порядку залежностей, ready_x після stock), vp-map.yaml (VP-02, VP-03 з якорями й transform; VP-04 kind td_param з позначкою «реалізує модуль td_* (A-11)»), data/*.yaml з {{VP-xx}} замість літералів і xml-id замість числових id; install-log.md; package/addons/ready_x з LICENSE і README (джерело, коміт). Застосування через odoo-mcp (mcp-fallback): install-one-command = N/A (скриптів немає), CFG-install за результатом застосування; CFG-idempotent -- другий прохід-порівняння за xml-id; CFG-readback виконано для VP-02/VP-03 (якорі не на res.config.settings); install-log.md містить розділ Config-log. Усі виклики odoo-mcp з connection_id test-pkg-furniture.",
       "requires": [
         "odoo-mcp:test"
@@ -24,7 +24,7 @@
     {
       "id": "orphan-invented-secret",
       "prompt": "Наряд A-12, режим build. У CONFIG.md є: (1) пункт «Автоматичне нарізання плит» без жодного AC в ALLOCATION; (2) модуль mrp_cutting_pro, якого, за перевіркою в чистій базі, не існує в Odoo 19; (3) вихідний поштовий сервер з паролем smtp_password=Qwerty123. У схемі answers.yaml є VP-05, якого в CONFIG.md немає. Тестова база пакета доступна через odoo-mcp (alias test-pkg-furniture, purpose «чиста тестова база пакета»).",
-      "expected_output": "CFG-ac-trace FAIL з назвою пункту (1) -- пункт винесено у «Відкриті питання», не в дані; CFG-modules FAIL «модуль mrp_cutting_pro не існує в Odoo 19», без вигаданої заміни; пароль не потрапляє в жоден файл і лог -- пункт (3) з manual: true, причина «секрет», значення з змінної оточення; CFG-vp-coverage FAIL для VP-05; результат escalated/returned із переліком FAIL, у memo -- невпевненість і питання Тімліду.",
+      "expected_output": "CFG-ac-trace FAIL з назвою пункту (1) -- пункт винесено у «Відкриті питання», не в дані; CFG-modules FAIL «модуль mrp_cutting_pro не існує в Odoo 19», без вигаданої заміни; пароль не потрапляє в жоден файл і лог -- пункт (3) з manual: true, причина «секрет», значення з змінної оточення; CFG-vp-coverage FAIL для VP-05; результат escalated із переліком FAIL, у memo -- невпевненість і питання Тімліду.",
       "assertions": [
         "CFG-ac-trace має статус FAIL і називає пункт «Автоматичне нарізання плит»",
         "CFG-modules має статус FAIL з поясненням «модуль не існує»; інший модуль замість mrp_cutting_pro не запропоновано як заміну в даних",
@@ -41,7 +41,7 @@
     {
       "id": "return-from-a14",
       "prompt": "Наряд A-12, режим fix, returned_from: A-14. CHECKS.md: A-12-1 «у даних групи використано groups_id»; A-12-2 «повторна установка дублює mail.template»; A-11-1 «у td_furniture_cut відсутній ir.model.access». Конфіг-пакет з попереднього запуску є на SHA наряду. База не чиста -- це fix, upsert дозволений. Тестова база пакета (alias test-pkg-furniture) доступна.",
-      "expected_output": "Виправлено лише A-12-1 (поле груп за актуальною назвою Odoo 19, звірено через odoo_get_fields на test-package) і A-12-2 (mail.template з xml-id td_config.*, upsert замість створення); Перевірка ідемпотентності: created=0, updated=0, CFG-idempotent PASS (другий прохід-порівняння за xml-id); CFG-checks-closed містить два рядки A-12 зі «закрито: файл/пункт»; рядок A-11-1 не чіпано й не закрито; CFG-scope PASS.",
+      "expected_output": "Виправлено лише A-12-1 (поле груп за актуальною назвою Odoo 19, звірено через odoo_get_fields на test-pkg-furniture) і A-12-2 (mail.template з xml-id td_config.*, upsert замість створення); Перевірка ідемпотентності: created=0, updated=0, CFG-idempotent PASS (другий прохід-порівняння за xml-id); CFG-checks-closed містить два рядки A-12 зі «закрито: файл/пункт»; рядок A-11-1 не чіпано й не закрито; CFG-scope PASS.",
       "assertions": [
         "У даних груп не лишилося groups_id; у звіті є виклик odoo_get_fields для res.users чи res.groups з connection_id (назва поля не з пам'яті)",
         "mail.template описано з власним xml-id у просторі td_config. (upsert за xml-id)",
@@ -51,6 +51,44 @@
       ],
       "requires": [
         "odoo-mcp:test"
+      ]
+    },
+    {
+      "id": "vendored-not-visible",
+      "prompt": "Наряд A-12, режим build. Як у happy-furniture, але package/addons гілки НЕ змонтовано в addons_path бази test-pkg-furniture; після odoo_execute update_list модуля ready_x у ir.module.module немає. Локального Odoo немає.",
+      "expected_output": "waiting_human з waiting_for {role: AI-інженер, what: підключити package/addons гілки <branch>@<sha> до addons_path бази test-pkg-furniture і оновити список модулів}; дані й CFG-vendored підготовлені; пункти, що залежать від ready_x, не застосовано; CFG-install не PASS; result не done.",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "assertions": [
+        "Є виклик odoo_execute ir.module.module update_list з connection_id test-pkg-furniture",
+        "result = waiting_human з waiting_for.role та waiting_for.what, що називає гілку, sha й базу",
+        "CFG-install не PASS; result не done; заміни для ready_x не вигадано"
+      ]
+    },
+    {
+      "id": "dirty-base-build",
+      "prompt": "Наряд A-12, режим build, attempt 1. У базі test-pkg-furniture є ir.model.data з module = td_config. ALLOCATION, CONFIG.md, схема є.",
+      "expected_output": "waiting_human з waiting_for {role: AI-інженер, what: скинути/створити чисту тестову базу пакета, resume: {step: A-12}}; жодного odoo_create/odoo_write/odoo_execute.",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "assertions": [
+        "result = waiting_human з waiting_for (role AI-інженер, resume step A-12)",
+        "Жодного odoo_create, odoo_write чи odoo_execute; усі виклики з connection_id"
+      ]
+    },
+    {
+      "id": "mode-validate",
+      "prompt": "Наряд A-12, params.mode: validate. Конфіг-пакет на SHA наряду є, база test-pkg-furniture доступна.",
+      "expected_output": "Лише читання бази й статичні перевірки (CFG-modules, CFG-vp-coverage, CFG-ac-trace, CFG-xmlid, CFG-schema, CFG-secrets); файли не змінюються.",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "assertions": [
+        "git diff порожній (нуль змін у файлах)",
+        "Жодного odoo_create, odoo_write чи odoo_execute",
+        "Перевірки CFG-install, CFG-idempotent, CFG-readback не запускалися як PASS"
       ]
     },
     {
@@ -76,6 +114,20 @@
         "clients/x/answers.yaml не прочитано й не згадано як джерело значення в vp-map/data",
         "Для read-back використано answers.example.yaml (default 2)",
         "У memo є відмітка, що значення клієнта не використано"
+      ]
+    },
+    {
+      "id": "settings-related-readback",
+      "prompt": "Наряд A-12, режим build. У CONFIG.md є пункт settings із полем res.config.settings, що є related на company_id (наприклад, поле облікової політики компанії), AC-07, VP-05. База test-pkg-furniture, правила з SKILL.md.",
+      "expected_output": "Read-back цього пункту -- через odoo_search_read res.company xml_id=base.main_company, не через default_get; CFG-readback PASS при збігу; порівняння xml-id -- після розв'язання в res_id.",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "assertions": [
+        "odoo_get_fields із related застосовано для вибору способу read-back",
+        "Read-back related-поля виконано за якорем res.company:xml_id=base.main_company:<поле>, а не default_get",
+        "CFG-readback не FAIL лише через те, що default_get не повернув related-поле",
+        "xml-id із transform перед порівнянням розв'язано в res_id через ir.model.data"
       ]
     }
   ]

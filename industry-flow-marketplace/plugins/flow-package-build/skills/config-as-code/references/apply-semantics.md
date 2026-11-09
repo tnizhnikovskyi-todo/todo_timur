@@ -17,8 +17,11 @@
 - Значення VP: `transform` з `vp-map.yaml`; значення поза схемою відхиляє `CFG-schema` до запису.
 
 ## Кроки й приклади викликів (`connection_id` -- з наряду, тут `<id>`)
+0. `odoo_execute` model `ir.module.module`, method `update_list`, ids `[]`, `connection_id: <id>` -- оновити список модулів.
+   Вендорений модуль відсутній після `update_list` -> `waiting_human` з `waiting_for: {role: AI-інженер, what: "підключити package/addons
+   гілки <branch>@<sha> до addons_path бази <alias> і оновити список модулів"}`; залежні пункти не застосовувати, `CFG-install` не PASS.
 1. Модулі: `odoo_search_read` model `ir.module.module`, domain `[["name","in",["stock","mrp"]]]`, fields `["name","state","dependencies_id"]`,
-   `connection_id: <id>`. Перед цим список модулів оновлено (`button_immediate_install` для не встановлених вимагає запису в списку).
+   `connection_id: <id>`. Список оновлено кроком 0 (`button_immediate_install` вимагає запису в списку).
 2. Установка: `odoo_execute` model `ir.module.module`, method `button_immediate_install`, ids знайдених із `state = "uninstalled"`
    (за одним модулем у порядку `manifest`), `connection_id: <id>`. Дозволено явно для тестової бази пакета (не прод, даних клієнта
    немає). Після виклику (можливе перезавантаження реєстру/тайм-аут) перечитати `state`; не `installed` -> `waiting_human`
@@ -29,8 +32,11 @@
 4. Settings: `odoo_create` `res.config.settings` зі значеннями -> `odoo_execute` method `execute` на створеному id.
    Settings, що через `group_*`/`module_*` ставлять модулі, застосовувати **окремим першим пунктом** (реєстр перезавантажиться),
    а ці модулі вносити в `manifest` явно; побічні дії `execute()` вручну не відтворювати -- позначити в CONFIG.md.
-5. Read-back: для кожного VP -- `odoo_search_read` за якорем з `vp-map.yaml` (`config-package-format.md`, «Формат якоря»), порівняти
-   з `transform(answers.example.yaml)`.
+5. Read-back: `settings` -- поле `related` (`company_id.*`) -> `odoo_search_read` `res.company` `xml_id=base.main_company`; інші поля --
+   `odoo_execute` `res.config.settings` `default_get` args `[[<поля>]]` (див. `config-package-format.md`); FAIL, лише якщо не спрацював жоден
+   із двох способів. Решта VP -- `odoo_search_read` за якорем з `vp-map.yaml` («Формат якоря»).
+   Порівняння з `transform(answers.example.yaml)`: xml-id з `transform` перед порівнянням розв'язати в `res_id` через `ir.model.data`
+   (`default_get` повертає many2one як id); selection -- порівнювати ключ; bool (`group_*`) -- булеве значення.
 
 ## Ідемпотентність у fallback
 `CFG-idempotent` = **другий прохід порівняння** за xml-id (кроки 3-5 без запису): розбіжностей і відсутніх записів немає -> PASS;

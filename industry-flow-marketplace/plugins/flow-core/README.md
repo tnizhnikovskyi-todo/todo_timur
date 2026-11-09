@@ -17,6 +17,11 @@
 
 (Тексти скілів — у `skills/<скіл>/SKILL.md`.)
 
+## Агенти плагіна
+- `flow-core:flow-executor` (`agents/flow-executor.md`) — субагент-виконавець кроку: лише файли результату, читання odoo-mcp; без Bash, git, gh, запису в Odoo.
+- `flow-core:flow-reviewer` (`agents/flow-reviewer.md`) — субагент-рецензент кроку: лише читання.
+Їх використовує `flow-step-runner` (крок 0 перевіряє наявність).
+
 ## Конвенції
 
 Цей плагін і є джерелом спільних конвенцій: `conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`, `odoo-bridge.md`, `flow-map.md`, `flow-step-run.md`, `flow-state.md`, `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`.

@@ -12,7 +12,7 @@ dispatch:
     - {action: skipped_stoplist, step: B-06, scope: client/cl-03, reason: "AI зупинено"}
     - {action: blocked, step: A-07, scope: package/<id>, task_id: 1188, reason: "2,5 x humanSla, raciA Власник продукту"}
   units_N: {D-01: 2}           # лише для кроків "на одиницю"
-  skill_remarks:               # зауваження до скілів з гейтів; переносить у observations/ flow-state-keeper (C-02, експорт) своїм PR
+  skill_remarks:               # зауваження до скілів з гейтів; очікуваний споживач — flow-state-keeper (ще не реалізовано; до того — активність AI-інженеру, крок 10 SKILL.md)
     - {step: A-12, skill_ref: "flow-package-build:config-as-code@0.1.0", task_id: 1190, text: "..."}
 ```
 

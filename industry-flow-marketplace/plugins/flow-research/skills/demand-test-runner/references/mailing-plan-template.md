@@ -20,8 +20,7 @@
 `utm_campaign=demand-<галузь>`, `utm_content=<A|B|C>`, `utm_term=F-xx` (для посилань на функцію).
 
 ## Канал і відправник
-Канал: <Odoo Email Marketing | Gmail — вирішує Sales>. Надсилає: Sales. Адреси: <посилання на теку Drive
-з `mailing-list.md`, не в репо>.
+Канал: <Odoo Email Marketing | Gmail — вирішує Sales>. Надсилає: Sales. Адреси: <ідентифікатор теки Drive з `mailing-list.md` (не URL, не в репо)>.
 
 ## Правила зупинки (оцінки, затверджує Власник продукту)
 - Відмови доставки > <N>% у хвилі -> пауза, повідомити Власника продукту.

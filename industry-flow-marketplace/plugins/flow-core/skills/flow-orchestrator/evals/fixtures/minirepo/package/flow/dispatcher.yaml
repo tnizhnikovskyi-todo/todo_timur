@@ -1,5 +1,10 @@
-catalog: {repo: industry-flow-marketplace, tag: v0.1.0}
+catalog: {repo: industry-flow-marketplace, ref: v0.1.0}
 lease_factor: 1.5
 per_unit_steps: [D-01, B-10]
-periodic: {monthly: [D-01, B-01b, D-02a], B-10: monthly}
-calendar: {holidays: []}
+parallelism: {per_package: 3, per_client: 1}
+periodic:
+  monthly_first_workday: [D-01, B-01(b), D-02(a)]
+  monthly_per_client_on_support: [B-10]
+work_calendar: {timezone: Europe/Kyiv, workdays: [Mon, Tue, Wed, Thu, Fri], holidays: []}
+role_pairs: {Власник продукту: Керівник напряму}
+unclaimed_after_minutes: 60

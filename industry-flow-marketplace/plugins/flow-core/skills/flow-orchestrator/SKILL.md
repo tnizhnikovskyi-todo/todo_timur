@@ -79,9 +79,16 @@ description: >
 3. **preconditions картки**: кожен параметр флоу з preconditions є в «Параметри флоу» з роллю й датою → інакше `skipped_precondition`, активність ролі-власнику параметра (немає ролі → Тімлід).
 4. **Згода**: клієнт з «AI-обробка: відкликано» і `clientData: personal` (або крок із розділу DATA_POLICY «Відкликання згоди на AI-обробку») → ставимо як **людський** (`executor: human`). Рішення щодо згоди C-01 не ухвалює. `skipped_precondition` лише якщо людського виконавця (роль `raciR`) не визначено.
 5. **Входи**: `flow-core:flow-autocheck` у режимі `inputs` — кожен `inArtifacts.path` збігається з `where` джерела в `flow/ARTIFACTS.md` і існує на SHA.
-   Порядок: (а) SHA `origin/<base_branch>` фіксується один раз; (б) клон репо флоу в тимчасову теку на цей SHA; (в) у тимчасовий JSON записується
-   мінімальний наряд `{step, scope, inputs: [{name, from, path, sha}], repo}` (повний наряд складається на кроці 3; `sha` входів = SHA гілки
-   `from`-кроку); (г) `python3 -I <flow-core>/skills/flow-autocheck/scripts/autocheck.py --mode inputs --naryad <json> --repo <тека> --base <sha>`;
+   Порядок:
+   - (а) SHA `origin/<base_branch>` фіксується один раз.
+   - (б) Клон репо флоу в тимчасову теку на цей SHA.
+   - (в) У тимчасовий JSON — мінімальний наряд `{step, scope, attempt, returned_from, inputs: [{name, from, path, sha, condition}], repo}`; повний наряд складається на кроці 3.
+     - `scope` — об'єкт `{kind, id}` за `naryad-format.md` (рядок дає помилку autocheck = FAIL); `sha` входів = SHA гілки `from`-кроку.
+     - Плейсхолдери `<галузь>`/`<клієнт>` у `inArtifacts.path` підставити зі scope/параметрів флоу до порівняння з `where`.
+     - Умовні входи картки («лише при повторному запуску», «лише при старті від повернення»): на `attempt` = 1 без `returned_from` **не включати**; на повторі — включати з `condition: «лише при повторному запуску»` (autocheck пропускає умову лише за словом «повтор»).
+     - Один `where` на крок-джерело: `flow/ARTIFACTS.md` має один рядок `where` на `from`, тому в тимчасовий наряд іде лише вхід кожного `from` з `path` = `where`. Решту входів того самого `from` перевірити `git -C <тека> cat-file -e <sha>:<path>` (немає → FAIL, активність Тімліду) і перенести в повний наряд з тим самим `sha`. `path`, якого немає в картці-джерелі, — теж FAIL.
+     - Якщо для `from` жоден вхід не має `path` = `where` (наприклад, `where` — тека, а `path` — файл у ній, або навпаки): усі входи цього `from` перевірити через `cat-file -e` (для теки — `git ls-tree`), а розбіжність картки й реєстру внести у звіт як зауваження до `ARTIFACTS.md`.
+   - (г) `python3 -I <flow-core>/skills/flow-autocheck/scripts/autocheck.py --mode inputs --naryad <json> --repo <тека> --base <sha>`;
    код виходу 0 — PASS, 1 — FAIL, 2 — INCOMPLETE. FAIL або INCOMPLETE → не ставити, активність Тімліду з текстом. Знайдені SHA переносяться в наряд.
 6. **Ідемпотентність**: відкрита задача з тим самим ключем ідемпотентності (`odoo-bridge.md` §7) → `skipped`.
 7. **Слот** (лише AI-задачі): ≤3 запуски на пакет, ≤1 на клієнта — рахується зі стану Odoo (стадії `Черга`/`В роботі`/`Автоперевірка`). Понад ліміт задачу **не створювати**: `held_slot` у `dispatch.actions` (це єдиний запис про відкладене); `sweep-rules.md` §1 підбере її, коли слот звільниться.
@@ -90,9 +97,9 @@ description: >
 ## Крок 3. Скласти наряд
 З картки кроку за `flow-core/references/naryad-format.md`; ключ ідемпотентності й пошук дублів — `flow-core/references/odoo-bridge.md` §7 (`dispatch-rules.md` §2).
 - `executor`: з картки. Змішаний крок → **дві задачі**: AI-частина (executor картки) + людська задача ролі з `raciR`, залежна від AI-частини.
-- `skill_ref` = `<плагін>:<скіл>@<версія>`; версія — поле `version` у `plugins/<плагін>/.claude-plugin/plugin.json` каталогу організації
+- `skill_ref` — список (картка може вимагати кілька скілів різних плагінів): кожен елемент `<плагін>:<скіл>@<версія>`; версія — поле `version` у `plugins/<плагін>/.claude-plugin/plugin.json` каталогу організації
   (репо `industry-flow-marketplace`, тег/SHA каталогу зі `package/flow/dispatcher.yaml` → `catalog`), читання через `github`; **не** з локально встановлених плагінів.
-  Точно, без діапазонів і без «останньої». Плагіна, скіла чи версії немає → не ставити, `skipped_precondition`, активність AI-інженеру.
+  Версію кожного елемента брати з `plugin.json` його плагіна. Точно, без діапазонів і без «останньої». Хоч одного плагіна, скіла чи версії немає → не ставити, `skipped_precondition`, активність AI-інженеру.
 - `model`, `effort`, `where`, `template`, `done`, `check`, `client_data`, `data_rule` — з картки; `inputs[].sha` — з кроку 2.
 - `limits` з картки; для кроків зі списку `per_unit_steps` у `dispatcher.yaml` множити на N (клієнтів/запитів), N → `units_N` у звіт.
 - `odoo_connections` — з класу кроку за DATA_POLICY «Класи доступу до баз Odoo (allow-list)»; крок без роботи з Odoo → порожньо. До цих баз C-01 сам не ходить.
@@ -118,10 +125,10 @@ description: >
 `attempt` > `maxAttempts`, `result: escalated`, перевищено `timeoutMin`/`costLimit` → **нового запуску не ставити**; активність ролі з поля `escalation` картки + перелік артефактів (шляхи на SHA, посилання на звіт і PR). Гейт «Повернути» → `on-complete` з `returned_from`.
 
 ## Крок 10. Гейт закрито із «зауваження до скіла = так»
-`boost:skill-feedback` **не викликати** (C-01 без PR, запис у контейнері загубиться). Додати в `dispatch:` запис
-`skill_remarks: [{step, skill_ref, task_id, text}]` (текст з поля `gate.skill_feedback`/`gate.comment`, без ПІБ). Єдиний споживач —
-`flow-core:flow-state-keeper` (C-02) у режимі експорту: читає `dispatch.skill_remarks` зі звітів C-01 і своїм PR створює
-`observations/<дата>-<скіл>.md` у форматі `boost:skill-feedback` (`eval-builder` у цьому не бере участі і `observations/` не змінює).
+`boost:skill-feedback` **не викликати** (C-01 без PR, запис у контейнері загубиться). Дві дії:
+1. Додати в `dispatch:` запис `skill_remarks: [{step, skill_ref, task_id, text}]` (текст з `gate.skill_feedback`/`gate.comment`, без ПІБ).
+   Очікуваний споживач — `flow-core:flow-state-keeper` (C-02), режим експорту → `observations/<дата>-<скіл>.md`; **цього кроку в ньому ще немає** (див. «Відкриті питання»).
+2. Поки споживача немає — створити активність AI-інженеру (або ролі з `escalation` картки C-04): «зауваження до скіла `<skill_ref>`, задача `<task_id>`: <текст>», щоб зауваження не загубилось.
 Поле чек-листа гейта порожнє → маршрут не продовжувати, активність перевіряльнику «заповнити чек-лист».
 
 ## Крок 11. Звіт
@@ -161,6 +168,7 @@ description: >
 
 ## Відкриті питання
 - C-00: автоматизація Odoo, що створює задачу C-01 `on-complete` на зміну стадії; `flow/ODOO_SCHEMA.md` (логічні імена з `odoo-bridge.md` §2); шлях карток `flow/cards/<код>.json`.
-- `flow-state-keeper` (C-02): у режимі експорту немає кроку «`dispatch.skill_remarks` → `observations/<дата>-<скіл>.md`» (чинний крок 4 обробляє лише дії created/requeued/…); потрібне доповнення його SKILL.md — поза межами цього скіла.
+- `flow-state-keeper` (C-02): у режимі експорту немає кроку «`dispatch.skill_remarks` → `observations/<дата>-<скіл>.md`» (чинний крок 4 обробляє лише дії created/requeued/…); потрібне доповнення його SKILL.md (крок експорту + евал) — поза межами цього скіла; до того діє активність AI-інженеру (крок 10).
 - `report-format.md`: `returned_to` описано як один код; для A-14/A-17/A-18 потрібен список кодів (AND-розгалуження) — до зміни діє резервна таблиця `dispatch-rules.md` §8.
+- `flow-autocheck` (inputs): підтримує один `where` на `from` (реєстр `ARTIFACTS.md` як dict за кодом кроку); до зміни autocheck або формату реєстру діє обхід кроку 2.5 (п. «Один `where` на крок-джерело»). Власник — власник `flow-autocheck`; при зміні переглянути крок 2.5.
 - `dispatcher.yaml`: ключі `catalog` (репо й тег каталогу плагінів) і `per_unit_steps`; календар свят.

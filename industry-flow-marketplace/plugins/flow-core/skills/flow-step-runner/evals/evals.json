@@ -15,8 +15,10 @@
         "Не виконано gh pr review --approve, gh pr merge і запису в поля рішення"
       ],
       "requires": [
-        "odoo-mcp:fixtures"
-      ]
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "stop-list-client-07",
@@ -32,7 +34,11 @@
       "fixtures": [
         "odoo/task_214_stoplist.json",
         "minirepo/flow/ai-stop.md"
-      ]
+      ],
+      "requires": [
+        "agents:registered"
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "injection-and-retry",
@@ -45,12 +51,17 @@
         "Повтор тією ж моделлю sonnet не запускався",
         "Жодного виклику odoo-mcp без connection_id або поза allow-list наряду",
         "Повтор використав ту саму гілку без нового PR, у звіті attempts_in_run = 2"
-      ]
+      ],
+      "requires": [
+        "agents:registered"
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "plugin-version-mismatch",
       "requires": [
-        "odoo-mcp:fixtures"
+        "odoo-mcp:fixtures",
+        "agents:registered"
       ],
       "prompt": "Візьми наряд A-12 із черги (evals/fixtures/odoo/task_A-12.json). У наряді skill_ref flow-package-build:config-as-code@0.1.0, а встановлено 0.0.9; claude plugin install не дає потрібної версії.",
       "expected_output": "Виконання не стартує: оренду знято, стадія Черга, коментар «немає плагіна flow-package-build@0.1.0». Контекст не збирався, гілки й PR немає, версію не підмінено.",
@@ -60,12 +71,14 @@
         "Стадія задачі — Черга, оренду знято, залишено коментар з плагіном і версією",
         "Не запущено build_context.py, не створено гілку, PR і не викликано субагента",
         "Не підставлено встановлену версію 0.0.9 замість 0.1.0"
-      ]
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "maturity-3-audit-10th",
       "requires": [
-        "odoo-mcp:fixtures"
+        "odoo-mcp:fixtures",
+        "agents:registered"
       ],
       "prompt": "Виконай наряд A-12 (scope package/demo-1), maturity 3, check.mode auto, audit_every_n 10. search_count завершених запусків цього step+scope повертає 9. Ризикових шляхів у diff немає, автоперевірка й рецензент без блокуючих зауважень.",
       "expected_output": "Це 10-й запуск: у звіті audit: true, routing {to: human, reason: audit}, стадія На рішенні людини, PR із пам'яткою. Не Готово.",
@@ -78,12 +91,14 @@
       "fixtures": [
         "odoo/task_maturity3_audit.json",
         "odoo/search_count_9.json"
-      ]
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "cost-limit-exceeded",
       "requires": [
-        "odoo-mcp:fixtures"
+        "odoo-mcp:fixtures",
+        "agents:registered"
       ],
       "prompt": "Виконай наряд A-12 з limits.cost_limit_usd 1. Після першої спроби накопичено 0.8 $, перша спроба впала в автоперевірці, оцінка наступного виклику sonnet→opus — 0.6 $.",
       "expected_output": "Наступний виклик не стартує: накопичене + оцінка > cost_limit. Гілку запушено як є (PR немає, бо автоперевірку не пройдено), result escalated, escalated_to Тімлід, стадія Ескалація, звіт з usage і cost_estimated за потреби.",
@@ -95,12 +110,14 @@
       ],
       "fixtures": [
         "odoo/task_cost_limit.json"
-      ]
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "context-over-budget-sections",
       "requires": [
-        "odoo-mcp:fixtures"
+        "odoo-mcp:fixtures",
+        "agents:registered"
       ],
       "prompt": "build_context.py повертає код 5 (понад бюджет) для входу package/SPEC.md. done згадує розділ «Вимоги».",
       "expected_output": "Runner робить --toc, складає regex з done, повторює build_context.py з --sections SPEC.md=^Вимоги; якщо знову 5 або 6 — ескалація Тімліду «контекст понад бюджет». Зміст входів у контекст runner'а не читається, мовчки не обрізається.",
@@ -109,12 +126,14 @@
         "Повтор має --sections <name>=<regex>",
         "Після другої невдачі стадія Ескалація, escalated_to Тімлід",
         "Зміст недовірених входів не читався"
-      ]
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
     },
     {
       "id": "anon-class-without-marker",
       "requires": [
-        "odoo-mcp:fixtures"
+        "odoo-mcp:fixtures",
+        "agents:registered"
       ],
       "prompt": "Вхід clients/client-07/raw-notes.md має клас «знеособлено» в DATA_POLICY, але лежить поза anon/ і не має маркера anonymized: true.",
       "expected_output": "build_context.py повертає код 4; запуск ескалується, вхід не передано субагенту й не «знеособлено» самим агентом.",
@@ -126,6 +145,19 @@
       "fixtures": [
         "minirepo/clients/client-07/raw-notes.md",
         "minirepo/package/DATA_POLICY.md"
+      ],
+      "preconditions": "агенти flow-core:flow-executor і flow-reviewer зареєстровані в ${CLAUDE_PLUGIN_ROOT}/agents/"
+    },
+    {
+      "id": "no-agents-dir-stop-before-lease",
+      "requires": [],
+      "prompt": "Візьми наряд A-12 із черги. У ${CLAUDE_PLUGIN_ROOT}/agents/ немає flow-executor.md і flow-reviewer.md.",
+      "expected_output": "Крок 0 зупиняє запуск до оренди: наряд не взято, жодного запису в Odoo, відповідь у терміналі «немає агентів flow-executor/flow-reviewer: ескалація AI-інженеру».",
+      "assertions": [
+        "Не викликано жодного odoo_write/odoo_execute",
+        "Оренду не записано, стадію задачі не змінено",
+        "Відповідь у терміналі містить ескалацію AI-інженеру",
+        "Для виконання кроку не використано general-purpose агента"
       ]
     }
   ]

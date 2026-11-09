@@ -13,3 +13,9 @@
 | task.scope | project.task | x_scope | char | |
 | project.prod_alias | project.project | x_prod_alias | char | лише `prod-metrics-<код>` |
 | project.flow_agent_users | res.users | група «Агенти флоу» | group | |
+| project.ai_stopped | project.project | x_ai_stopped | boolean | стоп-лист «AI зупинено» |
+| partner.ai_consent | res.partner | x_ai_consent | selection | `given` / `withdrawn` («AI-обробка: відкликано») |
+| partner.on_support | res.partner | x_on_support | boolean | клієнт «на супроводі» |
+| task.params | project.task | x_params | text | параметри флоу (YAML) |
+| task.executor | project.task | x_executor | selection | central / any / human |
+| task.attempt | project.task | x_attempt | integer | |

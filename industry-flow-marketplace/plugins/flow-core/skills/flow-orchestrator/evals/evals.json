@@ -80,6 +80,19 @@
         "Повторний запуск дає skipped, а не другу задачу",
         "Звіт має dispatch: з created і pr: null"
       ]
+    },
+    {
+      "id": "gate-skill-remarks",
+      "prompt": "Режим on-complete. Гейт A-12 закрито кнопкою «Затвердити», у полі «зауваження до скіла» — так, текст: «config-as-code пропускає групи доступу». Виконати.",
+      "expected_output": "Наступники за картою поставлено; у звіті є skill_remarks зі step, skill_ref і task_id; AI-інженеру створено активність із текстом зауваження.",
+      "assertions": [
+        "У звіті dispatch є skill_remarks з step A-12, skill_ref і текстом",
+        "Створено активність AI-інженеру з текстом зауваження",
+        "Диспетчер не пише в observations/ і не відкриває CHECKS.md"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ]
     }
   ]
 }

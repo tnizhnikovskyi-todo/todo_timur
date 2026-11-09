@@ -96,6 +96,8 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     items, total, toc = [], 0, []
     for i in json.load(open(a.inputs, encoding="utf-8")):
+        if not isinstance(i, dict) or not i.get("name") or not i.get("path"):
+            print(json.dumps({"error": "запис входу без обов'язкових ключів name/path", "input": str(i)[:200]}), file=sys.stderr); return 2
         sha, path = i.get("sha"), i["path"]
         if not sha or sh(a.repo, "cat-file", "-e", sha).returncode:
             print(json.dumps({"error": "немає SHA або коміт відсутній", "input": i["name"]}), file=sys.stderr); return 2

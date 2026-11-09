@@ -1,13 +1,19 @@
 {
  "tasks": [
   {
+   "id": 801,
    "step": "A-10",
-   "scope": "package/demo-1",
-   "stage": "Готово"
+   "scope": {
+    "kind": "package",
+    "id": "demo-1"
+   },
+   "stage": "Готово",
+   "executor": "central",
+   "attempt": 1
   }
  ],
  "slots_used": {
-  "package/demo-1": 1
+  "package:demo-1": 1
  },
  "stoplist": [],
  "catalog": {

@@ -2,7 +2,7 @@
 """demand_tool.py: stdlib-перевірки й підрахунки demand-test-runner (A-23). Запуск: python3 -I demand_tool.py <cmd> ...
   aggregate --signals S.csv [--calls calls.md] --list mailing-list.csv --features features.md --start YYYY-MM-DD --end YYYY-MM-DD [--hot 3]
   pii FILE...        email/phone/ПІБ за flow-core/references/pii-patterns.md; друкує лише тип:файл:рядок
-  utm FILE...        кожне http(s)-посилання має utm_campaign, utm_content; з #F-xx -- ще utm_term
+  utm FILE...        кожне посилання на лендинг (`https://{landing_url}/...`) має utm_campaign, utm_content; з #F-xx -- ще utm_term
   honesty FILE...    фрази з references/forbidden-claims.md (рядки з запереченням пропускаються); потрібні «Прототип» і «пілот з»
   complexity --complexity complexity.md --landing landing.md   F-xx «код/складно» -> «у плані пілоту»
 Контактів у вивід не друкує. Код виходу 1 при збігу/FAIL."""
@@ -87,7 +87,7 @@ CLAIMS = [r"готов\w+\s+(продукт|рішення|до використ
           r"гаранту\w+|гарантія результату|гарантир\w+", r"(впровад\w+|внедр\w+)\s+за\s+\d+|запуск\s+за\s+\d+",
           r"економі\w+\s+\d+\s*%|окупність|\bROI\b|зменшимо витрати", r"\bціна\b|\bціни\b|вартість|від\s+\d[\d\s]*(грн|\$|€)|знижк\w+|тариф|\bцена\b|стоимость",
           r"конкуренти гірші|єдине рішення|№\s?1", r"обмежена пропозиція|лише сьогодні"]
-NEG = re.compile(r"(не|без)\s+(є\s+|називаємо\s+|гарантуємо\s+)?(робоч\w+|готов\w+|цін\w*|гарант\w+)|ціни не|умови пілоту", re.I)
+NEG = re.compile(r"(не|без)\s+(є\s+|називаємо\s+|називати\s+|гарантуємо\s+)?(робоч\w+|готов\w+|цін\w*|гарант\w+)|ціни не|умови пілоту", re.I)
 
 def lines(files):
     for p in files:
@@ -117,7 +117,11 @@ def main():
                 print(f"missing-marks:{p}"); rc = 1
     elif a.cmd == "utm":
         for p, i, ln in lines(a.files):
-            for u in re.findall(r"https?://[^\s)>\]]+", ln):
+            for u in re.findall(r"https?://[^\s)>\]`]+", ln):
+                if u.endswith("..."): continue
+                if "{landing_url}" not in u:
+                    if "utm_" not in u: print(f"utm-warn:{p}:{i}: https-посилання без {{landing_url}} — UTM не перевірено")
+                    continue  # UTM перевіряється лише в посиланнях на лендинг (плейсхолдер)
                 need = ["utm_campaign=", "utm_content="] + (["utm_term=F-"] if "#F-" in u else [])
                 if any(n not in u for n in need): print(f"utm:{p}:{i}"); rc = 1
     elif a.cmd == "complexity":
