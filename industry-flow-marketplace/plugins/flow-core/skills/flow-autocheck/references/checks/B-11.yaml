@@ -3,6 +3,13 @@
  "step": "B-11",
  "checks": [
   {
+   "id": "pii-strict",
+   "prim": "pii_strict",
+   "args": {
+    "paths": ["clients/"]
+   }
+  },
+  {
    "id": "u-conn",
    "prim": "manual",
    "args": {

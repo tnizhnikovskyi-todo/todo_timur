@@ -9,6 +9,7 @@ step: A-12                      # код кроку (картка)
 scope: {kind: package|client, id: <пакет|ідентифікатор клієнта за DATA_POLICY>}
 executor: any|central|human
 skill_ref: ["flow-package-build:config-as-code@0.1.0", "odoo19-mvp-build:config-review@1.4.0"]
+called_skills: []               # необов'язково: ["плагін:скіл@semver"] — скіли, які ведучий (skill_ref[0]) викликає у своєму запуску; не гейти
 model: sonnet            effort: medium
 inputs:                          # з карток: inArtifacts; SHA фіксує оркестратор
   - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: <commit>}
@@ -43,7 +44,7 @@ params:                          # блок режимів кроку; став�
   addendum_source: <шлях|код>    # B-03 mode: addendum
   group: <ключ>                  # злиття паралельних нарядів
   resume: {…}                    # перезапуск після waiting_human
-  reconcile: true|false          # B-06 фаза 1: звірка
+  reconcile: true|false          # B-11 фаза 1: звірка (у B-06 режим звірки — `mode: reconcile`)
   maturity: <0..3>               # C-07: поточна зрілість кроку (для maturity_proposals)
 git:                             # SHA для автоперевірок; заповнює runner після створення гілки
   base: <sha>                    # git merge-base head origin/<base_branch>
@@ -61,6 +62,8 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 | A-09 | `first`, `review` (через `phase: review`) | `review` — оркестратор після `resume` | `first` |
 | A-12 | `build`, `fix`, `new-version`, `validate` | `fix` — повернення з A-14; `new-version` — від D-04/D-05 | `build` |
 | A-15, A-22 | `перша`, `нова-версія` | `нова-версія` — змінені AC і `git.prev_tag` | `перша` |
+| A-23 | `список`, `адреси`, `prep`, `results` | `список` -> `prep` (другий наряд); `адреси` — коли `список` у `waiting_human` (потрібні адреси), executor: central; `results` — після збору сигналів | `список` |
+| B-08a | `звірка`, `збіжність` | `збіжність` — другий наряд після APPROVE-звірки (`config-drift.md` на вході) | `звірка` |
 | B-06 | `mode`: `main\|reconcile\|return` | `reconcile` — звірка після міграції; `return` — з `returned_from` | `main` |
 | C-04 | `weekly`, `init`, `regress` | `weekly` — за розкладом; `init`, `regress` ставить лише AI-інженер (нова модель/версія плагіна) | `weekly` |
 | C-07 | `incident` | після розбору `boost:debug-root-cause` у `flow/ai-incidents/<id>.md` | `incident` |
@@ -79,6 +82,8 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 - `date` — з поля `date` наряду, інакше з `run.started` першого звіту; з пам'яті не брати.
 - Для `inputs`, де SHA не вказано, runner ставить `origin/<base_branch>` на момент запуску й записує в `git.base`.
 - Прямі ключі `mode`/`period`/`pilot` верхнього рівня (старі наряди) читаються як `params.*`.
+
+`called_skills`: runner звіряє їхній semver так само, як `skill_ref` (Крок 3), але не запускає як гейти (Крок 9 (д) бере лише `skill_ref[1:]`). Джерело — примітка в `step-skill-map.md`.
 
 Запис наряду в Odoo, розекранування `description`, дзеркальні поля — `odoo-bridge.md` §3. Шаблони задач наряду/гейта/ролі — `flow-step-run.md`.
 

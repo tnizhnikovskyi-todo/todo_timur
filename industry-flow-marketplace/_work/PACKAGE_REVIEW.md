@@ -1,3 +1,47 @@
+# PACKAGE_REVIEW — підсумкова рецензія після дозбирання, раунд 4 (2026-11-10)
+
+Перевірка після виправлень M-1 раунду 3 (15 файлів у робочому дереві поверх `65373ab`, ще не закомічено). Лише рекомендації, файли пакета не змінювались. Прийняті рішення (D-01, `eval-builder` лише під runner, агенти у `flow-core/agents/`, імена полів Odoo — C-00) не переглядались; відкриті питання README не вирішувались.
+Вердикт: **major** (blocker — 0, major — 1, minor — 5).
+
+## 1. Що перевірено
+
+| Перевірка | Результат |
+|---|---|
+| `claude plugin validate .` і `plugins/<p>` × 5 | PASS × 6 |
+| marketplace.json ↔ plugin.json ↔ теки | 5/5 плагінів (версії 0.1.0, іконки є), 28 `SKILL.md`, 28 `evals/evals.json`, `*.pyc` — 0 |
+| 28 `SKILL.md` | `name` = тека; frontmatter лише `name`/`description`; `description` після розбору YAML — максимум 888 (усі ≤ 900) |
+| Посилання `плагін:скіл` | усі існують (пакет, агенти `flow-core`, `boost`, `odoo19-mvp-build`, `odoo19-implementation`, `odoo19-tr-authoring`, `odoo19-sales-prep`) |
+| `checks/*.yaml` (35) | усі парсяться; усі `<корінь плагіна X>/…` скрипти існують; усі значення `when` — з переліку `checks.md` |
+| Самотести | `autocheck.py --selftest` OK; `evals_to_cli.py --self-test` OK |
+| Шаблони `tools-odoo` | 6 скриптів викликають `guard_db`; `prod`, `prod-acme`, `test-prod`, `Test-PROD2`, `client-x`, `anon-k1`, порожнє, `test-`, `test-x;id` — відмова (код 2); `test-x`, `demo-1`, `emu-a`, `test-pkg-a` — дозволено |
+| Попередній M-1 (а) | закрито: умова `when: mode:<значення>` у `checks.md` і `autocheck.py`; `A-23.yaml` (7 записів `mode:prep\|results`), `B-08a.yaml` (`mode:звірка`); runner (ж) виконує записи лише за справдженої `when` і бере плагін з тексту команди, не зі `skill_ref[0]` |
+| Попередній M-1 (в) | закрито: рядки `A-23 список → prep` і `B-08a звірка → збіжність` у `flow-map.md`, посилання з оркестратора (ключ ідемпотентності з `mode`), `segment-selector` р. 53 виправлено |
+| Попередній M-1 (б) | закрито в таблиці й README (один наряд B-11, звірку й додаток викликає ведучий), але позначка `called` не доведена до формату наряду й runner — M-1 нижче |
+| Minor 1 і 3 раунду 3 | закрито: `guard_db` відхиляє імена з `prod`, пункт у `c00-checklist.md`; `pii_strict` у `B-11.yaml` і `D-01.yaml` |
+
+## 2. Зауваження
+
+### Major
+
+**M-1. Позначка `called` для B-11 існує лише в `step-skill-map.md` р. 33 і README р. 39; формат наряду, runner, оркестратор і `package-upgrade-runner` її не знають.**
+(а) `flow-step-runner/SKILL.md` р. 34 і Крок 9 (д) трактують `skill_ref[1:]` як «скіли-гейти» й запускають їх після виконавця. Для наряду B-11 зі `skill_ref: [package-upgrade-runner, runbook-executor, package-sow-builder]` runner запустить `runbook-executor` («звірка», читання тестової бази клієнта) і `package-sow-builder` як гейти — незалежно від `params.reconcile`, який `package-upgrade-runner` (Крок 8, В-7) за замовчуванням тримає вимкненим до рішення людини.
+(б) `naryad-format.md` р. 11 задає `skill_ref` як список рядків `плагін:скіл@semver`; синтаксису позначки немає, а Крок 3 runner порівнює semver точною рівністю — суфікс у рядку зламає звірку версії.
+(в) `package-upgrade-runner/SKILL.md` (р. 92, 141) викликає обидва скіли, але про `skill_ref[1:]` і звірку їхніх версій не каже; `flow-orchestrator` не має правила додавати викликані скіли в наряд B-11.
+Виправити: 1) у `naryad-format.md` додати окремий ключ `called_skills: ["плагін:скіл@semver", …]` (скіли, які ведучий викликає у своєму запуску; runner звіряє версії на Кроці 3 і не запускає їх на Кроці 9 (д)) — це простіше за позначку в `skill_ref`; 2) у runner: Крок 3 — звірка semver і для `called_skills`; (д) — «лише `skill_ref[1:]`»; 3) у `step-skill-map.md` р. 33 і README р. 39 замінити «`skill_ref[1:]` з позначкою `called`» на `called_skills`; 4) у `package-upgrade-runner` Кроки 2 і 8 — «викликаний скіл має бути в `called_skills` наряду, інакше `escalated`»; 5) в оркестраторі (блок `skill_ref`, р. 101) — «`called_skills` — з примітки `step-skill-map.md`».
+
+### Minor
+
+1. `flow-map.md`: рядки-сусіди не уточнені за режимом. Р. 23 «A-21 done → A-23» (має бути A-23 `список`), р. 68 «B-07 done → B-08a» (B-08a `звірка`), р. 70 «B-08a APPROVE → B-08b» (APPROVE наряду `збіжність`), р. 26 «A-23 done (сигнали…)» (наряд `results`). Тригер наряду A-23 `адреси` не названо (р. 24 каже лише «окремий наряд для центрального агента»), хоча `segment-selector` р. 53 посилається на `flow-map.md`. Додати режими в ці рядки й рядок «A-23 `список` waiting_human (потрібні адреси) → A-23 `адреси`».
+2. `naryad-format.md`: у таблиці режимів немає рядків A-23 (`список\|адреси\|prep\|results`) і B-08a (`звірка\|збіжність`) — вони лише в `step-skill-map.md`; коментар р. 46 `reconcile: … # B-06 фаза 1` стосується B-11 (у B-06 це `mode: reconcile`). `package-upgrade-runner` В-1 (р. 205) застаріло: `phase` і `reconcile` у `naryad-format.md` вже описані.
+3. Наряд A-23 `список\|адреси` і B-08a `збіжність` тепер має лише загальні перевірки C-06 (усі записи кроку — `SKIP` або `manual`). Для A-23 `список` додати `exists` на `mailing-list.csv` і перевірку SS-mode; для `збіжність` — `exists` на `convergence.md`. Наряд A-23 без `params.mode` дає `SKIP` усіх семи записів і `PASS`: додати в `A-23.yaml` перевірку «`params.mode` задано».
+4. Крок 9 (ж) і далі розпізнає команду з прози `args.text` (необов'язкові частини, заповнювачі `<complexity.md>`); надійніше поле `args.cmd` (масив) — повтор з раундів 2–3. Кроки з усіма перевірками `manual` без команди: A-05, A-07, A-22, B-01, D-03, D-04.
+5. Виправлення раунду 3 не закомічені (15 змінених файлів). Наживо не запускалось (за `_work/static-run/*.md`): `claude plugin eval`, odoo-mcp, GitHub, Gmail, `tools-odoo` на Odoo 19 — перший живий прогін перед поданням у каталог.
+
+## 3. Покриття флоу
+
+Без змін: 28 скілів за CONCEPT §2 на місці, кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
+Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07, B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`. Відкладено `client-help-bot` (B-07, питання 24). Виробника знеособленої копії `anon-<клієнт>` немає (питання 26).
+
 # PACKAGE_REVIEW — раунд 1 (2026-11-09)
 
 Рецензія всього пакета `industry-flow-marketplace`. Лише рекомендації, файли пакета не змінювались.
@@ -378,3 +422,46 @@
 
 Без змін проти попереднього раунду: 28 скілів за CONCEPT §2 на місці, кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
 Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07, B-08c (і друга половина B-08a); C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`. Відкладено `client-help-bot` (B-07, питання 24). Виробника знеособленої копії `anon-<клієнт>` немає (питання 26).
+
+# PACKAGE_REVIEW — підсумкова рецензія після дозбирання, раунд 3 (2026-11-10)
+
+Перевірка після коміту `65373ab` (виправлення M-1 і M-2 раунду 2). Лише рекомендації, файли пакета не змінювались. Прийняті рішення (D-01, `eval-builder` лише під runner, агенти у `flow-core/agents/`, імена полів Odoo — C-00) не переглядались; відкриті питання README не вирішувались.
+Вердикт: **major** (blocker — 0, major — 1, minor — 4).
+
+## 1. Що перевірено
+
+| Перевірка | Результат |
+|---|---|
+| `claude plugin validate .` і `plugins/<p>` × 5 | PASS × 6 |
+| marketplace.json ↔ plugin.json ↔ теки | 5/5 плагінів, 28 `SKILL.md`, 28 `evals/evals.json`, робоче дерево чисте, `*.pyc` на диску — 0 |
+| 28 `SKILL.md` | `name` = тека; frontmatter лише `name`/`description`; `description` після розбору YAML — максимум 887 (усі ≤ 900) |
+| Посилання `плагін:скіл` | усі існують (пакет, агенти `flow-core`, `boost`, `odoo19-mvp-build`, `odoo19-implementation`, `odoo19-tr-authoring`, `odoo19-sales-prep`) |
+| `checks/*.yaml` (35, додано `B-08a.yaml`) | усі парсяться; усі названі скрипти скілів існують (`up.sh`, `*-migrate.py` — артефакти репо пакета, не скіла) |
+| Самотести | `autocheck.py --selftest` OK; `evals_to_cli.py --self-test` OK |
+| Шаблони `tools-odoo` | 6 скриптів викликають `guard_db` до дії з базою; `prod`, `prod-acme`, `PROD-x`, `client-acme`, `anon-k1`, `production_test`, порожнє, `test-`, `test-x;id` — `FLOW_STOP`; `test-x`, `demo-1`, `emu-a`, `test-pkg-a` — дозволено |
+| Попередній M-1 (а) | закрито: одне правило «до позначки C-00 — таблиця без порівняння», узгоджено з оркестратором р. 100 |
+| Попередній M-1 (в) | закрито: B-06 — `main\|reconcile\|return` у таблиці й `naryad-format.md` |
+| Попередній M-1 (б), (г) | закрито в таблиці (окремі рядки «крок / режим», один ведучий; B-08a — два наряди). Наслідки для оркестратора, yaml і `package-upgrade-runner` — M-1 нижче |
+| Попередній M-2 | закрито: runner, Крок 10 — `spec-missing` не блокує `done`, інший `ERROR`/`INCOMPLETE` — без `done`, один повтор, ескалація AI-інженеру; `B-08a.yaml` є; README р. 38 — 35 файлів |
+
+## 2. Зауваження
+
+### Major
+
+**M-1. Рядки «крок / режим» таблиці `step-skill-map.md` не доведені до оркестратора, yaml-специфікацій і `package-upgrade-runner`.**
+(а) Специфікація автоперевірки одна на код кроку, умови за режимом у `when` немає (`checks.md` р. 10). Наряд другого ведучого отримує перевірки першого: A-23 `список|адреси` (`segment-selector`) — чотири команди `demand_tool.py … landing.md emails.md` з `A-23.yaml`; цих файлів у наряді списку немає, скрипт падає (`FileNotFoundError`), за Кроком 9 (ж) це FAIL кроку. Те саме: B-08a «збіжність» (`track-convergence`) і B-11 `reconcile`/`addendum` проти `B-08a.yaml`/`B-11.yaml`. Крім того, (ж) бере корінь плагіна зі `skill_ref[0]` — для наряду `odoo19-mvp-build:track-convergence` це не `flow-client-delivery`, скрипт `check_config_log.py` не знайдеться → `ERROR` → без `done`.
+(б) B-11: таблиця дає окремі наряди `reconcile` → `runbook-executor` і `addendum` → `package-sow-builder`, а `package-upgrade-runner` викликає обидва скіли «у цьому ж запуску й гілці» (р. 92, 141) і вмикає звірку ключем `params.reconcile: true`, не `mode: reconcile`. Два механізми для однієї дії; при виклику в запуску версія викликаного скіла не зафіксована в `skill_ref`.
+(в) Ні `flow-orchestrator`, ні `flow-map.md` не кажуть, коли створювати другий наряд того самого кроку (A-23 `список` перед `prep`; B-08a «збіжність» після «звірки»; B-11). `segment-selector` р. 53 досі каже «до оновлення flow-core створює Тімлід вручну».
+Виправити: 1) у `checks.md` додати умову `when: mode:<значення>` (або файли `A-23.список.yaml`, `B-08a.збіжність.yaml`, `B-11.reconcile.yaml`, `B-11.addendum.yaml`) і розмітити записи `A-23.yaml`, `B-08a.yaml`, `B-11.yaml`; у (ж) брати плагін з тексту команди, не зі `skill_ref[0]`; 2) для B-11 лишити один механізм: або прибрати рядки `B-11 / reconcile|addendum` з таблиці й записати «викликає ведучий у своєму запуску; версії викликаних скілів — у `skill_ref[1:]` з позначкою `called`», або переписати Кроки 2 і 8 `package-upgrade-runner` на `waiting_human`/окремий наряд і замінити `params.reconcile` на `mode: reconcile`; 3) у `flow-map.md` додати рядки «A-23 список done → A-23 prep», «B-08a звірка done → B-08a збіжність» і послатися на них з оркестратора (Крок 3).
+
+### Minor
+
+1. `guard_db` пропускає `test-prod` (і будь-яке `test-*prod*`): відповідає класу `test-*`, але назва двозначна. Додати відмову для імен, що містять `prod` після префікса, або пункт у `c00-checklist.md` «тестові бази не називати з `prod`».
+2. Крок 9 (ж) і далі розпізнає команду з прози `args.text` (необов'язкові частини, заповнювачі `<complexity.md>`, `main|addendum`). Надійніше окреме поле `args.cmd` (масив) — повтор minor 1 раунду 2.
+3. Вісім кроків, де всі перевірки `manual` без команди (A-05, A-07, A-22, B-01, B-11, D-01, D-03, D-04): autocheck дає `PASS` лише за загальними перевірками C-06. Для B-11 і D-01 додати `pii_strict` і `exists` — повтор minor 2 раунду 2.
+4. Наживо не запускалось (за `_work/static-run/*.md`): `claude plugin eval`, odoo-mcp, GitHub, Gmail, `tools-odoo` на Odoo 19. Перший живий прогін — перед поданням у каталог.
+
+## 3. Покриття флоу
+
+Без змін: 28 скілів за CONCEPT §2 на місці, кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
+Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07, B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`. Відкладено `client-help-bot` (B-07, питання 24). Виробника знеособленої копії `anon-<клієнт>` немає (питання 26).

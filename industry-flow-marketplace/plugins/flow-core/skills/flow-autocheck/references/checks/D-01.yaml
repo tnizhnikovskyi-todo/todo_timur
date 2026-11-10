@@ -3,6 +3,13 @@
  "step": "D-01",
  "checks": [
   {
+   "id": "pii-strict",
+   "prim": "pii_strict",
+   "args": {
+    "paths": ["clients/"]
+   }
+  },
+  {
    "id": "m-export",
    "prim": "manual",
    "args": {

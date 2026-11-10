@@ -6,11 +6,12 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) ))
   echo "FLOW_STOP: потрібен bash >= 4.4 (macOS: встановити через brew)" >&2; exit 2
 fi
 
-# Захист від прод-баз (лише ім'я бази, НЕ сервер: C-00 гарантує, що PGHOST і db_host в ODOO_CONF — один непродовий сервер): дозволено лише test-*, test-pkg-*, demo-*, emu-*.
+# Захист від прод-баз (лише ім'я бази, НЕ сервер: C-00 гарантує, що PGHOST і db_host в ODOO_CONF — один непродовий сервер): дозволено лише test-*(без «prod» в імені), test-pkg-*, demo-*, emu-*.
 guard_db() {
   local db="${1:-}"
   if [[ -z "$db" ]]; then echo "FLOW_STOP: не задано ім'я бази" >&2; exit 2; fi
   case "$db" in
+    *[Pp][Rr][Oo][Dd]*) echo "FLOW_STOP: ім'я бази '$db' містить prod; відмова (двозначне ім'я)" >&2; exit 2 ;;
     test-?*|test-pkg-?*|demo-?*|emu-?*) ;;
     *) echo "FLOW_STOP: база '$db' не відповідає test-<суфікс>|demo-<суфікс>|emu-<суфікс>; відмова (прод не чіпаємо)" >&2; exit 2 ;;
   esac

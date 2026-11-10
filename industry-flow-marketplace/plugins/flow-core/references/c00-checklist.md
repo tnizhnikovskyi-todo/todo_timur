@@ -4,6 +4,7 @@
 
 - [ ] `flow/ODOO_SCHEMA.md`: технічні імена кастомних полів проєкту/задачі і стадій (`stage.*`) — `odoo-bridge.md`, `flow-orchestrator`, `flow-state-keeper`.
 - [ ] Автоматизація Odoo «задача C-01 на зміну стадії» — `flow-orchestrator`, `flow-state-keeper`.
+- [ ] Тестові бази не називати з «prod» в імені (`guard_db` відхиляє, напр., `test-prod`).
 - [ ] Класи баз і alias у `odoo-mcp`: `flow`, `test-<клієнт>`, `test-pkg-<пакет>`, `demo-<пакет>`, `emu-<галузь>`; рішення про `anon-<клієнт>` — прод-alias заборонено; про `data-and-connections.md` §3.5, `package-upgrade-runner`, `package-usage-metrics`.
 - [ ] Скрипти `tools/odoo/`: шаблони є в `references/templates/tools-odoo/` (README там) — C-00 копіює, адаптує й перевіряє на тестовій базі; `import.sh` і snapshot/restore реалізує C-00; також C-00 звіряє опції демо-даних Odoo 19, текст підсумку тестів (і skipped) та гарантує, що `PGHOST`/`db_host` — непродовий сервер. Вимоги скілів: (чиста база за тегом, установка, імпорт шаблонів, smoke, знімок/скидання, тести) — `ci-pipeline-builder`, `demo-base-builder`, `master-data-template-builder`, `package-release-builder`, `odoo-version-migrator`.
 - [ ] Тип агента (`FLOW_AGENT_KIND`/конфіг) і технічні користувачі агентів — `flow-step-runner` (open-questions №4), `odoo-bridge.md` §6.

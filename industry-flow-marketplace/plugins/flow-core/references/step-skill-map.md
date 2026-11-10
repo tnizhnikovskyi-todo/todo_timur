@@ -19,20 +19,18 @@
 | A-20 | flow-research:concept-mapper | — |
 | A-21 | flow-research:prototype-builder | — |
 | A-22 | flow-package-build:demo-base-builder | режим «емуляція» (`перша`\|`нова-версія`) |
-| A-23 / `prep`\|`results` | flow-research:demand-test-runner | — |
-| A-23 / `список`\|`адреси` | flow-research:segment-selector | список розсилки — окремий наряд |
+| A-23 / `prep`\|`results` | flow-research:demand-test-runner | `mode: prep`\|`results` |
+| A-23 / `список`\|`адреси` | flow-research:segment-selector | `mode: список`\|`адреси`; список розсилки — окремий наряд, створюється раніше за `prep` (див. `flow-map.md`) |
 | B-01 | flow-research:segment-selector | режим «ліди» |
 | B-02 | flow-client-delivery:package-fit-gap | — |
 | B-03 | flow-client-delivery:package-sow-builder | `main`\|`addendum` |
 | B-04 | flow-client-delivery:runbook-executor | застосувати |
 | B-06 | flow-client-delivery:client-data-migrator | `main`\|`reconcile`\|`return` (`returned_from` — з наряду) |
-| B-08a / звірка | flow-client-delivery:runbook-executor | звірка (перший наряд) |
-| B-08a / збіжність | odoo19-mvp-build:track-convergence | другий наряд після звірки (`convergence.md`; вхід `config-drift.md`) |
+| B-08a / звірка | flow-client-delivery:runbook-executor | `mode: звірка` (перший наряд) |
+| B-08a / збіжність | odoo19-mvp-build:track-convergence | `mode: збіжність`; другий наряд після звірки (`convergence.md`; вхід `config-drift.md`) |
 | B-09 | flow-client-delivery:support-desk | `intake`\|`hypercare-close` |
 | B-10 | flow-client-delivery:support-desk | `intake`\|`sla-month` |
-| B-11 / `phase: 0`\|`1`, `pilot` | flow-client-delivery:package-upgrade-runner | — |
-| B-11 / `reconcile` | flow-client-delivery:runbook-executor | звірка |
-| B-11 / `addendum` | flow-client-delivery:package-sow-builder | додаток SOW (фаза 0) |
+| B-11 | flow-client-delivery:package-upgrade-runner | `phase` 0\|1, `pilot`; звірка (`params.reconcile: true`) і додаток SOW виконує сам ведучий у своєму запуску й гілці: `runbook-executor` і `package-sow-builder` — у ключі `called_skills` наряду (версії з `plugin.json`), не в `skill_ref[1:]`, окремих нарядів немає |
 | B-13 | flow-client-delivery:runbook-executor | виправлення (б) |
 | C-03 | flow-core:ci-pipeline-builder | — |
 | C-04 | flow-core:eval-builder | `weekly`\|`init`\|`regress` |

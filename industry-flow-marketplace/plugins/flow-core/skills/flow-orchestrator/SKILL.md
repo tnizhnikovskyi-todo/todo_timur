@@ -97,6 +97,8 @@ description: >
 ## Крок 3. Скласти наряд
 З картки кроку за `flow-core/references/naryad-format.md`; ключ ідемпотентності й пошук дублів — `flow-core/references/odoo-bridge.md` §7 (`dispatch-rules.md` §2).
 - `executor`: з картки. Змішаний крок → **дві задачі**: AI-частина (executor картки) + людська задача ролі з `raciR`, залежна від AI-частини.
+- Другий наряд того самого кроку (A-23 `список` -> `prep`, B-08a `звірка` -> `збіжність`) — за рядками `flow-core/references/flow-map.md` з `params.mode` зі `step-skill-map.md`; ключ ідемпотентності включає `mode`.
+- `called_skills` беруться з примітки `step-skill-map.md` (не з `skill_ref`; формат елемента як у `skill_ref`).
 - `skill_ref` — список; перший елемент веде крок. Таблиця «крок → skill_ref → params.mode» — `flow-core/references/step-skill-map.md` (картки можуть мати застарілі/порожні `skillRef`; поки C-00 їх не оновив, діє таблиця). Кожен елемент `<плагін>:<скіл>@<версія>`; версія — поле `version` у `plugins/<плагін>/.claude-plugin/plugin.json` каталогу організації
   (репо `industry-flow-marketplace`, тег/SHA каталогу зі `package/flow/dispatcher.yaml` → `catalog`), читання через `github`; **не** з локально встановлених плагінів.
   Версію кожного елемента брати з `plugin.json` його плагіна. Точно, без діапазонів і без «останньої». Хоч одного плагіна, скіла чи версії немає → не ставити, `skipped_precondition`, активність AI-інженеру.

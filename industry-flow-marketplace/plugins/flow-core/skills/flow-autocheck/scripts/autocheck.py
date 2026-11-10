@@ -803,6 +803,9 @@ def when_ok(ctx, w):
     tests = {"prev": (bool(prev_tag(ctx)), "first-release"), "hotfix": (hot, "не hotfix"), "not_hotfix": (not hot, "hotfix"),
              "rerun": (ctx.n.get("attempt", 1) > 1 or bool(ctx.n.get("returned_from")), "перший запуск"),
              "new_version": (ctx.params.get("mode") == "нова-версія", "режим не «нова-версія»")}
+    if w.startswith("mode:"):
+        vals = w[5:].split("|")
+        return ctx.params.get("mode") in vals, f"режим не з {{{', '.join(vals)}}}"
     if w.startswith("in:"):
         ok = any(i.get("from") == w[3:] for i in ctx.n.get("inputs") or [])
         return ok, f"немає входу {w[3:]}"
