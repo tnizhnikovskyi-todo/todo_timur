@@ -58,7 +58,7 @@ description: >
 ### Спільний старт
 1. Перевірити наряд: `executor: central`, `client_data: personal`, `step: B-07`, `skill_ref[0]` — цей скіл.
    Інакше `escalated` «наряд не для цього скіла».
-2. Передумови: у `clients/<к>/SOW.md` є розділ «Бот-помічник client-help-bot»; у `package/DATA_POLICY.md` є рядок
+2. Передумови: у `clients/<к>/sow.md` є розділ «Бот-помічник client-help-bot»; у `package/DATA_POLICY.md` є рядок
    класу `prod-ro-<к>` і дозволені групи; стоп-лист C-08 не містить клієнта. Бракує чогось: `prepare` -> `done`:
    створити лише `help-bot/kb-index.md` з єдиним рядком `Стан: бот не підключено: <чого бракує>` (скрипт приймає
    його як HB-prepare PASS без чек-листа); `answer` -> `escalated` PM, прод не читати.
@@ -69,6 +69,7 @@ description: >
 3. `list_odoo_connections`; alias `prod-ro-<scope.id>` має бути і в списку, і в `odoo_connections` наряду з
    `purpose: читання (client-help-bot)`. Не збіглася `connection.db` -> стоп, `escalated` Тімліду
    «підключення не те», нічого не відповідати.
+   У режимі `prepare`, якщо `prod-ro-<scope.id>` немає в наряді, крок 3 пропустити, прод не читати (див. крок 5).
 
 ### Режим `prepare` (до go-live)
 4. Прочитати `config-log.md` і `training.md` (ім'я — за `flow/ARTIFACTS.md`; grep заголовків, не цілком).
@@ -109,9 +110,9 @@ description: >
 
 ## Автоперевірка і «Готово, коли»
 Команда (виконує runner): `python3 -I <корінь плагіна flow-client-delivery>/skills/client-help-bot/scripts/check_help.py
---dir clients/<к>/help-bot --prod-alias prod-ro-<scope.id> --prod-db <db з наряду> --allowlist <корінь плагіна>/skills/client-help-bot/references/prod-read-allowlist.md
---mode prepare|answer` -> JSON `[{id, status, msg}]`. Ідентифікатори: `HB-columns`, `HB-conn`,
-`HB-readonly`, `HB-allowlist`, `HB-logged`, `HB-sources`, `HB-pii`, `HB-limits`, `HB-prepare`, `HB-models`. `HB-conn` порівнює alias точно й db з `--prod-db` (без нього — SKIP). Тексти чернеток у репо не зберігаються: HB-codes і ПДн чернеток — MANUAL (Підтримка), скрипт їх не перевіряє; ліміт 20 тредів — SKIP, перевіряє Підтримка за «Журналом запусків».
+--dir clients/<к>/help-bot --prod-alias prod-ro-<scope.id> --prod-db <connection.db з list_odoo_connections для prod-ro-<scope.id>> --allowlist <корінь плагіна>/skills/client-help-bot/references/prod-read-allowlist.md
+--mode <params.mode>` -> JSON `[{id, status, msg}]`; код виходу: ненульовий = FAIL, 0 = PASS/SKIP/MANUAL. Ідентифікатори: `HB-columns`, `HB-conn`,
+`HB-codes` (SKIP у 0.1: чернетки не зберігаються), `HB-readonly`, `HB-allowlist`, `HB-logged`, `HB-sources`, `HB-pii`, `HB-limits`, `HB-prepare`, `HB-models`. `HB-conn` порівнює alias точно й db з `--prod-db` (без нього — SKIP). Тексти чернеток у репо не зберігаються: HB-codes і ПДн чернеток — MANUAL (Підтримка), скрипт їх не перевіряє; ліміт 20 тредів — SKIP, перевіряє Підтримка за «Журналом запусків».
 Скрипт чого не може перевірити — `SKIP`, не `PASS`. Звірка фактичних викликів інструментів із журналом — audit
 runner (пропозиція, не гарантія). Готово, коли: кожен новий тред періоду має рядок у `help-log.md` зі статусом;
 кожна відповідь має джерела; кожен виклик проду є в `query-log.md`; `HB-*` без FAIL. `prepare`: чек-лист
@@ -133,7 +134,7 @@ runner (пропозиція, не гарантія). Готово, коли: к
 
 ## Відкриті питання
 Рішення людини НЕ приймаються тут; повний перелік із адресатами — `references/open-questions.md`. Головні:
-- До внесення змін у `step-skill-map.md`, `naryad-format.md` (`params.mode/period`), `flow-map.md`, `support-desk` (`params.handoff`) — окрема задача їхніх власників — наряд `answer` створюється вручну PM/Підтримкою, передачу в support-desk робить людина за розділом «Передано в support-desk».
+- Лишилось у власників файлів: рядок B-07 у таблиці `params.mode` (`prepare`/`answer`, `period`) у `naryad-format.md`, вхід `params.handoff` у `support-desk` `intake`, тригер наряду `answer` «на період», поле db в `odoo_connections` наряду (поки db береться з `list_odoo_connections`). До того наряд `answer` створює вручну PM/Підтримка, а передачу в support-desk робить людина за розділом «Передано в support-desk» (оркестратор повідомлення лише фіксує).
 - Авто-надсилання відповідей (Власник продукту): за q21 AI лише створює чернетки; `send_message` не використовується.
 - Постійний чат-сервіс поза пакетом скілів (Власник продукту, AI-інженер): не в 0.1.
 - Як гарантувати «лише читання» на боці Odoo (Тімлід, Архітектор): штатної read-only ролі немає; зараз гарантія

@@ -19,6 +19,8 @@ def main():
     a = ap.parse_args()
     A.guard_db(a.db)
     exp = A.load_json(a.expect)
+    if not isinstance(exp, dict):
+        A.stop("expect.json має бути об'єктом")
     call = A.rpc_conn(a.db)
     checked = failed = 0
 
@@ -28,23 +30,38 @@ def main():
         failed += 0 if ok else 1
         print(("PASS " if ok else "FAIL ") + msg)
 
-    for m in exp.get("modules", []):
+    def guarded(label, fn):
+        try:
+            fn()
+        except Exception as e:  # noqa: BLE001 -- помилка формату/RPC = FAIL, підсумок друкується завжди
+            rep(False, "%s: помилка %s" % (label, str(e)[:200]))
+
+    def chk_module(m):
         r = call("ir.module.module", "search_read", [["name", "=", m]], fields=["state"], limit=1)
         st = r[0]["state"] if r else "немає в базі"
         rep(st == "installed", "module %s: %s" % (m, st))
-    for k, v in exp.get("params", {}).items():
+
+    def chk_param(k, v):
         r = call("ir.config_parameter", "search_read", [["key", "=", k]], fields=["value"], limit=1)
         got = r[0]["value"] if r else None
         rep(got == v, "param %s: %r (очікується %r)" % (k, got, v))
-    for it in exp.get("records", []):
+
+    def chk_record(it):
         mod, name = it["xmlid"].split(".", 1)
         imd = call("ir.model.data", "search_read", [["module", "=", mod], ["name", "=", name]], fields=["res_id"], limit=1)
         if not imd:
             rep(False, "record %s: немає xml-id" % it["xmlid"])
-            continue
+            return
         cur = call(it["model"], "read", [imd[0]["res_id"]], fields=list(it["values"]))[0]
-        bad = {k: cur.get(k) for k, v in it["values"].items() if A.norm(cur.get(k)) != v}
+        bad = {k: cur.get(k) for k, v in it["values"].items() if not A.same(cur.get(k), v)}
         rep(not bad, "record %s: %s" % (it["xmlid"], bad or "ok"))
+
+    for m in exp.get("modules", []):
+        guarded("module %s" % m, lambda m=m: chk_module(m))
+    for k, v in exp.get("params", {}).items():
+        guarded("param %s" % k, lambda k=k, v=v: chk_param(k, v))
+    for it in exp.get("records", []):
+        guarded("record %s" % (it.get("xmlid") if isinstance(it, dict) else it), lambda it=it: chk_record(it))
     print(json.dumps({"checked": checked, "failed": failed}))
     return 1 if failed else 0
 

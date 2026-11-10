@@ -3,7 +3,7 @@
 #   install.sh <db> <module1,module2,...> [--update] [--addons-src <dir>] [--tag <git-тег>]
 # За замовчуванням -i (install); з --update — -u (оновлення вже встановлених).
 # --tag: HEAD репо $PKG_REPO має збігатися з тегом (як у clean_db.sh), інакше FLOW_STOP. З --addons-src додатково: SRC усередині $PKG_REPO
-#   і без незакомічених/невідстежуваних змін (інакше доставили б не код тегу).
+#   і без незакомічених/невідстежуваних змін та ігнорованих файлів (напр. __pycache__) (інакше доставили б не код тегу).
 # --addons-src: доставка модулів (підкаталоги з __manifest__.py, напр. package/addons) у каталог
 #   $ODOO_DELIVERY_DIR, який ОБОВ'ЯЗКОВО є одним із шляхів ODOO_ADDONS_PATH тестової бази. Без ODOO_DELIVERY_DIR — FLOW_STOP.
 #   Каталог доставки має бути ОКРЕМИМ (не стандартні addons Odoo): модуль, що вже є в ньому й не в маркері .flow-delivery, не затирається.
@@ -33,7 +33,7 @@ if [[ -n "$TAG" ]]; then
       *) echo "FLOW_STOP: --addons-src поза \$PKG_REPO: з --tag код тегу не гарантовано" >&2; exit 2 ;;
     esac
     DIRTY="$(git -C "$PKG_REPO" status --porcelain --untracked-files=all --ignored -- "$SRC_R")" || { echo "FLOW_STOP: git status не вдався" >&2; exit 2; }
-    [[ -z "$DIRTY" ]] || { echo "FLOW_STOP: у --addons-src є незакомічені/невідстежувані зміни (код не збігається з тегом $TAG)" >&2; exit 2; }
+    [[ -z "$DIRTY" ]] || { echo "FLOW_STOP: у --addons-src є незакомічені/невідстежувані зміни або ігноровані файли, напр. __pycache__ (код не збігається з тегом $TAG). Перші рядки git status:" >&2; echo "$DIRTY" | head -5 >&2; exit 2; }
   fi
 fi
 if [[ -n "$SRC" ]]; then

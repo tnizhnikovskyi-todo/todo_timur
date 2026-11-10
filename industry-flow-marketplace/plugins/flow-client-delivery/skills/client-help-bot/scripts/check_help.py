@@ -3,7 +3,7 @@
 Використання: check_help.py --dir clients/<к>/help-bot [--prod-alias prod-ro-<к>] [--allowlist <prod-read-allowlist.md>]
               [--prod-db <db>] [--mode prepare|answer] [--drafts <файл; у 0.1 не використовується runner-ом>]
 Чого не можна перевірити без вхідних файлів — SKIP, не PASS. Шаблони ПДн узгоджені з flow-core/references/pii-patterns.md (змінювати разом)."""
-import argparse, json, re
+import argparse, json, re, sys
 from pathlib import Path
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
@@ -65,7 +65,7 @@ def main():
     names = REQ if a.mode == "answer" else {"kb-index.md": REQ["kb-index.md"]}
     if a.mode == "prepare" and texts["kb-index.md"] and re.search(r"^Стан:\s*бот не підключено:\s*\S+", texts["kb-index.md"], re.M):
         add("HB-columns", "PASS"); add("HB-prepare", "PASS", "бот не підключено (рядок «Стан» у kb-index.md); чек-лист не потрібен")
-        print(json.dumps(res, ensure_ascii=False, indent=1)); return
+        print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(0)
     miss = sorted({f"{n}: немає файла" if texts[n] is None else f"{n}: немає розділу {h}"
             for n, hs in names.items() for h in hs if texts[n] is None or h not in sections(texts[n])})
     add("HB-columns", "FAIL" if miss else "PASS", "; ".join(miss))
@@ -87,7 +87,9 @@ def main():
             if al != a.prod_alias: wrong.append(col(r, "connection") or "(порожньо)")
             elif a.prod_db and db != a.prod_db: wrong.append(col(r, "connection") + f" (очікується db {a.prod_db})")
             elif not a.prod_db: nodb.append(col(r, "id"))
-        if not a.prod_alias: add("HB-conn", "SKIP", "немає --prod-alias")
+        if not a.prod_alias:
+            foreign = sorted({col(r, "connection") or "(порожньо)" for r in qrows if parse(col(r, "connection"))[0] != "flow"})
+            add("HB-conn", "FAIL" if foreign else "SKIP", ("немає --prod-alias, а є не-flow підключення: " + ", ".join(foreign)) if foreign else "немає --prod-alias")
         elif wrong: add("HB-conn", "FAIL", "інше підключення: " + ", ".join(sorted(set(wrong))))
         elif nodb: add("HB-conn", "SKIP", "alias збігається, db не звірено: немає --prod-db")
         else: add("HB-conn", "PASS")
@@ -104,7 +106,7 @@ def main():
             for r in qrows:
                 m, fl = col(r, "модель"), col(r, "поля")
                 if col(r, "інструмент") == "odoo_get_fields" and m in allow: continue
-                fields = {f.strip() for f in fl.split(",") if f.strip()}
+                fields = {f.strip() for f in re.sub(r"\(.*?\)", "", fl).split(",") if f.strip()}
                 if m not in allow: errs.append(f"{m}: немає в allow-list")
                 elif not fields or fl.strip() in ("*", "усі", "—"): errs.append(f"{m}: без fields")
                 elif fields - allow[m]: errs.append(f"{m}: {sorted(fields - allow[m])}")
@@ -139,8 +141,10 @@ def main():
         add("HB-pii", "FAIL" if any(p.search(t) for _, p in PII) else "PASS")
         mrows = table(sec.get("Моделі allow-list для цього клієнта", []))[1]
         badm = [col(r, "модель") for r in mrows if not re.match(r"(так|не перевірено|вилучено)", col(r, "підтверджено").lower())]
-        add("HB-models", "FAIL" if badm else "PASS", "немає значення «Підтверджено» (так / не перевірено / вилучено): " + ", ".join(badm) if badm else "")
+        if not mrows: add("HB-models", "SKIP", "таблиця моделей порожня або відсутня: нічого перевіряти")
+        else: add("HB-models", "FAIL" if badm else "PASS", "немає значення «Підтверджено» (так / не перевірено / вилучено): " + ", ".join(badm) if badm else "")
     print(json.dumps(res, ensure_ascii=False, indent=1))
+    sys.exit(1 if any(r["status"] == "FAIL" for r in res) else 0)  # ненульовий код = FAIL (flow-step-runner, Крок 9 (ж))
 
 
 if __name__ == "__main__":

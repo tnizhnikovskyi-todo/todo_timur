@@ -111,6 +111,14 @@ def norm(v):
     return v[0] if isinstance(v, list) and len(v) == 2 and isinstance(v[0], int) else v  # many2one -> id
 
 
+def same(cur, v):
+    """Порівняння значення з бази (read) з планом: False з бази == null/"" з плану (для небулевого очікуваного)."""
+    cur = norm(cur)
+    if cur is False and (v is None or v == ""):
+        return True
+    return cur == v
+
+
 def cmd_rpc(a):
     call = rpc_conn(a.db)
     plan = load_json(a.plan)
@@ -132,7 +140,7 @@ def cmd_rpc(a):
                 res["created"] += 1
                 continue
             cur = call(it["model"], "read", [imd[0]["res_id"]], fields=list(vals))[0]
-            diff = {k: v for k, v in vals.items() if norm(cur.get(k)) != v}
+            diff = {k: v for k, v in vals.items() if not same(cur.get(k), v)}
             if diff:
                 if not a.dry_run:
                     call(it["model"], "write", [imd[0]["res_id"]], diff)

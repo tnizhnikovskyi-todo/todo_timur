@@ -32,3 +32,5 @@ claude plugin install flow-client-delivery@industry-flow
 
 ## Спільні references
 `references/`: `triage-routes.md` (тип -> маршрут для B-09/B-10/B-13), `support-report-template.md` (звіт SLA B-10).
+
+client-help-bot 0.1: фікстур для evals (`evals/fixtures/`) немає — `requires` в evals описує їх прозою; вхід `params.handoff`/`params.mode` для B-07 ще не внесено у naryad-format.md і support-desk (див. `skills/client-help-bot/references/open-questions.md`).

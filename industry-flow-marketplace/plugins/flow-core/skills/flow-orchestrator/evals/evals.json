@@ -105,7 +105,7 @@
         "Жодного іншого prod-* в odoo_connections немає"
       ],
       "requires": [
-        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати після появи скіла client-help-bot); DATA_POLICY з рядком prod-ro-k01 додано"
+        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати картку кроку з бота-помічником у фікстуру); DATA_POLICY з рядком prod-ro-k01 додано"
       ]
     },
     {
@@ -118,7 +118,7 @@
         "У звіті є пояснення винятку q01"
       ],
       "requires": [
-        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати після появи скіла client-help-bot); DATA_POLICY з рядком prod-ro-k01 додано"
+        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати картку кроку з бота-помічником у фікстуру); DATA_POLICY з рядком prod-ro-k01 додано"
       ]
     }
   ]

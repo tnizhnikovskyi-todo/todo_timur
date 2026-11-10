@@ -9,6 +9,8 @@
 - [ ] Скрипти `tools/odoo/`: шаблони є в `references/templates/tools-odoo/` (README там) — C-00 копіює, адаптує й перевіряє на тестовій базі; `import.sh` і snapshot/restore реалізує C-00; також C-00 звіряє опції демо-даних Odoo 19, текст підсумку тестів (і skipped) та гарантує, що `PGHOST`/`db_host` — непродовий сервер. Вимоги скілів: (чиста база за тегом, установка, імпорт шаблонів, smoke, знімок/скидання, тести) — `ci-pipeline-builder`, `demo-base-builder`, `master-data-template-builder`, `package-release-builder`, `odoo-version-migrator`.
 - [ ] Тип агента (`FLOW_AGENT_KIND`/конфіг) і технічні користувачі агентів — `flow-step-runner` (open-questions №4), `odoo-bridge.md` §6.
 - [ ] Налаштування q23: технічному користувачу агента дозволено створювати активність (`mail.activity`) AI-інженеру в задачі Odoo для `FLOW_STOP`; AI-інженер у переліку отримувачів сповіщень Odoo (`flow-step-runner`, open-questions №13).
+- [ ] q26: AI-інженер проганяє 1 згенерований `evals_to_cli.py` кейс через реальний `claude plugin eval` до подання пакета (`eval-builder`, open-questions).
+- [ ] q24: на першому прогоні C-03 перевірити, що MCP `github` повертає `display_title`; запас — пошук за SHA (`ci-pipeline-builder`).
 - [ ] Встановлення плагінів агентом і закріплення версії (q21: окремий репо каталогу, тег релізу) — `flow-step-runner` (open-questions №3), `eval-builder`.
 - [ ] Ліміти запуску (`costLimit`, `timeoutMin`) для `init`/`regress` евалів і довгого CI (q25: порції; CI поза таймаутом) — `eval-builder`, `package-upgrade-runner`, `demo-base-builder`.
 - [ ] Джерело календаря `work_calendar` і `lease_factor` — `flow-orchestrator` (`dispatcher-config.md`).

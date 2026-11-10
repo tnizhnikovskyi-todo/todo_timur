@@ -12,5 +12,4 @@
 | Таймер для наряду `answer` до автоматизації C-01: розклад Claude Code чи ручний запуск Підтримкою | AI-інженер |
 | До go-live: чи читає бот `test-<к>` замість проду (навчання на пісочниці) | PM |
 | Ім'я поля груп `res.users` у Odoo 19 (`groups_id` чи `group_ids`) | Тімлід |
-| Ім'я поля груп `res.users` у Odoo 19 (`groups_id` чи `group_ids`) | Тімлід |
-| Зміни поза цим скілом: B-07 `answer` у flow-map.md/naryad-format.md, step-skill-map.md, `params.handoff` у support-desk | власники файлів |
+| Зміни поза цим скілом: рядок B-07 у `params.mode` naryad-format.md, `params.handoff` у support-desk, тригер `answer` «на період», поле db в `odoo_connections` | власники файлів |
