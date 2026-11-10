@@ -289,7 +289,11 @@ def cmd_prune(a):
 def cmd_stats(a):
     runs = []
     for f in a.runs:
-        runs += json.load(open(f, encoding="utf-8"))
+        part = json.load(open(f, encoding="utf-8"))
+        if not isinstance(part, list) or not all(isinstance(x, dict) for x in part):
+            print("помилка: %s — очікується масив запусків (список словників), а не знімок" % f, file=sys.stderr)
+            return 2
+        runs += part
     agg = OrderedDict()
     incomplete = 0
     for r in runs:

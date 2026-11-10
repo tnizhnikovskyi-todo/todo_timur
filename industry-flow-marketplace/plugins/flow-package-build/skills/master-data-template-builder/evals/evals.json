@@ -46,7 +46,8 @@
       "files": [
         "evals/fixtures/td-and-code-allocation/ТР.md",
         "evals/fixtures/td-and-code-allocation/ALLOCATION.md",
-        "evals/fixtures/td-and-code-allocation/fields.json"
+        "evals/fixtures/td-and-code-allocation/fields.json",
+        "evals/fixtures/script-td-root/"
       ],
       "requires": [
         "odoo-mcp:test"

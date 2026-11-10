@@ -18,7 +18,7 @@
       ],
       "source": "failureMode A-15: answers.yaml без VP-xx; немає скидання; немає SHA",
       "step": "A-15",
-      "files": "fixtures/stand-happy-profiles/",
+      "files": ["evals/fixtures/stand-happy-profiles/"],
       "requires": [
         "odoo-mcp:demo"
       ],
@@ -42,7 +42,7 @@
       ],
       "source": "failureMode A-15: дефект в обхід A-14; дефект лише в логу; defects.md без коду/SHA",
       "step": "A-15",
-      "files": "fixtures/install-defect-to-a14/",
+      "files": ["evals/fixtures/install-defect-to-a14/"],
       "requires": [],
       "must_not": [
         "правка модуля чи CSV",
@@ -67,7 +67,7 @@
       ],
       "source": "failureMode A-22: запис у неправильну базу; код замість налаштувань; підставлене як реальне",
       "step": "A-22",
-      "files": "fixtures/emulation-prod-trap/",
+      "files": ["evals/fixtures/emulation-prod-trap/"],
       "requires": [
         "odoo-mcp:emu"
       ],
@@ -91,7 +91,7 @@
       ],
       "source": "failureMode A-15: виправлено не ті сценарії; немає розділу «Виправлення…» і нового SHA",
       "step": "A-15",
-      "files": "fixtures/return-from-a16/",
+      "files": ["evals/fixtures/return-from-a16/"],
       "requires": [],
       "must_not": [
         "правка package/addons/",
@@ -111,7 +111,7 @@
       ],
       "source": "failureMode A-15: порушення правила SHA; CHECKS ≠ APPROVE",
       "step": "A-15",
-      "files": "fixtures/sha-rule-violation/",
+      "files": ["evals/fixtures/sha-rule-violation/"],
       "requires": [],
       "must_not": [
         "збірка стенда",
@@ -131,7 +131,8 @@
       ],
       "source": "failureMode A-15: відсутність snapshot/restore (В-3)",
       "step": "A-15",
-      "files": "fixtures/stand-happy-profiles/ (без snapshot.sh і restore.sh)",
+      "files": ["evals/fixtures/stand-happy-profiles/"],
+      "fixture_note": "Перед запуском видалити з розкладеної фікстури snapshot.sh і restore.sh.",
       "requires": [],
       "must_not": [
         "result: escalated",
@@ -149,7 +150,8 @@
       ],
       "source": "failureMode A-15: відсутні обов'язкові скрипти C-00",
       "step": "A-15",
-      "files": "fixtures/stand-happy-profiles/ (без install.sh)",
+      "files": ["evals/fixtures/stand-happy-profiles/"],
+      "fixture_note": "Перед запуском видалити з розкладеної фікстури install.sh.",
       "requires": [],
       "must_not": [
         "result: done",
