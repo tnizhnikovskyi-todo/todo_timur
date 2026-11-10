@@ -1,162 +1,322 @@
 [
  {
   "sec": "01",
-  "companies": 5345
+  "companies": 5345,
+  "revenue": 67348452803,
+  "r_last": 96907461583,
+  "r_base": 62853421624,
+  "panel_n": 1807
  },
  {
   "sec": "02",
-  "companies": 2511
+  "companies": 2511,
+  "revenue": 226496925361,
+  "r_last": 168786090782,
+  "r_base": 158018358209,
+  "panel_n": 2048
  },
  {
   "sec": "03",
-  "companies": 6508
+  "companies": 6508,
+  "revenue": 749956393508,
+  "r_last": 453007837189,
+  "r_base": 216557322320,
+  "panel_n": 4087
  },
  {
   "sec": "05",
-  "companies": 831
+  "companies": 831,
+  "revenue": 470935156322,
+  "r_last": 134505254195,
+  "r_base": 90640407271,
+  "panel_n": 4521
  },
  {
   "sec": "06",
-  "companies": 1226
+  "companies": 1226,
+  "revenue": 347435555864,
+  "r_last": 524583274003,
+  "r_base": 486624614431,
+  "panel_n": 3546
  },
  {
   "sec": "07",
-  "companies": 8819
+  "companies": 8819,
+  "revenue": 642449871888,
+  "r_last": 384210602211,
+  "r_base": 304458495753,
+  "panel_n": 3422
  },
  {
   "sec": "08",
-  "companies": 1582
+  "companies": 1582,
+  "revenue": 502682356871,
+  "r_last": 353236440163,
+  "r_base": 197610372170,
+  "panel_n": 3136
  },
  {
   "sec": "09",
-  "companies": 6031
+  "companies": 6031,
+  "revenue": 328470498904,
+  "r_last": 141154543534,
+  "r_base": 128767475805,
+  "panel_n": 1463
  },
  {
   "sec": "10",
-  "companies": 990
+  "companies": 990,
+  "revenue": 873445345143,
+  "r_last": 220042583151,
+  "r_base": 125303873213,
+  "panel_n": 118
  },
  {
   "sec": "11",
-  "companies": 8353
+  "companies": 8353,
+  "revenue": 765776271002,
+  "r_last": 762046965352,
+  "r_base": 457449432447,
+  "panel_n": 2172
  },
  {
   "sec": "12",
-  "companies": 3557
+  "companies": 3557,
+  "revenue": 270137315104,
+  "r_last": 1428049101,
+  "r_base": 1310883260,
+  "panel_n": 4399
  },
  {
   "sec": "13",
-  "companies": 654
+  "companies": 654,
+  "revenue": 632211757119,
+  "r_last": 550912386897,
+  "r_base": 336693381101,
+  "panel_n": 1048
  },
  {
   "sec": "14",
-  "companies": 1448
+  "companies": 1448,
+  "revenue": 577315177813,
+  "r_last": 739876254806,
+  "r_base": 471217082925,
+  "panel_n": 462
  },
  {
   "sec": "15",
-  "companies": 7144
+  "companies": 7144,
+  "revenue": 800839133901,
+  "r_last": 1007972035635,
+  "r_base": 495982508893,
+  "panel_n": 4601
  },
  {
   "sec": "16",
-  "companies": 6891
+  "companies": 6891,
+  "revenue": 315960340794,
+  "r_last": 307190287221,
+  "r_base": 216533619363,
+  "panel_n": 868
  },
  {
   "sec": "17",
-  "companies": 1184
+  "companies": 1184,
+  "revenue": 129663414222,
+  "r_last": 497287307234,
+  "r_base": 350060475740,
+  "panel_n": 1581
  },
  {
   "sec": "18",
-  "companies": 3983
+  "companies": 3983,
+  "revenue": 462260235452,
+  "r_last": 268321528098,
+  "r_base": 241514799626,
+  "panel_n": 2805
  },
  {
   "sec": "19",
-  "companies": 1526
+  "companies": 1526,
+  "revenue": 830137194964,
+  "r_last": 29391414089,
+  "r_base": 28449907721,
+  "panel_n": 4663
  },
  {
   "sec": "20",
-  "companies": 6995
+  "companies": 6995,
+  "revenue": 165177875758,
+  "r_last": 302149088935,
+  "r_base": 292807454079,
+  "panel_n": 2998
  },
  {
   "sec": "21",
-  "companies": 1008
+  "companies": 1008,
+  "revenue": 541379277026,
+  "r_last": 15486703861,
+  "r_base": 15620883360,
+  "panel_n": 1723
  },
  {
   "sec": "22",
-  "companies": 2068
+  "companies": 2068,
+  "revenue": 45260853609,
+  "r_last": 228347304053,
+  "r_base": 208895836444,
+  "panel_n": 2086
  },
  {
   "sec": "23",
-  "companies": 3697
+  "companies": 3697,
+  "revenue": 739071248116,
+  "r_last": 325118593677,
+  "r_base": 193182264956,
+  "panel_n": 3904
  },
  {
   "sec": "24",
-  "companies": 1053
+  "companies": 1053,
+  "revenue": 838352000134,
+  "r_last": 121734110651,
+  "r_base": 60757145515,
+  "panel_n": 3837
  },
  {
   "sec": "25",
-  "companies": 6539
+  "companies": 6539,
+  "revenue": 629962142330,
+  "r_last": 344831731642,
+  "r_base": 264156286312,
+  "panel_n": 1200
  },
  {
   "sec": "26",
-  "companies": 852
+  "companies": 852,
+  "revenue": 347612184522,
+  "r_last": 549688544443,
+  "r_base": 408560785587,
+  "panel_n": 2188
  },
  {
   "sec": "27",
-  "companies": 3662
+  "companies": 3662,
+  "revenue": 762170025794,
+  "r_last": 823210746752,
+  "r_base": 457422198946,
+  "panel_n": 4249
  },
  {
   "sec": "28",
-  "companies": 803
+  "companies": 803,
+  "revenue": 654839033723,
+  "r_last": 238982247463,
+  "r_base": 111868345075,
+  "panel_n": 4347
  },
  {
   "sec": "29",
-  "companies": 2221
+  "companies": 2221,
+  "revenue": 638288361803,
+  "r_last": 141903675836,
+  "r_base": 78963126325,
+  "panel_n": 241
  },
  {
   "sec": "30",
-  "companies": 4784
+  "companies": 4784,
+  "revenue": 502138831325,
+  "r_last": 374820554687,
+  "r_base": 291119008042,
+  "panel_n": 765
  },
  {
   "sec": "31",
-  "companies": 6907
+  "companies": 6907,
+  "revenue": 521350423169,
+  "r_last": 578756862480,
+  "r_base": 466946610375,
+  "panel_n": 3024
  },
  {
   "sec": "32",
-  "companies": 2403
+  "companies": 2403,
+  "revenue": 733638213189,
+  "r_last": 128332086944,
+  "r_base": 94195253972,
+  "panel_n": 1845
  },
  {
   "sec": "33",
-  "companies": 8898
+  "companies": 8898,
+  "revenue": 65203682226,
+  "r_last": 571421718042,
+  "r_base": 298740210340,
+  "panel_n": 2720
  },
  {
   "sec": "35",
-  "companies": 1969
+  "companies": 1969,
+  "revenue": 772439451407,
+  "r_last": 208912321953,
+  "r_base": 123092581565,
+  "panel_n": 1618
  },
  {
   "sec": "36",
-  "companies": 5094
+  "companies": 5094,
+  "revenue": 710499357387,
+  "r_last": 260033264847,
+  "r_base": 132411100050,
+  "panel_n": 1877
  },
  {
   "sec": "38",
-  "companies": 3001
+  "companies": 3001,
+  "revenue": 311651657840,
+  "r_last": 438192102700,
+  "r_base": 284426482737,
+  "panel_n": 257
  },
  {
   "sec": "41",
-  "companies": 1728
+  "companies": 1728,
+  "revenue": 424484687954,
+  "r_last": 33214820352,
+  "r_base": 17235216934,
+  "panel_n": 3888
  },
  {
   "sec": "42",
-  "companies": 3118
+  "companies": 3118,
+  "revenue": 738749216648,
+  "r_last": 187755296901,
+  "r_base": 104292360530,
+  "panel_n": 2840
  },
  {
   "sec": "43",
-  "companies": 6141
+  "companies": 6141,
+  "revenue": 23465212733,
+  "r_last": 941301098404,
+  "r_base": 444402459721,
+  "panel_n": 2883
  },
  {
   "sec": "45",
-  "companies": 1636
+  "companies": 1636,
+  "revenue": 511346195765,
+  "r_last": 52941120754,
+  "r_base": 44615772165,
+  "panel_n": 1878
  },
  {
   "sec": "46",
-  "companies": 1068
+  "companies": 1068,
+  "revenue": 186710300457,
+  "r_last": 146617771851,
+  "r_base": 109493160566,
+  "panel_n": 3973
  }
 ]

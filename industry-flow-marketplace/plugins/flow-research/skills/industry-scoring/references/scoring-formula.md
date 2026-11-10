@@ -24,26 +24,30 @@
 -- Q1 покриття fin_history за роками (щоразу; db_schema застаріває)
 SELECT year AS y, COUNT(*) AS n FROM fin_history GROUP BY year ORDER BY year
 
--- Q2 кількість компаній за розділом
-SELECT LEFT(c.kved_2010,2) AS sec, COUNT(*) AS companies
-FROM companies c WHERE <фільтр §2> GROUP BY sec
-
--- Q3 виручка за останній повний рік (одна й та сама для всіх)
-SELECT LEFT(c.kved_2010,2) AS sec, SUM(f.revenue) AS revenue
-FROM companies c JOIN fin_history f ON f.code = c.code AND f.year = <останній_рік>
-WHERE <фільтр §2> GROUP BY sec
-
--- Q4 зростання: панель компаній з виручкою >0 і в базовому, і в останньому році
-SELECT LEFT(c.kved_2010,2) AS sec, SUM(l.revenue) AS r_last, SUM(b.revenue) AS r_base, COUNT(*) AS panel_n
+-- Q2 компаній, виручка і панель зростання — ОДИН запит, усі метрики (колонки sec, companies, revenue, r_last, r_base, panel_n)
+SELECT LEFT(c.kved_2010,2) AS sec,
+       COUNT(*) AS companies,
+       SUM(l.revenue) AS revenue,
+       SUM(CASE WHEN l.revenue > 0 AND b.revenue > 0 THEN l.revenue END) AS r_last,
+       SUM(CASE WHEN l.revenue > 0 AND b.revenue > 0 THEN b.revenue END) AS r_base,
+       SUM(l.revenue > 0 AND b.revenue > 0) AS panel_n
 FROM companies c
-JOIN fin_history l ON l.code=c.code AND l.year=<останній_рік> AND l.revenue > 0
-JOIN fin_history b ON b.code=c.code AND b.year=<базовий_рік>  AND b.revenue > 0
+LEFT JOIN fin_history l ON l.code = c.code AND l.year = <останній_рік>
+LEFT JOIN fin_history b ON b.code = c.code AND b.year = <базовий_рік>
 WHERE <фільтр §2> GROUP BY sec
--- growth = r_last / r_base - 1; CAGR = (r_last / r_base)^(1/(останній-базовий)) - 1
+-- companies = усі компанії розділу з has_financials=1; revenue = SUM за останній рік;
+-- r_last/r_base/panel_n = панель з виручкою >0 в обох роках. Перевірено на живому odb-catalog
+-- 2026-11-10 для розділів 31, 41, 92: збіг з окремими запитами (напр. 92: 60 компаній, панель 10). Передумова:
+-- fin_history унікальна за (code, year): перевірено на живому odb-catalog 2026-11-10 — COUNT(*) = COUNT(DISTINCT code, year) = 1 296 131,
+-- дублікатів немає. Рекомендовано повторити контрольний запит на старті після оновлення знімка (вкладається в ліміт 12 SQL).
+-- growth = r_last / r_base - 1; CAGR = POW(r_last / r_base, 1/(останній-базовий)) - 1
 
--- Q5 частка kved_ambig=1 (лише для «Якість даних»)
+-- Q3 частка kved_ambig=1 (лише для «Якість даних»)
 SELECT LEFT(c.kved_2010,2) AS sec, AVG(c.kved_ambig = 1) AS ambig_share
 FROM companies c WHERE <фільтр §2> GROUP BY sec
+
+-- Q4 SC-repro: ОДИН запит на 3 клітинки (3 розділи з топ-10; ті самі вирази, що в Q2)
+-- = Q2 з додатковою умовою AND LEFT(c.kved_2010,2) IN ('<s1>','<s2>','<s3>')
 ```
 Якщо розділів >500 рядків — не буває (розділів ~85), але перевірити, що відповідь не обрізана.
 
@@ -55,7 +59,7 @@ FROM companies c WHERE <фільтр §2> GROUP BY sec
 Роки нижче порогу й дірки (2020, 2023) — у «Якість даних і обмеження».
 
 ## 5. Допустимі змінні формули
-`companies` (Q2), `revenue` (Q3), `growth` (Q4, ratio), `cagr` (Q4), `market_solutions` (лише колонка/ознака
+`companies`, `revenue`, `growth` (ratio), `cagr` (усі — з відповіді Q2), `market_solutions` (лише колонка/ознака
 з кроку 5, кількість знайдених рішень). `norm(x)` — нормалізація, лише та, що описана в параметрі
 (min–max, ранг тощо). Інша змінна в параметрі → стоп кроку 1.
 Приклад (ілюстрація, **не значення за замовчуванням**): `бал = 0.4·norm(companies) + 0.4·norm(revenue) + 0.2·norm(growth)`.
@@ -68,7 +72,7 @@ FROM companies c WHERE <фільтр §2> GROUP BY sec
   2. вхід наряду «Реєстр компаній (знімок з датою)» (`inputs`, `from: odb-catalog`) — оркестратор фіксує дату;
   3. немає ні того, ні іншого → стоп, ескалація «дата знімка невідома», **дату з пам'яті не ставити**.
   Джерело дати записати в «Знімок даних» і в `memo`.
-- Тег числа: `<число> [odb YYYY-MM]`. Тег мають лише метрики з реєстру: **компаній, виручка, зростання (Q2–Q4)**.
+- Тег числа: `<число> [odb YYYY-MM]`. Тег мають лише метрики з реєстру: **компаній, виручка, зростання (усі з Q2)**.
   Ранг, код, назва й **бал** (обчислений) тегу не мають. Регекс клітинки: `^\s*-?[\d\s.,]+%?\s\[odb \d{4}-(0[1-9]|1[0-2])\]\s*$`.
 
 ## 7. Перерахунок і округлення
@@ -77,3 +81,15 @@ FROM companies c WHERE <фільтр §2> GROUP BY sec
 - SC-repro порівнює цифру з повторного запиту **після того самого округлення**.
 - SC-repro на статичному знімку повторює той самий запит: він ловить помилки переписування/транскрипції, а не
   помилки даних. У `memo` так і писати.
+
+## 8. Малі панелі зростання (SC-panel)
+Min–max нормалізація `norm(growth)` задається крайніми розділами; розділ із панеллю в кілька компаній (приклад
+тесту mebli: 92 — 60 компаній, панель 10, +2 072.9 %) може потрапити в топ-10 майже лише через складову зростання.
+- **Допустимий параметр критерію (необов'язковий):** «мінімальна панель для growth = N» (запис `мін. панель N`
+  або `min_panel=N`) і правило для розділу з `panel_n < N`: (а) лише попередження, бал не змінюється;
+  (б) `norm(growth)=0` для такого розділу, (в) розділ виключається з рейтингу. Скіл застосовує лише те, що
+  прямо записано в параметрі; формулу сам не змінює.
+- **Якщо параметр порогу не задає:** `check_scoring.py` видає `SC-panel` WARN для розділів топ-10 з панеллю
+  < N (довідкове N=30, ключ `--min-panel`), бал **не змінюється**; перелік (код, panel_n) — у «Якість даних».
+- **Відкрите питання до Власника продукту (не вирішувати в скілі):** чи вводити поріг, яким він має бути і яка
+  дія (а/б/в). 30 — довідкове значення для попередження, не рішення.

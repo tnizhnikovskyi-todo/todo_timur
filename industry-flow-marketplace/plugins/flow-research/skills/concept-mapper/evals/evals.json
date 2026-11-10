@@ -37,16 +37,32 @@
     {
       "id": "thin-sources",
       "prompt": "Наряд A-20, scope package/furniture. inputs: briefing.md, де лише 2 ролі і 5 болів, та past-projects.md з 0 проєктів (валідний вхід). Сесій A-06 не було. Побудуй концепцію.",
-      "expected_output": "Підтверджене записано (2 ролі, болі з цитатами, функції лише на цих болях), ролі й екрани не добито вигаданими до норми. Є розділ «Чого бракує» з вказівкою, з якого кроку чекати дані (A-03, A-04 або A-06); result: escalated до BA; у checks CM-count = FAIL названо явно, решта CM-* PASS або MANUAL (CM-pii).",
+      "expected_output": "Підтверджене записано (2 ролі, болі з цитатами, функції лише на цих болях), ролі й екрани не добито вигаданими до норми. Є розділ «Чого бракує» з вказівкою, з якого кроку чекати дані (A-03, A-04 або A-06); result: waiting_human із заповненим waiting_for {role, what, resume}; у memo перелік 2 знайдених ролей із джерелами; CM-count = FAIL названо в memo, решта CM-* PASS або MANUAL (CM-pii).",
       "assertions": [
         "Ролей не більше двох, нових ролей не вигадано; екранів і сценаріїв не добито до 10–15 і 4–6",
         "Є розділ «Чого бракує» з посиланнями на A-03/A-04/A-06",
-        "Результат запуску — escalated з роллю BA, а не done",
-        "CM-count = FAIL названо явно в checks і memo",
+        "Результат запуску — waiting_human із заповненим waiting_for (role, what, resume), а не done чи escalated",
+        "CM-count = FAIL названо явно в checks і memo; у memo перелік 2 знайдених ролей із джерелами",
         "Власного ресерчу галузі (веб, Fathom, AIKB) не виконано"
       ],
       "input": {
         "fixtures": "evals/fixtures/thin-sources/"
+      }
+    },
+    {
+      "id": "no-departments-section",
+      "prompt": "Наряд A-20, scope package/mebli, client_data none. inputs: briefing.md формату industry-briefing 0.10.0/0.12.1 — розділу «Структура відділів» немає, ролі лише в підписах болів («**Конструктор:** …») і в таблиці модулів; past-projects.md з 0 проєктів. Сесій A-06 не було. Побудуй концепцію.",
+      "expected_output": "Ролі взято з підписів болів briefing.md: 7 (або 4–8 після злиття синонімів, злиття пояснено в memo), кожна ROLE-xx має джерело briefing.md§<###-підрозділ>; скіл не зупинився через відсутність розділу відділів і не вигадав ролей. З 7 болів фікстури чесно виходить менше 10 екранів: екрани не добито, є розділ «Чого бракує», result escalated (екрани <10), CM-count = FAIL названо в memo; CM-src, CM-quote, CM-feat, CM-trace PASS (еталон — evals/fixtures/no-departments/concept-expected/concept/). Якби знайдено <4 ролей — result waiting_human із waiting_for і переліком знайденого.",
+      "assertions": [
+        "Відсутність розділу «Структура відділів» не названо помилкою й не призвела до зупинки",
+        "Ролі взяті з підписів болів `- **Роль:**`; жодної ролі без підпису чи згадки в джерелі не додано",
+        "Кожна ROLE-xx має в колонці «Джерело» briefing.md§<заголовок>",
+        "scripts/check_concept.py запущено; CM-src, CM-quote, CM-feat PASS, CM-count FAIL (екранів <10) названо в memo",
+        "Якщо ролей <4 — result waiting_human, у memo перелік знайденого, нових ролей не вигадано",
+        "Екрани не добито заглушками до 10; result escalated, розділ «Чого бракує» є"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/no-departments/"
       }
     },
     {
