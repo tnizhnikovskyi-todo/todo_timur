@@ -43,6 +43,14 @@
 
 Лишається: 34 відкриті питання до людини (README); евали з `requires: odoo-mcp:test / step-run` — після C-00 (тестова база флоу й скрипти `tools/odoo/` у репо пакета).
 
+## Рішення людини по 44 питаннях (2026-11-10, день)
+- Журнал: `_work/DECISIONS_2026-11-10.md`. Не за рекомендацією: q01 (B-13/B-08a — будь-який агент), q05 (Fathom безстроково), q09 (без згоди на AI не беремо; q30 знято), q10 (підпис SOW = стадія CRM), q17 (усі скрипти до пілоту), q34 (SLA — календарні дні), q37 (бот з читанням проду).
+- Внесено в усі плагіни (Sonnet), кожну задачу перевірено Fable 5.2 до відсутності blocker/major.
+- Новий скіл `flow-client-delivery:client-help-bot` (B-07): Opus — план, Sonnet — скіл; прод клієнта лише через клас `prod-ro-<клієнт>`, read-only, дозволений тільки цьому скілу.
+- Еталони `apply.py`, `validate.py`, `install.sh` у `flow-core/references/templates/tools-odoo/` (q17) з відмовою працювати поза test-*/test-pkg-*/demo-*/emu-*.
+- Підсумкова пакетна рецензія Fable 5.2 (4 раунди + контрольна): останні major (формат тега q19 у кількох скілах і в runner) виправлено. 29 скілів, `claude plugin validate` — без помилок.
+- Лишилось minor: autocheck вибирає попередній тег без фільтра за лінією `-odoo<N>`; евали з тегами з суфіксом не додано.
+
 ## Установка
 ```bash
 claude plugin marketplace add ./industry-flow-marketplace
