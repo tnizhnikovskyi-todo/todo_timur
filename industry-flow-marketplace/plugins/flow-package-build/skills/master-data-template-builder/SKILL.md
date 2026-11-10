@@ -199,7 +199,6 @@ A-11 і A-12, A-14 стартує, коли готові всі три). Пов�
 
 ## Відкриті питання
 - Ім'я й інтерфейс скрипта C-00 «імпорт шаблонів» у `tools/odoo/` (контракт — `references/test-import.md`); еталони `apply.py`/`validate.py` — `flow-core/references/templates/tools-odoo/`.
-- Клас alias тестової бази пакета в allow-list (у конвенціях `flow-core` немає `test-pkg-*`; `gates-aggregator` його вживає).
 - Хто перевіряє імпорт td_*: A-14 (`track-convergence`) чи окремий тест-імпорт.
 - Перехід A-13 -> A-10/A-08 у C-01 — до правки ручний.
 - Одноразова `boost:source-check` по 4 рядках `references/odoo19-master-data-pitfalls.md` із записом джерела/дати (мейнтейнер плагіна).

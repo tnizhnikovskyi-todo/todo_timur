@@ -12,7 +12,7 @@ package/config/
   vp-map.yaml        VP-xx -> {track, kind, anchor, transform, ac}
   data/NN_<область>.yaml
   install-log.md     (install-log-template.md)
-  (майбутнє, у 0.1 НЕ постачається: install.sh, bin/apply.py, bin/validate.py -- див. «CLI-контракт»)
+  (еталони install.sh, apply.py, validate.py -- `flow-core/references/templates/tools-odoo/` (q17); C-00 копіює в `tools/odoo/`; сигнатури еталонів відрізняються від «CLI-контракту» нижче -- розбіжність у README «Лишається відкритим»)
 package/addons/<готове>/                      вендорене (vendoring.md)
 ```
 
@@ -77,8 +77,8 @@ Read-back знаходить запис через `odoo_search_read` (для `x
   reason: ""
 ```
 
-## CLI-контракт майбутніх скриптів (у 0.1 скриптів НЕМАЄ)
-Контракт -- вимога до скриптів, коли їх випустять (беклог AI-інженера); до того на нього **не спираються** (C-03 пропускає job
+## CLI-контракт скриптів (еталони є в `flow-core/references/templates/tools-odoo/`, сигнатури відрізняються)
+Контракт -- вимога до скриптів `tools/odoo/`; до вирішення розбіжності з еталонами на нього **не спираються** (C-03 пропускає job
 конфігу з явним статусом, A-12 застосовує через odoo-mcp).
 | Команда | Дія | Коди виходу |
 |---|---|---|

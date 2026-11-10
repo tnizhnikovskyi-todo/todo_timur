@@ -1,0 +1,9 @@
+step: B-07
+scope: {kind: client, id: client-demo-01}
+executor: any
+client_data: personal
+params: {mode: answer, period: {month: "2026-10"}}
+skill_ref: ["flow-client-delivery:client-help-bot@0.1.0"]
+odoo_connections:
+  - {alias: flow, purpose: наряд/звіт}
+  - {alias: prod-ro-client-demo-01, purpose: читання (client-help-bot)}

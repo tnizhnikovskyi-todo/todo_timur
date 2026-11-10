@@ -39,7 +39,7 @@ description: >
 - **Запис:** лише `clients/<к>/upgrade-log.md`. Не пише: `answers.yaml`, `config-log.md`, `addons/`, `sow.md`
   (його пише `package-sow-builder`), `delivery-log.md`, поля проєкту Odoo («тег-кандидат», тег у проді), колонку
   рішень D-02.
-- **github (MCP):** `get_tag`, `actions_list` (лише пошук прогону цього кроку), `actions_run_trigger` (лише workflow C-03), `actions_get`, `get_job_logs`
+- **github (MCP):** `get_tag`, `actions_list` (лише пошук прогону цього кроку), `actions_run_trigger` (лише workflow C-03) — через runner, рядок «КОМАНДИ: gh workflow run», `actions_get`, `get_job_logs`
   (лише хвіст/grep `FAIL|ERROR`). Без merge, без створення тегів.
 - **odoo-mcp:** лише `odoo_search_read`; alias `flow` (поля проєкту через логічні імена `project.*` з
   `flow/ODOO_SCHEMA.md`, задачі B-11 пілота) і `test-<клієнт>` (версія 1; `anon-<клієнт>` — версія 2, відкладена після пілоту, q03). Кожен виклик з
@@ -92,7 +92,7 @@ description: >
 нові, змінені допустимі значення, видалені. Викликати `flow-client-delivery:package-sow-builder` (має бути в `called_skills` наряду, інакше `escalated`) у цьому ж запуску й гілці: `params: {mode: addendum,
 addendum_source: changelog}`, `inputs` = перелік VP (нові/змінені/видалені; значення за замовчуванням з CHANGELOG — лише
 як «потребує підтвердження Клієнтом», не як відповідь) із SHA, `where: clients/<к>/sow.md`, `odoo_connections` і `attempt`
-наряду. Результат лишається в гілці кроку. Немає `sow.md` або підписаного основного SOW (q10: підпис — стадія угоди в CRM, підтверджена в тексті наряду; `sow.md` — лише дзеркало; див. `package-fit-gap/references/agreement-check.md`) -> `returned` PM
+наряду. Результат лишається в гілці кроку. Немає `sow.md` або підписаного основного SOW (q10: підпис — стадія угоди в CRM, підтверджена ключем наряду `preconditions_confirmed.crm_deal_stage: sow_signed`; `sow.md` — лише дзеркало; див. `package-fit-gap/references/agreement-check.md`) -> `returned` PM
 (`returned_to: B-03`).
 
 ## Крок 3 (фаза 0). Кандидати на зняття

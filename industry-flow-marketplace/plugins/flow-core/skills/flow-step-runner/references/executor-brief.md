@@ -1,8 +1,9 @@
 # Шаблони брифів субагентам
 
 Бриф збирає runner з наряду. Зміст входів у бриф **не вставляється** — лише шляхи до теки контексту (`build_context.py`). Виконавець запускається як агент `flow-core:flow-executor` (визначення — `agents/flow-executor.md`): інструменти Read/Write/Edit/Grep/Glob/Skill і лише читання odoo-mcp; Bash, git, gh,
-`odoo_write/create/execute` у нього **немає на рівні інструментів**, а не лише в тексті брифу. Рецензент — `flow-core:flow-reviewer` (лише Read/Grep/Glob). Модель — параметр `model` виклику.
+`odoo_write/create/execute` у нього **немає на рівні інструментів**, а не лише в тексті брифу. Для кроків, що потребують конекторів, агент — профільний варіант за `access_profile` наряду (`flow-executor-mail|-research|-outreach|-drive|-repo`, `step-skill-map.md`): у брифі додається рядок «Профіль: <access_profile>»; інструментів поза профілем немає. Рецензент — `flow-core:flow-reviewer` (лише Read/Grep/Glob). Модель — параметр `model` виклику.
 У виконавця немає Bash: команди скіла (lint, тести, генератори) він не запускає, а перелічує рядком «КОМАНДИ: …» — їх виконує runner (крок 8–9). Запис в Odoo — рядки «ODOO: {tool, connection_id, model, method, args}»: виконує runner лише для test-/demo-/emu-/test-pkg- підключень наряду з `purpose` запису; прод (`prod-*`) заборонено — виклик відхиляється; результат повертає виконавцю. Єдиний виняток (q37): `prod-ro-<клієнт>` у наряді `flow-client-delivery:client-help-bot` — лише читання (`odoo_search_read`/`odoo_get_fields`, виконавець читає сам з явним `connection_id`); «ODOO:» на `prod-ro-*` відхиляється. Умови читання для client-help-bot: кожен запит перелічити у відповіді рядком «ЗАПИТ: <model, domain, fields>» (для журналу, місце ведення — відкрите питання, `open-questions.md`), у відповідях клієнту не розкривати ПДн інших користувачів.
+`Bash` у «Інструментах» скіла = рядок «КОМАНДИ:» для runner (git, gh, `actions_run_trigger` як `gh workflow run`, запис файлу в Drive); виконавець Bash не має.
 Параметри `params` наряду (mode, phase, resume тощо) і `git.base/head` runner передає в бриф рядком «Параметри кроку».
 
 ## Бриф виконавця

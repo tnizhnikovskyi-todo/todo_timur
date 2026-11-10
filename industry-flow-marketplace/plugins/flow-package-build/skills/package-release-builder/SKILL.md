@@ -4,7 +4,7 @@ description: >
   Запускай на кроці A-18 флоу галузевого пакета: приймання версії (package/ACCEPTANCE.md, A-17) підписано, або після
   hotfix A-19 з APPROVE гейтів A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує релізну гілку,
   package/CHANGELOG.md, шаблони package/templates/{migration-plan,training}.md, перевіряє установку в чисту базу Odoo 19
-  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N> (припущення AI, див. open-questions.md п. 8 / В-9); дефект пакета
+  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N> (припущення AI); дефект пакета
   пише в package/demo/release-defects.md і повертає в A-14. Тригери — «випусти версію пакета», «реліз пакета», «постав
   тег пакета», «CHANGELOG пакета», «A-18». НЕ для виправлення дефекту (A-19), гейтів (A-14), підпису ACCEPTANCE.md
   (A-17), оновлення в клієнта (B-11), міграції на нову Odoo (D-03), CI (C-03), плану міграції чи навчання (B-06/B-07).
@@ -52,7 +52,7 @@ description: >
 
 ## Інструменти та доступи
 - `git` у репо (лише читання й коміт у гілці runner): `merge-base`, `cat-file`, `diff` (`--stat`, `--name-only`, точкові `-U0`), `tag -l`, `ls-remote --tags`. Заборонено: `switch -c`, `push` (гілки й тега), `tag` будь-який, `tag -f`, `push --force`, мердж `main` у гілку.
-- MCP `github`: `actions_run_trigger` (workflow C-03, `workflow_dispatch`), `actions_list`/`actions_get`, `get_job_logs` (лише хвіст/grep), `get_tag` (читання). Контракт — `references/ci-contract.md` (маппінг на `ci-pipeline-builder`).
+- MCP `github`: `actions_run_trigger` (workflow C-03, `workflow_dispatch`) — через runner, рядок «КОМАНДИ: gh workflow run», `actions_list`/`actions_get`, `get_job_logs` (лише хвіст/grep), `get_tag` (читання). Контракт — `references/ci-contract.md` (маппінг на `ci-pipeline-builder`).
 - MCP `odoo-mcp`: `flow` (через runner) і, якщо є в allow-list наряду, alias «чиста база пакета» — лише читання `ir.module.module` (`state`, `latest_version`; `installed_version` — версія з маніфесту). Перед першим викликом `list_odoo_connections`, звірити з `odoo_connections`; кожен виклик — з явним `connection_id`, після виклику звірити `connection.db`. Без `connection_id` odoo-mcp дивиться в прод: виклик без нього заборонено. Alias бази клієнта, прод, стенда A-15 — стоп «недозволене підключення». Видалень немає.
 - Скіли: `boost:odoo19-lint` (R-15), `boost:odoo-model-map` (хто наслідує змінену модель), `flow-core:flow-autocheck`.
 - Клієнтських даних немає (`client_data: none`); правила — `package/DATA_POLICY.md` (C-05, «Знеособлення»).

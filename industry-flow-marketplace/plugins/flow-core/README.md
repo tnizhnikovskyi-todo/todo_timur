@@ -18,6 +18,7 @@
 (Тексти скілів — у `skills/<скіл>/SKILL.md`.)
 
 ## Агенти плагіна
+- Профільні виконавці `flow-executor-mail|-research|-outreach|-drive|-repo` (`agents/`): той самий виконавець + мінімальний набір конекторів за `access_profile` наряду (`step-skill-map.md`); без запису в Gmail/Drive/GitHub, окрім чернеток Gmail.
 - `flow-core:flow-executor` (`agents/flow-executor.md`) — субагент-виконавець кроку: лише файли результату, читання odoo-mcp; без Bash, git, gh, запису в Odoo.
 - `flow-core:flow-reviewer` (`agents/flow-reviewer.md`) — субагент-рецензент кроку: лише читання.
 Їх використовує `flow-step-runner` (крок 0 перевіряє наявність).
@@ -26,7 +27,7 @@
 
 Цей плагін і є джерелом спільних конвенцій: `conventions.md`, `naryad-format.md`, `report-format.md`, `data-and-connections.md`, `odoo-bridge.md`, `flow-map.md`, `flow-step-run.md`, `flow-state.md`, `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`.
 
-Коротко: кожен крок — наряд (задача Odoo) із YAML-блоком у `description`; результат — PR у GitHub; звіт — у задачу Odoo; рішення людини — кнопка в задачі; кожен виклик `odoo-mcp` — з явним `connection_id` з наряду; дані клієнта — лише тестові бази й знеособлені копії.
+Коротко: кожен крок — наряд (задача Odoo) із YAML-блоком у `description`; результат — PR у GitHub; звіт — у задачу Odoo; рішення людини — кнопка в задачі; кожен виклик `odoo-mcp` — з явним `connection_id` з наряду; дані клієнта — лише тестові бази й знеособлені копії, якщо вони є (q02: на пілоті копій немає); єдиний виняток-читання проду — `prod-ro-<клієнт>` для `client-help-bot` (q37); будь-який агент — лише B-13/B-08a на `test-<клієнт>` (q01); повністю — `flow-core/references/data-and-connections.md` §3.6.
 
 ## Установка
 

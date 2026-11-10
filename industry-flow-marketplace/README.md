@@ -1,12 +1,12 @@
 # industry-flow
 
-Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md`. Усього 29 скілів у 5 плагінах.
+Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md` (історична, до 2026-11-10; чинні — `_work/DECISIONS_2026-11-10.md` і `plugins/flow-core/references/`). Усього 29 скілів у 5 плагінах.
 
 ## Плагіни
 
 | Плагін | Призначення | Кроки |
 |---|---|---|
-| `flow-core` | Ядро флоу; таблиця кроків і скілів `references/step-skill-map.md` | Скіли: `flow-orchestrator`, `flow-state-keeper`, `ci-pipeline-builder`, `eval-builder`, `flow-step-runner`, `flow-autocheck`. Наскрізний: C-01 (оркестратор), C-02 (стан), C-03 (CI), C-04 і C-07 (евали), C-05 (політика даних), C-06 (цикл AI-кроку, автоперевірка), C-08. Агенти `plugins/flow-core/agents/`: `flow-executor` (виконавець: лише файли результату, читання odoo-mcp; запис в Odoo й команди виконує runner за рядками «ODOO:»/«КОМАНДИ:») і `flow-reviewer` (рецензент, лише читання); `flow-step-runner` і цей README посилаються саме на цю єдину копію. |
+| `flow-core` | Ядро флоу; таблиця кроків і скілів `references/step-skill-map.md` | Скіли: `flow-orchestrator`, `flow-state-keeper`, `ci-pipeline-builder`, `eval-builder`, `flow-step-runner`, `flow-autocheck`. Наскрізний: C-01 (оркестратор), C-02 (стан), C-03 (CI), C-04 і C-07 (евали), C-05 (політика даних), C-06 (цикл AI-кроку, автоперевірка), C-08. Агенти `plugins/flow-core/agents/`: `flow-executor` (виконавець `base`: лише файли результату, читання odoo-mcp; запис в Odoo й команди виконує runner за рядками «ODOO:»/«КОМАНДИ:»), профільні виконавці `flow-executor-mail|-research|-outreach|-drive|-repo` (мінімальні конектори за ключем наряду `access_profile`; таблиця — `step-skill-map.md`; `repo` — також gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator; `research` — WebSearch/WebFetch; `mail` — читання договору в Drive; запуск workflow і запис у Drive — рядком «КОМАНДИ:» для runner) і `flow-reviewer` (рецензент, лише читання); `flow-step-runner` і цей README посилаються саме на цю єдину копію. |
 | `flow-research` | Дослідження до рішення «будуємо пакет?»; скіли: `concept-mapper`, `demand-test-runner`, `industry-scoring`, `past-projects-analyzer`, `prototype-builder`, `segment-selector`. | A-01, A-04, A-05, A-20, A-21, A-23 (+ список лідів B-01). |
 | `flow-package-build` | Збірка тиражованого пакета | A-09, A-12, A-13, A-14, A-15 (+A-22), A-18; скіли: `config-as-code`, `demo-base-builder`, `gates-aggregator`, `master-data-template-builder`, `package-release-builder`, `questionnaire-builder`. |
 | `flow-client-delivery` | Впровадження пакета в клієнта | B-02, B-03, B-04, B-06, B-07 (бот), B-09/B-10, B-11 (+B-13); скіли: `client-data-migrator`, `client-help-bot` (B-07; читає прод клієнта лише через підключення `prod-ro-<клієнт>`, лише читання — рішення q37), `package-fit-gap`, `package-sow-builder`, `package-upgrade-runner`, `runbook-executor`, `support-desk`. |
@@ -37,6 +37,9 @@ claude plugin install flow-package-evolution@industry-flow
 - Другий наряд того самого кроку (A-23 `список`->`prep`, B-08a `звірка`->`збіжність`) створює `flow-orchestrator` за `flow-core/references/flow-map.md`; перевірки в `checks/*.yaml` розрізняються умовою `when: mode:<значення>`. B-11: звірку й додаток SOW виконує `package-upgrade-runner` сам (ключ наряду `called_skills`, не гейти). Тестові бази з «prod» в імені відхиляє `tools-odoo/_common.sh`.
 Yaml-специфікації автоперевірки (`flow-autocheck/references/checks/`, 36 файлів) є для кроків, які виконує скіл пакета, крім C-06 і C-08. Автоматично `autocheck.py` виконує лише `exists`, `headings`, `git_diff_allowed`, `pii_strict`, `vendored_license` для кроків із фіксованими шляхами; скрипти скілів (`check_sow.py`, `check_fit_gap.py`, `check_migration.py`, `check_pii.py` та ін.) у специфікаціях — рядки `manual` з `who: runner`: їх виконує runner за `flow-step-runner`, Крок 9 (ж) (FAIL скрипта = FAIL кроку, не виконано = ERROR). До першого живого прогону PASS кроків, де всі перевірки yaml — `manual` (A-04, A-05, A-07, A-20–A-23, B-01–B-04, B-06, B-08a, B-09–B-11, B-13, D-01, D-03, D-04), не вважати підставою для зрілості 3. Без специфікації (`ERROR spec-missing`, `INCOMPLETE`; не блокує `done`): A-03, A-06, A-08, A-11, A-16, A-19, B-05, B-08b–d, B-12, C-01, C-02, C-08; C-06 — лише загальні перевірки; A-02, C-00 — людські кроки. Технічні імена полів і стадій Odoo визначає C-00 (`flow/ODOO_SCHEMA.md`); зведені вимоги до C-00 — `plugins/flow-core/references/c00-checklist.md`. Таблиця «крок → skill_ref → params.mode» — `plugins/flow-core/references/step-skill-map.md`. Іконки плагінів є (`.claude-plugin/icon.png`); `eval-builder/scripts/evals_to_cli.py` створено (самотест на 5 evals.json); еталони `apply.py`/`validate.py`/`install.sh` і скрипти `tools/odoo/` є як шаблони в `flow-core/references/templates/tools-odoo/` — C-00 копіює й адаптує, на Odoo 19 не перевірені. Наживо не запускалось: `claude plugin eval`, odoo-mcp, GitHub, Gmail, скрипти `tools/odoo/` на Odoo 19 — перший живий прогін (1 кейс eval, один крок через runner на тестовій базі) перед поданням у каталог.
 
+## Агенти flow-core
+`flow-executor` (профіль `base`) і профільні `flow-executor-drive|mail|outreach|repo|research` лежать у `plugins/flow-core/agents/`; runner зупиняє наряд, якщо потрібного агента немає. Дії поза профілем (`gh workflow run`, `drive-create` для A-23) виконує runner за рядком «КОМАНДИ:». `ODOO_ALLOWED_HOSTS` у tools-odoo — через кому або пробіл.
+
 ## Релізи
 Версія плагіна записана в `.claude-plugin/marketplace.json` і в `plugins/<плагін>/.claude-plugin/plugin.json`: при релізі міняти обидва файли; джерело для `skill_ref` — `plugin.json`.
 
@@ -58,14 +61,17 @@ Yaml-специфікації автоперевірки (`flow-autocheck/refere
 - q37: `client-help-bot` (B-07) робимо зараз; читання проду клієнта — єдиний виняток (див. «Правила»).
 
 **Лишається відкритим** (за «Відкриті питання» скілів; подробиці — там і в `references/open-questions.md`)
-- `client-help-bot`: як гарантувати «лише читання» на боці Odoo (Тімлід, Архітектор); allow-list моделей і заборонені групи (Тімлід, C-00); журнал запитів і читання `res.users` (Юрист); що створює наряд `answer` «на період» (`flow-orchestrator`).
+- Блокує перший `client-help-bot` `answer`: підтвердження Тімліда в `kb-index.md`, що користувач `prod-ro-<клієнт>` без прав запису/створення/видалення (штатної read-only ролі немає); пункт у `c00-checklist.md`.
+- `flow-core`: назви стадій угоди CRM для `preconditions_confirmed.crm_deal_stage` (`discovery_signed` — B-02, `sow_signed` — B-04/B-06/B-11) і поле-дзеркало (q10; C-00); мітка Gmail допомоги — окрема чи спільна з `support-desk` (до рішення мітки різні, спільна = `escalated`; PM, Підтримка).
+- `client-help-bot`: як гарантувати «лише читання» на боці Odoo (Тімлід, Архітектор); allow-list моделей і заборонені групи в Odoo 19 (`group_ids`; Тімлід, C-00); журнал запитів і читання `res.users` (Юрист); що створює наряд `answer` «на період» (`flow-orchestrator`).
 - `support-desk`: середня серйозність дефекту пакета — беклог чи обхід.
 - `package-sow-builder`: структура `package/pricing.md`.
 - `package-upgrade-runner`: шаблон тега `-odoo<N>` в `id-patterns.md`; сценарій міграції клієнта на нову мажорну Odoo; де PM фіксує «зняті відхилення».
 - `demo-base-builder`: ліміт установки всіх профілів; паролі демо-ролей і хостинг (Тімлід, C-05).
 - `package-usage-metrics`: як рахувати «активні внутрішні користувачі»; де лежить вивантаження за замовчуванням (Тімлід).
-- `config-as-code`: дозвіл агенту встановлювати модулі в тестовій базі пакета (C-05); клас `test-pkg-<пакет>` у `data-and-connections.md`.
+- `config-as-code`: дозвіл агенту встановлювати модулі в тестовій базі пакета (C-05).
 - `ci-pipeline-builder`: хто й коли доперевіряє довгий CI за run id.
 - `product-decision-drafter`: чи є модель табеля пілота в `ODOO_SCHEMA.md`.
 - `industry-scoring`: дата знімка odb-catalog у наряді A-01.
+- `flow-package-build`/`flow-core`: сигнатури еталонів `install.sh`/`validate.py` (`templates/tools-odoo/`) відрізняються від «CLI-контракту» в `config-package-format.md` — рішення людини: перейменувати еталони чи змінити контракт (q17; пункт у `c00-checklist.md`). Bash-скрипти `tools-odoo` не запускати на сервері, де є прод, поки C-00 не задасть `ODOO_ALLOWED_HOSTS`.
 - Наживо не перевірено: перший прогін `claude plugin eval`, скриптів `tools/odoo/`, MCP (q26).

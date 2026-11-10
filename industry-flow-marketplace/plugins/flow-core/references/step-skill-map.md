@@ -44,3 +44,17 @@
 | D-05 | flow-package-evolution:product-decision-drafter | — (`pilot/decision.md`; AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 
 Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.
+
+## Профіль доступу наряду (`access_profile`)
+Оркестратор ставить у наряд ключ `access_profile` за **ведучим скілом** (`skill_ref[0]`); runner запускає виконавця з однойменним агентом (`naryad-format.md`). Ключа немає = `base`. Профілі не складаються: одному наряду — один агент з мінімальним `tools:`.
+
+| access_profile | агент | додаткові інструменти (до читання odoo-mcp) | ведучі скіли |
+|---|---|---|---|
+| `base` | `flow-core:flow-executor` | немає | усі, не названі нижче |
+| `mail` | `flow-core:flow-executor-mail` | Gmail: читання й `create_draft`; Drive: читання файлу за id з наряду (договір для support-desk) | client-help-bot, support-desk |
+| `research` | `flow-core:flow-executor-research` | odb-catalog, AIKB, Fathom, Drive — лише читання; WebSearch/WebFetch | industry-scoring, segment-selector, past-projects-analyzer, concept-mapper, prototype-builder, questionnaire-builder, package-fit-gap |
+| `outreach` | `flow-core:flow-executor-outreach` | odb-catalog, Drive (читання) + Gmail `create_draft` | demand-test-runner |
+| `drive` | `flow-core:flow-executor-drive` | Drive: лише читання файлів з наряду | package-sow-builder, package-usage-metrics, client-data-migrator |
+| `repo` | `flow-core:flow-executor-repo` | GitHub MCP — лише читання (+ `get_tag`, `list_tags`); WebFetch (лише документація Odoo 19) | ci-pipeline-builder, gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator |
+
+Наряд із `prod-ro-<клієнт>` (лише client-help-bot, q37) має профіль `mail` і не отримує запису в Gmail/Drive/GitHub — таких інструментів у цього агента немає. Дії, яких виконавець не має (`actions_run_trigger`, запис файлу в Drive, `Bash (git)` у скілі), він віддає runner'у рядком «КОМАНДИ:» (`executor-brief.md`). Скіл, чия інструкція потребує конектора поза профілем наряду, зупиняється `escalated` (не шукає обхідних шляхів). Якщо ведучий скіл не в таблиці — `base`; помилку профілю виправляє AI-інженер у цій таблиці.

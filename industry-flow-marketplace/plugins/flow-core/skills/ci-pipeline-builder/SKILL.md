@@ -31,7 +31,7 @@ description: >
   `package/demo/scenarios.md`, `package/demo/profiles/`, `tools/odoo/` (скрипти C-00), наявний `.github/workflows/ci.yml`.
 - Запис: `.github/workflows/ci.yml`, `package/templates/ci-workflow.md`, лише в гілці кроку.
 - MCP `github`: `get_file_contents`, `list_branches`/`list_tags`, `actions_list`/`actions_get`/`get_job_logs` (лише tail/grep помилок),
-  `actions_run_trigger` (пробний dispatch). Не мерджить, не апрувить, не змінює захист гілки й секрети (це дії Тімліда).
+  `actions_run_trigger` (пробний dispatch) — через runner, рядок «КОМАНДИ: gh workflow run». Не мерджить, не апрувить, не змінює захист гілки й секрети (це дії Тімліда).
 - MCP `odoo-mcp`: лише підключення `flow`, лише читання (наряд; поля проєктів клієнтів для звірки з `REGISTRY.md`). Явний `connection_id`
   у кожному виклику (за замовчуванням odoo-mcp дивиться в **прод**), після кожного виклику звірити поле `connection`; не збіглося — стоп,
   «підключення не те». Інші бази, прод і реальні копії баз — заборонені.

@@ -3,6 +3,8 @@
 Зведення вимог скілів до C-00. Подробиці й формулювання питань — у розділах «Відкриті питання» вказаних скілів. Технічні імена полів і стадій у скілах не вигадуються: їх фіксує C-00.
 
 - [ ] `flow/ODOO_SCHEMA.md` (q14: AI-чернетка, Тімлід затверджує): технічні імена кастомних полів проєкту/задачі і стадій (`stage.*`) — `odoo-bridge.md`, `flow-orchestrator`, `flow-state-keeper`.
+- [ ] q10: назва стадії угоди CRM «підписано» і поле-дзеркало в проєкті клієнта; C-01 за ним вписує в наряди B-02/B-04/B-06/B-11 ключ `preconditions_confirmed.crm_deal_stage` (`discovery_signed` для B-02, `sow_signed` для B-04/B-06/B-11; `naryad-format.md`) — `flow-orchestrator`, `odoo-bridge.md`.
+- [ ] q37: Тімлід підтверджує, що технічний користувач `prod-ro-<клієнт>` не має прав запису/створення/видалення (роль, дата) і вносить рядок у `kb-index.md` клієнта — без цього `client-help-bot` `answer` не читає прод.
 - [ ] Автоматизація Odoo «задача C-01 на зміну стадії» — `flow-orchestrator`, `flow-state-keeper`.
 - [ ] Тестові бази не називати з «prod» в імені (`guard_db` відхиляє, напр., `test-prod`).
 - [ ] Класи баз і alias у `odoo-mcp`: `flow`, `test-<клієнт>`, `test-pkg-<пакет>`, `demo-<пакет>`, `emu-<галузь>`; `anon-<клієнт>` відкладено після пілоту (q02/q03); прод-alias заборонено, окрім `prod-ro-<клієнт>` для `client-help-bot` (q37, read-only, технічний користувач клієнта з мінімальними групами); про `data-and-connections.md` §3.5, `package-upgrade-runner`, `package-usage-metrics`.

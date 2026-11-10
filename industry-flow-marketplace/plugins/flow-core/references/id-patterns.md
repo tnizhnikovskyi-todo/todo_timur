@@ -11,6 +11,7 @@
 | Код П-xx | `П-\d{2}` | `sources.md`, `past-projects.md` |
 | ID вимоги | `\b(?:ROLE\|PAIN\|F\|S\|SC)-\d{2,}\b` | концепція |
 | VP | `VP-\d{2,}` | анкета |
+| Питання бота | `HB-\d{3,}` | `help-log.md` (client-help-bot); передача в support-desk: `params.handoff` |
 
 Джерела SHA для перевірок:
 - `result`/`form`: `--base <sha>` і `--head <sha>` з `git:` наряду (`naryad-format.md`); немає — runner рахує: head = вершина `repo.branch`, base = `git merge-base head origin/<base_branch>`; обидва записати в `checks[]` JSON.

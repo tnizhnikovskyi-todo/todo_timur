@@ -44,6 +44,7 @@
 3. Зняти теги (`<br>`/`</p>`/`</div>` -> `\n`, решту тегів прибрати), `html.unescape`, прибрати ` `. Парсити `yaml.safe_load`; помилка парсингу — `escalated` з номером рядка, наряд не «лагодити».
 4. Звірити дзеркальні поля (`task.step`, `task.executor`, `task.client_data`, `task.attempt`) із YAML: розбіжність — YAML недійсний, `escalated`.
 5. Перевірити обов'язкові ключі за `naryad-format.md`; відсутні необов'язкові — значення за замовчуванням звідти ж.
+Ключ `preconditions_confirmed.crm_deal_stage` (`discovery_signed` для B-02, `sow_signed` для B-04/B-06/B-11; пише C-01 з дзеркального поля стадії угоди CRM, q10) читається з YAML наряду; AI сам CRM не читає. Назва стадії CRM — з `flow/ODOO_SCHEMA.md` (C-00).
 Ключі з `params:` (naryad-format.md) читаються так само; їхня відсутність не є помилкою.
 
 ## 4. Звіт у задачу

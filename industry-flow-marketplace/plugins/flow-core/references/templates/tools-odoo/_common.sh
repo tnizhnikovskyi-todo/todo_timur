@@ -6,7 +6,7 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4) ))
   echo "FLOW_STOP: потрібен bash >= 4.4 (macOS: встановити через brew)" >&2; exit 2
 fi
 
-# Захист від прод-баз (лише ім'я бази, НЕ сервер: C-00 гарантує, що PGHOST і db_host в ODOO_CONF — один непродовий сервер): дозволено лише test-*(без «prod» в імені), test-pkg-*, demo-*, emu-*.
+# Захист від прод-баз (ім'я бази + PGHOST за ODOO_ALLOWED_HOSTS; C-00 гарантує, що db_host в ODOO_CONF — той самий непродовий сервер): дозволено лише test-*(без «prod» в імені), test-pkg-*, demo-*, emu-*.
 guard_db() {
   local db="${1:-}"
   if [[ -z "$db" ]]; then echo "FLOW_STOP: не задано ім'я бази" >&2; exit 2; fi
@@ -18,6 +18,11 @@ guard_db() {
   if [[ ! "$db" =~ ^[A-Za-z0-9_-]+$ ]]; then
     echo "FLOW_STOP: недопустимі символи в імені бази '$db'" >&2; exit 2
   fi
+  # Сервер: PGHOST (за замовчуванням localhost) має входити в ODOO_ALLOWED_HOSTS (список через кому або пробіл; задає C-00); не задано — відмова.
+  if [[ -z "${ODOO_ALLOWED_HOSTS:-}" ]]; then echo "FLOW_STOP: не задано ODOO_ALLOWED_HOSTS (allow-list серверів БД)" >&2; exit 2; fi
+  local h="${PGHOST:-localhost}" ok=0 a
+  for a in ${ODOO_ALLOWED_HOSTS//,/ }; do [[ "$h" == "$a" ]] && ok=1; done
+  if (( ! ok )); then echo "FLOW_STOP: сервер БД '$h' не в ODOO_ALLOWED_HOSTS; відмова" >&2; exit 2; fi
 }
 
 # Параметри середовища (задає C-00): ODOO_BIN, ODOO_ADDONS_PATH, ODOO_CONF (необов'язково),

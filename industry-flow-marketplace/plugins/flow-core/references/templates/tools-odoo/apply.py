@@ -40,7 +40,7 @@ def guard_db(db):
 
 
 def guard_host(url):
-    allowed = [h.strip() for h in os.environ.get("ODOO_ALLOWED_HOSTS", "").split(",") if h.strip()]
+    allowed = [h.strip() for h in os.environ.get("ODOO_ALLOWED_HOSTS", "").replace(" ", ",").split(",") if h.strip()]
     if not allowed:
         stop("задайте ODOO_ALLOWED_HOSTS (allowlist непродових серверів); ім'я бази сервер не гарантує")
     host = urlparse(url).hostname

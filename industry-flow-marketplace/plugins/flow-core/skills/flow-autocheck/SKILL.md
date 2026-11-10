@@ -29,7 +29,7 @@ template, done, check.how, client_data, repo, attempt, returned_from`, `params.{
 ## Режими (задає виклик; без режиму — `result`)
 | Режим | Коли і хто викликає | Що перевіряє |
 |---|---|---|
-| `inputs` | до запуску кроку (q43); `flow-orchestrator` перед видачею наряду, `flow-step-runner` на старті | входи наряду ↔ `flow/ARTIFACTS.md` і SHA |
+| `inputs` | до запуску кроку; `flow-orchestrator` перед видачею наряду, `flow-step-runner` на старті | входи наряду ↔ `flow/ARTIFACTS.md` і SHA |
 | `result` | C-06 крок 5; `flow-step-runner`; самоперевірка `questionnaire-builder` (A-09), `package-release-builder` (A-18), `product-decision-drafter` (A-17) | `where`, diff, форма за шаблоном, перевірки кроку |
 | `result --only allocation-coverage` | `gates-aggregator` (наряд A-14): кожен `td_*`, вендорений «готове» і файл `package/config/` узгоджені з ALLOCATION і CHECKS.md | одна перевірка |
 | `form` | людські кроки (A-02, A-06, B-08b/d), `package/DATA_POLICY.md` (C-05) | заголовки за шаблоном; поля рішення/підпису не заповнив AI |
@@ -65,7 +65,7 @@ SHA `origin/<base_branch>` на момент запуску (фіксуєтьс�
 додаються загальні перевірки C-06 (`where-only`, `where-exists`, `template-headings`, `no-pii`, `sources-hint`). Немає файлу кроку →
 `ERROR spec-missing`, речення `check.how` дослівно як `MANUAL`, вердикт `INCOMPLETE`. Перевірки з тексту `check.how` не домислювати.
 
-## Крок 2. Режим `inputs` (q43)
+## Крок 2. Режим `inputs`
 Для кожного входу наряду (скрипт; ID рядків `input-*`): `path` = `where` кроку `from` у `flow/ARTIFACTS.md` на SHA бази (`FAIL input-path`);
 `from` — не код кроку («клієнт», «odb-catalog») → `SKIP external`; `sha` порожній → `FAIL input-no-sha` (оркестратор заповнює `sha` кожного входу до виклику `inputs`; `origin/<base_branch>` ставить лише runner); об'єкта чи шляху на `sha` немає →
 `FAIL input-missing`; `sha` не предок SHA бази → `FAIL input-unmerged`; вхід з умовою («лише при повторі»), що не справдилась → `SKIP conditional`;

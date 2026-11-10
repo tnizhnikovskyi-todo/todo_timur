@@ -30,7 +30,7 @@ description: >
 ## Інструменти та доступи
 - Скіл-гейти: `odoo19-mvp-build:pr-review`, `security-review`, `config-review`, `track-convergence`,
   `boost:odoo19-lint`; кожен — точної версії з `skill_ref` наряду (звіряє runner).
-- MCP `github`: лише читання прогонів (`actions_list`, `actions_get`), `get_commit`, і `actions_run_trigger`
+- MCP `github`: лише читання прогонів (`actions_list`, `actions_get`), `get_commit`, і `actions_run_trigger` — через runner, рядок «КОМАНДИ: gh workflow run»
   (`run_workflow`, обов'язкові `workflow_id` і `ref`) для C-03. Не мерджить, не апрувить PR. Деталі — `references/c03-lookup.md`.
 - MCP `odoo-mcp`: `flow` — лише читання наряду й закритого підкроку Тімліда (версія 1); `test-pkg-<пакет>` — тільки для
   `track-convergence` і тест-імпорту. Перед першим викликом `list_odoo_connections`, звірити з

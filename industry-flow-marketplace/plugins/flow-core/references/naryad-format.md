@@ -8,6 +8,7 @@
 step: A-12                      # код кроку (картка)
 scope: {kind: package|client, id: <пакет|ідентифікатор клієнта за DATA_POLICY>}
 executor: any|central|human
+access_profile: base|mail|research|outreach|drive|repo   # агент-виконавець за ведучим скілом (step-skill-map.md); немає ключа = base
 skill_ref: ["flow-package-build:config-as-code@0.1.0", "odoo19-mvp-build:config-review@1.4.0"]
 called_skills: []               # необов'язково: ["плагін:скіл@semver"] — скіли, які ведучий (skill_ref[0]) викликає у своєму запуску; не гейти
 model: sonnet            effort: medium
@@ -21,6 +22,7 @@ limits: {max_attempts: 3, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15
 human_sla: "2 робочі дні"        # лише для гейтів/людських кроків
 client_data: none|commercial|personal   # personal -> executor: central; виняток q01: B-13/B-08a на test-<клієнт> — будь-який агент
 data_rule: "<посилання на розділ DATA_POLICY>"
+preconditions_confirmed: {crm_deal_stage: discovery_signed|sow_signed, by: <роль>, at: <дата>}   # q10: ознака стадії угоди в CRM; `discovery_signed` — угода дискавері підписана (наряд B-02), `sow_signed` — SOW підписано (B-04/B-06/B-11 і суміжні); назва стадії CRM, що відповідає значенню, — C-00; вписує C-01 з дзеркального поля
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}
@@ -70,6 +72,7 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 | C-07 | `incident` | після розбору `boost:debug-root-cause` у `flow/ai-incidents/<id>.md` | `incident` |
 | D-03 | `prepare`, `verify` | `verify` — після `prepare` і рішення людини | `prepare` |
 | B-03 | `main`, `addendum` | `addendum`, якщо step = B-11, або в `inputs` є `ТР-доробок.md`/`CHANGELOG.md`/підписаний `sow.md`; `main`, якщо `clients/<к>/sow.md` немає | `main` |
+| B-07 | `prepare`, `answer` | `answer` лише коли в SOW є розділ бота й `prepare` = done; `period: {month, start, end}`; `params.handoff: help-log.md#HB-NNN` — вхід `support-desk` intake | `prepare` |
 | B-09 | `intake`, `hypercare-close` | `hypercare-close` — минуло 14 днів без критичних або граничний строк | `intake` |
 | B-10 | `intake`, `sla-month` | `sla-month` — на початку місяця, `period` = попередній місяць | `intake` без `period`; щомісячний запуск за розкладом без `period` -> попередній календарний місяць |
 | D-01 | `collect`, `report` | N нарядів `collect` (scope client; `odoo_connections`: лише `flow`; дані — з вивантаження людини за `params.upload_path`, без файлу — `waiting_human`), після всіх `done` один `report` (scope package) | немає значення = стоп, питання Тімліду |

@@ -1,3 +1,112 @@
+# PACKAGE_REVIEW — підсумкова рецензія після рішень людини (q01–q44), раунд 2 (2026-11-10)
+
+Вердикт: **major** (2 major, 6 minor, blocker немає). Лише рекомендації; файли пакета не змінювались.
+
+## 1. Що перевірено
+
+- `claude plugin validate` для маркетплейсу і всіх 5 плагінів — пройшло. JSON, Python, bash — без синтаксичних помилок; yaml парситься (крім `ci-workflow-template.yml` — це шаблон із `{{…}}`, очікувано).
+- 29 скілів у 5 плагінах: теки = README = `step-skill-map.md`; `name` у frontmatter збігається з текою; у кожного є «НЕ використовуй» і «Відкриті питання»; однакових тригерних фраз між скілами немає.
+- Усі посилання `плагін:скіл` існують (пакет + каталог організації); старих назв кандидатів немає; версії — лише `@0.1.0` і приклад `@1.4.0`.
+- Попередні major: M-2 (q09/q30) закрито — згадок профілю «без AI» як варіанту немає. M-4 закрито — `support-desk` знає бота, `params.handoff`, `HB-NNN` в `id-patterns.md`, рядок B-07 у `naryad-format.md`, `triage-routes.md` виправлено. M-5 закрито в межах можливого — `answer` заблоковано до підтвердження Тімліда в `kb-index.md`; виконавець бота структурно без інструментів запису. M-1 і M-3 закрито частково (нижче).
+- q01: виняток лише для B-13/B-08a на `test-<клієнт>` — у 12 місцях однаково, на прод і інші кроки не поширено.
+- q37: `prod-ro-<клієнт>` дозволено лише наряду з `skill_ref[0]` = `client-help-bot` — однаково в оркестраторі, sweep, runner, `naryad-format.md`, `data-and-connections.md`, шаблоні DATA_POLICY, SOW; рядки «ODOO:» на `prod-ro-*` відхиляються; `executor: central`.
+- q17: еталони `apply.py`, `validate.py`, `install.sh` і решта скриптів є в `flow-core/references/templates/tools-odoo/`; захист: allow-list імен баз + відмова на «prod» в імені, для RPC — обов'язковий `ODOO_ALLOWED_HOSTS`.
+- Вибірково без суперечностей: q03, q05, q06, q33, q34, q38, q42.
+
+## 2. Зауваження
+
+### Major
+
+**M-1. Профілі доступу не покривають конектори шести скілів.** За `step-skill-map.md` скіл, якому потрібен конектор поза профілем, зупиняється `escalated`:
+- `gates-aggregator` (A-14) і `package-release-builder` (A-18): потрібен MCP `github` (`actions_list`, `actions_get`, `get_commit`, `get_job_logs`, `get_tag`, `actions_run_trigger`), а профіль — `base`. У профілі `repo` немає `actions_run_trigger` і `get_tag`. Кожен A-14 зупиниться на статусі C-03.
+- `support-desk` (B-09/B-10): читання договору супроводу з Drive, профіль `mail` Drive не має.
+- `segment-selector`, режим `адреси` (A-23): Drive `create_file`; жоден профіль не має запису в Drive.
+- `industry-scoring`, `segment-selector` (A-05), `prototype-builder`, `odoo-version-migrator`: `WebSearch`/`WebFetch` — немає в жодного виконавця.
+Рекомендація: додати `gates-aggregator` і `package-release-builder` у профіль `repo` (запуск workflow — рядком «КОМАНДИ:» через runner); Drive-читання в `mail` або окремий профіль для `support-desk`; для `адреси` — запис файлу runner'ом або окремий профіль; `WebFetch`/`WebSearch` — у `research` (або прибрати зі скілів).
+
+**M-2. q10: ядро і скіли-споживачі описують різний канал.** `naryad-format.md` р. 25 вводить ключ `preconditions_confirmed: {crm_deal_stage: signed, …}`. А `package-fit-gap` (`agreement-check.md` р. 7, `open-questions.md`), `runbook-executor` (р. 65–66, 190), `client-data-migrator` (р. 67–68, 179), `package-upgrade-runner` (р. 95) досі пишуть «у форматі наряду такого поля немає», «ключ наряду — відкрите питання» і чекають дослівний текст «стадія угоди в CRM: підписано». Крім того, для B-02 угода — це `discovery-agreement.md` (до SOW), а ключ один: значення `signed` не розрізняє угоду про обробку даних і SOW. В `odoo-bridge.md` ключа немає, хоча `c00-checklist.md` на нього посилається.
+Рекомендація: у чотирьох скілах замінити очікування тексту на ключ `preconditions_confirmed.crm_deal_stage`; розділити значення (наприклад `discovery_signed` / `sow_signed`) або два ключі; дописати `odoo-bridge.md`.
+
+### Minor
+
+- m-1. `client-help-bot/references/open-questions.md`, останній рядок («Зміни поза цим скілом: рядок B-07…, `params.handoff`…») — уже зроблено, прибрати; лишити лише тригер `answer` «на період» і поле db.
+- m-2. Там само питання «`groups_id` чи `group_ids`»: у Odoo 19 поле `groups_id` перейменовано (ловушка `boost:odoo19-lint`) — закрити через `boost:source-check`.
+- m-3. `config-package-format.md` р. 15: «у 0.1 НЕ постачається: install.sh, bin/apply.py, bin/validate.py» — після q17 еталони є; сигнатури еталонів і контракту різні (питання в `c00-checklist.md`), але в README «Лишається відкритим» його немає.
+- m-4. У багатьох скілах в «Інструменти» стоїть `Bash (git)`, а виконавець Bash не має (команди — рядком «КОМАНДИ:» через runner). Додати одне речення в `executor-brief.md` або вирівняти формулювання.
+- m-5. `guard_db` у bash-скриптах перевіряє лише ім'я бази; перевірку хоста додає C-00 (є в чек-листі). До неї скрипти не запускати на сервері, де є прод.
+- m-6. Мітка Gmail допомоги — окрема чи спільна з `support-desk` — відкрита (у README є); до рішення діє «мітки різні, спільна = `escalated`».
+
+## 3. Покриття флоу
+
+Без змін відносно раунду 1. Кандидати з `candidates.md` закриті скілами або злиттям: `support-first-line` + `support-sla-tracker` → `support-desk`; `reference-client-selector` + `segment-lead-builder` → `segment-selector`; `release-planner` + `pilot-review` → `product-decision-drafter`; `config-drift-checker` → `runbook-executor` (режим `звірка`); `odoo-flow-bridge` → `flow-core/references/odoo-bridge.md`; `data-policy-builder` — скіла немає: C-05 людський крок із шаблоном `data-policy-template.md` і `checks/C-05.yaml`. Без скіла пакета (скіли організації або люди): A-02, A-03, A-06, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання), B-08b–d, B-12, C-00, C-08. Кроку-виробника знеособленої копії (C-09) немає — відкладено q03.
+
+---
+
+# PACKAGE_REVIEW — підсумкова рецензія після рішень людини (q01–q44), раунд 1 (2026-11-10)
+
+Перевірка пакета на коміті `7e0f831` (робоче дерево чисте) після внесення рішень `DECISIONS_2026-11-10.md`. Лише рекомендації, файли пакета не змінювались. Рішення людини не переглядались; технічні імена полів Odoo — C-00.
+Вердикт: **major** (blocker — 0, major — 5, minor — 10).
+
+## 1. Що перевірено
+
+| Перевірка | Результат |
+|---|---|
+| `claude plugin validate .` і `plugins/<p>` × 5 | PASS × 6 |
+| marketplace.json ↔ plugin.json ↔ теки | 5/5 плагінів, версії 0.1.0, іконки є; 29 `SKILL.md` (README: 29), 29 `evals/evals.json` (усі парсяться), 36 `checks/*.yaml` |
+| 29 `SKILL.md` | `name` = тека; frontmatter лише `name`/`description`; розділи «Наряд і звіт», «Pre-save», «Відкриті питання», «Чого НЕ робити» є в усіх |
+| Посилання `плагін:скіл` | усі існують (пакет, агенти `flow-core`, скіли організації) |
+| Самотести | `autocheck.py --selftest` OK; `evals_to_cli.py --self-test` OK |
+| q17: `flow-core/references/templates/tools-odoo/` | є `apply.py`, `validate.py`, `install.sh` + 6 скриптів; усі викликають `guard_db`; `prod`, `prod-acme`, `test-prod`, `prod-ro-k01`, `client-x`, `anon-k1` — відмова; `apply.py rpc`/`validate.py` додатково вимагають `ODOO_ALLOWED_HOSTS` і https |
+| q37: клас `prod-ro-<клієнт>` | дозволений лише `flow-client-delivery:client-help-bot`: `data-and-connections.md` §3.5–3.6, `naryad-format.md`, оркестратор (Крок 3, евал `prod-ro-only-help-bot`), runner (Крок 2, евал `prod-ro-write-refused`, рядки «ODOO:» на `prod-ro-*` — відмова), `eval-builder`, `flow-state.md`, `package-usage-metrics` (прод не читає). В інших скілах дозволу немає |
+| q01: виняток B-13/B-08a | є в `data-and-connections.md`, `naryad-format.md`, оркестраторі, runner, `runbook-executor` (евал: B-04 з `executor: any` → `stopped`). `client-data-migrator`, `package-upgrade-runner`, `package-fit-gap`, `support-desk`, `client-help-bot`, `past-projects-analyzer` лишились `central` — виняток не поширився |
+| q09/q30: профіль «без AI» | прибрано з `package-fit-gap`, `package-sow-builder`; **лишився** в `product-decision-drafter` (M-2) |
+| Решта рішень | q02–q08, q11–q16, q18–q29, q31–q36, q38–q44 внесені у відповідні скіли й references; суперечностей не знайдено, крім зазначених нижче |
+
+## 2. Зауваження
+
+### Major
+
+**M-1. Виконавець `flow-core:flow-executor` не має інструментів конекторів, яких потребують скіли.**
+`plugins/flow-core/agents/flow-executor.md`, `tools:` — лише `Read, Write, Edit, Grep, Glob, Skill` і три читальні інструменти `odoo-mcp`. Runner (`flow-step-runner/SKILL.md` р. 32) забороняє інший агент. Отже під runner не виконаються: `client-help-bot` і `support-desk` (Gmail: `search_threads`, `get_thread`, `create_draft`), `industry-scoring` і `segment-selector` (`odb-catalog`), `past-projects-analyzer` (AIKB), `package-fit-gap` (Fathom), `segment-selector` `адреси` (запис на Drive), `ci-pipeline-builder` (MCP `github`). У `naryad-format.md`, `executor-brief.md` і runner про ці конектори немає жодного слова.
+Виправити: окремі визначення агентів із мінімальним `tools:` за профілем кроку (наприклад `flow-executor-mail`: Gmail лише читання й `create_draft`, без `send_message`/`label_*`; `flow-executor-research`: `odb-catalog`, AIKB, Fathom — лише читання), ключ наряду `access_profile`, який ставить оркестратор за `step-skill-map.md`, і правило runner «агент = профіль наряду». Не розширювати єдиний `flow-executor` усіма інструментами: бот із `prod-ro` не повинен отримати запис у Gmail чи Drive.
+
+**M-2. q09/q30 не внесено в `product-decision-drafter`.**
+`plugins/flow-package-evolution/skills/product-decision-drafter/references/business-case.md` р. 49–54: розділ «Політика клієнтів без згоди на AI» з варіантом «Б — профіль „без AI на даних“: кроки B-06, B-09, B-10, D-01 ручні» і «вибір — людина»; `SKILL.md` р. 145 вимагає в чернетці A-07 цей розділ «(А/Б)». Суперечить рішенню «таких клієнтів не беремо, профілю немає» і скілам `package-fit-gap`, `package-sow-builder`.
+Виправити: замінити розділ на один рядок-факт «клієнтів без згоди на AI не беремо (q09); відмова = причина „умови AI“ у воронці B-01», прибрати «(А/Б)» з р. 145 і вплив профілю на ціну SOW.
+
+**M-3. q10 (підпис = стадія угоди в CRM) є в чотирьох скілах, але не в `flow-core`.**
+`package-fit-gap` (р. 69–70), `runbook-executor` (р. 65–66), `client-data-migrator` (р. 67–68), `package-upgrade-runner` (р. 95) чекають у тексті наряду рядок «стадія угоди в CRM: підписано». У `naryad-format.md`, `flow-map.md` (р. 63: «B-03 done + Затвердити (SOW підписано) → B-04» — тригер досі кнопка), оркестраторі, `odoo-bridge.md` і `c00-checklist.md` слова «CRM» немає: ніхто не визначений вписувати цю ознаку. Наслідок — B-02, B-04, B-06, B-11 зупиняться або ескалюють на першому клієнті.
+Виправити: логічний ключ у `naryad-format.md` (наприклад `preconditions_confirmed: {crm_deal_stage: signed, by: <роль>, at: <дата>}`), правило оркестратора «B-04 ставити лише за стадії угоди CRM „підписано“; ознаку в наряд вписує C-01 з дзеркального поля проєкту», рядок у `flow-map.md` р. 63 і пункт у `c00-checklist.md` (назва стадії CRM і поле-дзеркало — C-00). У README це питання в «Лишається відкритим» додати.
+
+**M-4. Межа `client-help-bot` ↔ `support-desk` описана лише з боку бота.**
+`support-desk/SKILL.md` бота не знає: у `description` і таблиці «Що чиє» його немає, обидва скіли читають листи клієнта з мітки Gmail і створюють чернетки відповідей; маршрут «консультація» (питання «як») у `flow-client-delivery/references/triage-routes.md` р. 15 лишився за Підтримкою. Питання «окрема мітка допомоги чи спільна» відкрите (`client-help-bot/references/open-questions.md`); за спільної мітки на один тред буде дві чернетки. Вхід `params.handoff` у `support-desk` `intake` не реалізовано; `HB-NNN` немає в `flow-core/references/id-patterns.md`; рядка B-07 (`prepare`/`answer`, `period`) немає в таблиці `params.mode` `naryad-format.md` (є лише в `step-skill-map.md`).
+Виправити: 1) у `support-desk` — рядок у «Що чиє» і «НЕ використовуй для питань „як зробити“ за наявності розділу бота в SOW (client-help-bot)», крок `intake`: тред із мітки допомоги не брати, передачу приймати за `params.handoff`; 2) до рішення про мітку зафіксувати в обох скілах «мітки різні, спільна мітка → `escalated`»; 3) рядок B-07 у `naryad-format.md`, `HB-NNN` в `id-patterns.md`, примітка в `triage-routes.md`.
+
+**M-5. q37: «лише читання» на проді гарантоване тільки на боці скіла; режим `answer` не залежить від підтвердження прав технічного користувача.**
+`client-help-bot/references/tech-user-checklist.md` і «Відкриті питання»: штатної read-only ролі немає, гарантія — інструменти скіла й allow-list. Runner сам має `odoo_write`/`odoo_execute` (для бази `flow`), підключення `prod-ro-<клієнт>` у конекторі центрального агента доступне всім його сесіям. Умова менеджера «окремий технічний користувач з мінімальними групами, жодних записів» перевіряється лише читанням груп (`prepare`, крок 5).
+Виправити (рішення не переглядається, лише його дотримання): у `prepare` зробити обов'язковим пункт чек-листа «Тімлід підтвердив: користувач не має прав запису/створення/видалення в жодній моделі; дата, роль» (рядок у `kb-index.md`, перевірка `HB-prepare`); без нього `answer` → `escalated`, прод не читати. У `c00-checklist.md` — пункт «`prod-ro-*`: права лише на читання перевірено на базі клієнта». Питання лишити в README як блокувальне для першого запуску `answer`.
+
+### Minor
+
+1. `config-as-code`: `SKILL.md` р. 20 і `references/apply-semantics.md` р. 3 кажуть «скриптів `apply.py`/`validate.py`/`install.sh` немає», а р. 243 того ж скіла й q17 — «еталони є в `flow-core/references/templates/tools-odoo/`, у `tools/odoo/` їх ставить C-00». Уточнити формулювання в р. 20 і р. 3: «у `tools/odoo/` репозиторію ще немає (еталони — у flow-core, q17)». Р. 96 «рядка A-12 у таблиці `params.mode` немає» застарів: рядок є (`naryad-format.md` р. 65).
+2. Хибні номери рішень (лишились зі старої нумерації README): `client-help-bot/SKILL.md` р. 138 і `references/open-questions.md` р. 4 — «q21: чернетки» (q21 — каталог плагінів); `segment-selector/SKILL.md` р. 76 — «q12: CRM вручну» (q12 — додаткова угода); `flow-autocheck/SKILL.md` р. 32 і 68 — «(q43)» біля режиму `inputs` (q43 — формулювання «на базі Odoo 19»). Прибрати номер або замінити на правильне джерело.
+3. Рядок «Коротко» у п'яти `plugins/*/README.md`: «дані клієнта — лише тестові бази й знеособлені копії» — без q02 (копій на пілоті немає), q37 і q01. Звести до посилання на `data-and-connections.md` §3.6 або дописати винятки.
+4. Закриті пункти досі названі відкритими: README «`config-as-code`: клас `test-pkg-<пакет>` у `data-and-connections.md`» (клас уже визначено в §3.5); `segment-selector/SKILL.md` р. 46–48 «`naryad-format.md`, `flow-map.md` не знають наряду `адреси`» (знають: `flow-map.md` р. 24, `naryad-format.md` р. 66); `demand-test-runner/SKILL.md` р. 204 (рядок A-23 у таблиці режимів уже є). У `naryad-format.md` рядок A-08 продубльовано (р. 60–61).
+5. `_work/CONCEPT.md` не оновлено після рішень: «28 скілів» (р. 9, 40), `client-help-bot` — «відкласти» (р. 235), немає винятків q01 і q37. README називає його концепцією пакета. Оновити §2, §3.5–3.6, §4 або дописати на початку «після 2026-11-10 чинні `DECISIONS_2026-11-10.md` і `flow-core/references/`».
+6. `flow-orchestrator/SKILL.md` р. 80 (Крок 2 п. 4): клієнт з «AI-обробка: відкликано» → кроки ставляться людині; посилання на розділ DATA_POLICY «Відкликання згоди на AI-обробку», якого немає в переліку обов'язкових заголовків (`data-and-connections.md` §3.6, `data-policy-template.md`). Дописати, що це лише аварійний випадок C-08 під час чинного договору, а не профіль продажу (q09), і додати заголовок у шаблон або прибрати посилання.
+7. `description` у `package-release-builder` — 915 символів (у пакеті прийнято ≤ 900); у `client-help-bot` — 897, запасу немає.
+8. У робочому дереві 10 файлів `__pycache__/*.pyc` (git їх ігнорує, але установка з локальної теки їх забере; еталон `install.sh` сам зупиняється на `__pycache__`). Видалити. Клас `o19demo` названо демо-класом у `data-and-connections.md` §3.5, а `guard_db` приймає лише `demo-<суфікс>`: дописати в §3.5, що скрипти `tools/odoo` з `o19demo` не працюють.
+9. `client-help-bot`: 3 евал-кейси без фікстур (README плагіна це визнає); немає кейсів «немає розділу бота в SOW → `prepare` без читання проду», «`executor` не `central`», «тригерна фраза без наряду». `checks/B-07.yaml` — усі три перевірки `manual`; перевірок частини «навчання» кроку B-07 немає.
+10. Наживо не запускалось: `claude plugin eval`, odoo-mcp, GitHub, Gmail, `tools-odoo` на Odoo 19 (README це вказує; q17 і q26 — до пілоту).
+
+## 3. Покриття флоу
+
+29 скілів: 28 за CONCEPT §2 і `client-help-bot` (q37). Кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
+Без скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання), B-08c, B-08a `збіжність`; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`.
+Немає виробника: знеособлена копія `anon-<клієнт>` (відкладено, q02/q03); тригер наряду `client-help-bot` `answer` «на період» (до рішення — вручну PM/Підтримка); канал ознаки «стадія угоди в CRM» (M-3).
+
+---
+
 # PACKAGE_REVIEW — підсумкова рецензія після дозбирання, раунд 4 (2026-11-10)
 
 Перевірка після виправлень M-1 раунду 3 (15 файлів у робочому дереві поверх `65373ab`, ще не закомічено). Лише рекомендації, файли пакета не змінювались. Прийняті рішення (D-01, `eval-builder` лише під runner, агенти у `flow-core/agents/`, імена полів Odoo — C-00) не переглядались; відкриті питання README не вирішувались.
@@ -465,3 +574,52 @@
 
 Без змін: 28 скілів за CONCEPT §2 на місці, кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
 Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07, B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`. Відкладено `client-help-bot` (B-07, питання 24). Виробника знеособленої копії `anon-<клієнт>` немає (питання 26).
+
+# PACKAGE_REVIEW — рецензія після внесення рішень людини (q01–q44), перевірка №3 (2026-11-10)
+
+Стан: робоче дерево поверх коміту `7e0f831` (44 змінені файли, 6 невідстежуваних шляхів). Лише рекомендації, файли пакета не змінювались. Рішення людини (`DECISIONS_2026-11-10.md`) не переглядались; технічні імена полів Odoo — C-00.
+Вердикт: **major** (blocker — 0, major — 2, minor — 7).
+
+## 1. Що перевірено
+
+| Перевірка | Результат |
+|---|---|
+| `claude plugin validate .` і `plugins/<p>` × 5 | PASS × 6 |
+| marketplace.json ↔ plugin.json ↔ теки | 5/5 плагінів, версії 0.1.0 збігаються, `dependencies: [flow-core]` у чотирьох; 29 `SKILL.md`, 29 `evals/evals.json` (JSON валідний); README каже 29 — збігається |
+| 29 `SKILL.md` | `name` = тека; frontmatter лише `name`/`description`; `description` ≤ 897 символів; дублів тригерних фраз між скілами немає |
+| Посилання `плагін:скіл` (73 різні) | усі існують: пакет, 7 агентів `flow-core`, `boost`, `odoo19-mvp-build`, `odoo19-implementation`, `odoo19-tr-authoring`, `odoo19-sales-prep`, `odoo19-discovery-initiation`, `odoo19-discovery-closeout` |
+| `checks/*.yaml` | 36 файлів (додано `B-07.yaml`), усі парсяться; `autocheck.py --selftest` OK; `evals_to_cli.py --self-test` OK |
+| q01 | узгоджено: виняток лише B-13/B-08a на `test-<клієнт>` у `naryad-format.md`, `conventions.md`, `data-and-connections.md`, оркестраторі, `sweep-rules.md`, runner, `runbook-executor`; `client-data-migrator`, `package-fit-gap`, `package-upgrade-runner`, `support-desk`, `client-help-bot` вимагають `central`; є евали «B-04 — виняток не діє» |
+| q37 | узгоджено: `prod-ro-<клієнт>` дозволено лише при `skill_ref[0]` = `client-help-bot` і `purpose: читання (client-help-bot)` (оркестратор, runner, `sweep-rules.md`, `naryad-format.md`, `executor-brief.md`); рядки «ODOO:» на `prod-ro-*` відхиляються; `eval-builder`, `flow-state.md` (D-01) і `guard_db` його забороняють; агент `mail` не має запису в Odoo/Drive/GitHub. В інших скілах дозволу на прод немає |
+| q09/q30 | профілю «без AI» немає ніде; відсутній пункт про AI → `escalated` (`package-fit-gap`, `package-sow-builder`, `business-case.md`) |
+| q17 | еталони є; `guard_db` (bash і python): `prod`, `test-prod`, `prod-ro-acme`, `client-acme`, `anon-k1`, порожнє, `test-`, `test-x;id` → `FLOW_STOP`; `test-x`, `demo-1` → дозволено; без `ODOO_ALLOWED_HOSTS` — відмова |
+| Попередній M-1 (профілі доступу) | закрито: профіль `repo` покриває gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator (+`get_tag`, `list_tags`, WebFetch); `mail` має читання Drive; `research` має WebSearch/WebFetch. Лишок — M-1 і minor 1 нижче |
+| Попередній M-2 (q10) | закрито: ключ `preconditions_confirmed.crm_deal_stage` зі значеннями `discovery_signed` (B-02) і `sow_signed` (B-04/B-06/B-11) у `naryad-format.md`, `odoo-bridge.md`, `c00-checklist.md`, `flow-map.md`, оркестраторі й чотирьох скілах-споживачах. Лишок — minor 2 |
+| Решта рішень (q02–q08, q11–q16, q18–q29, q31–q36, q38–q44) | вибіркова перевірка за ключовими словами: суперечностей не знайдено (ліцензії q42, «на базі Odoo 19» q43, 2021→2025 q38, календарні дні q34, `anon-*` відкладено q02/q03, Fathom безстроково q05) |
+
+## 2. Зауваження
+
+### Major
+
+**M-1. Запис файлу адрес у Drive (A-23 `адреси`, q08) не має виконавця: команду `drive-create` runner не знає, а скіл і агент суперечать один одному.**
+`step-skill-map.md` (р. 60), `flow-executor-research.md` і `segment-selector/SKILL.md` (р. 70) віддають створення файлу runner'у рядком «КОМАНДИ: drive-create …». У `flow-step-runner/SKILL.md` такої команди немає, Drive серед інструментів runner не названо, дозволеного переліку команд для цього кроку немає. Крім того, агент каже «файл виконавець кладе в тимчасовий шлях із `where`», а скіл — «жодного проміжного файлу в робочому дереві репо чи scratchpad». Як адреси потрапляють від виконавця до runner, не визначено; наряд `адреси` закінчиться `escalated`.
+Виправити: у `flow-step-runner` (Інструменти + Крок 8–9) описати `drive-create`: інструмент (`Google_Drive create_file`), дозволена тека лише з DATA_POLICY «Місця зберігання», лише для A-23 `адреси`, звідки береться вміст і де він видаляється; у скілі й агенті лишити одне формулювання про проміжний файл. Те саме одним рядком для `gh workflow run` (зараз є лише в `executor-brief.md`).
+
+**M-2. Частину пакета не закомічено: 5 профільних агентів і фікстури `client-help-bot` — невідстежувані, 44 файли змінено.**
+`plugins/flow-core/agents/flow-executor-{drive,mail,outreach,repo,research}.md` і `client-help-bot/evals/fixtures/` відсутні в git. Якщо каталог зібрати з `HEAD`, runner на Кроці 0 зупинить кожен наряд з `access_profile` ≠ `base` («немає агента»), тобто 18 з 29 ведучих скілів. Виправити: закомітити робоче дерево до тега релізу каталогу (q21) і перевірити `git status` порожній.
+
+### Minor
+
+1. `gates-aggregator` (р. 33), `package-release-builder` (р. 55), `package-upgrade-runner` (р. 42), `ci-pipeline-builder` (р. 34) називають `actions_run_trigger` своїм інструментом MCP, а в профілі `repo` його немає (це рядок «КОМАНДИ: gh workflow run»). Міст є лише в `executor-brief.md` і агенті; додати в кожен скіл три слова «через runner, рядок КОМАНДИ».
+2. q10, залишки старого формулювання: `runbook-executor/evals/evals.json` р. 168 («назва стадії й ключ наряду — відкрите питання»; ключ уже визначено); `package-fit-gap/evals/evals.json` р. 66, 103 подають підтвердження прозою «Стадія угоди в CRM: підписано (вказано в наряді)», а не ключем `preconditions_confirmed.crm_deal_stage: discovery_signed`.
+3. `ODOO_ALLOWED_HOSTS`: `_common.sh` читає список через пробіл, `apply.py`/`validate.py` — через кому. Значення з двох хостів пройде лише в одному з них (другий відмовить; безпечно, але зламає прогін). Узгодити роздільник і записати в `tools-odoo/README.md`.
+4. `flow-client-delivery/README.md` р. 36 застарів: «фікстур для evals немає» (є три) і «`params.handoff`/`params.mode` для B-07 ще не внесено» (внесено в `naryad-format.md` і `support-desk`).
+5. Закриті питання лишились у «Відкритих»: `config-as-code` («додати клас `test-pkg-<пакет>` у `data-and-connections.md`») і `master-data-template-builder` («у конвенціях flow-core немає `test-pkg-*`») — клас уже є в `data-and-connections.md` р. 21 і `c00-checklist.md`.
+6. `client-help-bot/SKILL.md` р. 46: «odoo-mcp за замовчуванням може дивитися в іншу базу» — в усіх інших скілах «за замовчуванням дивиться в прод»; вирівняти формулювання.
+7. Повтори з попередніх раундів, не змінились: розпізнавання команди з прози `args.text` у Кроці 9 (ж); кроки, де всі перевірки `manual`; наживо не запускались `claude plugin eval`, odoo-mcp, GitHub, Gmail, `tools-odoo` на Odoo 19 (q26 — AI-інженер до подання).
+
+## 3. Покриття флоу
+
+29 скілів; проти `CONCEPT.md` §2 (28, історична) додано `client-help-bot` (B-07, друга частина, q37). Кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
+Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання), B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`.
+Свідомо відкладено рішеннями: виробник знеособленої копії `anon-<клієнт>` (C-09) і B-11 версія 2 (q02/q03); щорічний перерахунок A-01 (q40, ручне завдання); евали `requires: step-run` (q27); код Enterprise для D-03 (q20). Не визначено: що створює наряд `client-help-bot` `answer` «на період» (до рішення — вручну PM/Підтримка).

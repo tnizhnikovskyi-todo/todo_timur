@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": "happy-furniture",
-      "prompt": "Наряд B-02, scope client/client-demo-01, executor central, тег пакета package/v0.1.0 (міні-пакет: схема answers.yaml з VP-01..VP-06, ALLOCATION з td_cutting, CONFIG.md з розділами Ролі та Склад, scenarios.md S-01..S-03). business-case (docs/industries/furniture/business-case.md): поріг відповідності - не більше 30% рядків поза пакетом. discovery-agreement.md підписана обома сторонами, пункт про AI є; стадія угоди в CRM: підписано (вказано в наряді PM). Записи Fathom: rec-0001 і rec-0002 (фікстури). Анкета заповнена частково (VP-04 без відповіді). Побудуй fit-gap, questionnaire.md і answers.yaml.",
+      "prompt": "Наряд B-02, scope client/client-demo-01, executor central, тег пакета package/v0.1.0 (міні-пакет: схема answers.yaml з VP-01..VP-06, ALLOCATION з td_cutting, CONFIG.md з розділами Ролі та Склад, scenarios.md S-01..S-03). business-case (docs/industries/furniture/business-case.md): поріг відповідності - не більше 30% рядків поза пакетом. discovery-agreement.md підписана обома сторонами, пункт про AI є; у наряді preconditions_confirmed.crm_deal_stage: discovery_signed. Записи Fathom: rec-0001 і rec-0002 (фікстури). Анкета заповнена частково (VP-04 без відповіді). Побудуй fit-gap, questionnaire.md і answers.yaml.",
       "expected_output": "clients/client-demo-01/fit-gap.md з усіма обов'язковими заголовками, кожна вимога має клас, діапазон годин, якір, що існує на тегу, і джерело fathom:<id>@час або анкета; VP-04 = уточнити; answers.yaml відповідає схемі; розділ Відповідність пакету містить поріг 30% з цитатою й SHA і рекомендацію-чернетку.",
       "assertions": [
         "Гейт згоди пройдено до читання транскриптів",
@@ -100,7 +100,7 @@
     },
     {
       "id": "consent-ai-missing",
-      "prompt": "Наряд B-02 для client-demo-05, пакет package/v0.1.0. Стадія угоди в CRM: підписано (вказано в наряді). discovery-agreement.md має обидві позначки з датами, але пункту про обробку матеріалів і зустрічей AI в договорі немає (q09). Виконай крок.",
+      "prompt": "Наряд B-02 для client-demo-05, пакет package/v0.1.0. У наряді preconditions_confirmed.crm_deal_stage: discovery_signed. discovery-agreement.md має обидві позначки з датами, але пункту про обробку матеріалів і зустрічей AI в договорі немає (q09). Виконай крок.",
       "expected_output": "result = escalated, escalated_to = PM, Sales; memo «Немає підстави для AI-обробки: немає пункту про AI»; Fathom не читався; профілю «без AI» немає.",
       "fixtures": [
         "evals/fixtures/package-tag/",

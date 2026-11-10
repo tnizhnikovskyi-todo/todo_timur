@@ -2,14 +2,11 @@
 name: support-desk
 description: >
   Запускай на кроках B-09 (hypercare після go-live) і B-10 (супровід за SLA) флоу галузевого пакета.
-  Режими: «intake» — читає нові листи мітки Gmail клієнта та ручні файли incidents/, заводить звернення
-  INC-NNN у hypercare.md / support-log.md (час листа, серйозність, тип з 8, AC, маршрут за triage-routes.md),
-  готує чернетки відповідей; «hypercare-close» — 14 днів без критичних, граничний строк, факти для пілота;
-  «sla-month» — місячний звіт SLA. Тригери — "розбери звернення клієнта", "тріаж звернень", "hypercare
-  клієнта", "звіт SLA за місяць", "разбери обращения клиента", "отчёт по SLA".
-  НЕ використовуй для проєктів поза флоу пакета (odoo19-implementation:hypercare-tracker), для change-request
+  Режими: «intake» — читає нові листи мітки Gmail клієнта та файли incidents/, заводить INC-NNN у hypercare.md / support-log.md (серйозність, тип з 8, AC, маршрут за triage-routes.md), готує чернетки; «hypercare-close» — 14 днів без критичних, граничний строк, факти для пілота;
+  «sla-month» — місячний звіт SLA. Тригери — "розбери звернення клієнта", "тріаж звернень", "звіт SLA за місяць", "отчёт по SLA".
+  НЕ використовуй для питань «як зробити» за наявності бота в SOW (client-help-bot, B-07; передачі — params.handoff), для проєктів поза флоу пакета (hypercare-tracker), change-request
   і рішень «у продукт» (D-02), виправлення конфігу/коду (B-04/B-05/B-13) і поставки в прод (B-12).
-  Результат — clients/<клієнт>/hypercare.md, support-log.md, чернетки Gmail.
+  Результат — hypercare.md, support-log.md, чернетки Gmail.
 ---
 
 # Support Desk — hypercare і супровід клієнта пакета (B-09, B-10)
@@ -41,6 +38,7 @@ description: >
 ## Що чиє (межі)
 | Скіл / крок | Межа |
 |---|---|
+| B-07 `client-help-bot` | бот веде мітку допомоги й питання «як зробити» (розділ бота в SOW); тут ці треди не беремо. Передачі бота (`HB-NNN`) приймає `intake` за `params.handoff: help-log.md#HB-NNN`: заводить INC за переказом з `help-log.md`, без повторного читання мітки допомоги. Мітки різні; до рішення PM спільна мітка = `escalated` (одне питання не отримує двох чернеток) |
 | `odoo19-implementation:hypercare-tracker` | не викликається: інша таблиця тріажу, нова вимога там -> `tr-change-request` |
 | D-02 `flow-package-evolution:backlog-triage` | власник рішення «у продукт / у кастом / відхилено» і колонки «рішення D-02 і версія пакета»; тут лише рядок у «Запити в D-02» зі статусом «передано в беклог (D-02)» (B-09) / «передано в D-02» (B-10) |
 | B-04 `runbook-executor`, B-05 `code-dev`/`pr-review`, B-06 `client-data-migrator`, B-07 `user-training-builder` | одержувачі маршруту; тут нічого не виправляється, у бази клієнта не ходимо |
@@ -98,7 +96,7 @@ description: >
 6. Цільовий файл: стан «hypercare» -> `hypercare.md`; «на супроводі» -> `support-log.md`. Файлу немає -> створити з
    `package/templates/…` або `references/…-template.md` і **видалити рядки-приклади** (реєстр починається порожнім). Відбір для B-10: дата
    листа після дати завершення hypercare **або** `threadId` відсутній у `hypercare.md`.
-7. Gmail за `references/gmail-intake.md`: `search_threads` по мітці від водяного знака; відкинути `threadId`, що вже
+7. Gmail за `references/gmail-intake.md`: `search_threads` по мітці від водяного знака (мітка допомоги бота — не наша; збіг міток -> `escalated`); відкинути `threadId`, що вже
    є в будь-якому з двох реєстрів; нові — `get_thread` (повний тред). Ліміт — 20 тредів на запуск; решта —
    наступний запуск, у memo «оброблено N з M», перелік решти — «не оброблено (ліміт)».
    Ручні файли `clients/<к>/incidents/`, яких немає в реєстрах, — тріаж за `references/gmail-intake.md` («Звернення не з Gmail»).

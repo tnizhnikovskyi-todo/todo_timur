@@ -201,7 +201,6 @@ description: >
 ## Передумови пакета (до першого запуску)
 Без цих правок скіл не стартує або дає FAIL; закрити при складанні пакета:
 - **Менеджер карток:** A-23 `skillRef` -> `flow-research:demand-test-runner@0.1.0` (зараз `client-followup-writer`, Крок 0.1 відхилить наряд); `where`/`inArtifacts`/`template` — додати `landing.md`, `emails.md`, `mailing-plan.md`, `mailing-list.csv`, `features.md`, `complexity.md`; те саме в `flow/ARTIFACTS.md`.
-- **flow-core (`naryad-format.md`, `flow-map.md`):** рядок A-23 у таблиці режимів (`список`, `адреси`, `prep`, `results`) і ключі `params.start_sha`, `params.final`, `params.round`.
 - **Юрист (`data-policy-template.md`):** розділ із текстом згоди й відписки; до того DT-consent завжди FAIL.
 
 ## Відкриті питання

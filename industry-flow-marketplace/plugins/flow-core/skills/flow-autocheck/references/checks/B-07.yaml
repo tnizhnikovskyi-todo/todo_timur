@@ -4,6 +4,17 @@
  "step": "B-07",
  "checks": [
   {
+   "id": "answer-logs-exist",
+   "when": "mode:answer",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "clients/<к>/help-bot/help-log.md",
+     "clients/<к>/help-bot/query-log.md"
+    ]
+   }
+  },
+  {
    "id": "script-check-help",
    "prim": "manual",
    "args": {

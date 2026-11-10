@@ -17,7 +17,7 @@ description: >
 Перетворити конфігурацію пакета (CONFIG.md по AC) на **декларативні дані**: кожна точка варіативності VP-xx з анкети --
 параметр, а не константа. Агент генерує `manifest.yaml`, `vp-map.yaml`, `data/NN_<область>.yaml` і **сам** застосовує їх у
 чисту тестову базу пакета через `odoo-mcp` (`references/apply-semantics.md`). **Версія 0.1: скриптів `install.sh`,
-`apply.py`, `validate.py`, `check_config.py` немає -- власних не створювати.** Є лише контракт майбутніх скриптів
+`apply.py`, `validate.py`, `check_config.py` у `tools/odoo/` репозиторію ще немає (еталони `apply.py`/`validate.py`/`install.sh` -- у `flow-core/references/templates/tools-odoo/`, q17; в `tools/odoo/` їх ставить C-00) -- власних не створювати.** Є лише контракт майбутніх скриптів
 (`references/config-package-format.md`); `install-one-command: N/A (скриптів немає; рішення q29 -- у 0.1 замість нього покрокова інструкція в `install-log.md`)`, `maturity 1`. Усі перевірки `CFG-*`
 виконує агент за таблицею нижче.
 
@@ -49,7 +49,7 @@ description: >
   `odoo19-mvp-build:config-review`, `boost:odoo19-lint`, `boost:source-check`. Потрібного немає в `skill_ref` -> стоп,
   runner повертає в чергу «немає скіла в наряді»; не викликати «з пам'яті».
 - `odoo-mcp` -- **тестова база пакета**: запис `odoo_connections` з `purpose: чиста тестова база пакета` або alias
-  `test-pkg-<пакет>`. Клас у `data-and-connections.md` §3.5 поки не закріплено (пропозиція нижче). `connection_id` -- у кожному
+  `test-pkg-<пакет>`.  Клас закріплено в `data-and-connections.md` §3.5. `connection_id` -- у кожному
   виклику, після виклику звірити `connection.db`. `flow`, прод, `demo`/`o19demo`, `emu-*`, `test-<клієнт>` -- не тестова
   база пакета, запис заборонений. Дозволено: `odoo_search_read`, `odoo_get_fields`; запис і `odoo_execute`
   (установка модулів, `execute()` налаштувань) -- лише в цю базу (не прод, даних клієнта немає); `unlink` не викликається.
@@ -93,8 +93,7 @@ description: >
 ## Крок 1. Режим і передумови
 Режим за ключами наряду, **без вгадування**: `returned_from: A-14` -> `fix`; явний `params.mode: validate` (лише читання,
 файли не змінюються) -> `validate`; `git.prev_tag` не `null` і нема `returned_from` -> `new-version`; інакше `build`. Інші значення
-`params.mode` (`build|fix|new-version`) -- як вказано. Рядка A-12 у таблиці `params.mode` `naryad-format.md` немає -- відкрите
-питання. `validate` ніколи не виводиться з коду кроку чи з CI. Передумови (стоп до генерації, `escalated`):
+`params.mode` (`build|fix|new-version`) -- як вказано. Рядок A-12 є в таблиці `params.mode` `naryad-format.md`. `validate` ніколи не виводиться з коду кроку чи з CI. Передумови (стоп до генерації, `escalated`):
 - ALLOCATION затверджено, є колонка «модуль Odoo (технічна назва)»; немає -> `escalated_to: Архітектор рішення` (повернення на A-10
   -- рішення людини);
 - є схема `answers.yaml` і `answers.example.yaml`; немає -> `escalated_to: Архітектор рішення` (повернення на A-09);
@@ -236,14 +235,10 @@ config-review.
 
 ## Відкриті питання
 - Формат конфіг-пакета -- рішення Архітектора в A-10; формат цього скіла -- пропозиція за замовчуванням.
-- Додати клас «чиста тестова база пакета» (`purpose` або alias `test-pkg-<пакет>`) у `flow-core/references/data-and-connections.md`
-  §3.5 і в allow-list `DATA_POLICY.md`.
-- Додати рядок A-12 (`build|fix|new-version|validate`) у таблицю `params.mode` `flow-core/references/naryad-format.md`.
 - Ключ `td_param` (`td_<пакет>.vp_xx`) узгодити з A-11; A-11 читає той самий ключ.
 - Еталонні скрипти (`apply.py`, `validate.py`, `install.sh`) -- шаблони є в `flow-core/references/templates/tools-odoo/` (q17), але в `tools/odoo/` їх ставить C-00 після прогону на тестовій базі; формат `--answers` ними НЕ реалізовано, сигнатури відрізняються від контракту (відкрите питання до людини: перейменувати еталони чи змінити контракт); C-03 до їх появи конфіг не ставить.
 - Рішення q15: картку A-12 (формулювання «однією командою») вносить AI-чернетка одним PR; затверджує власник картки.
 - Рішення q29: у версії 0.1 `done` A-12 допустимий без install-one-command; замість нього -- покрокова інструкція установки в `install-log.md` (розділ «Покрокова установка»). Картку A-12 («однією командою») узгодити з цим рішенням (власник картки); до появи скриптів C-00 вимога «однією командою» для A-12 не діє. R-09 у A-17 (`package-release-builder`) цим рішенням не змінено.
-- Узгодити написання `test-pkg-<пакет>` (цей скіл) і `test-pkg-<пакет>` (A-13/A-14); клас додати в `data-and-connections.md` §3.5 -- файл не цього скіла.
 - Штатний механізм доставки `package/addons` гілки кроку в тестову базу пакета (C-00 чи CI) -- рішення AI-інженера; до того кожен пакет із «готовим» проходить через `waiting_human`.
 - Підтвердити через `boost:source-check`, що `default_get` на `res.config.settings` повертає лише `default_*`, `group_*`, `module_*`, `config_parameter` (Odoo 19).
 - Дозвіл агенту встановлювати модулі (`button_immediate_install`) у тестовій базі пакета -- підтвердити в C-05.

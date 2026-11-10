@@ -1,6 +1,6 @@
 # Семантика застосування (режим `mcp-fallback`; у 0.1 -- єдиний)
 
-Скриптів `apply.py`/`install.sh` немає: агент виконує кроки сам. Загальні правила викликів `odoo-mcp` (явний `connection_id`,
+У `tools/odoo/` репозиторію скриптів `apply.py`/`install.sh` ще немає (еталони -- `flow-core/references/templates/tools-odoo/`, q17; ставить C-00), тож: агент виконує кроки сам. Загальні правила викликів `odoo-mcp` (явний `connection_id`,
 перевірка `connection`, технічні користувачі) -- `flow-core/references/odoo-bridge.md` §1; тут лише виклики для `ir.module.module`,
 `ir.model.data`, `res.config.settings`, яких у ньому немає.
 
