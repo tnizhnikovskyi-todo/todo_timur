@@ -1,0 +1,29 @@
+{
+ "connection": {
+  "id": "c1",
+  "name": "own-erp-example",
+  "db": "example_erp_db"
+ },
+ "result": [
+  {
+   "name": "mrp_example",
+   "shortdesc": "Приклад виробництва",
+   "author": "Example Vendor",
+   "installed_version": "18.0.1.0",
+   "category_id": [
+    1,
+    "Manufacturing"
+   ]
+  },
+  {
+   "name": "stock_example",
+   "shortdesc": "Приклад складу",
+   "author": "Example Vendor",
+   "installed_version": "18.0.1.0",
+   "category_id": [
+    2,
+    "Inventory"
+   ]
+  }
+ ]
+}

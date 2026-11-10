@@ -187,6 +187,12 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
 
     text = Path(doc).read_text(encoding="utf-8")
     secs = sections(text)
+    # підрозділ «### Модулі власної ERP» (без repo:/П-xx) виділяється з розділу модулів і перевіряється окремо (PP-erp)
+    erp_rx = re.compile(r"^### Модулі власної ERP[^\n]*\n(.*?)(?=^### |\Z)", re.M | re.S)
+    erp_m = erp_rx.search(secs.get(SECTIONS[2], ""))
+    erp_sub = erp_m.group(1) if erp_m else None
+    if erp_m:
+        secs[SECTIONS[2]] = erp_rx.sub("", secs[SECTIONS[2]])
     miss = [s for s in SECTIONS if s not in secs]
     add("PP-sections", not miss, "немає: " + ", ".join(miss))
     codes, modes, deny, problems = sources_info(sources)
@@ -255,6 +261,24 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
             ver_bad.append(r[0])
     add("PP-repo", not repo_bad, "; ".join(repo_bad[:5]))
     add("PP-ver", not ver_bad, "; ".join(ver_bad[:5]))
+
+    # PP-erp: підрозділ власної ERP допустимий лише за рядком «власна ERP» у sources.md; без repo:/П-xx; 4 колонки
+    if erp_sub is not None:
+        try:
+            has_row = bool(re.search(r"^\|\s*власна ERP\s*\|", Path(sources).read_text(encoding="utf-8"), re.M))
+        except OSError:
+            has_row = False
+        erp_rows = [r for r in rows(erp_sub) if "немає даних" not in " ".join(r).lower()]
+        erp_bad = []
+        if not has_row:
+            erp_bad.append("у sources.md немає рядка «власна ERP»")
+        for r in erp_rows:
+            line = " | ".join(r)
+            if "repo:" in line or CODE.search(line):
+                erp_bad.append(f"{r[0][:30]}: repo:/П-xx заборонені")
+            elif len(r) < 4 or not all(c.strip("- ") for c in r[:4]):
+                erp_bad.append(f"{r[0][:30]}: потрібні 4 колонки")
+        add("PP-erp", not erp_bad, "; ".join(erp_bad[:5]))
 
     # PP-ref: коміт repo:<шлях>@<sha> має лежати на ref рядка sources.md, а без ref - на гілці за замовчуванням.
     # Клон береться за репозиторієм рядка (repo:<alias>/...); ref шукається серед <ref>, origin/<ref>, refs/remotes/origin/<ref>, refs/tags/<ref>.
@@ -369,7 +393,9 @@ def self_test():
             "|---|---|---|---|---|---|---|\n"
             "| П-01 | Вигаданий Клієнт А | proj_example1 | odoo_addons/td_edge | rec_0001 | згода/договір, пункт про AI | повний |\n"
             "| П-02 | Вигаданий Клієнт Б | proj_example2 | | | немає | лише звіти |\n"
-            "| П-03 | Вигаданий Клієнт В | proj_example3 | | | згода | повний |\n", encoding="utf-8")
+            "| П-03 | Вигаданий Клієнт В | proj_example3 | | | згода | повний |\n\n"
+            "| джерело | alias підключення | db | режим читання |\n|---|---|---|---|\n"
+            "| власна ERP | own-erp-example | example_db | лише модулі |\n", encoding="utf-8")
         doc = d / "docs/industries/test/past-projects.md"
         doc.write_text(tpl.replace("abc1234", sha), encoding="utf-8")
         rel = "docs/industries/test/past-projects.md"
@@ -459,6 +485,15 @@ def self_test():
         base_doc = tpl.replace("abc1234", sha)
         if [o for o in run_checks(str(doc), str(inp / "sources.md"), {"": str(d)}, no_fathom=True) if o["id"] == "PP-mode"][0]["status"] != "FAIL":
             errs.append("--no-fathom має давати FAIL PP-mode (шаблон містить fathom:)")
+        # PP-erp: підрозділ без рядка у sources.md, з repo:/П-xx — FAIL
+        sp = inp / "sources.md"; keep = sp.read_text(encoding="utf-8")
+        sp.write_text(keep.split("\n| джерело")[0] + "\n", encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-erp"][0]["status"] != "FAIL":
+            errs.append("підрозділ власної ERP без рядка «власна ERP» у sources.md має давати FAIL PP-erp")
+        sp.write_text(keep, encoding="utf-8")
+        doc.write_text(base_doc.replace("| mrp_example |", "| П-01 repo:x@abc1234 |"), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-erp"][0]["status"] != "FAIL":
+            errs.append("repo:/П-xx у підрозділі власної ERP має давати FAIL PP-erp")
         doc.write_text(base_doc.replace("1 (П-01) | fathom:rec_0001", "2 (П-01, П-02) | fathom:rec_0001"), encoding="utf-8")
         if [o for o in run() if o["id"] == "PP-mode"][0]["status"] != "FAIL":
             errs.append("рядок з кількома П-xx і fathom: без пар «П-xx fathom:» має давати FAIL PP-mode")

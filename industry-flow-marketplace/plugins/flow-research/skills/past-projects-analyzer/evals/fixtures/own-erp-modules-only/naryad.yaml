@@ -1,0 +1,4 @@
+# фрагмент наряду A-04 (фікстура)
+odoo_connections:
+  - own-erp-example
+purpose: читання (past-projects-analyzer)

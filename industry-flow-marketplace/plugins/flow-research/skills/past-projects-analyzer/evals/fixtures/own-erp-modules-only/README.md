@@ -1,0 +1,1 @@
+Решта фікстур — як у happy-two-modes (aikb/fathom/repo, `_common/setup_repo.sh happy-two-modes`). Мок-відповідь `odoo/ir_module_module.json`; `connection.db` = example_erp_db. Очікуваний підрозділ — `expected/own-erp-section.md`.

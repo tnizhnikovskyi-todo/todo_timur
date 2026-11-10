@@ -1,0 +1,4 @@
+# фрагмент наряду A-04 (фікстура)
+odoo_connections:
+  - prod-example-klient
+purpose: читання (past-projects-analyzer)
