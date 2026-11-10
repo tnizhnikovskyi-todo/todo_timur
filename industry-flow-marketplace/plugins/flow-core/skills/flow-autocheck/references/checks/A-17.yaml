@@ -1,0 +1,178 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-17",
+ "checks": [
+  {
+   "id": "sha-eq",
+   "prim": "sha_eq",
+   "args": {
+    "refs": [
+     "head:package/ACCEPTANCE.md",
+     "head:package/demo/scenarios.md",
+     "head:package/demo/README.md"
+    ]
+   }
+  },
+  {
+   "id": "checks-ancestor",
+   "prim": "git_ancestor",
+   "args": {
+    "a": "extract:head:package/CHECKS.md",
+    "b": "extract:head:package/ACCEPTANCE.md"
+   }
+  },
+  {
+   "id": "diff-checks-acc",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "extract:head:package/CHECKS.md",
+    "to": "extract:head:package/ACCEPTANCE.md",
+    "allow": [
+     "package/CHECKS.md",
+     "package/demo/**",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "version-eq",
+   "prim": "version_eq",
+   "route_on_fail": "A-14 (A-11)",
+   "args": {
+    "sources": [
+     {
+      "name": "ACCEPTANCE",
+      "kind": "regex",
+      "ref": "head:package/ACCEPTANCE.md",
+      "pattern": "(?i)(?:верс\\w*|package/v)[^\\n\\d]{0,30}(\\d+\\.\\d+)"
+     },
+     {
+      "name": "ТР «Зміни версії»",
+      "kind": "regex",
+      "ref": "in:A-08",
+      "pattern": "(?i)зміни версії\\s*v?(\\d+\\.\\d+)",
+      "optional": true,
+      "pick": "max"
+     },
+     {
+      "kind": "manifests"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ac-table",
+   "prim": "id_set",
+   "args": {
+    "left": {
+     "ref": "in:A-08",
+     "regex": "AC-\\d{2,3}",
+     "drop_line_regex": "deprecated з версії"
+    },
+    "right": {
+     "ref": "head:package/ACCEPTANCE.md",
+     "table_col": [
+      "ac"
+     ],
+     "regex": "AC-\\d{2,3}"
+    },
+    "relation": "subset",
+    "msg_missing": "Додай у таблицю ACCEPTANCE.md (статус і підстава) AC: {ids}"
+   }
+  },
+  {
+   "id": "rejected-route",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:package/ACCEPTANCE.md",
+    "require": [
+     [
+      "ac"
+     ],
+     [
+      "статус"
+     ]
+    ],
+    "key": [
+     "ac"
+    ],
+    "rules": [
+     {
+      "when": {
+       "col": [
+        "статус"
+       ],
+       "in": [
+        "відхилено"
+       ]
+      },
+      "col": [
+       "код повернення",
+       "повернення"
+      ],
+      "kind": "enum",
+      "values": [
+       "A-08",
+       "A-14",
+       "D-03"
+      ],
+      "msg": "відхилений AC: код повернення A-08, A-14 або D-03"
+     },
+     {
+      "when": {
+       "col": [
+        "статус"
+       ],
+       "in": [
+        "відхилено"
+       ]
+      },
+      "col": [
+       "тип причини",
+       "причина"
+      ],
+      "kind": "nonempty",
+      "msg": "відхилений AC: тип причини"
+     }
+    ]
+   }
+  },
+  {
+   "id": "profiles-list",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/ACCEPTANCE.md",
+    "headings": [
+     "re:профіл"
+    ]
+   }
+  },
+  {
+   "id": "regression-row",
+   "prim": "headings",
+   "when": "new_version",
+   "args": {
+    "ref": "head:package/ACCEPTANCE.md",
+    "headings": [
+     "re:регрес"
+    ]
+   }
+  },
+  {
+   "id": "signature-by-ai",
+   "prim": "signature_by_ai",
+   "args": {
+    "file": "package/ACCEPTANCE.md",
+    "heading": "(?i)підпис|рішення|затверд"
+   }
+  },
+  {
+   "id": "stand-sample",
+   "prim": "manual",
+   "args": {
+    "text": "Вибіркова перевірка стенда; підпис «прийнято»",
+    "who": "Власник продукту (рішення №36)"
+   }
+  }
+ ]
+}

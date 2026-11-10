@@ -1,0 +1,25 @@
+# ТЕСТОВИЙ наряд A-20 (етап 1, без Odoo). Протоколів сесій (A-06) немає — у inputs не вказуються (скіл їх не вимагає).
+# limits для A-20 у SKILL.md не названі: значення нижче — тестові, затверджено для тесту.
+step: A-20
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: research
+skill_ref: ["flow-research:concept-mapper@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: briefing.md, from: A-03, path: docs/industries/mebli/briefing.md, sha: HEAD}
+  - {name: past-projects.md, from: A-04, path: docs/industries/mebli/past-projects.md, sha: HEAD}
+where: docs/industries/mebli/concept/
+template: "docs/industries/_template/concept/ — немає, створити з references/template/ скіла concept-mapper"
+done: "є features.md, screens.md, scenarios.md; кожна функція прив'язана до ролі й болю з цитатою з джерела; 10–15 екранів; сценарії 4–6 ролей"
+check: {mode: both, how: "python3 -I check_concept.py docs/industries/mebli/concept --input … --base <git.base>; усі CM-* PASS або MANUAL з поясненням", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 60, lease_factor: 1.5, cost_limit_usd: 10, context_budget_tokens: 60000}
+client_data: none
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI» (none; лише ролі, ID, коди П-xx)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-20-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

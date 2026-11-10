@@ -1,0 +1,29 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-08a",
+ "checks": [
+  {
+   "id": "convergence-exists",
+   "when": "mode:збіжність",
+   "prim": "manual",
+   "args": {"text": "непорожній convergence.md у where наряду", "who": "runner"}
+  },
+  {
+   "id": "script-check-config-log",
+   "when": "mode:звірка",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/runbook-executor/scripts/check_config_log.py --client-dir clients/<к> --package package --mode reconcile: без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (Крок 9 (ж); не виконано → ERROR, не PASS).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "conn-test-only",
+   "prim": "manual",
+   "args": {
+    "text": "усі виклики odoo-mcp з connection_id тестової бази (журнал запуску); prod-* відсутні",
+    "who": "runner"
+   }
+  }
+ ]
+}

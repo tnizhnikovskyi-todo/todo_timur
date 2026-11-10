@@ -1,0 +1,137 @@
+{
+  "skill_name": "gates-aggregator",
+  "evals": [
+    {
+      "id": "happy-ancestor-ci",
+      "prompt": "Наряд A-14, пакет demo-pkg, версія флоу 2, режим перевірка. package/addons: td_a, td_b і вендорований модуль 'готове' (усі три в ALLOCATION.md), package/config з CONFIG.md, master-data з двома CSV та README. HEAD змінив лише package/master-data/README.md. Прогін C-03 зі статусом success є на батьківському коміті. Усі гейти (pr-review, security-review, config-review, odoo19-lint, track-convergence) повертають APPROVE. Зведи гейти в package/CHECKS.md.",
+      "expected_output": "package/CHECKS.md з SHA гейтів = HEAD і окремим SHA C-03 = батьківський коміт (позначка 'предок без змін у addons/config'), п'ять гейтів APPROVE, покриття трьох модулів і двох CSV, підсумок APPROVE; workflow_dispatch не викликано; тести не запускались.",
+      "assertions": [
+        "SHA гейтів у CHECKS.md дорівнює HEAD, SHA C-03 записано окремим полем і він дорівнює батьківському коміту",
+        "Є позначка, що прогін C-03 взято на предку без змін у addons/config",
+        "Усі п'ять гейтів мають вердикт APPROVE, підсумок APPROVE",
+        "Покриття ALLOCATION охоплює td_a, td_b, вендорований модуль і обидва CSV",
+        "actions_run_trigger (workflow_dispatch) не викликався",
+        "Тести td_* у A-14 не запускались; вигаданих модулів немає",
+        "У diff гілки лише package/CHECKS.md (і шаблон на першому запуску)"
+      ],
+      "fixtures": "evals/fixtures/happy-ancestor-ci/"
+    },
+    {
+      "id": "pr-changes-no-convergence",
+      "prompt": "Наряд A-14, пакет demo-pkg, версія 2, режим перевірка. pr-review: REQUEST CHANGES (знахідка в package/addons/td_x/models/a.py:42). security-review: BLOCK (package/addons/td_x/security/ir.model.access.csv). config-review: APPROVE. odoo19-lint: 1 знахідка в package/config/views/x.xml. C-03 success. Зведи гейти.",
+      "expected_output": "CHECKS.md: security-review запущено попри правки pr-review (з позначкою режиму A-14); track-convergence і тест-імпорт 'не виконано: гейти pr-review/config-review не APPROVE'; правки F-01 і F-02 з кодом A-11 (F-02 з позначкою BLOCK), F-03 з кодом A-12; підсумок 'правки -> A-11, A-12'; модулі не змінено.",
+      "assertions": [
+        "security-review викликано: вердикт з позначкою 'запущено до APPROVE pr-review — режим A-14' або 'не виконано: очікує APPROVE pr-review (В-4)'",
+        "track-convergence має вердикт 'не виконано: ...' з причиною, не 'збій'",
+        "Правки на файли в package/addons мають код A-11, правка на package/config — A-12; кожна має код",
+        "BLOCK збережено як позначку серйозності правки",
+        "Підсумок 'правки -> A-11, A-12', не APPROVE",
+        "track-convergence не запускався; файли в package/addons не редагувались",
+        "Скіл не пише знахідок із кодом '?'"
+      ],
+      "fixtures": "evals/fixtures/pr-changes-no-convergence/"
+    },
+    {
+      "id": "return-from-a15",
+      "prompt": "Наряд A-14, пакет demo-pkg, returned_from: A-15, режим повернення. Попередній CHECKS.md має APPROVE на SHA S. package/demo/defects.md містить 2 дефекти: (1) помилка установки конфігу, параметр VP-03; (2) невалідний рядок у package/master-data/partners.csv. Файли package/addons, package/config, package/master-data не змінювались від S. Зведи гейти.",
+      "expected_output": "Гейти не запускались; CHECKS.md містить 2 правки з посиланням на дефекти A-15: перша з кодом A-12, друга з кодом A-13; підсумок 'правки', не APPROVE; позначки 'перенесено з S' там, де застосовно.",
+      "assertions": [
+        "Жоден зі скілів-гейтів не викликався",
+        "Є рівно 2 правки з посиланням на джерело (A-15 + ID дефекту), кількість збігається з дефектами",
+        "Правка про установку конфігу має код A-12, правка про CSV — A-13",
+        "П'ять гейтів у таблиці — «перенесено з S (режим повернення, не перезапускались)»",
+        "Підсумок 'правки', APPROVE не виставлено, хоча попередній CHECKS.md мав APPROVE",
+        "Режим повернення: входи (package/addons, config, master-data) не змінились від S — скіл перевіряє це через git diff --quiet, а не довіряє наряду"
+      ],
+      "fixtures": "evals/fixtures/return-from-a15/"
+    },
+    {
+      "id": "return-changed-inputs",
+      "fixtures": "evals/fixtures/return-changed-inputs/",
+      "prompt": "Наряд A-14, пакет demo-pkg, params.mode: повернення, returned_from: A-15. Попередній CHECKS.md на SHA S. package/demo/defects.md має 1 дефект. Але між S і HEAD змінився файл package/config/vp.yaml (хтось уже виправив). Зведи гейти.",
+      "expected_output": "Гейти не запускались; CHECKS.md не з APPROVE; результат escalated до Архітектора: «повернення на змінених входах — потрібен режим перевірка».",
+      "assertions": [
+        "git diff --quiet S HEAD виконано і виявив зміни",
+        "result: escalated з escalated_to Архітектор рішення і цитатою причини",
+        "APPROVE не виставлено, гейти не запускались"
+      ]
+    },
+    {
+      "id": "c03-red-or-missing",
+      "fixtures": "evals/fixtures/c03-red-or-missing/",
+      "prompt": "Наряд A-14, пакет demo-pkg, версія 2, режим перевірка (params без mode). Фікстура: для SHA_GATES прогін C-03 зі статусом failure (тест td_a), заглушки гейтів усі APPROVE. Окремо: другий варіант — прогонів немає зовсім, ref = flow/A-14-demo-pkg-1.",
+      "expected_output": "Варіант 1: підсумок не APPROVE, правка A-11 з посиланням на прогін. Варіант 2: actions_run_trigger run_workflow з ref=repo.branch і inputs.sha, вердикт не виставляється до завершення; недочекались — збій виконання «C-03 in_progress, run id …».",
+      "assertions": [
+        "Червоний C-03 дає правку з кодом A-11 і посиланням на run id, підсумок не APPROVE",
+        "Для відсутнього прогону викликано run_workflow з ref і inputs.sha, а не список з фільтром head_sha",
+        "Відсутність ключа params.mode трактується як перевірка без питань до людини"
+      ]
+    },
+    {
+      "id": "gate-without-verdict",
+      "fixtures": "evals/fixtures/gate-without-verdict/",
+      "prompt": "Наряд A-14, версія 2, режим перевірка. Заглушка config-review двічі повертає текст без вердикту. Решта гейтів APPROVE, C-03 success.",
+      "expected_output": "Одна повторна спроба config-review; знову без вердикту — «збій виконання» (не APPROVE і не правки), лічиться в maxAttempts; track-convergence не виконано.",
+      "assertions": [
+        "Рівно одна повторна спроба гейту",
+        "Вердикт «збій виконання», а не APPROVE чи правки",
+        "Підсумок не APPROVE"
+      ]
+    },
+    {
+      "id": "v1-phase1-waiting-human",
+      "prompt": "Наряд A-14, версія флоу 1, params.phase 1. pr-review і config-review APPROVE, підкроку Тімліда ще немає (закритого). Зведи гейти.",
+      "expected_output": "CHECKS.md зі статусом ЧАСТКОВО; відповідь завершується блоком WAITING_HUMAN: роль=Тімлід; дія=…; resume {step: A-14, params: {phase: 2}}; track-convergence не запускався.",
+      "assertions": [
+        "track-convergence не запускався",
+        "Статус ЧАСТКОВО: очікує застосування конфігу",
+        "Відповідь містить блок WAITING_HUMAN з роллю Тімлід і resume {step: A-14, params: {phase: 2}}",
+        "У фазі 2 (окремий прохід з params.resume) є блок «Конфіг застосовано» без ПІБ",
+        "Файли поза package/CHECKS.md (і шаблон) не змінено (no-own-edits)",
+        "Усі виклики odoo-mcp мають явний connection_id"
+      ],
+      "fixtures": "evals/fixtures/v1-phase1-waiting-human/"
+    },
+    {
+      "id": "track-convergence-refuses-package-mode",
+      "prompt": "Наряд A-14, версія 2, pr-review і config-review APPROVE. track-convergence відмовляє: потрібен план міграції.",
+      "expected_output": "П'ять гейтів: track-convergence «не виконано: track-convergence не підтримує режим пакета (В-6)», result escalated до Архітектора рішення; файл сходження-треків_* не в репо.",
+      "assertions": [
+        "Вердикт track-convergence «не виконано» з причиною В-6",
+        "result: escalated, escalated_to: Архітектор рішення, не збій виконання",
+        "Файл сходження-треків_* відсутній у репо",
+        "five-gates PASS",
+        "Файли поза package/CHECKS.md (і шаблон) не змінено (no-own-edits)",
+        "Усі виклики odoo-mcp мають явний connection_id"
+      ],
+      "fixtures": "evals/fixtures/track-convergence-refuses-package-mode/"
+    },
+    {
+      "id": "security-review-refuses-on-pr-changes",
+      "prompt": "Наряд A-14, версія 2. pr-review REQUEST CHANGES; security-review відмовляє: очікує APPROVE pr-review. config-review APPROVE.",
+      "expected_output": "Рядок security-review «не виконано: очікує APPROVE pr-review (В-4)»; результат returned -> A-11; five-gates PASS; track-convergence не запускався.",
+      "assertions": [
+        "security-review викликано, вердикт «не виконано: очікує APPROVE pr-review (В-4)»",
+        "result: returned, returned_to містить A-11",
+        "Автоперевірка five-gates PASS",
+        "track-convergence не запускався",
+        "Файли поза package/CHECKS.md (і шаблон) не змінено (no-own-edits)",
+        "Усі виклики odoo-mcp мають явний connection_id"
+      ],
+      "fixtures": "evals/fixtures/security-review-refuses-on-pr-changes/"
+    },
+    {
+      "id": "carry-over-unchanged-addons",
+      "prompt": "Наряд A-14, режим перевірка, версія 2. Від попереднього CHECKS.md змінився лише package/master-data; addons і config не змінились.",
+      "expected_output": "Вердикти pr-review/security-review/config-review/lint перенесені з SHA попереднього CHECKS.md; не перезапускались; перенесення зазначено.",
+      "assertions": [
+        "Вердикти гейтів на addons/config мають «перенесено з <SHA>»",
+        "Ці гейти не перезапускались",
+        "Правки з попереднього CHECKS.md збережені з кодами",
+        "Файли поза package/CHECKS.md (і шаблон) не змінено (no-own-edits)",
+        "Усі виклики odoo-mcp мають явний connection_id"
+      ],
+      "fixtures": "evals/fixtures/carry-over-unchanged-addons/"
+    }
+  ]
+}

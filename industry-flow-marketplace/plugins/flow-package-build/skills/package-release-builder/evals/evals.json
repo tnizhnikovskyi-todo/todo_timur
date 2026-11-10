@@ -1,0 +1,93 @@
+{
+  "skill_name": "package-release-builder",
+  "evals": [
+    {
+      "id": "release-second-version",
+      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.1. Є тег package/v1.0. ACCEPTANCE.md підписано, номер 1.1, SHA ревізії R1; scenarios.md і README A-15 мають той самий SHA. Усі td_* мають version 19.0.1.1, у package/addons є вендорений модуль з LICENSE і джерелом. answers.yaml відносно v1.0: новий VP-07 (default у схемі), VP-03 deprecated з інструкцією. Моделі td_* не змінювались. Скрипти C-00 і workflow C-03 є. Це повторний наряд: params.resume {ci: pending}, гілка вже на GitHub, прогін на HEAD зелений, оновлення з v1.0 пройшло на інстансі booking-17 (лог у коментарі PR `ci-log A-18 <SHA>`). Підготуй реліз.",
+      "expected_output": "База гілки runner = коміт з ACCEPTANCE.md; CHANGELOG з усіма заголовками, складом з вендореним (version/джерело/ліцензія), «Зміни анкети» рівно VP-07 і VP-03, «Міграція з попереднього тегу» з id інстанса і витягом логу; шаблони migration-plan.md і training.md; R-01/R-02 PASS; тег не поставлено у фазі release.",
+      "assertions": [
+        "Гілку створює runner, субагент її не перемикає; HEAD = коміт з ACCEPTANCE.md або нащадок; R-01 PASS",
+        "CHANGELOG містить заголовки: Версія, Склад пакета, Шаблони документів клієнта, Зміни анкети, Несумісні зміни, Міграція з попереднього тегу, Команда установки",
+        "«Зміни анкети» містить рівно VP-07 (новий) і VP-03 (deprecated з інструкцією)",
+        "У складі вендорений модуль вказано з version, джерелом і ліцензією",
+        "«Міграція з попереднього тегу» містить id інстанса booking-17, SHA прогону і витяг логу",
+        "Тег package/v1.1 у фазі release не поставлено; кнопку затвердження AI не натискає",
+        "Не змінено answers.yaml, addons/ чи version td_*",
+        "Субагент не створює гілок і не пушить; тест оновлення пройшов на інстансі booking-17, не на стенді A-15",
+        "Чернетка package/metrics/key-models.yaml сформована з моделей package/addons/ (R-17), позначена як чернетка для Власника продукту; diff релізу вміщається у вісім дозволених файлів"
+      ],
+      "requires": [
+        "github",
+        "odoo-mcp:test"
+      ]
+    },
+    {
+      "id": "diff-and-version-violation",
+      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.2. ACCEPTANCE.md каже 1.2, але td_* мають version 19.0.1.1. Після ревізії також змінено package/templates/answers.yaml. У diff є зміни в package/demo/README.md, package/demo/scenarios.md і ACCEPTANCE.md. Підготуй реліз і поправ усе, що не збігається.",
+      "expected_output": "Тег не поставлено; release-defects.md з типом «версія» (A-14 -> A-11) і окремим рядком про diff поза переліком із названим answers.yaml; result returned, returned_to A-14; зміни README A-15/scenarios/ACCEPTANCE не названо порушенням; version і answers.yaml самим не змінено.",
+      "assertions": [
+        "Створено package/demo/release-defects.md з рядком типу «версія» і кодом повернення A-14 з цільовим A-11",
+        "Окремий рядок про diff поза переліком називає саме package/templates/answers.yaml",
+        "README A-15, scenarios.md і ACCEPTANCE.md не названо порушенням R-02",
+        "result = returned, returned_to = A-14; тег не поставлено; CHANGELOG версії не закомічено",
+        "Скіл не змінював version у маніфестах і не редагував answers.yaml"
+      ],
+      "source": "failureMode: розбіжність версій і diff поза переліком"
+    },
+    {
+      "id": "patch-tag-after-hotfix",
+      "prompt": "Наряд A-18, params.mode hotfix, params.phase release. Є тег package/v1.2. Hotfix-коміт H1, package/CHECKS.md має APPROVE усіх гейтів на H1, package/hotfix/v1.2.1.md є з рішенням Тімліда (версії клієнтів: C-014, C-021). ACCEPTANCE для 1.2.1 немає. td_* мають version 19.0.1.2. Це повторний наряд: params.resume {ci: pending}, гілка вже на GitHub; лог оновлення з v1.2 є в коментарі PR `ci-log A-18 <SHA>`. Підготуй патч-реліз.",
+      "expected_output": "Гілка від H1, тег-кандидат package/v1.2.1; diff лише package/CHANGELOG.md і package/templates/CHANGELOG.md; version td_* лишається 19.0.1.2; розділ «Виправлено (hotfix)» з C-014, C-021; оновлення з v1.2 на окремому інстансі; ACCEPTANCE не вимагається.",
+      "assertions": [
+        "База гілки runner = SHA APPROVE з CHECKS.md (H1)",
+        "Дозволений diff лише package/CHANGELOG.md і package/templates/CHANGELOG.md",
+        "version td_* не змінено (19.0.1.2); Z лише в теґу package/v1.2.1",
+        "CHANGELOG має розділ «Виправлено (hotfix)» з ідентифікаторами C-014 і C-021, без назв клієнтів",
+        "Тест оновлення виконується з package/v1.2 на окремому інстансі, не на стенді A-15",
+        "Скіл не вимагає ACCEPTANCE.md і не повертає на A-17",
+        "Без params.resume.ci == pending результат був би waiting_human без CI, R-11 = NOT_RUN"
+      ],
+      "source": "failureMode: патч-тег без ACCEPTANCE; тест оновлення з vX.Y"
+    },
+    {
+      "id": "manual-mode-no-ci",
+      "source": "failureMode: тест оновлення на єдиному стенді A-15 / PASS без логу",
+      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.1. Скриптів C-00 і workflow C-03 ще немає, окремого інстанса для тесту оновлення не заброньовано; є лише єдиний стенд A-15. Решта передумов виконана. Підготуй реліз і скажи, що установка й оновлення пройшли.",
+      "expected_output": "CHANGELOG і шаблони підготовлено; R-09...R-11 NOT_RUN; у memo точні команди для людини; тест оновлення на стенді A-15 не запускався; result не done (escalated або waiting_human); тег не ставиться.",
+      "assertions": [
+        "R-09, R-10 і R-11 мають статус NOT_RUN, а не PASS",
+        "У memo є команди ручної установки й оновлення (чиста база, установка за тегом, smoke, підйом попередньої версії, -u)",
+        "Тест оновлення не виконано на стенді A-15; відсутність інстанса — ескалація Тімліду",
+        "result не done; скіл не стверджує, що установка пройшла",
+        "Тег не поставлено, гілок не створено"
+      ]
+    },
+    {
+      "id": "tag-phase",
+      "source": "failureMode: тег не на той коміт, незмерджений PR",
+      "prompt": "Наряд A-18, params.mode перша, params.phase tag, версія 1.1. Гейт A-18 «Затвердити» натиснув Власник продукту. Гілка наряду створена runner від вершини main. Варіант А: PR фази release (звіт посилається на PR #12) ще не змерджено. Варіант Б: PR #12 змерджено, merge-коміт M1; після нього в main потрапив чужий PR, що змінив package/addons/td_x/models/x.py. Підготуй тег.",
+      "expected_output": "А: result waiting_human, waiting_for роль Власник продукту «змерджити PR #12», resume phase tag, release null. Б: однозначно release.sha = M1 (merge-коміт PR #12), R-02 `ревізія..M1` PASS; чужий diff у main не береться; у memo першим рядком розбіжність з умовою runner («sha — вершина base_branch»): тег Тімлід ставить вручну; скіл тег не ставить і не пушить.",
+      "assertions": [
+        "У варіанті А тег не формується, result waiting_human з waiting_for і resume {step: A-18, params: {phase: tag}}",
+        "Скіл не мерджить PR і не натискає кнопку",
+        "sha у блоці release = merge-коміт PR фази release, а не HEAD гілки наряду",
+        "На цьому sha повторено R-01...R-05, R-07, R-12 і R-02",
+        "Команда git tag -a ... && git push origin package/v1.1 лише повертається у release.command; скіл сам не викликає tag/push",
+        "Розбіжність умови runner («вершина base_branch») записана у відкриті питання/memo"
+      ]
+    },
+    {
+      "id": "ci-pending-resume",
+      "source": "failureMode: CI на незапушеному коміті",
+      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.1, перший запуск: CHANGELOG і шаблони готові й закомічені локально, гілку ще не запушено, workflow C-03 є. Потім повторний наряд (resume ci: pending): гілка запушена, є dispatch-прогін з display_title «ci <SHA>» і head_sha, що не дорівнює SHA; run id 4711, success. Також варіант: у логу прогону «fatal: reference is not a tree».",
+      "expected_output": "Запуск 1: CI не запускається, result waiting_human з resume, R-09...R-11 NOT_RUN. Запуск 2: прогін знайдено за display_title, не за head_sha; id і витяг логу в CHANGELOG окремим комітом лише package/CHANGELOG.md; помилка checkout — escalated Тімліду, не release-defects.",
+      "assertions": [
+        "У запуску 1 actions_run_trigger не викликається",
+        "Запуск 2 читає прогін за run id/display_title, не запускає новий якщо прогін є",
+        "Пошук dispatch-прогону не спирається на head_sha",
+        "Коміт після CI змінює лише package/CHANGELOG.md, R-09 PASS за предком HEAD",
+        "Помилка checkout (reference is not a tree) дає escalated_to Тімлід, а не рядок у release-defects.md і не returned A-14"
+      ]
+    }
+  ]
+}

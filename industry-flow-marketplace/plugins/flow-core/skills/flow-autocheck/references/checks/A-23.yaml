@@ -1,0 +1,80 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-23",
+ "checks": [
+  {
+   "id": "mailing-list-exists",
+   "when": "mode:список",
+   "prim": "manual",
+   "args": {"text": "непорожній mailing-list.csv у where наряду (docs/industries/<галузь>/demand/)", "who": "runner"}
+  },
+  {
+   "id": "params-mode-set",
+   "prim": "manual",
+   "args": {"text": "params.mode наряду задано (список|адреси|prep|results); без нього перевірки з when дають SKIP", "who": "runner"}
+  },
+  {
+   "id": "dt-structure",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "DT-inputs, DT-thresholds (6 заголовків thresholds.md і числа Р3, Р4, Р5а, Р5б, рядок «Тривалість:»), DT-variants (2–3 варіанти, ≥2 F-xx на варіант), DT-reach, DT-wave (prep); DT-frozen, DT-levels, DT-featmap, DT-hot, DT-trace (results)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "dt-honesty",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py honesty landing.md emails.md — без заборонених фраз, є «Прототип» і «пілот з» Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "dt-complexity",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py complexity --complexity <complexity.md> --landing landing.md — F-xx «код/складно» мають «у плані пілоту» Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "dt-utm",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py utm landing.md emails.md — utm_campaign, utm_content, utm_term=F-xx на #F-xx Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "dt-no-pii",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py pii <файли, які пише скіл, і _input/*> (mailing-list.* не перевіряється) Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "dt-consent",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "DT-consent: у кожному листі відписка й відправник; у формі текст згоди, не плейсхолдер",
+    "who": "Юрист"
+   }
+  },
+  {
+   "id": "human-thresholds",
+   "when": "mode:prep|results",
+   "prim": "manual",
+   "args": {
+    "text": "пороги не змінені після старту; сигнали Р3–Р5 пораховані окремо від кліків; карта інтересу прив'язана до F-xx A-20",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

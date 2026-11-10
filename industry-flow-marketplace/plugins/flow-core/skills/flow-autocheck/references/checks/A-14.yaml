@@ -1,0 +1,11 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-14",
+ "checks": [
+  {
+   "id": "allocation-coverage",
+   "prim": "allocation_coverage",
+   "route_on_fail": "A-11/A-12/A-13 за кодами CHECKS.md"
+  }
+ ]
+}

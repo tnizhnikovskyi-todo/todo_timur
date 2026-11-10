@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-04",
+ "checks": [
+  {
+   "id": "script-check-past-projects",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/past-projects-analyzer/scripts/check_past_projects.py --doc docs/industries/<галузь>/past-projects.md --sources docs/industries/<галузь>/_input/sources.md --repo <корінь> --scope-files docs/industries/<галузь>/past-projects.md,observations/ [--base --head] [--no-fathom]; перед цим --self-test. Усі PP-* без FAIL (PP-input -> waiting_human, PP-gitignore -> escalated). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "codes-opaque",
+   "prim": "manual",
+   "args": {
+    "text": "проєкти лише кодами П-xx з колонки «код П-xx» sources.md; назви клієнтів лише в sources.md",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "sections",
+   "prim": "manual",
+   "args": {
+    "text": "є розділи «Що вже робили», «Модулі для повторного використання» та решта за references/past-projects-template.md",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-pii-opaque",
+   "prim": "manual",
+   "args": {
+    "text": "знеособлення за references/deidentification.md: ПІБ, email, телефони, суми відсутні; ПІБ-подібне — перевірка очима",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

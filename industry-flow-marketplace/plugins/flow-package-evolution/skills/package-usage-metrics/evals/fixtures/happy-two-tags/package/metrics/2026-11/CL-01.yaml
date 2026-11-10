@@ -1,0 +1,9 @@
+client: CL-01
+tag: package/v1.0
+period: {month: 2026-11, start: "2026-11-01T00:00:00Z", end: "2026-12-01T00:00:00Z"}
+go_live: 2026-03-01
+source: upload
+upload_ref: clients/CL-01/exports/period.csv
+active_internal_users: 10
+models:
+  - {model: td.order, source: td, created: 80, changed: 240, status: ok}

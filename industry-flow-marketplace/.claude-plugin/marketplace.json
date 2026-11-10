@@ -1,0 +1,56 @@
+{
+  "name": "industry-flow",
+  "owner": {
+    "name": "tnizhnikovskyi-todo"
+  },
+  "metadata": {
+    "description": "Пакет скілів для флоу створення тиражованих галузевих пакетів на Odoo 19 з AI-автоматизацією: AI робить, людина вирішує й перевіряє."
+  },
+  "plugins": [
+    {
+      "name": "flow-core",
+      "source": "./plugins/flow-core",
+      "description": "Ядро флоу: цикл AI-кроку (черга Odoo, наряд, звіт, PR), оркестратор, стан і журнал, автоперевірка артефактів, CI та евали. Містить спільні конвенції пакета.",
+      "version": "0.1.0",
+      "author": {
+        "name": "tnizhnikovskyi-todo"
+      }
+    },
+    {
+      "name": "flow-research",
+      "source": "./plugins/flow-research",
+      "description": "Дослідження до рішення «будуємо пакет?»: скоринг галузей, аналіз минулих проєктів, вибірка сегмента, мапа концепції, прототип і тест попиту.",
+      "version": "0.1.0",
+      "author": {
+        "name": "tnizhnikovskyi-todo"
+      }
+    },
+    {
+      "name": "flow-package-build",
+      "source": "./plugins/flow-package-build",
+      "description": "Збірка тиражованого пакета: анкета, конфігурація як код, шаблони майстер-даних, агрегація гейтів, демо-база, реліз пакета.",
+      "version": "0.1.0",
+      "author": {
+        "name": "tnizhnikovskyi-todo"
+      }
+    },
+    {
+      "name": "flow-client-delivery",
+      "source": "./plugins/flow-client-delivery",
+      "description": "Впровадження пакета в клієнта: fit-gap, SOW, виконання ранбука, міграція даних, підтримка, оновлення пакета в клієнта.",
+      "version": "0.1.0",
+      "author": {
+        "name": "tnizhnikovskyi-todo"
+      }
+    },
+    {
+      "name": "flow-package-evolution",
+      "source": "./plugins/flow-package-evolution",
+      "description": "Розвиток пакета: метрики використання, тріаж беклогу, чернетки рішень Власника продукту, міграція на нову версію Odoo.",
+      "version": "0.1.0",
+      "author": {
+        "name": "tnizhnikovskyi-todo"
+      }
+    }
+  ]
+}

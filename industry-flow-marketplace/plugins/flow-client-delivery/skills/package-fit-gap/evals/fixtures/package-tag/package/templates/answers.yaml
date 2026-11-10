@@ -1,0 +1,7 @@
+# Схема answers.yaml (вигадана)
+VP-01: # allowed: партії|без партій
+VP-02: # allowed: 1|2|3
+VP-03: # allowed: так|ні
+VP-04: # allowed: так|ні
+VP-05: # allowed: окремо|разом
+VP-06: # deprecated

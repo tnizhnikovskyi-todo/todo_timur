@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-07",
+ "checks": [
+  {
+   "id": "headings",
+   "prim": "manual",
+   "args": {
+    "text": "заголовки business-case.md (шаблон product-decision-drafter/references/business-case.md) на місці; шлях залежить від галузі (`docs/industries/<галузь>/business-case.md`)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "fields-empty",
+   "prim": "manual",
+   "args": {
+    "text": "після маркера «ЗАПОВНЮЄ ЛЮДИНА» немає значень; рядок «Рішення:» порожній (PD-05)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "facts-sourced",
+   "prim": "manual",
+   "args": {
+    "text": "кожне число у «Фактах» має [джерело: …@sha] (PD-03)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "signature",
+   "prim": "manual",
+   "args": {
+    "text": "підписи й рішення вписала людина, не агент",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

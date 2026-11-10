@@ -1,0 +1,62 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "C-03",
+ "checks": [
+  {
+   "id": "ci-yml",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     ".github/workflows/ci.yml"
+    ]
+   }
+  },
+  {
+   "id": "scope-ci",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     ".github/workflows/",
+     "package/templates/ci-workflow.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "no-pii-ci",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     ".github/workflows/",
+     "package/templates/ci-workflow.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-ci",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/ci-pipeline-builder/scripts/check_ci.py .github/workflows/ci.yml --registry clients/REGISTRY.md --scenarios package/demo/scenarios.md: placeholders, ci-contract, triggers, resolve-zones, dispatch-inputs, addons-path, client-tag, odoo-version, needs-exist, verdict-rules, tours-list, security без FAIL; actionlint, якщо встановлений. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "probe-runs",
+   "prim": "manual",
+   "args": {
+    "text": "пробні прогони: ci.yml на поточному пакеті зелений; червоний пробник (skipTest / зламаний тест) дає червоний прогін; результати прогонів — з GitHub Actions",
+    "who": "Тімлід"
+   }
+  },
+  {
+   "id": "gates",
+   "prim": "manual",
+   "args": {
+    "text": "odoo19-mvp-build:pr-review і security-review на дифі ci.yml (секрети, permissions, injection через ${{ github.event.* }}, закріплення actions)",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

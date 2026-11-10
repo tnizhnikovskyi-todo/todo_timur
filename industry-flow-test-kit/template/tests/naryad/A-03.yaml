@@ -1,0 +1,24 @@
+# ТЕСТОВИЙ наряд A-03 (етап 1, без Odoo). Крок закриває скіл ОРГАНІЗАЦІЇ (каталог організації), версія — з claude-methodology-marketplace/.claude-plugin/marketplace.json (odoo19-discovery-initiation 0.12.1).
+# Скіл за замовчуванням пише в outputs/галузь_*.md; у тесті результат кладемо за `where` (сесія переносить/пише прямо туди). Це спостереження для observations/, якщо скіл не вміє `where`.
+step: A-03
+scope: {kind: package, id: mebli}
+executor: any
+skill_ref: ["odoo19-discovery-initiation:industry-briefing@0.12.1"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: "decision.md (A-02: галузь і сегмент)", from: A-02, path: docs/industries/mebli/decision.md, sha: HEAD}
+where: docs/industries/mebli/briefing.md
+template: "немає — формат скіла industry-briefing"
+prompt_extra: "Компанії немає — галузевий брифінг для пакета; галузь, країна (Україна) і розмір — з decision.md; назву компанії не вигадувати."
+done: "галузевий брифінг: типові процеси, болі, регуляторика, модулі Odoo; болі й процеси придатні для цитування в concept-mapper (A-20)"
+check: {mode: both, how: "розділи процесів і болів (розділ «структура відділів» формат скіла не передбачає — очікувана розбіжність, у observations/, не провал); регуляторика з джерелами/позначкою [перевірити]; немає назв клієнтів і ПІБ", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 60, lease_factor: 1.5, cost_limit_usd: 10, context_budget_tokens: 60000}
+client_data: none
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI» (відкриті джерела, без даних клієнтів)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-03-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

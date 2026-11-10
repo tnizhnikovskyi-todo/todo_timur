@@ -1,0 +1,65 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-01",
+ "checks": [
+  {
+   "id": "scoring-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/scoring.md"
+    ]
+   }
+  },
+  {
+   "id": "scoring-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:docs/industries/scoring.md",
+    "headings": [
+     "Знімок даних",
+     "Критерій ранжування",
+     "Топ-10",
+     "Повний рейтинг",
+     "Рішення на ринку: джерела",
+     "Якість даних і обмеження",
+     "SQL-запити",
+     "Зміни відносно попереднього знімка"
+    ]
+   }
+  },
+  {
+   "id": "no-pii-scoring",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  },
+  {
+   "id": "script-check-scoring",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/industry-scoring/scripts/check_scoring.py docs/industries/scoring.md --param <файл параметра> --metrics <json Q2–Q4> --snapshot <YYYY-MM> --exclude <розділи>: SC-count, SC-tag, SC-cols, SC-criterion, SC-level, SC-exclude, SC-sources, SC-nopii, SC-headers, SC-q, SC-order без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "sc-repro",
+   "prim": "manual",
+   "args": {
+    "text": "SC-repro: 3 випадкові клітинки перераховано окремим запитом до odb-catalog (після того самого округлення), результат у memo",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "decision-human",
+   "prim": "manual",
+   "args": {
+    "text": "вибір галузі й підпис — людина (Власник продукту); AI лише рейтинг",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

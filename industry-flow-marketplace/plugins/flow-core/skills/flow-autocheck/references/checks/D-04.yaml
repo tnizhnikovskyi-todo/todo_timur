@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "D-04",
+ "checks": [
+  {
+   "id": "headings",
+   "prim": "manual",
+   "args": {
+    "text": "заголовки release-plan-X.Y.md за шаблоном release-plan.md; шлях залежить від версії",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "backlog-ids",
+   "prim": "manual",
+   "args": {
+    "text": "кожен ID плану є в backlog.md зі статусом «у продукт», без дублів (PD-09)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "fields-empty",
+   "prim": "manual",
+   "args": {
+    "text": "поля людини порожні; «Рішення:» не заповнено агентом (PD-05)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "signature",
+   "prim": "manual",
+   "args": {
+    "text": "підпис «склад заморожено» вписала людина",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

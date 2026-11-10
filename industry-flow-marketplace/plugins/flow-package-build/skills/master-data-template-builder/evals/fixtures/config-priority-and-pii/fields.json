@@ -1,0 +1,19 @@
+{
+ "res.partner": {
+  "name": {
+   "required": true,
+   "selection": null,
+   "default": false
+  },
+  "vat": {
+   "required": false,
+   "selection": null,
+   "default": false
+  },
+  "is_company": {
+   "required": false,
+   "selection": null,
+   "default": true
+  }
+ }
+}

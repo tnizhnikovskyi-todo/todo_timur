@@ -1,0 +1,28 @@
+# ТЕСТОВИЙ наряд A-21 (етап 1, без Odoo). Скіл вимагає odoo_connections «лише flow»; у тесті Odoo немає -> []. Якщо скіл на порожньому списку зупиняється — це зауваження в observations/.
+# Передумова: A-20 затверджено людиною (рядок у flow/decisions.md) — формально скіл її не читає, але гейт A-20 -> A-21 за flow-map.md.
+step: A-21
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: research
+skill_ref: ["flow-research:prototype-builder@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: features.md, from: A-20, path: docs/industries/mebli/concept/features.md, sha: HEAD}
+  - {name: screens.md, from: A-20, path: docs/industries/mebli/concept/screens.md, sha: HEAD}
+  - {name: scenarios.md, from: A-20, path: docs/industries/mebli/concept/scenarios.md, sha: HEAD}
+  - {name: briefing.md, from: A-03, path: docs/industries/mebli/briefing.md, sha: HEAD}
+  - {name: past-projects.md, from: A-04, path: docs/industries/mebli/past-projects.md, sha: HEAD}
+where: docs/industries/mebli/prototype/
+template: "немає — оболонка prototype-shell.html у складі скіла"
+done: "клікабельний index.html у стилі Odoo 19 з вигаданими демо-даними; відео кожного сценарію (Playwright); complexity.md (стандарт/конфіг/код для кожної F-xx)"
+check: {mode: both, how: "node scripts/check.mjs (VP-*); усі сценарії пройдені; відео відповідають сценаріям; complexity.md перевіряє Архітектор рішення", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані галузі; package/DATA_POLICY.md — «Дозволено передавати в AI» (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-21-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

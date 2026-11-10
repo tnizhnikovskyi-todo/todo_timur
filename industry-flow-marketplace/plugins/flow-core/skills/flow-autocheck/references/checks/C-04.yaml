@@ -1,0 +1,89 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "C-04",
+ "checks": [
+  {
+   "id": "scope-evals-only",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "evals/",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "index-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "evals/INDEX.md"
+    ]
+   }
+  },
+  {
+   "id": "json-schema",
+   "prim": "evals_schema",
+   "args": {}
+  },
+  {
+   "id": "no-pii-evals",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "evals/"
+    ]
+   }
+  },
+  {
+   "id": "source-filled",
+   "prim": "manual",
+   "args": {
+    "text": "«Джерело евала» в INDEX і source кейсів непорожні: failureMode картки <код> / observation <файл> / incident <id>",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "skills-covered",
+   "prim": "manual",
+   "args": {
+    "text": "множина скілів флоу (з карток) входить у рядки INDEX зі статусом з index-format.md",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "gates-covered",
+   "prim": "manual",
+   "args": {
+    "text": "5 гейтових скілів мають >=1 кейс із source failureMode A-14/B-05/B-04 (init і далі)",
+    "who": "Тімлід"
+   }
+  },
+  {
+   "id": "obs-closed",
+   "prim": "manual",
+   "args": {
+    "text": "кожне open спостереження тижня має кейс або причину (weekly)",
+    "who": "Тімлід"
+   }
+  },
+  {
+   "id": "regress-recorded",
+   "prim": "manual",
+   "args": {
+    "text": "для нової версії/моделі є рядок прогону (дата, модель, версія, pass/fail)",
+    "who": "Тімлід"
+   }
+  },
+  {
+   "id": "case-concreteness",
+   "prim": "manual",
+   "args": {
+    "text": "конкретність кейсів; обґрунтованість «не відтворено»; рішення «відхилено»",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

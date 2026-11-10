@@ -1,0 +1,22 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-01",
+ "checks": [
+  {
+   "id": "ss-leads",
+   "prim": "manual",
+   "args": {
+    "text": "SS-registry, SS-unique, SS-exclude, SS-size (≤ size; до D-05 лише пілотні), SS-tag, SS-pii: кожен лід має ЄДРПОУ з odb-catalog (has_financials=1) у сегменті A-02; контактів і адрес у репо немає",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-review",
+   "prim": "manual",
+   "args": {
+    "text": "перевірка списку лідів",
+    "who": "Керівник напряму"
+   }
+  }
+ ]
+}

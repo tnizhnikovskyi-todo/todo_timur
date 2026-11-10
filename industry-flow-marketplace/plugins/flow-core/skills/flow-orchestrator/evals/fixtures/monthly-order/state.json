@@ -1,0 +1,32 @@
+{
+ "date": "first workday of month",
+ "clients_on_support": [
+  {
+   "id": "cl-01",
+   "on_support": true,
+   "ai_consent": "given"
+  },
+  {
+   "id": "cl-02",
+   "on_support": true,
+   "ai_consent": "withdrawn"
+  }
+ ],
+ "tasks": [
+  {
+   "id": 701,
+   "step": "B-01",
+   "scope": {
+    "kind": "package",
+    "id": "demo-1"
+   },
+   "stage": "В роботі",
+   "executor": "central",
+   "attempt": 1,
+   "params": {
+    "mode": "b"
+   }
+  }
+ ],
+ "files": []
+}

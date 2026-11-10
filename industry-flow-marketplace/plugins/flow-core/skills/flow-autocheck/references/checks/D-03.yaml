@@ -1,0 +1,54 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "D-03",
+ "checks": [
+  {
+   "id": "m-branch",
+   "prim": "manual",
+   "args": {
+    "text": "M-01: робота в PR у upgrade/vX.Y-odoo<N>; diff не торкається main/гілки поточної версії; тегів не створено",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "m-versions",
+   "prim": "manual",
+   "args": {
+    "text": "M-02: усі td_* мають version = <N>.0.X.Y; M-03: migrations/<N>.0.X.Y/*-migrate.py для змін збережених полів/моделей",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "m-docs",
+   "prim": "manual",
+   "args": {
+    "text": "M-04..M-06: package/upgrade-<версія>.md без блоків коду Python/SQL, інвентар зі статусами й джерелами, запис CHANGELOG vX.Y-odoo<N>",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "m-verify",
+   "prim": "manual",
+   "args": {
+    "text": "M-07..M-09, M-11 (verify): чиста база на SHA коду, 0 ERROR/Traceback, тести td_*, лог -u перенесеної бази; SHA гейтів і турів = SHA коду",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "m-conn",
+   "prim": "manual",
+   "args": {
+    "text": "M-10: підключення лише з allow-list, кожен виклик з connection_id, клієнтських alias немає",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-sign",
+   "prim": "manual",
+   "args": {
+    "text": "результати гейтів A-14, турів A-16 і шлях міграції бази — Тімлід",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

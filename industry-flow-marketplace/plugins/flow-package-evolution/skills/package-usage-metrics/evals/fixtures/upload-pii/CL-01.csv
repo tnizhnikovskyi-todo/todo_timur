@@ -1,0 +1,4 @@
+schema_version,client,period_start,period_end,kind,key,created,changed,status
+1,CL-01,2026-12-01,2027-01-01,model,td.order,120,340,ok
+1,CL-01,2026-12-01,2027-01-01,users,internal_total,14,,ok
+1,CL-01,2026-12-01,2027-01-01,users,role:sales,6,,ok # контакт: ivan.petrenko@example.com

@@ -1,0 +1,88 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-15",
+ "checks": [
+  {
+   "id": "demo-readme",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/demo/README.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-demo",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/demo/",
+     "package/templates/demo-README.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "readme-sections",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/demo/README.md",
+    "headings": [
+     "Адреса стенда",
+     "Ревізія package/",
+     "Команда підйому з нуля",
+     "Команда скидання",
+     "Режим використання стенда",
+     "Демо-ролі й логіни",
+     "Склад демо-даних",
+     "Файл answers.yaml і профілі",
+     "Журнал установки",
+     "Виправлення стенда/демо-даних"
+    ]
+   }
+  },
+  {
+   "id": "no-pii-demo",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/demo/"
+    ]
+   }
+  },
+  {
+   "id": "sha-rule",
+   "prim": "manual",
+   "args": {
+    "text": "SHA у README = SHA package/CHECKS.md або його нащадок; diff лише package/CHECKS.md і package/demo/",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "synthetic-data",
+   "prim": "manual",
+   "args": {
+    "text": "demo-data-rules.md: e-mail лише example.com, назви «Демо-…», збігів із реальними назвами немає",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "stand-live",
+   "prim": "manual",
+   "args": {
+    "text": "up-from-scratch (up.sh на чистій базі, exit 0), modules-installed, config-answers, answers-schema, profiles-coverage, reset — на стенді; connection_id явний, база з allow-list",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-stand",
+   "prim": "manual",
+   "args": {
+    "text": "адреса відкривається, пам'ятка Тімліда виконана",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

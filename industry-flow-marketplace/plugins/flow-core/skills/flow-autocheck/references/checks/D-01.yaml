@@ -1,0 +1,37 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "D-01",
+ "checks": [
+  {
+   "id": "pii-strict",
+   "prim": "pii_strict",
+   "args": {
+    "paths": ["clients/"]
+   }
+  },
+  {
+   "id": "m-export",
+   "prim": "manual",
+   "args": {
+    "text": "M-01..M-05 (collect): файл вивантаження за references/export-template.md, client і період = наряд, лише відкриті агрегати без ПДн (pii-patterns.md strict); до проду жодного виклику (M-02)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "m-report",
+   "prim": "manual",
+   "args": {
+    "text": "M-06..M-11 (report): клієнти звіту = клієнти B-10 зі стану на SHA; поріг і дата рішення = журнал рішень; частки перераховано з таблиці; динаміка або «перший період»; заголовки шаблону на місці",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-review",
+   "prim": "manual",
+   "args": {
+    "text": "звіт перевіряє Власник продукту (checkMode both)",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

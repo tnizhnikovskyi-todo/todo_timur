@@ -1,0 +1,1 @@
+{"connections": [{"id": 1, "name": "flow", "db": "flow_internal", "aliases": ["flow"]}, {"id": 2, "name": "prod-x", "db": "prod_x", "aliases": ["prod-x"]}]}

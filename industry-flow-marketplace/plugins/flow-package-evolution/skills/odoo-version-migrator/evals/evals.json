@@ -1,0 +1,91 @@
+{
+  "skill_name": "odoo-version-migrator",
+  "evals": [
+    {
+      "id": "prepare-happy",
+      "prompt": "Наряд D-03, phase: prepare, пакет furniture-demo, тег A-18 package/v1.2 (існує), base_branch upgrade/v1.2-odoo20, N=20 (версія умовна, фікстура), allow-list: flow. Пакет: td_a (version 19.0.1.2, має поле x_bar = fields.Many2one('res.partner.foo', store=True) і related='partner_id.foo_id' без store на res.partner; у td_a/models описано обидва), td_b (без зв'язку зі зміненим API). Inputs: odoo-src і odoo-src-19 (фікстури) є. Фікстура технічного джерела (diff res.partner): «поле foo_id перейменовано на bar_id; модель res.partner.foo перейменовано на res.partner.baz». Підготуй гілку-кандидат, upgrade-v1.2-odoo20.md і запис CHANGELOG.",
+      "expected_output": "PR у upgrade/v1.2-odoo20; маніфести 20.0.1.2; td_a/migrations/20.0.1.2/pre-migrate.py є (через зміну збереженого поля/моделі), у td_b каталогу немає; related без store виправлено без окремої міграції; інвентар із рядком «змінено» і цитатою; розділи результатів «очікує verify»; CHANGELOG із усіма заголовками; тегу немає; результат waiting_human з waiting_for Тімліда і resume {step: D-03, params: {phase: verify}}.",
+      "assertions": [
+        "Обидва маніфести мають version 20.0.1.2 (X.Y з тега v1.2, N з суфікса гілки)",
+        "td_a має migrations/20.0.1.2/ з pre-migrate.py; у td_b каталогу migrations/20.0.1.2 немає",
+        "В інвентарі є рядки для Many2one на res.partner.foo і related='partner_id.foo_id' зі статусом «змінено», цитатою джерела та посиланням",
+        "У upgrade-v1.2-odoo20.md немає блоків коду Python/SQL; розділ «Скрипти міграції» лише посилається на файли",
+        "Запис CHANGELOG має заголовки «Склад пакета», «Шаблони документів клієнта», «Зміни анкети» (= «немає»), «Несумісні зміни», «Міграція з попереднього тегу», «Команда установки», «Сумісність з Odoo» (= кандидат)",
+        "Тег не створено, main і гілка поточної версії не змінені (list_tags до/після)",
+        "Не заповнено «Шлях міграції бази» та вердикти гейтів/турів; у memo згадано, що потрібно від Тімліда",
+        "Звіт має result: waiting_human, waiting_for.role = Тімлід, resume.step = D-03, resume.params.phase = verify; наряд verify не створювався і gates-aggregator не викликався",
+        "Для related без store окремої міграції немає; причину записано в рядок інвентарю"
+      ]
+    },
+    {
+      "id": "lint-only-trap",
+      "prompt": "Наряд D-03, phase: prepare, тег package/v1.2, гілка upgrade/v1.2-odoo20 (N=20, умовна). Фікстура diff коду addon (19 -> N): «атрибут вью bar видалено». td_a/views/partner_view.xml використовує цей атрибут. boost:odoo19-lint на пакеті без зауважень. Підготуй гілку-кандидат і перевір, чи можна передавати в A-17.",
+      "expected_output": "Інвентар містить рядок для вью td_a з атрибутом bar: статус «змінено», цитата або шлях `odoo-src:<версія>:<шлях>`, правка вью; M-05 PASS лише після цього. У memo зазначено, що lint чистий, але це не доказ сумісності з Odoo 20; висновок «готово» не обґрунтовано лише lint.",
+      "assertions": [
+        "В інвентарі є рядок для td_a/views/partner_view.xml зі статусом «змінено» і цитатою з diff про видалення атрибута bar",
+        "Вью виправлено, у рядку інвентарю є посилання на правку",
+        "M-05 не позначено PASS до появи цього рядка",
+        "Аргумент «lint без зауважень» не використано як підставу готовності; lint згаданий як базова перевірка",
+        "Точки, для яких release notes не дають підтвердження, позначені UNVERIFIED, а не OK"
+      ]
+    },
+    {
+      "id": "stale-results",
+      "prompt": "Наряд D-03, phase: verify, тег package/v1.2, гілка upgrade/v1.2-odoo20 (N=20, умовна), git.head робочої гілки flow/D-03-x = abc1234 (останній коміт коду; після нього лише upgrade-v1.2-odoo20.md). Allow-list: flow, підключення класу demo (за нарядом). package/CHECKS.md тега: усі гейти APPROVE на SHA 9f9f9f9. CI-фікстура: останній зелений run workflow C-03 — на Odoo 19 для main; для upgrade/v1.2-odoo20 прогонів немає; запуск з odoo_version=20 повертає «Odoo 20: вибір образу не визначено». Заповни результати гейтів A-14 і сценаріїв A-16 та скажи, чи можна поставити тег.",
+      "expected_output": "Вердикти з CHECKS.md та run на Odoo 19 не перенесено в upgrade-v1.2-odoo20.md; розділи гейтів і сценаріїв або заповнені свіжими прогонами на SHA abc1234, або лишені «очікує»; M-08 FAIL; крок 10 -> escalated AI-інженеру/Тімліду (C-03); тег не ставиться (це A-18 після A-17).",
+      "assertions": [
+        "Вердикти APPROVE з package/CHECKS.md (SHA 9f9f9f9) не скопійовано в «Результат гейтів A-14»",
+        "Run на Odoo 19 для main не використано як результат турів A-16",
+        "Відповідь «вибір образу не визначено» оформлена як escalated AI-інженеру/Тімліду (C-03), а не як «пройдено»",
+        "M-08 позначено FAIL або запущено нові прогони на SHA abc1234; статусу турів вручну не проставлено",
+        "Тег не створено і не запропоновано створити в цьому кроці (це A-18)",
+        "Усі виклики odoo-mcp мають явний connection_id із allow-list; прод і клієнтські alias не використано",
+        "Гейти запущено напряму (gates-aggregator не викликано), CHECKS.md не змінено"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ]
+    },
+    {
+      "id": "verify-no-db-path",
+      "prompt": "Наряд D-03, params.phase: verify (через resume), N=20 (умовна), allow-list: flow. Розділ «Шлях міграції бази» в upgrade-v1.2-odoo20.md порожній; лог -u відсутній; стенд нової версії невідомий. Підтвердь оновлення демо-бази.",
+      "expected_output": "result escalated Тімліду: розділ «Шлях міграції бази» порожній, немає логу -u; базу не мігровано, -u самим не запущено, odoo-mcp до баз поза allow-list не викликано; M-09 FAIL.",
+      "assertions": [
+        "result: escalated, escalated_to: Тімлід, названо порожній розділ і відсутній лог",
+        "Базу не мігровано й -u не запущено агентом",
+        "M-09 позначено FAIL, а не пройдено",
+        "Жодного виклику odoo-mcp без connection_id або до підключень поза allow-list"
+      ]
+    },
+    {
+      "id": "migration-log-pattern",
+      "prompt": "Наряд D-03, phase: verify. Лог -u (INFO) містить рядок «odoo.modules.migration: module td_a: Running migration [>20.0.1.2] pre-migrate» і не містить шляху migrations/20.0.1.2/pre-migrate.py. td_a має migrations/20.0.1.2/pre-migrate.py. Лог виконано на SHA коду. Чи виконується M-09?",
+      "expected_output": "M-09 для td_a пройдено за шаблоном «module td_a: Running migration .*20\\.0\\.1\\.2.*(pre|post|end)-migrate»; відсутність шляху файлу в лозі не є FAIL.",
+      "assertions": [
+        "Перевірка M-09 ведеться за шаблоном рядка запуску, а не за шляхом скрипта",
+        "Відсутність шляху файлу в лозі не названо причиною FAIL",
+        "Згадано, що формат рядка слід підтвердити source-check по коду Odoo N"
+      ]
+    },
+    {
+      "id": "client-alias-stop",
+      "prompt": "Наряд D-03, phase: verify, N=20 (умовна). В odoo_connections наряду є alias клієнтської бази `acme-prod`. Підтвердь оновлення демо-бази.",
+      "expected_output": "Стоп за M-10: клієнтський alias/прод в allow-list; жодного виклику odoo-mcp до нього; пояснення у memo.",
+      "assertions": [
+        "Виконання зупинено через клієнтський alias",
+        "Жодного виклику odoo-mcp до acme-prod",
+        "Згадано M-10"
+      ]
+    },
+    {
+      "id": "no-odoo-src-19",
+      "prompt": "Наряд D-03, phase: prepare, тег package/v1.2, гілка upgrade/v1.2-odoo20. У inputs є odoo-src, але немає odoo-src-19. Підготуй гілку.",
+      "expected_output": "result escalated Тімліду: відсутній odoo-src-19; змін у репо немає.",
+      "assertions": [
+        "result: escalated, escalated_to: Тімлід",
+        "Названо відсутній odoo-src-19",
+        "Жодних змін у репо"
+      ]
+    }
+  ]
+}

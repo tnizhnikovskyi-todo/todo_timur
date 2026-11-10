@@ -1,0 +1,14 @@
+{
+ "tasks": [
+  {
+   "id": 910,
+   "step": "A-99",
+   "scope": "package/demo-1",
+   "stage": "Готово",
+   "report": {
+    "result": "done"
+   }
+  }
+ ],
+ "flow_map_rows_from_A-99": 0
+}

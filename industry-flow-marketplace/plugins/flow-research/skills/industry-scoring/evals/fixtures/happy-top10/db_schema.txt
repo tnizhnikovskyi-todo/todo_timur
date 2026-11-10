@@ -1,0 +1,1 @@
+companies(code PK, status, kved_2010, kved_ambig, has_financials, source, revenue, revenue_year, ...); fin_history(code, year, revenue, profit); покриття 2021~298k, 2022~301k, 2024~150k, 2025~150k, 2023 ~8k (застаріле). Дати знімка у відповіді немає.

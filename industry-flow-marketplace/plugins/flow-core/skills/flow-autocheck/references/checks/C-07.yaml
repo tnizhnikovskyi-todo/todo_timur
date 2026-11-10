@@ -1,0 +1,48 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "C-07",
+ "checks": [
+  {
+   "id": "scope-evals-only",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "evals/",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "json-schema",
+   "prim": "evals_schema",
+   "args": {}
+  },
+  {
+   "id": "no-pii-evals",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "evals/"
+    ]
+   }
+  },
+  {
+   "id": "incident-case",
+   "prim": "manual",
+   "args": {
+    "text": "у evals/<крок>/evals.json є кейс source: incident <id>; maturity_proposals є, якщо умова пониження виконана",
+    "who": "runner / AI-інженер"
+   }
+  },
+  {
+   "id": "source-filled",
+   "prim": "manual",
+   "args": {
+    "text": "source кейса містить incident <id>",
+    "who": "runner"
+   }
+  }
+ ]
+}

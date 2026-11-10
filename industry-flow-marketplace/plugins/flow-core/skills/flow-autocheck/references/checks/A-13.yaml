@@ -1,0 +1,76 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-13",
+ "checks": [
+  {
+   "id": "md-readme",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/master-data/README.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-master-data",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/master-data/",
+     "package/templates/master-data.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "md-readme-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/master-data/README.md",
+    "headings": [
+     "Файли",
+     "Порядок імпорту",
+     "Залежності між файлами",
+     "Трасування ТР",
+     "Потребують модулів A-11",
+     "Тест-імпорт"
+    ]
+   }
+  },
+  {
+   "id": "no-pii-master-data",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/master-data/"
+    ]
+   }
+  },
+  {
+   "id": "script-check-master-data",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/master-data-template-builder/scripts/check_master_data.py --dir package/master-data [--fields fields.json]: MD-rows, MD-readme, MD-pii, MD-td, MD-ref, MD-order (+MD-cols, MD-req) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "md-agent",
+   "prim": "manual",
+   "args": {
+    "text": "MD-trace, MD-modules, MD-import (0 помилок імпорту кожного стандартного файлу в тестову базу; SKIPPED = не готово), boost:odoo19-lint по package/master-data/",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-coverage",
+   "prim": "manual",
+   "args": {
+    "text": "довідники покривають ТР і ALLOCATION; приклади вигадані",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

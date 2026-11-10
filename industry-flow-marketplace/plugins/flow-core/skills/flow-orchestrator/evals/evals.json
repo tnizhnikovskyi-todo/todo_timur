@@ -1,0 +1,125 @@
+{
+  "skill_name": "flow-orchestrator",
+  "evals": [
+    {
+      "id": "a14-not-approve",
+      "prompt": "Режим on-complete для задачі A-14 (scope package/demo-1): звіт result: returned, у checks FAIL для модулів (pr-review) і для конфігу (config-review), задачі A-15 ще немає. Стан Odoo flow і картки надано у фікстурі. Поставити наступні кроки.",
+      "expected_output": "Створено задачі A-11 і A-12 з attempt 2, returned_from A-14 з текстом FAIL, inputs[].sha, skill_ref з точним semver, odoo_connections без прод-баз. A-13 і A-15 не створено, людям активностей немає. Звіт має dispatch: з номерами рядків flow-map.",
+      "assertions": [
+        "Створено задачі A-11 і A-12 з attempt: 2 і returned_from, що містить A-14 та текст FAIL",
+        "Задачі A-13 і A-15 не створено, вигаданих кодів кроків немає",
+        "skill_ref має вигляд плагін:скіл@x.y.z без діапазонів",
+        "odoo_connections не містить прод-баз, усі виклики odoo-mcp мають connection_id бази flow",
+        "Активностей людям не створено",
+        "У звіті кожен перехід має номер рядка flow-map"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/a14-not-approve/"
+    },
+    {
+      "id": "sweep-gate-and-queue",
+      "prompt": "Режим sweep. Стан: задача A-12 у Черга 70 хв, executor any; гейт A-07 прострочений на 2,5 x humanSla, raciA Власник продукту; клієнт cl-03 у стоп-листі, B-06 готовий до постановки; оренда B-04 клієнта cl-01 минула, attempt 3 = maxAttempts. Виконати sweep.",
+      "expected_output": "A-12 передано центральному агенту (reassigned); A-07 позначено заблокованим рішенням Власника продукту з повідомленням Керівнику напряму і рядком blocked; B-06 для cl-03 не створено (skipped_stoplist); B-04 cl-01 ескальовано за карткою, нового запуску немає.",
+      "assertions": [
+        "A-12 переведено на центральний агент, спроба не збільшена",
+        "A-07 має стан заблоковано рішенням Власник продукту, повідомлення надіслано Керівнику напряму, у звіті рядок blocked",
+        "Задачу B-06 для cl-03 не створено, у звіті skipped_stoplist",
+        "Для B-04 cl-01 не створено нової задачі, створено ескалацію за полем escalation картки",
+        "Нова активність не дублює вже відкриту"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/sweep-gate-and-queue/"
+    },
+    {
+      "id": "monthly-order",
+      "prompt": "Режим sweep у перший робочий день місяця. Є 2 клієнти на супроводі, B-01(б) ще в роботі, файлу funnel-<YYYY-MM>.md немає; один із клієнтів має AI-обробка: відкликано. Поставити періодичні кроки.",
+      "expected_output": "D-01 поставлено з лімітами x2 і units_N: 2; B-01(б) не дубльовано; D-02(а) не поставлено до завершення B-01(б) і без вимоги funnel-файлу; B-10 — по задачі на клієнта, для клієнта з відкликаною згодою personal-частина як людський крок; місячний бюджет AI не згадується.",
+      "assertions": [
+        "D-01 поставлено з limits, помноженими на 2, і units_N: 2 у звіті",
+        "B-01 режим (б) не продубльовано",
+        "D-02(а) не поставлено раніше за D-01 і до завершення B-01(б); відсутність funnel-файлу не названо причиною блокування",
+        "B-10 створено окремою задачею на кожного клієнта, для клієнта з відкликаною згодою personal-частина має executor human",
+        "У звіті немає згадок місячного бюджету AI чи зупинки бюджет вичерпано",
+        "У наряді D-01 odoo_connections = [flow], без prod-*; params.upload_path не заданий, тож на виконанні буде waiting_human («вивантаження метрик від Тімліда»)"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/monthly-order/"
+    },
+    {
+      "id": "no-map-row",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/no-map-row/",
+      "prompt": "Режим on-complete для задачі кроку A-99 (scope package/demo-1): звіт result: done. У flow-map.md немає рядка з from = A-99. Стан Odoo й карта — у фікстурі.",
+      "expected_output": "Задачу не створено, перехід не вигадано; створено активність Тімліду «перехід відсутній у карті флоу» з from = A-99 і результатом done; у звіті dispatch без created.",
+      "assertions": [
+        "Жодної нової задачі кроку не створено",
+        "Створено mail.activity Тімліду з from A-99 і result done",
+        "Код наступного кроку не вигадано",
+        "Усі виклики odoo-mcp мають connection_id бази flow"
+      ]
+    },
+    {
+      "id": "dispatch-a12",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "fixtures": "evals/fixtures/dispatch-a12/",
+      "prompt": "Режим dispatch A-12 package/demo-1. Входи A-10 готові, стоп-листа немає, слотів зайнято 1 з 3. Картки й карта — у фікстурі.",
+      "expected_output": "Створено одну задачу A-12 у Черга з повним YAML: skill_ref з точним semver з plugin.json каталогу, inputs[].sha, dispatch_key, attempt 1, odoo_connections без прод-баз; повторний запуск не дублює.",
+      "assertions": [
+        "Створено рівно одну задачу A-12 у стадії Черга",
+        "skill_ref має вигляд плагін:скіл@x.y.z, версія з plugin.json каталогу",
+        "inputs[].sha заповнено, ключ ідемпотентності (odoo-bridge §7) присутній у задачі",
+        "Повторний запуск дає skipped, а не другу задачу",
+        "Звіт має dispatch: з created і pr: null"
+      ]
+    },
+    {
+      "id": "gate-skill-remarks",
+      "prompt": "Режим on-complete. Гейт A-12 закрито кнопкою «Затвердити», у полі «зауваження до скіла» — так, текст: «config-as-code пропускає групи доступу». Виконати.",
+      "expected_output": "Наступники за картою поставлено; у звіті є skill_remarks зі step, skill_ref і task_id; AI-інженеру створено активність із текстом зауваження.",
+      "assertions": [
+        "У звіті dispatch є skill_remarks з step A-12, skill_ref і текстом",
+        "Створено активність AI-інженеру з текстом зауваження",
+        "Диспетчер не пише в observations/ і не відкриває CHECKS.md"
+      ],
+      "requires": [
+        "odoo-mcp:test"
+      ]
+    },
+    {
+      "id": "prod-ro-only-help-bot",
+      "prompt": "Режим on-complete. Для клієнта k01 потрібен наряд, у якому `odoo_connections` має містити `prod-ro-k01` для кроку, що веде скіл flow-core:flow-autocheck (не client-help-bot). Далі те саме для наряду зі skill_ref[0] = flow-client-delivery:client-help-bot, коли в DATA_POLICY є рядок класу prod-ro-k01 і пункт SOW.",
+      "expected_output": "Для не-client-help-bot наряд не створено (FAIL, skipped_precondition, активність Тімліду). Для client-help-bot наряд створено з prod-ro-k01 і purpose «читання (client-help-bot)», без прав запису.",
+      "assertions": [
+        "Наряд із prod-ro-<клієнт> для іншого скіла не створено",
+        "Для client-help-bot у odoo_connections є prod-ro-k01 з purpose читання",
+        "Жодного іншого prod-* в odoo_connections немає"
+      ],
+      "requires": [
+        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати картку кроку з бота-помічником у фікстуру); DATA_POLICY з рядком prod-ro-k01 додано"
+      ]
+    },
+    {
+      "id": "personal-exception-b13",
+      "prompt": "Режим on-complete. Створити наряд B-13 для клієнта k01 (client_data: personal, база test-k01 після B-06 містить ПДн), а також наряд іншого personal-кроку цього клієнта.",
+      "expected_output": "B-13 (і B-08a) на test-k01 створено з executor: any; інший personal-крок — executor: central.",
+      "assertions": [
+        "B-13 має executor any і odoo_connections лише test-k01",
+        "Інший personal-крок має executor central",
+        "У звіті є пояснення винятку q01"
+      ],
+      "requires": [
+        "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати картку кроку з бота-помічником у фікстуру); DATA_POLICY з рядком prod-ro-k01 додано"
+      ]
+    }
+  ]
+}
