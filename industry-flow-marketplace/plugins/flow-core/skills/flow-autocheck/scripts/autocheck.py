@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 PLUGIN = os.path.dirname(os.path.dirname(SKILL))
 SHA_RE = re.compile(r"(?i)\b(SHA|commit)\b[:\s]*([0-9a-f]{7,40})")  # id-patterns.md
-TAG_RE = re.compile(r"^package/v\d+\.\d+$")
+TAG_RE = re.compile(r"^package/v\d+\.\d+(-odoo\d+)?$")  # id-patterns.md, q19
 ORDER = ["FAIL", "ERROR", "WARN", "MANUAL", "SKIP", "PASS"]
 PII = [  # pii-patterns.md; (тип, regex, статус при client_data != none)
     ("email", re.compile(r"[\w.+-]+@(?!example\.)[\w-]+\.[\w.-]+", re.I), "FAIL"),

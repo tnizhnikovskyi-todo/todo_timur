@@ -1,11 +1,11 @@
 # Версіонування, SHA і дозволений diff
 
-Рішення q19: версія модулів `19.0.X.Y`, тег `package/vX.Y`; суфікс `-odoo<N>` -- для гілок переходу на нову мажорну Odoo (режим `odoo-upgrade`). Суфікс у ТЕГУ (`package/vX.Y-odoo<N>`) -- припущення AI, не рішення q19; відкрите питання Архітектору (колізія з `package/vX.Y` на Odoo 19), див. `open-questions.md` п. 8.
+Рішення q19: версія модулів `19.0.X.Y`, тег `package/vX.Y`; суфікс `-odoo<N>` -- для гілок переходу на нову мажорну Odoo (режим `odoo-upgrade`). Тег переходу -- `package/vX.Y-odoo<N>` (рішення q19), гілка -- `upgrade/vX.Y-odoo<N>`; звичайні випуски -- без суфікса.
 
 ## Режими
 | Параметр | `release` = `params.mode: перша` (A-17 -> A-18) | `patch` = `hotfix` (A-19 -> A-18) | `odoo-upgrade` = `нова-версія` (D-03 -> A-17 -> A-18) |
 |---|---|---|---|
-| Тег | `package/vX.Y` | `package/vX.Y.Z` | `package/vX.Y-odoo<N>` (припущення AI, питання Архітектору) |
+| Тег | `package/vX.Y` | `package/vX.Y.Z` | `package/vX.Y-odoo<N>` (рішення q19) |
 | Номер версії з | `ACCEPTANCE.md` | `hotfix/vX.Y.Z.md` + попередній тег `package/vX.Y` | `ACCEPTANCE.md` + `upgrade-<версія>.md` |
 | База гілки (створює runner) | `inputs[ACCEPTANCE.md].sha` | SHA APPROVE з `CHECKS.md` | `inputs[ACCEPTANCE.md].sha` |
 | База SHA для R-01/R-02 | SHA ревізії стенда з ACCEPTANCE | SHA APPROVE | SHA ревізії з ACCEPTANCE |

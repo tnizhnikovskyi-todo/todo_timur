@@ -189,7 +189,7 @@ def main():
             head = dt[:800]
             drows = [r for r in rows(dt.splitlines()) if len(r) >= 5]
             badc = [r[0] for r in drows if r[-1].strip().lower() not in DRIFT_CLASSES]
-            probs = ([] if re.search(r"\bpackage/v\d+\.\d+(\.\d+)?\b", head) else ["немає тегу звірки в шапці"]) + \
+            probs = ([] if re.search(r"\bpackage/v\d+\.\d+(\.\d+|-odoo\d+)?\b", head) else ["немає тегу звірки в шапці"]) + \
                     ([f"недозволений клас: {badc}"] if badc else []) + ([] if drows else ["таблиця порожня"])
             add("drift-file", "FAIL" if probs else "PASS", "; ".join(probs))
     if "застосовано в прод" in text.lower():

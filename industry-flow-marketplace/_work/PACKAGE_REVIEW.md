@@ -623,3 +623,52 @@
 29 скілів; проти `CONCEPT.md` §2 (28, історична) додано `client-help-bot` (B-07, друга частина, q37). Кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
 Без власного скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання), B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`.
 Свідомо відкладено рішеннями: виробник знеособленої копії `anon-<клієнт>` (C-09) і B-11 версія 2 (q02/q03); щорічний перерахунок A-01 (q40, ручне завдання); евали `requires: step-run` (q27); код Enterprise для D-03 (q20). Не визначено: що створює наряд `client-help-bot` `answer` «на період» (до рішення — вручну PM/Підтримка).
+
+---
+
+# PACKAGE_REVIEW — рецензія після внесення рішень людини (q01–q44), перевірка №4 (2026-11-10)
+
+Стан: коміт `157b5d6`, робоче дерево чисте (`git status` порожній; ігнорується лише `tools-odoo/__pycache__/`). Лише рекомендації, файли пакета не змінювались. Рішення людини (`DECISIONS_2026-11-10.md`) не переглядались; технічні імена полів Odoo — C-00.
+Вердикт: **major** (blocker — 0, major — 1, minor — 7).
+
+## 1. Що перевірено
+
+| Перевірка | Результат |
+|---|---|
+| `claude plugin validate .` і `plugins/<p>` × 5 | PASS × 6 |
+| marketplace.json ↔ plugin.json ↔ теки | 5/5 плагінів, версії 0.1.0, `dependencies: [flow-core]` у чотирьох; 29 `SKILL.md` (140–251 рядок), 29 `evals/evals.json` (JSON валідний); 7 агентів `flow-core` у git |
+| 29 `SKILL.md` | `name` = тека; frontmatter лише `name`/`description`; `description` ≤ 1024 |
+| Посилання `плагін:скіл` | усі існують (пакет, агенти `flow-core`, `boost`, `odoo19-*`) |
+| `checks/*.yaml` | 36 файлів; `autocheck.py --selftest` OK |
+| Попередній M-1 (`drive-create`) | закрито: команда описана в `flow-step-runner` («Інструменти» + Крок 8), лише A-23 `адреси`, тека лише з DATA_POLICY, вміст з `$T` поза репо; скіл `segment-selector`, агент `flow-executor-research`, `executor-brief.md`, README кажуть те саме. `gh workflow run` теж описано в runner. Лишок — minor 1 |
+| Попередній M-2 (незакомічене) | закрито: усе в `157b5d6` |
+| q01 | виняток лише B-13/B-08a на `test-<клієнт>`; решта скілів delivery вимагає `central`; евал «B-04 — виняток не діє» є |
+| q37 | `prod-ro-<клієнт>` дозволено лише при `skill_ref[0]` = `flow-client-delivery:client-help-bot` і `purpose: читання (client-help-bot)` (оркестратор, runner, `sweep-rules.md`, `naryad-format.md`, `executor-brief.md`); скіл: лише `odoo_search_read`/`odoo_get_fields`, `odoo_execute` і рядки «ODOO:» заборонені, `central`, передумови SOW + DATA_POLICY + підтвердження Тімліда; `eval-builder`, D-01 (`flow-state.md`) і `guard_db` клас забороняють; в інших скілах згадки лише як заборона або пункт SOW |
+| q09/q30 | профілю «без AI» немає; без згоди → `escalated` |
+| q17 | еталони є; `guard_db` (bash): `prod`, `test-prod`, `prod-ro-acme`, `client-acme`, `anon-k1`, порожнє, `test-`, `test-x;id` → `FLOW_STOP`; `test-x`, `demo-1`, `test-pkg-a`, `emu-b` → дозволено; хост поза `ODOO_ALLOWED_HOSTS` → відмова; роздільник кома/пробіл узгоджено в bash і python |
+| Попередні minor 1–6 | закрито (міст `actions_run_trigger`, q10 в евалах, роздільник хостів, README delivery, `test-pkg-*`, формулювання «дивиться в прод») |
+| Решта рішень | «Відкриті питання» усіх 29 скілів і README прочитано; розбіжності — M-1 і minor 2–4 |
+
+## 2. Зауваження
+
+### Major
+
+**M-1. q19 внесено неузгоджено: тег із суфіксом `-odoo<N>` в одному скілі — факт із посиланням на неіснуючий шаблон, у другому — відкрите питання, у третьому — «припущення AI».**
+`flow-core/skills/ci-pipeline-builder/references/odoo-version-resolve.md` р. 5 пише «формат тега `package/vX.Y-odoo<N>`, `id-patterns.md`», але в `id-patterns.md` тег — лише `^package/v\d+\.\d+$` (суфікса немає; посилання зламане). `package-upgrade-runner/SKILL.md` В-0 і README («шаблон тега `-odoo<N>` в `id-patterns.md`») досі подають це як «додати або відмовитися», хоча q19 вирішено: суфікс — лише для гілок `upgrade/vX.Y-odoo<N>`. `odoo-version-migrator` В-9 каже правильно: тег із суфіксом — припущення AI, не рішення. Вплив — лише шлях D-03/B-11 на новій мажорній Odoo (на пілоті не спрацює), але це три різні версії однієї конвенції.
+Виправити: в `odoo-version-resolve.md` (п. 2 і 4) і `ci-contract.md` прибрати посилання на `id-patterns.md` і позначити тег із суфіксом як «не визначено (В-9 `odoo-version-migrator`), до рішення Архітектора джерело N — лише input `odoo_version` і суфікс гілки»; у `package-upgrade-runner` В-0 і README замінити на «q19: суфікс лише для гілок; схема тегів переходу — В-9»; в `id-patterns.md` додати рядок гілки `upgrade/vX.Y-odoo<N>`.
+
+### Minor
+
+1. `flow-step-runner/SKILL.md` р. 33: після `drive-create` «runner видаляє `$T`» — але `$T/ctx` потрібна далі (Крок 12 кладе туди `diff.patch`, фінал робить `rm -rf $T`). Написати «видаляє файл адрес із `$T`». У `executor-brief.md` немає рядка, що передає виконавцю шлях `$T` для файлу адрес («за `where`» — це шляхи репо): додати в «Параметри кроку» для A-23 `адреси`.
+2. q16: `flow-state-keeper` — «зрілість і рядок „Рішення:“ вписує AI», `product-decision-drafter` В-1 — «q16 охоплює лише зрілість; „Рішення:“ у business-case/ACCEPTANCE/pilot-decision/release-plan вписує людина». Суперечності по суті немає (різні рядки «Рішення:»), але README подає q16 без цього розрізнення; додати пів речення в README й `flow-state-keeper` (а).
+3. Закриті пункти в «Відкритих»: `package-release-builder` п. 3 («оркестратор ще каже „код з CHANGELOG“» — оркестратор р. 66 уже бере `returned_to`); `package-upgrade-runner` В-2 («розбіжність `ci-contract.md` двох скілів» — файл release-builder уже посилається на єдине джерело в `ci-pipeline-builder`).
+4. q25 («порції, CI поза таймаутом») внесено, але механіка доперевірки run id відкрита в трьох місцях різними словами (`ci-pipeline-builder` В-4, `package-upgrade-runner` В-4, `demo-base-builder` В-2); звести до одного посилання на `flow-step-runner/references/open-questions.md` №15.
+5. q17: еталони `apply.py`/`install.sh`/`validate.py` не реалізують `--answers` і мають інші сигнатури, ніж контракт `config-package-format.md` (чесно позначено в `config-as-code` і README як питання людині). До рішення A-12 іде через `waiting_human`.
+6. `client-help-bot`: «лише читання» гарантується скілом, allow-list і ручним підтвердженням Тімліда в `kb-index.md` (штатної read-only ролі в Odoo немає); allow-list моделей — кандидати, не затверджені. Це умова q37 «окремий технічний користувач» — відкрито для C-00, позначено в README.
+7. Повтори: кроки, де всі перевірки `manual`; наживо не запускались `claude plugin eval`, odoo-mcp, GitHub, Gmail, Drive `create_file`, `tools-odoo` на Odoo 19 (q26).
+
+## 3. Покриття флоу
+
+Без змін проти перевірки №3: 29 скілів; `CONCEPT.md` §2 (28) + `client-help-bot` (B-07, q37); кандидати з `candidates.md` реалізовані або злиті/відкинуті за CONCEPT §4.
+Без скіла пакета: людські кроки A-02, A-06, B-08b, B-08d, B-12, C-00, C-08; на скілах організації — A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання), B-08c і другий наряд B-08a; C-05 — шаблон `data-policy-template.md` + `C-05.yaml`; C-07 — режим `incident` у `eval-builder`.
+Відкладено рішеннями: виробник знеособленої копії `anon-<клієнт>` (C-09) і B-11 версія 2 (q02/q03); щорічний перерахунок A-01 (q40); евали `requires: step-run` (q27); код Enterprise для D-03 (q20). Не визначено: що створює наряд `client-help-bot` `answer` «на період» (до рішення — вручну PM/Підтримка).

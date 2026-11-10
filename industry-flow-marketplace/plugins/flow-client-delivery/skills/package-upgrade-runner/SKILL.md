@@ -76,7 +76,7 @@ description: >
 позначити «не перевірено (стоп на U-01)» і завершити `escalated` Тімліду.
 
 ## Крок 1. Тег і хвиля (фази 0 і 1; у фазі 1 повторити, пілот міг відкотитися)
-1. Тег з `inputs` (from A-18) існує (`get_tag`; формат — `flow-core/references/id-patterns.md`: `package/vX.Y`; `vX.Y` у цьому скілі — скорочення цього тегу, суфікс `-odoo<N>` у id-patterns не заданий, див. В-0). Тег виду `vX.Y-odoo<N>`,
+1. Тег з `inputs` (from A-18) існує (`get_tag`; формат — `flow-core/references/id-patterns.md`: `package/vX.Y`; `vX.Y` у цьому скілі — скорочення цього тегу, рішення q19: суфікс `-odoo<N>` лише для гілок `upgrade/vX.Y-odoo<N>` і тегів `package/vX.Y-odoo<N>` переходу на нову мажорну Odoo). Тег виду `vX.Y-odoo<N>`,
    де N не збігається з версією Odoo клієнта -> стоп, `escalated` Тімліду й Власнику продукту: «міграція клієнта на нову
    мажорну Odoo: окремий сценарій не спроєктовано».
 2. Поточний тег клієнта: `project.package_tag` (`flow`), `git.prev_tag` наряду й `clients/REGISTRY.md` на SHA наряду
@@ -201,11 +201,11 @@ merge-коміт останнього PR B-04/B-05: `git log --merges --grep 'B-
 Очікування CI довше таймауту — В-4.
 
 ## Відкриті питання
-- В-0. Шаблон тегу `package/vX.Y-odoo<N>` відсутній у `flow-core/references/id-patterns.md`; додати або відмовитися від суфікса.
+- В-0. Рішення q19: суфікс `-odoo<N>` лише для гілок `upgrade/vX.Y-odoo<N>` і тегів `package/vX.Y-odoo<N>` переходу на нову мажорну Odoo; звичайні випуски -- `package/vX.Y`.
 - В-1. Хто ставить наряд фази 1 — узгодити з `flow-orchestrator` (ключі `params.phase`, `params.reconcile` у `naryad-format.md` описані).
-- В-2. Розбіжність `ci-contract.md` двох скілів: `flow-core/.../ci-pipeline-builder` (фактичний) і `package-release-builder` (`tag_candidate`, `mode`, `prev_tag`); режим upgrade у CI (попередній тег -> новий -> smoke) не підтверджено.
+- В-2. Єдине джерело `ci-contract.md` -- `ci-pipeline-builder` (розбіжність закрито); режим upgrade у CI (попередній тег -> новий -> smoke) не підтверджено.
 - В-3. Номер хвилі: ознака пілота — `project.pilot`/`params.pilot`; номер хвилі — рішення PM у наряді (поля немає).
-- В-4. CI довший за `timeoutMin` 60: `waiting_human` покриває очікування, але SLA на цю паузу не задано.
+- В-4. CI довший за `timeoutMin` 60 (q25): механіка доперевірки за run id -- `flow-step-runner/references/open-questions.md` №15; SLA на паузу не задано.
 - В-5. Де PM фіксує рішення «Зняті відхилення й кастом»: колонка файлу в PR чи чаттер задачі.
 - В-6. Розбіжність картки: `hours` 3 vs «8 покриває фази 0–1»; `answers.yaml` vs `questionnaire.md` у B-04.
 - Рішення q28 (було В-7): AI звіряє конфіг лише за метаданими, чернетку затверджує Тімлід. Лишається оновити failureMode/dataRule картки B-11; крок 8 до того вмикається лише ключем `params.reconcile: true`.

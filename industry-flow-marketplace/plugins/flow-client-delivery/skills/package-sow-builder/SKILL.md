@@ -29,7 +29,7 @@ AI не перекласифіковує позиції fit-gap, не вигад
 Усі виклики `odoo-mcp` — з `connection_id` з наряду (правила — `flow-core/references/data-and-connections.md`).
 Ключі наряду цього скіла — у блоці `params` (`naryad-format.md`): `mode: main|addendum`; для `addendum` ще
 `addendum_source: tr|scope|answers|changelog` (або шлях до входу). Дата документа — поле `date` наряду
-(інакше `run.started` першого звіту; з пам'яті не брати). Теги пакета — `package/vX.Y[.Z]` (`id-patterns.md`),
+(інакше `run.started` першого звіту; з пам'яті не брати). Теги пакета — `package/vX.Y[.Z|-odoo<N>]` (`id-patterns.md`),
 **завжди дослівно з наряду**, префікс не обрізати й не додавати. Результат `waiting_human` (з `waiting_for`)
 скіл не ставить сам: він повертає runner `checks` зі статусом «очікує людини» й перелік дій людини в `memo`;
 `phase`/`partial` — поля runner. Етап B-03 -> B-04 і повернення — `flow-core/references/flow-map.md` (рядки B-03, B-05, B-11).
@@ -73,7 +73,7 @@ AI не перекласифіковує позиції fit-gap, не вигад
 fit-gap на новому SHA відрізняється від таблиці «Позиції» -> `scope`; змінено лише `answers.yaml` -> `answers`;
 неоднозначно -> питання runner (`waiting_human`), не вгадувати. Вивід записати в `memo`.
 **Тег пакета** — рядок із наряду (`inputs[].path`/`params`/`project.candidate_tag` для B-11), дослівно; форма
-`^package/v\d+\.\d+(\.\d+)?$`; `git rev-parse -q --verify refs/tags/<тег>` має його знайти; для основного SOW — збігається
+`^package/v\d+\.\d+(\.\d+|-odoo\d+)?$`; `git rev-parse -q --verify refs/tags/<тег>` має його знайти; для основного SOW — збігається
 з тегом A-18 з наряду. Немає тегу чи не знайдено -> стоп, питання runner.
 **Галузь** (`<галузь>` для `docs/industries/<галузь>/`) — з заголовка `clients/<к>/fit-gap.md` («пакет <галузь> <тег>»), звірити з
 `package/` на тегу; розбіжність -> `memo`.
@@ -175,7 +175,7 @@ PM/Тімліда, шлюз — MANUAL «очікує людини». FAIL, як
 | SOW-sections | а | усі заголовки `references/sow-template.md` на місці (розділ «Бот-помічник client-help-bot» — лише за домовленістю; «Агрегати використання системи» (q41) — обов'язковий); рядків «Допущення» з джерелом fit-gap = (пункти «Суперечності й відкриті питання» + непорожні «Примітка») у fit-gap |
 | SOW-coverage | а | множина `FG-NN` у «Позиції» = «Вимоги» fit-gap (без знятих), Відмітка = Рішення |
 | SOW-price | а | у позиції є ціна й термін; «Разом» = сума статей; сума цін позицій = Доналаштування + Доробки; Enterprise -> рядок «Ліцензія Odoo» |
-| SOW-tag | а, б | `Git-тег` = `--tag`, форма `package/vX.Y[.Z]`, `git rev-parse` знаходить |
+| SOW-tag | а, б | `Git-тег` = `--tag`, форма `package/vX.Y[.Z|-odoo<N>]`, `git rev-parse` знаходить |
 | SOW-ac | а | «з пакета» — сценарій `S-xx`; «доналаштування» — `S-xx` або клієнтський рядок `CS-xx`; «доробка» — лише «AC з ТР-доробок.md» |
 | SOW-clarify | а | «уточнити» лише в «Допущення» і «Відповіді анкети» |
 | SOW-answers | а, б | таблиця «Відповіді анкети» = `answers.yaml`; режим (б) `--first-run` -> MANUAL «очікує людини (BA внесе ключі)», `--rerun` -> порівняння |
