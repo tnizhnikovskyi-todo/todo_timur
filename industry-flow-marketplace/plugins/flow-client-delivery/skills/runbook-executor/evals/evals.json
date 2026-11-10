@@ -113,11 +113,11 @@
       "requires": [],
       "input": {
         "fixtures": [
-          "skills/runbook-executor/evals/fixtures/valid-log/config-log.md",
-          "skills/runbook-executor/evals/fixtures/valid-log/answers.yaml"
+          "evals/fixtures/valid-log/config-log.md",
+          "evals/fixtures/valid-log/answers.yaml"
         ]
       },
-      "prompt": "Запусти python3 -I scripts/check_config_log.py --client-dir skills/runbook-executor/evals/fixtures/valid-log --package nopkg --mode apply.",
+      "prompt": "Запусти python3 -I scripts/check_config_log.py --client-dir evals/fixtures/valid-log --package nopkg --mode apply.",
       "expected_output": "Жодного FAIL: pii PASS попри ISO-дати в колонці 'Дата', readback PASS для many2one (7 vs 7:Основний) і boolean (True), modules і roles PASS при заголовках з іншим текстом.",
       "assertions": [
         "у виводі немає статусу FAIL",
@@ -130,11 +130,11 @@
       "requires": [],
       "input": {
         "fixtures": [
-          "skills/runbook-executor/evals/fixtures/no-readback/config-log.md",
-          "skills/runbook-executor/evals/fixtures/no-readback/answers.yaml"
+          "evals/fixtures/no-readback/config-log.md",
+          "evals/fixtures/no-readback/answers.yaml"
         ]
       },
-      "prompt": "Запусти python3 -I scripts/check_config_log.py --client-dir skills/runbook-executor/evals/fixtures/no-readback --package nopkg --mode apply.",
+      "prompt": "Запусти python3 -I scripts/check_config_log.py --client-dir evals/fixtures/no-readback --package nopkg --mode apply.",
       "expected_output": "readback = FAIL для CL-003 (рядок 'застосовано' з порожнім read-back); решта перевірок без FAIL.",
       "assertions": [
         "readback = FAIL і згадує CL-003",

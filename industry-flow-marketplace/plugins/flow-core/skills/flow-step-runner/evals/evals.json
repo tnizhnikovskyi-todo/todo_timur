@@ -120,7 +120,7 @@
         "agents:registered"
       ],
       "prompt": "build_context.py повертає код 5 (понад бюджет) для входу package/SPEC.md. done згадує розділ «Вимоги».",
-      "expected_output": "Runner робить --toc, складає regex з done, повторює build_context.py з --sections SPEC.md=^Вимоги; якщо знову 5 або 6 — ескалація Тімліду «контекст понад бюджет». Зміст входів у контекст runner'а не читається, мовчки не обрізається.",
+      "expected_output": "Runner робить --toc, складає regex з done, повторює build_context.py з --sections SPEC.md=^Вимоги (SPEC.md — name входу з наряду); якщо знову 5 або 6 — ескалація Тімліду «контекст понад бюджет». Зміст входів у контекст runner'а не читається, мовчки не обрізається.",
       "assertions": [
         "Виконано --toc перед звуженням",
         "Повтор має --sections <name>=<regex>",

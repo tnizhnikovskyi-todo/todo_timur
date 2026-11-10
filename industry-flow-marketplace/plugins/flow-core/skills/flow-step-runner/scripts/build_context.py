@@ -95,7 +95,12 @@ def main():
         print(json.dumps({"error": "DATA_POLICY: таблицю фільтра не розібрано"}), file=sys.stderr); return 3
     os.makedirs(a.out, exist_ok=True)
     items, total, toc = [], 0, []
-    for i in json.load(open(a.inputs, encoding="utf-8")):
+    inputs = json.load(open(a.inputs, encoding="utf-8"))
+    known = {i.get("name") for i in inputs if isinstance(i, dict)}
+    for n in narrowing:
+        if n not in known:  # ім'я з --sections має збігатися з name входу, інакше звуження мовчки не спрацює
+            print(json.dumps({"error": "--sections: немає входу з таким name", "input": n}, ensure_ascii=False), file=sys.stderr); return 6
+    for i in inputs:
         if not isinstance(i, dict) or not i.get("name") or not i.get("path"):
             print(json.dumps({"error": "запис входу без обов'язкових ключів name/path", "input": str(i)[:200]}), file=sys.stderr); return 2
         sha, path = i.get("sha"), i["path"]

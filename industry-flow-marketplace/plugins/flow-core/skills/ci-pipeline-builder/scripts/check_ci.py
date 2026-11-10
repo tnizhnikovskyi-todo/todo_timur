@@ -32,7 +32,11 @@ def main(argv):
     if not argv:
         print("FAIL usage ci.yml path required")
         return 2
-    text = open(argv[0], encoding="utf-8").read()
+    try:
+        text = open(argv[0], encoding="utf-8").read()
+    except OSError as e:
+        print(f"FAIL usage не вдалося прочитати {argv[0]}: {e.strerror}")
+        return 2
     opt = {argv[i]: argv[i + 1] for i in range(1, len(argv) - 1, 2)}
     res = []
 

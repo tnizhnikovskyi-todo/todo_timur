@@ -15,7 +15,8 @@
         "Рядок підпису Власника продукту порожній",
         "td.quality.check позначено «живе» (частка 0.5, 1 з 2)",
         "Розділ меню й звітів порожній за фікстурою (package/addons немає) — не помилка"
-      ]
+      ],
+      "files": "fixtures/happy-two-tags/"
     },
     {
       "id": "prod-alias-forbidden",
@@ -49,7 +50,8 @@
         "result = returned, адресат Тімлід",
         "Файл package/metrics/2026-12/CL-01.yaml не створено",
         "Жодного виклику до prod-*"
-      ]
+      ],
+      "files": "fixtures/upload-pii/"
     },
     {
       "id": "custom-and-young",
@@ -62,6 +64,10 @@
         "У варіанті Б результат escalated, адресат — Власник продукту",
         "У варіанті Б файл package/metrics/2026-12.md не створено і поріг 50% не підставлено",
         "Ніде немає рекомендації видалити модель"
+      ],
+      "files": [
+        "fixtures/custom-and-young/a/",
+        "fixtures/custom-and-young/b/"
       ]
     }
   ]

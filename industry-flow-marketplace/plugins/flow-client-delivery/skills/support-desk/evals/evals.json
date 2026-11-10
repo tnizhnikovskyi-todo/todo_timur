@@ -121,7 +121,6 @@
         "Gmail MCP і odoo-mcp не викликались, файли не створено",
         "З executor central і без мітки Gmail: result returned, нових рядків реєстру немає"
       ],
-      "fixtures": "evals/fixtures/stop-executor/",
       "requires": [
         "mock: Gmail MCP (фіксує виклики)"
       ],
