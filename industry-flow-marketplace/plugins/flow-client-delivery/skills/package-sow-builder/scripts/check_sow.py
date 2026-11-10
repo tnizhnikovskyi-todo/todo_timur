@@ -191,7 +191,7 @@ def main():
     else:
         errs = []
         if not TAGRE.match(a.tag):
-            errs.append("форма тегу з наряду не package/vX.Y[.Z]")
+            errs.append("форма тегу з наряду не package/vX.Y[.Z|-odoo<N>]")
         if main and (not m or m.group(1) != a.tag):
             errs.append("Git-тег у SOW != тег наряду")
         if not main and a.tag not in sow:

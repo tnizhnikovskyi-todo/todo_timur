@@ -11,5 +11,5 @@
 
 
 ## Крок 14б
-б) A-18 `params.phase: tag`: після `done` скіл формує `release {tag, sha, command}`. Runner перевіряє тег за `id-patterns.md` (`^package/v\d+\.\d+$`, патч — `…\.\d+$`), що `sha` — вершина `base_branch` із схваленим гейтом A-18, і лише тоді виконує `command` (`git tag -a … && git push origin <тег>`); іншого push у `base_branch` немає. Не вдалося → `escalated_to: Тімлід` (`flow-map.md`).
+б) A-18 `params.phase: tag`: після `done` скіл формує `release {tag, sha, command}`. Runner перевіряє тег за `id-patterns.md` (`^package/v\d+\.\d+(-odoo\d+)?$` — суфікс лише для переходу на нову мажорну Odoo, рішення q19; патч — `^package/v\d+\.\d+\.\d+$`), що `sha` — вершина `base_branch` із схваленим гейтом A-18, і лише тоді виконує `command` (`git tag -a … && git push origin <тег>`); іншого push у `base_branch` немає. Не вдалося → `escalated_to: Тімлід` (`flow-map.md`).
 
