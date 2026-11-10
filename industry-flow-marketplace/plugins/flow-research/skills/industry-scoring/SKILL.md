@@ -62,7 +62,7 @@ SQL-запиту до `odb-catalog` з датою знімка; рейтинг �
 
 ## Крок 0. Наряд і доступи
 Прийняти від runner: `where`, `inputs` (SHA), `odoo_connections`, `attempt`, `returned_from`, `date`, режим
-(«перший запуск» / «щорічний перезапуск»). `list_odoo_connections` → лише alias `flow` з allow-list наряду.
+(«перший запуск» / «щорічний перезапуск»). `odoo_connections` порожній → `odoo_*` і `list_odoo_connections` не викликати (скіл Odoo не читає), у `checks` `SKIP odoo-connections`; інакше `list_odoo_connections` → лише alias `flow` з allow-list наряду.
 Якщо `where` порожній або шлях не `docs/industries/scoring.md` — не вгадувати й не питати (людини в запуску немає):
 повернути runner результат `escalated` (оркестратору) з перевіркою `where-mismatch` FAIL, запуск не продовжувати.
 Попередній `scoring.md` на SHA з `inputs` потрібен лише в режимі перезапуску.

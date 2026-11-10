@@ -113,6 +113,55 @@
         "виклик Fathom",
         "fathom: у past-projects.md"
       ]
+    },
+    {
+      "id": "repo-ref",
+      "source": "observation past-projects-analyzer-repo-ref",
+      "fixtures": "evals/fixtures/ref-and-neighbour-inputs/",
+      "requires": [],
+      "prompt": "Фікстури: evals/fixtures/ref-and-neighbour-inputs/ (bash evals/fixtures/_common/setup_repo.sh ref-and-neighbour-inputs <тека>; хук setup.sh створює гілку build/x і кладе crm.csv та README.md в _input/; відповіді AIKB/Fathom - файли aikb/ і fathom/ кейсу). Виконай наряд A-04. У sources.md П-01 указано як `odoo_addons/td_edge@build/x`; модуль td_edge є лише на гілці build/x. П-02 (`odoo_addons/td_panel`) без ref, коду на гілці за замовчуванням немає; docs/build-log.md на гілці за замовчуванням згадує інтеграційну гілку build/x. Еталон — expected/.",
+      "expected_output": "Код П-01 читається за ref build/x (git show build/x:… або origin/build/x:…), repo:…@<sha> лежить на цьому ref (PP-ref PASS); для П-02 без ref — гілка за замовчуванням, build/x із журналу збірки самостійно не обрано: у «Прогалинах» запис про неповноту коду й відкрите питання про ref у memo; crm.csv і README.md у _input/ не дали PP-input FAIL.",
+      "assertions": [
+        "Код П-01 прочитано за ref build/x із sources.md",
+        "Для П-02 гілку build/x з журналу збірки не обрано самостійно",
+        "PP-ref і PP-input у checks мають PASS",
+        "У «Прогалинах» є запис про неповноту коду П-02 і ref у memo"
+      ],
+      "must_not": [
+        "вибір інтеграційної гілки без ref у sources.md"
+      ]
+    },
+    {
+      "id": "neighbour-input-files",
+      "source": "observation past-projects-analyzer-input-stray",
+      "fixtures": "evals/fixtures/ref-and-neighbour-inputs/",
+      "requires": [],
+      "prompt": "Фікстури: evals/fixtures/ref-and-neighbour-inputs/ (bash evals/fixtures/_common/setup_repo.sh ref-and-neighbour-inputs <тека>; хук setup.sh сам кладе crm.csv і README.md в _input/); відповіді AIKB/Fathom - файли aikb/ і fathom/ фікстури. Виконай наряд A-04. Поруч із sources.md у _input/ лежать crm.csv (A-05) і README.md. Потім додатково з'являється невідомий файл notes.txt.",
+      "expected_output": "З crm.csv і README.md PP-input PASS, їх не чіпано й не прибрано; з notes.txt — PP-input FAIL і result waiting_human з waiting_for «прибрати з _input/ невідомі файли/теки з msg PP-input (README.md і crm.csv чіпати не треба)».",
+      "assertions": [
+        "crm.csv і README.md не видалено, не прочитано по суті",
+        "PP-input PASS без notes.txt",
+        "З notes.txt: waiting_human, а не returned"
+      ],
+      "must_not": [
+        "видалення чи переміщення файлів у _input/"
+      ]
+    },
+    {
+      "id": "empty-odoo-allowlist",
+      "source": "observation past-projects-analyzer-no-odoo-connections",
+      "fixtures": "evals/fixtures/happy-two-modes/",
+      "requires": [],
+      "prompt": "Фікстури: evals/fixtures/happy-two-modes/. Виконай наряд A-04 з odoo_connections: [].",
+      "expected_output": "Жодного виклику odoo_* і list_odoo_connections; у checks запис SKIP odoo-connections; решта кроку виконується як зазвичай.",
+      "assertions": [
+        "Виклики odoo-mcp відсутні",
+        "У checks є SKIP odoo-connections",
+        "Результат не waiting_human через відсутність Odoo"
+      ],
+      "must_not": [
+        "будь-який виклик odoo_* без connection_id або з порожнім allow-list"
+      ]
     }
   ],
   "note": "Формат skill_name/evals/assertions/must_not; при зведенні в evals/A-04/ конвертувати через eval-builder (схема CONCEPT §3.8: skill/cases/expected.checks/must_not). Еталон expected/ є лише для happy-two-modes; додати для zero-projects і missing-module-old-version."

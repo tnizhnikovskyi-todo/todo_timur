@@ -41,7 +41,7 @@ description: >
 | Що | Шлях / джерело | Обов'язковий |
 |---|---|---|
 | Рішення про галузь і цільовий сегмент (A-02) | `docs/industries/<галузь>/decision.md` (SHA з `inputs`) | так |
-| Перелік проєктів-джерел | `docs/industries/<галузь>/_input/sources.md` (робоча тека, поза git, лише читання; на час A-04 там лише він) | так; немає — стоп «очікує людину» |
+| Перелік проєктів-джерел | `docs/industries/<галузь>/_input/sources.md` (робоча тека, поза git, лише читання; поруч можуть лежати `README.md`, `crm.csv` сусідніх кроків — їх не чіпати; `signals.csv`/`calls.md` A-23 тримає в `demand/_input/`) | так; немає — стоп «очікує людину» |
 | Правила обробки | `package/DATA_POLICY.md`, розділ «Матеріали минулих проєктів і звернення клієнтів: підстава обробки й режим читання» | так |
 | Шаблон результату | `references/past-projects-template.md` цього скіла | так |
 | `returned_from` | текст зауваження гейта Архітектора | при повторі |
@@ -59,8 +59,8 @@ A-04 не має режимів і фаз, `params.mode`/`phase` ігнорую�
   Лише `project_id` із `sources.md`; інші проєкти не відкривати.
 - `Fathom` (лише режим «повний» і лише якщо DATA_POLICY дозволяє): `get_meeting_summary`, `get_meeting_transcript`.
   Пошук `search_meetings` / `find_relevant_meetings` / `find_person` за назвою клієнта заборонений.
-- Код: `github` або локальний клон; репозиторії з `sources.md`, за замовчуванням `factory3d/odoo_addons/`. Рецепти `boost:odoo-model-map`.
-- `odoo-mcp`: лише alias `flow` з `odoo_connections` наряду, `connection_id` у кожному виклику, після виклику звірити поле
+- Код: `github` або локальний клон; репозиторії з `sources.md` (формат `шлях@ref`, `sources-format.md`): є ref — читати лише його (`git show <ref>:…`; на свіжому клоні гілки може не бути локально — `git show origin/<ref>:…`; checkout/fetch не потрібні); немає ref — гілка за замовчуванням; іншу гілку (інтеграційну, з журналу збірки) самому не обирати — у «Прогалини» «код на гілці за замовчуванням неповний; потрібен ref у sources.md» і відкрите питання в memo. За замовчуванням `factory3d/odoo_addons/`. Рецепти `boost:odoo-model-map`.
+- `odoo-mcp`: лише alias `flow` з `odoo_connections` наряду (порожній allow-list — не викликати, Крок 0 п.2), `connection_id` у кожному виклику, після виклику звірити поле
   `connection`. Бази клієнтів (прод і тестові) цьому кроку не потрібні й не відкриваються.
 - Заборонено: змінювати `sources.md`, присвоювати коди П-xx, писати в `_input/`, коммітити будь-що з `_input/`, зберігати
   проміжні витяги й denylist на диск, записувати в Odoo щось, крім того, що робить runner.
@@ -72,7 +72,7 @@ A-04 не має режимів і фаз, `params.mode`/`phase` ігнорую�
 1. Наряд: `step: A-04`, `executor: central`, `client_data: personal`. Інакше — `result: returned`, `returned_to: A-04` (наряд
    переставити центральному агенту), причина «не той виконавець» у `checks`. До появи ознаки центрального агента в
    `conventions.md` спиратись лише на `executor` наряду.
-2. `list_odoo_connections` → звірити alias `flow` з allow-list наряду.
+2. `odoo_connections` наряду порожній → `odoo_*` і `list_odoo_connections` не викликати (скіл Odoo не читає), у `checks` запис `SKIP odoo-connections` («allow-list порожній»). Інакше `list_odoo_connections` → звірити alias `flow` з allow-list наряду.
 3. `package/DATA_POLICY.md`: є заголовок розділу про матеріали минулих проєктів → прочитати його і з'ясувати, чи дозволене
    читання Fathom AI-агентом. Немає розділу → `result: waiting_human`, `waiting_for: {role: Власник продукту, what: "додати в package/DATA_POLICY.md розділ про матеріали минулих проєктів (C-05)", resume: {step: A-04}}`. Не дозволено прямо або не сказано →
    режим «лише звіти AIKB» для всіх проєктів і прапорець `--no-fathom` у Кроці 8; у memo: «транскрипти: ручне знеособлення BA».
@@ -111,7 +111,7 @@ summary не дає болів. Імена учасників — у denylist у
 ## Крок 5. Код
 
 Для кожного репозиторію з `sources.md` (один або кілька; другий і далі — з alias, Крок 8): `__manifest__.py` (технічна назва, `version`, `depends`), `_name`/`_inherit`, ключові вью
-(рецепти `boost:odoo-model-map`). Рядок таблиці модулів: технічна назва, `repo:<шлях>@<sha>`, версія Odoo з маніфесту,
+(рецепти `boost:odoo-model-map`). Рядок таблиці модулів: технічна назва, `repo:<шлях>@<sha>` (sha — коміт на ref з `sources.md`, а без ref — на гілці за замовчуванням), версія Odoo з маніфесту,
 «сумісність з 19: так / міграція / невідомо» (версія з `19.` → так), який процес закриває, П-xx. Версію не здогадувати: немає в маніфесті — «невідомо».
 Модуль, згаданий в AIKB, але відсутній у репо, — не в «Модулях для повторного використання», а в «Прогалинах» («згадано, коду
 немає»). `data/*.xml` і `demo/` з реальними назвами в результат не читати.
@@ -146,8 +146,8 @@ python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/past-projects-analyzer/scripts/check_pa
 Кілька репозиторіїв: перший `--repo` без alias — основний (`repo:<шлях>@<sha>`), інші — `--repo alias=<шлях>` і `repo:<alias>/<шлях>@<sha>`.
 
 Виводить JSON `[{id, status, msg}]` — це `checks` звіту. FAIL — виправити й перезапустити в межах спроби; не вдалося — `result:
-returned`, `returned_to: A-04`, причина в `checks`. Виняток: **PP-input** (сторонній файл у `_input/`, агент його прибрати не може) →
-`waiting_human`, `waiting_for: {role: Власник продукту, what: "прибрати сторонні файли з _input/", resume: {step: A-04}}`;
+returned`, `returned_to: A-04`, причина в `checks`. Виняток: **PP-input** (невідомий файл у `_input/` — файл або тека; відомі `README.md`, `crm.csv` дозволені; агент його прибрати не може) →
+`waiting_human`, `waiting_for: {role: Власник продукту, what: "прибрати з _input/ невідомі файли/теки з msg PP-input (README.md і crm.csv чіпати не треба)", resume: {step: A-04}}`;
 **PP-gitignore** → `escalated` (Крок 1 п.2).
 
 Таблиця PP-* — `references/autochecks.md`.
@@ -193,7 +193,8 @@ A-04 → A-20 (AND-join з A-03, A-06). Шлюз «Потрібні сесії �
    (past-projects-analyzer)»; вноситься AI-чернеткою одним PR (q15), затверджує власник картки.
 3. Ознака центрального агента в `conventions.md` відсутня (див. Крок 0).
 4. Картка A-04 (`done`/шаблон): ідентифікатор Fathom названо «URL запису»; скіл вимагає `fathom:<recording_id>` (share-URL заборонено, дає FAIL PP-pii). Замінити «URL Fathom» на «recording_id Fathom» у картці (AI-чернетка одним PR, q15; затверджує власник картки); одним рядком у memo для перевіряльника.
-5. Шаблон `docs/industries/_template/past-projects.md` — окремий крок або вручну (контракт runner: diff лише `where`)
+5. Drive (Google Docs: звіти, ТР поза AIKB) і наша база Odoo (що вже налаштовано) як джерела досвіду A-04 скілом не передбачені: Drive — через AIKB чи окремий дозвіл у DATA_POLICY, Odoo — окремий клас доступу; рішення за власником flow-research, скіл їх не читає (observation drive-odoo-sources).
+6. Шаблон `docs/industries/_template/past-projects.md` — окремий крок або вручну (контракт runner: diff лише `where`)
 
 ## Чого НЕ робити
 

@@ -132,17 +132,58 @@ def changed_files(repo, base, head):
 ALWAYS_OK = ("observations/",)  # runner комітить сюди окремим комітом (flow-step-runner); завжди дозволено
 
 
+# Відомі вхідні файли сусідніх кроків у _input/ (A-05 crm.csv; README.md теки). Решта видимих файлів і тек - PP-input FAIL.
+KNOWN_INPUTS = {"README.md", "crm.csv"}  # signals.csv/calls.md A-23 тримає в demand/_input/, не тут
+
+
 def stray_inputs(sources):
-    """Видимі сторонні файли в _input/ (приховані .*, *.bak, *~ ігноруються)."""
+    """Невідомі видимі файли й теки в _input/ (приховані .*, *.bak, *~ і KNOWN_INPUTS ігноруються)."""
     return sorted(f for f in os.listdir(Path(sources).parent)
-                  if f != Path(sources).name and not f.startswith(".") and not f.endswith((".bak", "~")))
+                  if f != Path(sources).name and f not in KNOWN_INPUTS
+                  and not f.startswith(".") and not f.endswith((".bak", "~")))
+
+
+def sources_repos(path):
+    """-> {код: [(репозиторій, ref|None)]}. Колонка «репозиторії»: `шлях@ref`, кілька через `,`/`;`;
+    окрема колонка «ref» діє на всі репозиторії рядка без власного @ref. Немає ref -> гілка за замовчуванням."""
+    res, repo_i, ref_i = {}, None, None
+    for l in Path(path).read_text(encoding="utf-8").splitlines():
+        if not l.startswith("|"):
+            continue
+        cs = cells(l)
+        if not cs or re.match(r"^[\s:|-]+$", "".join(cs)):
+            continue
+        if not CODE.fullmatch(cs[0]):
+            if repo_i is None and "код" in cs[0].lower():
+                for i, c in enumerate(cs):
+                    lc = c.lower().strip()
+                    if "репозитор" in lc and repo_i is None:
+                        repo_i = i
+                    if lc == "ref" or lc.startswith("ref ") or lc.startswith("ref("):
+                        ref_i = i
+            continue
+        if repo_i is None or repo_i >= len(cs):
+            continue
+        col_ref = cs[ref_i].strip() if ref_i is not None and ref_i < len(cs) else ""
+        items = []
+        for part in re.split(r"[;,]", cs[repo_i]):
+            part = part.strip()
+            if not part:
+                continue
+            if re.match(r"^[\w.-]+@[\w.-]+:", part) or "://" in part:  # SSH/URL з @ - не шлях@ref; PP-ref дає FAIL
+                items.append((part, None))
+                continue
+            r, _, ref = part.rpartition("@") if "@" in part else (part, "", "")
+            items.append((r.strip(), (ref.strip() or col_ref) or None))
+        res[cs[0]] = items
+    return res
 
 
 def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_names=(), no_fathom=False):
     out = []
 
-    def add(i, ok, msg=""):
-        out.append({"id": i, "status": "PASS" if ok else "FAIL", "msg": "" if ok else msg})
+    def add(i, ok, msg="", warn=False):
+        out.append({"id": i, "status": "PASS" if ok else ("WARN" if warn else "FAIL"), "msg": "" if ok else msg})
 
     text = Path(doc).read_text(encoding="utf-8")
     secs = sections(text)
@@ -215,6 +256,67 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
     add("PP-repo", not repo_bad, "; ".join(repo_bad[:5]))
     add("PP-ver", not ver_bad, "; ".join(ver_bad[:5]))
 
+    # PP-ref: коміт repo:<шлях>@<sha> має лежати на ref рядка sources.md, а без ref - на гілці за замовчуванням.
+    # Клон береться за репозиторієм рядка (repo:<alias>/...); ref шукається серед <ref>, origin/<ref>, refs/remotes/origin/<ref>, refs/tags/<ref>.
+    ref_bad, ref_warn = [], []
+    try:
+        srepos = sources_repos(sources)
+    except OSError:
+        srepos = {}
+    doc_repos = [(m.group(1), m.group(2)) for r in mod_rows for m in re.finditer(r"repo:(\S+?)@([0-9a-fA-F]{4,40})", " | ".join(r))]
+    multi = len(repos) > 1
+    main_root = repos.get("") or next(iter(repos.values()), ".")
+    dflt = {}
+
+    def default_ref(root):
+        if root not in dflt:
+            o = git(root, "symbolic-ref", "-q", "refs/remotes/origin/HEAD")
+            h = git(root, "symbolic-ref", "-q", "HEAD")
+            dflt[root] = o.stdout.strip() if o.returncode == 0 and o.stdout.strip() else ("HEAD" if h.returncode == 0 else None)
+        return dflt[root]
+
+    for code, items in srepos.items():
+        for rpath, ref in items:
+            if not rpath:
+                continue
+            if "@" in rpath:
+                ref_bad.append(f"{code}: SSH-URL/«@» у репозиторії не допускається (лише шлях або owner/repo)")
+                continue
+            root, rel, aliased = main_root, rpath, False
+            for alias, path in repos.items():
+                if alias and rpath.startswith(alias + "/"):
+                    root, rel, aliased = path, rpath[len(alias) + 1:], True
+            roots = [root] if aliased or not multi else [root] + [v for v in repos.values() if v != root]
+            target = None
+            if ref:
+                for rt in roots:
+                    for cand in (ref, f"origin/{ref}", f"refs/remotes/origin/{ref}", f"refs/tags/{ref}"):
+                        if git(rt, "rev-parse", "--verify", "-q", f"{cand}^{{commit}}").returncode == 0:
+                            target = (rt, cand)
+                            break
+                    if target:
+                        break
+                if not target:
+                    (ref_warn if multi and not aliased else ref_bad).append(
+                        f"{code}: ref {ref} не знайдено в клоні" + (" (репозиторій не зіставлено з --repo)" if multi and not aliased else ""))
+                    continue
+            else:
+                dr = default_ref(root)
+                if dr is None:
+                    ref_warn.append(f"{code}: гілку за замовчуванням не визначено, перевірку пропущено")
+                    continue
+                target = (root, dr)
+            troot, tref = target
+            for rp, sha in doc_repos:
+                drt, drel = repo_for(rp)
+                if drt != troot and not (drt is None and troot == main_root):
+                    continue
+                if not (drel == rel or drel.startswith(rel.rstrip("/") + "/") or rel.startswith(drel.rstrip("/") + "/")):
+                    continue
+                if git(troot, "merge-base", "--is-ancestor", sha, tref).returncode != 0:
+                    ref_bad.append(f"{rp}@{sha} не на " + (f"ref {ref}" if ref else "гілці за замовчуванням"))
+    add("PP-ref", not ref_bad and not ref_warn, "; ".join((ref_bad + ref_warn)[:5]), warn=not ref_bad)
+
     rep = secs.get("Що вже робили", "").split("### Повторювані вимоги")
     rep_bad = [r[0] for r in rows(rep[1])
                if "немає даних" not in " ".join(r).lower() and len(set(CODE.findall(r[1] if len(r) > 1 else ""))) < 2] if len(rep) > 1 else []
@@ -243,7 +345,7 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
             "; ".join(filter(None, ["зайве: " + ", ".join(extra[:5]) if extra else "",
                                     "_input/ змінено/додано до git: " + ", ".join(inp[:3]) if inp else ""])))
     stray = stray_inputs(sources)
-    add("PP-input", not stray, "сторонні файли в _input/ (агент не прибирає; waiting_human): " + ", ".join(stray[:3]))
+    add("PP-input", not stray, "невідомі файли/теки в _input/ (README.md, crm.csv дозволені; агент не прибирає; waiting_human): " + ", ".join(stray[:3]))
     return out
 
 
@@ -298,6 +400,61 @@ def self_test():
         if [o for o in run() if o["id"] == "PP-input"][0]["status"] != "FAIL":
             errs.append("PP-input має ловити видимий сторонній файл")
         (inp / "backup.txt").unlink()
+        # сусідні вхідні файли кроків (crm.csv, README.md) не є помилкою
+        (inp / "crm.csv").write_text("x"); (inp / "README.md").write_text("x")
+        if [o for o in run() if o["id"] == "PP-input"][0]["status"] != "PASS":
+            errs.append("crm.csv і README.md у _input/ не мають давати FAIL PP-input")
+        (inp / "crm.csv").unlink(); (inp / "README.md").unlink()
+        # @ref: sha на ref -> PASS; sha не з ref -> FAIL
+        sh("branch", "feat"); sh("checkout", "-q", "feat")
+        (d / "odoo_addons/td_edge/x.txt").write_text("x"); sh("add", "-A"); sh("commit", "-qm", "feat")
+        sha_feat = sh("rev-parse", "--short", "HEAD").stdout.strip()
+        sh("checkout", "-q", "-")
+        (d / "odoo_addons/td_edge/y.txt").write_text("y"); sh("add", "-A"); sh("commit", "-qm", "main")
+        sha_main = sh("rev-parse", "--short", "HEAD").stdout.strip()
+        src_txt = (inp / "sources.md").read_text(encoding="utf-8")
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "odoo_addons/td_edge@feat |"), encoding="utf-8")
+        doc.write_text(tpl.replace("abc1234", sha_main), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-ref"][0]["status"] != "FAIL":
+            errs.append("PP-ref має ловити sha, якого немає на ref")
+        doc.write_text(tpl.replace("abc1234", sha_feat), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-ref"][0]["status"] != "PASS":
+            errs.append("PP-ref: sha на ref має давати PASS")
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "odoo_addons/td_edge@nope |"), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-ref"][0]["status"] != "FAIL":
+            errs.append("PP-ref: неіснуючий ref має давати FAIL")
+        # remote-only ref (origin/feat без локальної гілки) -> PASS; без ref sha з іншої гілки -> FAIL
+        cl = d.parent / (d.name + "_clone")
+        subprocess.run(["git", "clone", "-q", str(d), str(cl)], capture_output=True)
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "odoo_addons/td_edge@feat |"), encoding="utf-8")
+        doc.write_text(tpl.replace("abc1234", sha_feat), encoding="utf-8")
+        run_cl = lambda r: [o for o in run_checks(str(doc), str(inp / "sources.md"), r, scope_files=rel) if o["id"] == "PP-ref"][0]["status"]
+        if run_cl({"": str(cl)}) != "PASS":
+            errs.append("PP-ref: ref, що є лише як origin/<ref> у клоні, має давати PASS")
+        # кілька репозиторіїв: ref лише у другому (alias)
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "two/odoo_addons/td_edge@feat |"), encoding="utf-8")
+        doc.write_text(tpl.replace("abc1234", sha_feat).replace("repo:odoo_addons/td_edge", "repo:two/odoo_addons/td_edge"), encoding="utf-8")
+        if run_cl({"": str(d / "odoo_addons"), "two": str(cl)}) != "PASS":
+            errs.append("PP-ref: ref лише у репо з alias має давати PASS")
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "other/x@feat |"), encoding="utf-8")
+        if run_cl({"": str(d / "odoo_addons"), "two": str(cl)}) == "FAIL":
+            errs.append("PP-ref: незіставлений репозиторій має давати WARN, не FAIL")
+        (inp / "sources.md").write_text(src_txt.replace("odoo_addons/td_edge |", "git@example.invalid:o/r |"), encoding="utf-8")
+        if run_cl({"": str(cl)}) != "FAIL":
+            errs.append("PP-ref: SSH-URL з @ має давати FAIL")
+        # без ref: sha з іншої гілки (не default) -> FAIL
+        (inp / "sources.md").write_text(src_txt, encoding="utf-8")
+        doc.write_text(tpl.replace("abc1234", sha_feat), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-ref"][0]["status"] != "FAIL":
+            errs.append("PP-ref без ref має ловити sha не з гілки за замовчуванням")
+        doc.write_text(tpl.replace("abc1234", sha), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-ref"][0]["status"] != "PASS":
+            errs.append("PP-ref без ref: sha на гілці за замовчуванням має давати PASS")
+        # тека в _input/ -> PP-input FAIL
+        (inp / "subdir").mkdir()
+        if [o for o in run() if o["id"] == "PP-input"][0]["status"] != "FAIL":
+            errs.append("PP-input має ловити теку")
+        (inp / "subdir").rmdir()
         # fathom: --no-fathom і рядок з кількома кодами без пар
         base_doc = tpl.replace("abc1234", sha)
         if [o for o in run_checks(str(doc), str(inp / "sources.md"), {"": str(d)}, no_fathom=True) if o["id"] == "PP-mode"][0]["status"] != "FAIL":
