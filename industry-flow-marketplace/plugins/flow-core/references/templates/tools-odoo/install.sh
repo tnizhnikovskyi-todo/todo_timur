@@ -1,12 +1,66 @@
 #!/usr/bin/env bash
 # Установка модулів у тестову базу. Використання:
-#   install.sh <db> <module1,module2,...> [--update]
+#   install.sh <db> <module1,module2,...> [--update] [--addons-src <dir>] [--tag <git-тег>]
 # За замовчуванням -i (install); з --update — -u (оновлення вже встановлених).
+# --tag: HEAD репо $PKG_REPO має збігатися з тегом (як у clean_db.sh), інакше FLOW_STOP. З --addons-src додатково: SRC усередині $PKG_REPO
+#   і без незакомічених/невідстежуваних змін (інакше доставили б не код тегу).
+# --addons-src: доставка модулів (підкаталоги з __manifest__.py, напр. package/addons) у каталог
+#   $ODOO_DELIVERY_DIR, який ОБОВ'ЯЗКОВО є одним із шляхів ODOO_ADDONS_PATH тестової бази. Без ODOO_DELIVERY_DIR — FLOW_STOP.
+#   Каталог доставки має бути ОКРЕМИМ (не стандартні addons Odoo): модуль, що вже є в ньому й не в маркері .flow-delivery, не затирається.
+#   Доставка потрібна ДО -i: інакше Odoo не бачить модуль (перевіряє require_installed нижче).
 source "$(dirname "$0")/_common.sh"
 DB="${1:-}"; MODS="${2:-}"; shift 2 || true
-MODE="-i"
-[[ "${1:-}" == "--update" ]] && MODE="-u"
+MODE="-i"; SRC=""; TAG=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --update) MODE="-u"; shift ;;
+    --addons-src) SRC="${2:?--addons-src потребує значення}"; shift 2 ;;
+    --tag) TAG="${2:?--tag потребує значення}"; shift 2 ;;
+    *) echo "FLOW_STOP: невідомий аргумент '$1'" >&2; exit 2 ;;
+  esac
+done
 guard_db "$DB"
+if [[ -n "$TAG" ]]; then
+  [[ -n "${PKG_REPO:-}" ]] || { echo "FLOW_STOP: для --tag задайте PKG_REPO" >&2; exit 2; }
+  HEAD_SHA="$(git -C "$PKG_REPO" rev-parse HEAD)" || { echo "FLOW_STOP: git rev-parse HEAD не вдався" >&2; exit 2; }
+  TAG_SHA="$(git -C "$PKG_REPO" rev-parse "$TAG^{commit}")" || { echo "FLOW_STOP: тег $TAG не знайдено" >&2; exit 2; }
+  [[ "$HEAD_SHA" == "$TAG_SHA" ]] || { echo "FLOW_STOP: HEAD не збігається з тегом $TAG" >&2; exit 2; }
+  if [[ -n "$SRC" ]]; then  # --tag гарантує код тегу лише якщо SRC у репо й без незакомічених змін
+    [[ -d "$SRC" ]] || { echo "FLOW_STOP: немає каталогу --addons-src '$SRC'" >&2; exit 2; }
+    REPO_R="$(cd "$PKG_REPO" && pwd -P)"; SRC_R="$(cd "$SRC" && pwd -P)"
+    case "$SRC_R/" in
+      "$REPO_R"/*) ;;
+      *) echo "FLOW_STOP: --addons-src поза \$PKG_REPO: з --tag код тегу не гарантовано" >&2; exit 2 ;;
+    esac
+    DIRTY="$(git -C "$PKG_REPO" status --porcelain --untracked-files=all -- "$SRC_R")" || { echo "FLOW_STOP: git status не вдався" >&2; exit 2; }
+    [[ -z "$DIRTY" ]] || { echo "FLOW_STOP: у --addons-src є незакомічені/невідстежувані зміни (код не збігається з тегом $TAG)" >&2; exit 2; }
+  fi
+fi
+if [[ -n "$SRC" ]]; then
+  DEST="${ODOO_DELIVERY_DIR:-}"
+  [[ -d "$SRC" ]] || { echo "FLOW_STOP: немає каталогу --addons-src '$SRC'" >&2; exit 2; }
+  [[ -n "$DEST" && "$DEST" != "/" && -d "$DEST" ]] || { echo "FLOW_STOP: задайте ODOO_DELIVERY_DIR (існуючий каталог тестової бази)" >&2; exit 2; }
+  DEST="$(cd "$DEST" && pwd)"
+  case ",${ODOO_ADDONS_PATH:-}," in
+    *",$DEST,"*) ;;
+    *) echo "FLOW_STOP: $DEST не входить до ODOO_ADDONS_PATH (повні шляхи через кому)" >&2; exit 2 ;;
+  esac
+  MARK="$DEST/.flow-delivery"  # список модулів, доставлених цим скриптом раніше
+  [[ ! -f "$DEST/base/__manifest__.py" ]] || { echo "FLOW_STOP: $DEST схожий на каталог стандартних addons Odoo (є base); потрібен окремий каталог доставки" >&2; exit 2; }
+  for d in "$SRC"/*/; do
+    [[ -f "$d/__manifest__.py" ]] || continue
+    n="$(basename "$d")"
+    if [[ -e "$DEST/$n" ]] && ! grep -qxF -- "$n" "$MARK" 2>/dev/null; then
+      echo "FLOW_STOP: $DEST/$n існує й не доставлявся цим скриптом (немає в .flow-delivery); не затираю" >&2; exit 2
+    fi
+  done
+  for d in "$SRC"/*/; do
+    [[ -f "$d/__manifest__.py" ]] || continue
+    n="$(basename "$d")"
+    [[ "$n" =~ ^[a-z0-9_]+$ ]] || { echo "FLOW_STOP: недопустиме ім'я модуля '$n'" >&2; exit 2; }
+    rm -rf -- "${DEST:?}/$n"; cp -R "$d" "$DEST/$n"; grep -qxF -- "$n" "$MARK" 2>/dev/null || echo "$n" >> "$MARK"; echo "delivered: $n -> $DEST"
+  done
+fi
 [[ -n "$MODS" ]] || { echo "Не задано модулі" >&2; exit 2; }
 validate_mods "$MODS"
 odoo_args

@@ -18,7 +18,7 @@ description: >
 параметр, а не константа. Агент генерує `manifest.yaml`, `vp-map.yaml`, `data/NN_<область>.yaml` і **сам** застосовує їх у
 чисту тестову базу пакета через `odoo-mcp` (`references/apply-semantics.md`). **Версія 0.1: скриптів `install.sh`,
 `apply.py`, `validate.py`, `check_config.py` немає -- власних не створювати.** Є лише контракт майбутніх скриптів
-(`references/config-package-format.md`); `install-one-command: N/A (скриптів немає)`, `maturity 1`. Усі перевірки `CFG-*`
+(`references/config-package-format.md`); `install-one-command: N/A (скриптів немає; рішення q29 -- у 0.1 замість нього покрокова інструкція в `install-log.md`)`, `maturity 1`. Усі перевірки `CFG-*`
 виконує агент за таблицею нижче.
 
 Скіл **не вигадує**: модулі, поля й моделі Odoo -- лише ті, що підтверджені чистою базою (`ir.module.module`,
@@ -127,7 +127,7 @@ Studio) -> `manual: true` з причиною.
 
 ## Крок 5. Вендоринг «готове»
 Код у `package/addons/<модуль>/` за `references/vendoring.md`. Джерело (URL, коміт) і ліцензія мають бути **у вході/ALLOCATION**;
-не задані або несумісні -> не вендорити, `escalated_to: Тімлід` (Юрист -- за ліцензію). Далі `boost:odoo19-lint`.
+не задані або ліцензія не з переліку q42 (MIT, BSD, Apache-2.0, LGPL-3; AGPL/GPL -- ні) -> не вендорити, `escalated_to: Тімлід` (Юрист -- за ліцензію). Далі `boost:odoo19-lint`.
 
 ## Крок 6. Дані й vp-map
 Кожний пункт CONFIG.md -> пункт даних за `references/config-kinds-odoo19.md`; схема пункту й **формат якоря** --
@@ -168,11 +168,11 @@ config-log. Даних у базі немає (установка не відб�
 | `CFG-ac-trace` | пункт без AC з `AC_cfg`; AC з `AC_cfg` без пункту й без `manual` |
 | `CFG-xmlid` | числовий id, `ref` на неіснуючий xml-id, власний xml-id поза `td_config.` |
 | `CFG-schema` | `answers.example.yaml` або профіль не відповідає схемі (ключі, типи, значення з переліку) |
-| `CFG-install` | застосування в тестову базу (модулі, дані, settings) завершилось помилкою; `install-one-command` -- завжди `N/A` у 0.1, окремий рядок |
+| `CFG-install` | розділ «Покрокова установка» в `install-log.md` порожній або не має щонайменше одного рядка на кожен модуль і кожен `data/NN_*.yaml`; застосування в тестову базу (модулі, дані, settings) завершилось помилкою; `install-one-command` -- завжди `N/A` у 0.1, окремий рядок |
 | `CFG-idempotent` | 2-й прохід-порівняння за xml-id: знайдено записи, яких бракує або що відрізняються (мало б `created=0, updated=0`); N/A лише при `fix` без установки |
 | `CFG-readback` | значення VP у базі != `answers.example.yaml` після `transform`; обов'язковий; `MANUAL` лише для пунктів `manual: true`; пункт `settings` без read-back (`default_get` або якір `related`) -- FAIL, не MANUAL |
 | `CFG-td-isolation` | у даних є моделі/поля `td_*` (дозволено лише `td_param`) |
-| `CFG-vendored` | у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом |
+| `CFG-vendored` | у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом, або ліцензія поза переліком q42 (MIT, BSD, Apache-2.0, LGPL-3) |
 | `CFG-checks-closed` | правка A-12 з CHECKS.md без рядка «закрито: файл/пункт» |
 | `CFG-scope` | diff поза `package/config/**` і `package/addons/<готове>/**` |
 | `CFG-secrets` | збіг із шаблоном secret з `pii-patterns.md` у файлах чи лозі |
@@ -181,7 +181,7 @@ config-log. Даних у базі немає (установка не відб�
 ### Статуси checks -> result
 | Стан | result |
 |---|---|
-| усі `CFG-*`, `lint` PASS; `config-review` APPROVE; `MANUAL` лише для пунктів `manual: true`; `install-one-command: N/A` | `done`, `maturity 1`, у `memo` обов'язковий пункт «install-one-command N/A: скриптів немає» і перелік MANUAL для Тімліда |
+| усі `CFG-*`, `lint` PASS; `config-review` APPROVE; `MANUAL` лише для пунктів `manual: true`; `install-one-command: N/A` | `done`, `maturity 1`, у `memo` обов'язковий пункт «install-one-command N/A: скриптів немає, замість нього покрокова інструкція (q29)» і перелік MANUAL для Тімліда |
 | FAIL, який виправляється даними | виправити й перепровірити в цій спробі; не здавати з FAIL |
 | FAIL лишився після виправлення / `config-review` не APPROVE | `escalated`, `escalated_to: Тімлід`; після 3 спроб -- так само |
 | причина в ALLOCATION або схемі | `escalated`, `escalated_to: Архітектор рішення`, у `memo` «повернення на A-10 / A-09 -- рішення людини» |
@@ -195,7 +195,8 @@ config-log. Даних у базі немає (установка не відб�
 Дані конфіг-пакета застосовано в чисту тестову базу пакета й вони проходять read-back та `config-review`; кожна VP-xx треку
 стандарт/конфіг/готове -- параметр CONFIG.md і даних, не константа; VP треку «код» позначені «реалізує модуль td_* (A-11)» і
 пишуться в `td_param`; «Модулі до установки» -- усі стандарт/конфіг/«готове в складі» в порядку залежностей, до налаштувань;
-правки A-12 з CHECKS.md закриті. «Однією командою» в 0.1 не досяжне -- `install-one-command: N/A`, `maturity 1`.
+правки A-12 з CHECKS.md закриті. «Однією командою» в 0.1 не досяжне -- `install-one-command: N/A`, `maturity 1`; покрокова
+інструкція установки (розділ «Покрокова установка» `install-log.md`) обов'язкова (q29).
 
 ### Дані для звіту (повертає скіл, не постить)
 `result` за таблицею вище; `checks[]` -- ID з PASS/FAIL/MANUAL/N/A; `data_sources`: `repo:package/ALLOCATION.md@<sha>`,
@@ -204,7 +205,7 @@ config-log. Даних у базі немає (установка не відб�
 Невпевнений: пункти manual/MANUAL (N), format-decision WARN, td_param WARN, розбіжності CONFIG<->ALLOCATION.
 Що змінилось: режим, модулі/VP/пункти даних +/-.   Де ризик: порядок модулів, побічні дії execute() налаштувань.
 Що перевірити: Тімлід -- лог установки й ідемпотентності, трасування AC, повнота й порядок модулів, закриті правки A-14.
-install-one-command N/A: скриптів немає (maturity 1).
+install-one-command N/A: скриптів немає (maturity 1); покрокова інструкція -- у install-log.md (q29).
 ```
 
 ## Ліміти й ескалація
@@ -239,10 +240,10 @@ config-review.
   §3.5 і в allow-list `DATA_POLICY.md`.
 - Додати рядок A-12 (`build|fix|new-version|validate`) у таблицю `params.mode` `flow-core/references/naryad-format.md`.
 - Ключ `td_param` (`td_<пакет>.vp_xx`) узгодити з A-11; A-11 читає той самий ключ.
-- Еталонні скрипти (`apply.py`, `validate.py`, `install.sh`) -- беклог AI-інженера; C-03 до їх появи конфіг не ставить.
-- Рішення людини до затвердження: чи допустимий `done` A-12 без install-one-command у версії 0.1 (картка вимагає «однією командою»; поки не зафіксовано, розбіжність відкрита).
+- Еталонні скрипти (`apply.py`, `validate.py`, `install.sh`) -- шаблони є в `flow-core/references/templates/tools-odoo/` (q17), але в `tools/odoo/` їх ставить C-00 після прогону на тестовій базі; формат `--answers` ними НЕ реалізовано, сигнатури відрізняються від контракту (відкрите питання до людини: перейменувати еталони чи змінити контракт); C-03 до їх появи конфіг не ставить.
+- Рішення q29: у версії 0.1 `done` A-12 допустимий без install-one-command; замість нього -- покрокова інструкція установки в `install-log.md` (розділ «Покрокова установка»). Картку A-12 («однією командою») узгодити з цим рішенням (власник картки); до появи скриптів C-00 вимога «однією командою» для A-12 не діє. R-09 у A-17 (`package-release-builder`) цим рішенням не змінено.
 - Узгодити написання `test-pkg-<пакет>` (цей скіл) і `test-pkg-<пакет>` (A-13/A-14); клас додати в `data-and-connections.md` §3.5 -- файл не цього скіла.
 - Штатний механізм доставки `package/addons` гілки кроку в тестову базу пакета (C-00 чи CI) -- рішення AI-інженера; до того кожен пакет із «готовим» проходить через `waiting_human`.
 - Підтвердити через `boost:source-check`, що `default_get` на `res.config.settings` повертає лише `default_*`, `group_*`, `module_*`, `config_parameter` (Odoo 19).
 - Дозвіл агенту встановлювати модулі (`button_immediate_install`) у тестовій базі пакета -- підтвердити в C-05.
-- Список сумісних ліцензій для вендорингу погоджує Юрист.
+- Рішення q42: вендорити можна лише модулі з пермісивними ліцензіями (MIT, BSD, Apache-2.0) і LGPL-3; AGPL/GPL -- ні. Рідкісні ліцензії -- на розгляд Юристу.

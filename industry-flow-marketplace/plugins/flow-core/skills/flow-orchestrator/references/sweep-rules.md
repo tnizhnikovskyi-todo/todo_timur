@@ -10,7 +10,7 @@
 ## 2. Оренди й невзяті задачі
 - `stage.in_progress`, `task.lease_until` минув (`timeoutMin` x `lease_factor`) → використана спроба: `attempt+1`; ≤ `maxAttempts` → `stage.queue`, оренда знята, нове з новим ключем ідемпотентності; інакше — ескалація (крок 9).
 - `stage.queue` понад `unclaimed_after_minutes` без взяття (спроба не рахується): `any`/`central` → виконавець `central`; `human` → активність ролі `raciR`.
-- `personal` у не-центрального агента → `stage.queue` з `executor: central`, запис у звіт.
+- `personal` у не-центрального агента → `stage.queue` з `executor: central`, запис у звіт; виняток q01: B-13 і B-08a на `test-<клієнт>` — `executor: any`, не переназначати.
 
 ## 3. Прострочені гейти й людські кроки
 Понад `humanSla` → нагадування й активність `raciA` (якщо відкритої немає). Роль гейта = `raciA` і понад 2 x `humanSla` → «заблоковано рішенням <роль>»,
@@ -19,4 +19,4 @@
 ## 4. Періодичні кроки (`dispatcher.yaml` → `periodic`)
 - 1-й робочий день місяця: D-01 (`params.mode: collect` по клієнту «на супроводі» з `params.upload_path`; без вивантаження крок завершується `waiting_human` («вивантаження метрик від Тімліда»); клієнтів немає — кроки не ставляться) → B-01 (б) → D-02(а). D-02(а) — коли D-01 готовий (або маркер) і B-01(б) завершено (готово, ескалація або «лідів немає»). Відсутність `funnel-<YYYY-MM>.md` не блокує; позначку, яку ставить сам диспетчер, не чекати.
 - B-10 щомісяця на клієнта «на супроводі» (`params.mode: sla-month`, `period`); B-09 щодня на клієнта в hypercare (`intake`; `hypercare-close` за 14 днів); C-04 щотижня — лише якщо на base є `evals/INDEX.md`; інакше не ставити, позначка «евали не ініціалізовано» (init ставить лише AI-інженер).
-- Кроки з `per_unit_steps`: ліміти x N, `units_N` у звіт. Прод-підключень немає: `prod-*` в `odoo_connections` заборонено.
+- Кроки з `per_unit_steps`: ліміти x N, `units_N` у звіт. Прод-підключень немає: `prod-*` в `odoo_connections` заборонено. **Єдиний виняток (q37):** `prod-ro-<клієнт>` лише в наряді `flow-client-delivery:client-help-bot` (`skill_ref[0]`, `purpose: читання (client-help-bot)`), лише `odoo_search_read`/`odoo_get_fields`; такий наряд має `client_data: personal`, `executor: central` (інакше sweep відхиляє); рядки «ODOO:» на `prod-ro-*` відхиляються; для будь-якого іншого скіла `prod-ro-*` заборонено.

@@ -14,6 +14,7 @@
         "Значення, що залежать від VP-02/VP-03, у data/*.yaml задані як {{VP-02}}/{{VP-03}}, а не літералом",
         "У файлах немає числових id (наприклад stock.warehouse id=1) і немає посилань на моделі td.*",
         "Усі odoo_* виклики мають явний connection_id тестової бази test-pkg-furniture; прод/flow не використано для запису",
+        "Розділ «Покрокова установка» в `install-log.md` має рядок на кожен модуль і кожен data/NN_*.yaml (інакше CFG-install не PASS)",
         "Запис у `install-log.md` про install-one-command: N/A з причиною «скриптів немає»; файлів install.sh/apply.py/validate.py не створено",
         "git diff --stat лише в package/config/** і package/addons/ready_x/**",
         "install-log.md має розділ Config-log (пункт, xml-id, значення read-back, статус); у звіті є CFG-idempotent і CFG-readback зі статусом PASS або FAIL (не пропущені)",

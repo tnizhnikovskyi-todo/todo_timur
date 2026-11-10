@@ -21,7 +21,7 @@ git grep -nE "ir\.actions\.report" <тег> -- 'package/addons/td_*'
 ```
 У звіт — xml id і тег, без цифр.
 
-## `package/metrics/key-models.yaml` (веде Власник продукту; питання В-4)
+## `package/metrics/key-models.yaml` (рішення q36: AI-чернетка при релізі; відповідальний -- Власник продукту)
 ```yaml
 version: 1
 models:

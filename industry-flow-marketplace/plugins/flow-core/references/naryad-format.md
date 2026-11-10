@@ -19,11 +19,12 @@ done: "<критерій «Готово, коли» з картки>"
 check: {mode: auto|human|both, how: "<checkHow картки>", audit_every_n: 10}
 limits: {max_attempts: 3, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 120000}   # оренда = timeout_min x lease_factor (odoo-bridge §7)
 human_sla: "2 робочі дні"        # лише для гейтів/людських кроків
-client_data: none|commercial|personal
+client_data: none|commercial|personal   # personal -> executor: central; виняток q01: B-13/B-08a на test-<клієнт> — будь-який агент
 data_rule: "<посилання на розділ DATA_POLICY>"
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}
+  # q37, лише наряд client-help-bot: - {alias: prod-ro-<клієнт>, purpose: читання (client-help-bot)}
 repo: {url: <github>, base_branch: main, branch: flow/<крок>-<scope>-<спроба>}
 attempt: 1                       # ставить оркестратор; збільшується при повторі
 returned_from: null              # код кроку/гейта, що повернув, і текст зауваження
@@ -89,4 +90,4 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 
 
 ## Команди й записи в Odoo, які виконує runner (виконавець їх не має)
-Виконавець (`flow-core:flow-executor`) без Bash і без `odoo_write/create/execute`. Тому: (а) команди скіла — рядок відповіді «КОМАНДИ: …» (для C-04/C-07 дозволено лише `claude plugin eval|list`, `git`, `jq`); (б) виклики запису в Odoo — рядки «ODOO: {tool, connection_id, model, method, args}». Runner виконує їх на кроці 8–9, повертає вивід виконавцю й лише якщо `connection_id` у `odoo_connections` наряду належить класу `test-*`, `test-pkg-*`, `demo-*` чи `emu-*` з `purpose` запису (`data-and-connections.md`); `flow` і будь-який прод — відмова, `escalated`. **Прод-alias (`prod-*`) в `odoo_connections` наряду заборонено без винятків: наряд із ним → відмова, `escalated`; жодних «за рішенням».**
+Виконавець (`flow-core:flow-executor`) без Bash і без `odoo_write/create/execute`. Тому: (а) команди скіла — рядок відповіді «КОМАНДИ: …» (для C-04/C-07 дозволено лише `claude plugin eval|list`, `git`, `jq`); (б) виклики запису в Odoo — рядки «ODOO: {tool, connection_id, model, method, args}». Runner виконує їх на кроці 8–9, повертає вивід виконавцю й лише якщо `connection_id` у `odoo_connections` наряду належить класу `test-*`, `test-pkg-*`, `demo-*` чи `emu-*` з `purpose` запису (`data-and-connections.md`); `flow`, `prod-ro-<клієнт>` і будь-який прод — відмова для рядків «ODOO:», `escalated` (виконавець нічого не пише; `prod-ro-<клієнт>` лише читається самим скілом `client-help-bot` через `odoo_search_read`/`odoo_get_fields`). Рішення q13: записи в `test-*`, `test-pkg-*`, `demo-*`, `emu-*` виконує runner за рядками «ODOO:» і allow-list, окремого агента немає. **Прод-alias (`prod-*`) в `odoo_connections` наряду заборонено; єдиний виняток (q37) — `prod-ro-<клієнт>` у наряді, де `skill_ref[0]` = `flow-client-delivery:client-help-bot` і `purpose: читання (client-help-bot)`; інакше наряд → відмова, `escalated`; жодних «за рішенням».**

@@ -9,6 +9,7 @@
 |---|---|
 | R-01 | `git merge-base --is-ancestor $SHA HEAD && echo PASS` |
 | R-02 | `git diff --name-only $SHA..HEAD \| grep -vxFf allowed.txt` — вивід порожній = PASS; `allowed.txt` з `versioning.md` для режиму |
+| R-17 | `git show HEAD:package/metrics/key-models.yaml` існує (release/odoo-upgrade), кожна модель є в `_name`/`_inherit` у `package/addons/` (`git grep`); немає — повтор |
 | R-03 | `grep -h "'version'" package/addons/td_*/__manifest__.py` — усі `19.0.X.Y` (odoo-upgrade `<N>.0.X.Y`), X.Y = ACCEPTANCE |
 | R-04 | `git ls-remote --tags origin "refs/tags/$TAG"` — порожньо = PASS |
 | R-05 | множина `ls package/addons` = перелік комплекту ACCEPTANCE = таблиця «Склад пакета» (`flow-core:flow-autocheck`) |

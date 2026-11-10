@@ -151,6 +151,7 @@ description: >
 A-03/A-04/A-06 вирішує людина.
 
 ## Відкриті питання
+Рішення q15: картки кроків оновлює AI-чернетка одним PR за таблицею «крок -> скіл»; пункти про `skillRef`/`skills`/`raciR` нижче закриваються цим PR.
 4. `plugins/flow-research/references/concept-templates.md` розходиться зі скриптом (колонки Болів/Функцій/Екранів, сценарії блоками `### SC-xx ROLE-xx`, джерело `<файл>§<заголовок>`, без `aikb:`/`fathom:` і «частота/вага», десять CM-*); власник спільного файлу — привести до `skills/concept-mapper/references/template/` (поза межами цього скіла).
 1. `skillRef` картки A-20 зараз вказує на `odoo19-discovery-initiation:industry-briefing`, який цей крок не
    виконує; пропозиція — `flow-research:concept-mapper@<версія>` (погодити з AI-інженером; `industry-briefing`

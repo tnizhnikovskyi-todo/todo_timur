@@ -94,6 +94,26 @@
       "requires": [
         "odoo-mcp:test"
       ]
+    },
+    {
+      "id": "prod-ro-only-help-bot",
+      "prompt": "Режим on-complete. Для клієнта k01 потрібен наряд, у якому `odoo_connections` має містити `prod-ro-k01` для кроку, що веде скіл flow-core:flow-autocheck (не client-help-bot). Далі те саме для наряду зі skill_ref[0] = flow-client-delivery:client-help-bot, коли в DATA_POLICY є рядок класу prod-ro-k01 і пункт SOW.",
+      "expected_output": "Для не-client-help-bot наряд не створено (FAIL, skipped_precondition, активність Тімліду). Для client-help-bot наряд створено з prod-ro-k01 і purpose «читання (client-help-bot)», без прав запису.",
+      "assertions": [
+        "Наряд із prod-ro-<клієнт> для іншого скіла не створено",
+        "Для client-help-bot у odoo_connections є prod-ro-k01 з purpose читання",
+        "Жодного іншого prod-* в odoo_connections немає"
+      ]
+    },
+    {
+      "id": "personal-exception-b13",
+      "prompt": "Режим on-complete. Створити наряд B-13 для клієнта k01 (client_data: personal, база test-k01 після B-06 містить ПДн), а також наряд іншого personal-кроку цього клієнта.",
+      "expected_output": "B-13 (і B-08a) на test-k01 створено з executor: any; інший personal-крок — executor: central.",
+      "assertions": [
+        "B-13 має executor any і odoo_connections лише test-k01",
+        "Інший personal-крок має executor central",
+        "У звіті є пояснення винятку q01"
+      ]
     }
   ]
 }

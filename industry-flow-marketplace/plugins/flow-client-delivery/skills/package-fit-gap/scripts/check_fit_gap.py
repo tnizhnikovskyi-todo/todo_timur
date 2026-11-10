@@ -70,7 +70,7 @@ def main():
     else:
         sig = re.findall(r"(?im)^\s*підпис[^\n]*?\b(20\d{2}-\d{2}-\d{2}|\d{2}\.\d{2}\.20\d{2})", ag)
         add("FG-agreement", "FAIL" if len(sig) < 2 else "MANUAL",
-            "менше двох позначок підпису з датами" if len(sig) < 2 else "дві позначки з датами є; пункт про AI — вручну за references/agreement-check.md")
+            "менше двох позначок підпису з датами" if len(sig) < 2 else "дві позначки з датами є; стадія угоди в CRM (q10, канал — відкрите питання) і пункт про AI — вручну за references/agreement-check.md")
     # таблиця Вимоги
     hdr, rows = table(section(fg, "Вимоги") or "")
     col = lambda n: next((i for i, h in enumerate(hdr) if h.lower().startswith(n)), None)

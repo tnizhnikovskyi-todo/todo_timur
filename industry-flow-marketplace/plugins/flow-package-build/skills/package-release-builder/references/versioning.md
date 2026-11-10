@@ -1,5 +1,7 @@
 # Версіонування, SHA і дозволений diff
 
+Рішення q19: версія модулів `19.0.X.Y`, тег `package/vX.Y`; суфікс `-odoo<N>` -- лише для гілок і тегів переходу на нову мажорну Odoo (режим `odoo-upgrade`).
+
 ## Режими
 | Параметр | `release` = `params.mode: перша` (A-17 -> A-18) | `patch` = `hotfix` (A-19 -> A-18) | `odoo-upgrade` = `нова-версія` (D-03 -> A-17 -> A-18) |
 |---|---|---|---|
@@ -7,14 +9,14 @@
 | Номер версії з | `ACCEPTANCE.md` | `hotfix/vX.Y.Z.md` + попередній тег `package/vX.Y` | `ACCEPTANCE.md` + `upgrade-<версія>.md` |
 | База гілки (створює runner) | `inputs[ACCEPTANCE.md].sha` | SHA APPROVE з `CHECKS.md` | `inputs[ACCEPTANCE.md].sha` |
 | База SHA для R-01/R-02 | SHA ревізії стенда з ACCEPTANCE | SHA APPROVE | SHA ревізії з ACCEPTANCE |
-| Дозволений diff | сім файлів (нижче) | лише `package/CHANGELOG.md`, `package/templates/CHANGELOG.md` | сім файлів |
+| Дозволений diff | вісім файлів (нижче) | лише `package/CHANGELOG.md`, `package/templates/CHANGELOG.md` | вісім файлів |
 | `version` td_* | `19.0.X.Y` | не змінюється (Z лише в тегу) | `<N>.0.X.Y` |
 | Додаткові розділи CHANGELOG | - | «Виправлено (hotfix)» (версії клієнтів ідентифікаторами з hotfix.md) | «Сумісність з Odoo» |
 | ACCEPTANCE / A-17 | обов'язково | не застосовується | обов'язково |
 | Тест оновлення (R-11) | з попереднього тега (`git.prev_tag`) | з `vX.Y` | не застосовується: `-u` не мігрує БД між мажорними версіями Odoo; міграція — `upgrade-<версія>.md` (D-03), тут лише читається її результат |
 | «Міграція з попереднього тегу» | R-11 | R-11 | посилання на звіт D-03 + установка в чисту базу нової Odoo (R-09/R-10) |
 
-## Сім дозволених файлів (release, odoo-upgrade)
+## Вісім дозволених файлів (release, odoo-upgrade)
 Різниця `<SHA ревізії>..HEAD` може містити лише:
 1. `package/CHANGELOG.md`
 2. `package/templates/CHANGELOG.md`
@@ -23,6 +25,7 @@
 5. `package/demo/README.md` (A-15: SHA, режим використання стенда)
 6. `package/demo/scenarios.md` (A-16: SHA у заголовку)
 7. `package/ACCEPTANCE.md` (A-17: підпис)
+8. `package/metrics/key-models.yaml` (рішення q36: AI-чернетка, затверджує Власник продукту; лише `release`/`odoo-upgrade`)
 
 `package/demo/release-defects.md` (дефект пакета) у R-02 не враховується: при `returned` PR не мерджиться. Файли 5-7 з'являються в гілці як нащадки ревізії стенда; вони не є порушенням. Будь-який інший файл
 (`package/addons/`, `config/`, `master-data/`, `templates/answers.yaml`, `questionnaire.md`, `SPEC.md`) — порушення R-02,

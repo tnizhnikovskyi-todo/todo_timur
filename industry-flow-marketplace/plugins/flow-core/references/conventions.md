@@ -20,7 +20,7 @@ done: "<критерій «Готово, коли» з картки>"
 check: {mode: auto|human|both, how: "<checkHow картки>", audit_every_n: 10}
 limits: {max_attempts: 3, timeout_min: 90, cost_limit_usd: 15, context_budget_tokens: 120000}
 human_sla: "2 робочі дні"        # лише для гейтів/людських кроків
-client_data: none|commercial|personal
+client_data: none|commercial|personal   # personal -> executor: central; виняток q01: B-13/B-08a на test-<клієнт>
 data_rule: "<посилання на розділ DATA_POLICY>"
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}

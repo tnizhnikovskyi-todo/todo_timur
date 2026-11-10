@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED = ["Обсяг", "Позиції", "Доробки (для шлюзу)", "Версія пакета", "Редакція Odoo і хостинг", "Ціна", "Терміни",
             "Залежності від клієнта", "Договір супроводу", "Умови оновлення пакета", "Критерії приймання",
-            "Зобов'язання клієнта", "Пункт про AI і дані", "Допущення", "Відповіді анкети", "Додатки", "Підписи"]
+            "Зобов'язання клієнта", "Пункт про AI і дані", "Агрегати використання системи", "Допущення", "Відповіді анкети", "Додатки", "Підписи"]
 MARKS = {"з пакета", "доналаштування", "доробка"}
 TAGRE = re.compile(r"^package/v\d+\.\d+(\.\d+)?$")
 PII = {"email": r"[\w.+-]+@[\w-]+\.[\w.-]+", "phone": r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)",
@@ -138,6 +138,14 @@ def main():
             if n != ncontra + nnotes:
                 miss, msg = ["count"], f"допущень з джерелом fit-gap {n}, у fit-gap {ncontra + nnotes}"
         add("SOW-sections", "FAIL" if miss else "PASS", msg)
+        bk = next((k for k in list(S) + list(sub) if "client-help-bot" in k), None)
+        if bk:
+            bt = norm(S.get(bk) or "\n".join(sub.get(bk) or [])).lower()
+            lack = [w for w in ("згод", "лише читання", "prod-ro-") if w not in bt]
+            add("SOW-bot", "FAIL" if lack else "MANUAL",
+                ("у розділі про бот немає: " + ", ".join(lack)) if lack else "розділ є з умовами; чи є домовленість у наряді (q37) — вручну")
+        else:
+            add("SOW-bot", "MANUAL", "розділу про бот немає; чи мала бути домовленість у наряді (q37) — вручну")
     else:
         add("SOW-sections", "SKIP", "режим addendum")
 

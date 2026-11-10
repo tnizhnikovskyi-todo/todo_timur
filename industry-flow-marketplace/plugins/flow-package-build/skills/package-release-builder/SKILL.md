@@ -97,9 +97,11 @@ description: >
 
 ## Крок 4. Склад пакета (R-05, R-06)
 Перелік `package/addons/*/__manifest__.py`: td_* і вендорені "готове" — ім'я, version, джерело/коміт з `package/addons/<модуль>/README.md` (A-11; `module-skeleton.md` —
-плановий спільний reference), ліцензія з маніфесту + наявність LICENSE. Звірити множину з комплектом ACCEPTANCE (не збігається
+плановий спільний reference), ліцензія з маніфесту + наявність LICENSE (вендорені — лише MIT/BSD/Apache-2.0/LGPL-3, q42; інша — «Невпевнений» у `memo`, Юрист). Звірити множину з комплектом ACCEPTANCE (не збігається
 — дефект). `depends` кожного td_* має бути в `addons/` або в «Модулі до установки» CONFIG.md. Ліцензія, про сумісність
 якої з політикою пакета немає правила, — не вирішувати: рядок «Невпевнений» у `memo` (Юрист/Архітектор).
+
+Чернетка `package/metrics/key-models.yaml` (рішення q36; режими `release` і `odoo-upgrade`, у `patch` не створюється й не змінюється). Сформувати з `package/addons/*/models/*.py` на ревізії: перелік моделей (`_name`/`_inherit`) за форматом `package/metrics/key-models.yaml` з `flow-package-evolution/skills/package-usage-metrics/references/model-inventory.md`, нових полів не вигадувати; причину (`reason`) брати лише з коду/README модуля, невідоме — «уточнити». Заголовок-коментар: «чернетка AI, затверджує Власник продукту». Файл уже є й не відрізняється — не чіпати; склад затверджує людина в PR.
 
 ## Крок 5. Зміни анкети (R-08)
 Блоки `VP-xx` схеми `answers.yaml` (`questionnaire-builder/references/answers-schema.md`) на попередньому тегу vs ревізії (скрипт —
@@ -192,6 +194,7 @@ description: >
 | R-13 | Кожна несумісна зміна має migrations/ і рядок у CHANGELOG | A-14 -> A-11 |
 | R-14 | Немає даних клієнтів (ЄДРПОУ, +380..., email, назви з CRM) | повтор; у майстер-даних/демо — A-14 -> A-13/A-15 |
 | R-15 | `boost:odoo19-lint` по `package/addons/td_*/` на ревізії | A-14 -> A-11 |
+| R-17 | `package/metrics/key-models.yaml` є (чернетка), моделі є в `package/addons/` | повтор |
 | R-16 | SHA ревізії однаковий у ACCEPTANCE, scenarios.md, README A-15 | ескалація Власнику продукту |
 Команди — `references/release-checks.md`. Без логу CI немає PASS: R-09...R-11 без логу — `NOT_RUN`.
 
@@ -244,4 +247,5 @@ ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEP
 2. Фаза `tag`: runner (14б) виконує `command`, лише якщо `sha` — вершина `base_branch`; потрібна умова «`sha` досяжний з `base_branch` і є merge-комітом затвердженого PR A-18» (до `flow-step-runner`/`flow-map.md`). Також наряд-тег має нести посилання на PR фази release.
 3. Код повернення — з `release-defects.md`; рядок карти A-18 -> A-14 є (`flow-map.md`), але `flow-orchestrator` (рядок про A-18) ще каже «код з CHANGELOG» — виправити на `returned_to` зі звіту (поза цим скілом). Стан «чекає CI» подано як `waiting_human` з `resume.params.ci: pending`; потрібне підтвердження, що оркестратор передає `params.resume` у повторний наряд.
 4. Тест оновлення (R-11): потрібен окремий вхід/job в `ci-pipeline-builder` (`prev_tag` + `instance`) — запит до нього; до появи R-11 = `NOT_RUN`.
+Еталони `install.sh --addons-src --tag` і `validate.py` — `flow-core/references/templates/tools-odoo/` (C-00 ставить у `tools/odoo/`).
 Решта — `references/open-questions.md`.

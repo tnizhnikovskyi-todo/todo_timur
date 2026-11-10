@@ -65,10 +65,10 @@
     {
       "id": "phase1-reconcile-skipped",
       "prompt": "Наряд B-11, params.phase: 1, без params.reconcile, клієнт K-01, усі передумови й CI зелені. Склади upgrade-log.md фази 1.",
-      "expected_output": "Крок звірки конфігу пропущено: у «Чернетка звірки (метадані)» рядок «не виконано: очікує рішення В-7»; runbook-executor не викликано.",
+      "expected_output": "Крок звірки конфігу пропущено: у «Чернетка звірки (метадані)» рядок «не виконано: params.reconcile не задано»; runbook-executor не викликано.",
       "assertions": [
         "runbook-executor не викликано",
-        "У «Чернетка звірки (метадані)» є «не виконано: очікує рішення В-7»",
+        "У «Чернетка звірки (метадані)» є «не виконано: params.reconcile не задано»",
         "Жодного читання ir.config_parameter, res.groups чи конфіг-моделей через odoo-mcp"
       ]
     },

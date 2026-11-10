@@ -125,6 +125,32 @@
         "mock: Gmail MCP (фіксує виклики)"
       ],
       "expected_checks": {}
+    },
+    {
+      "id": "sla-no-calendar-default",
+      "prompt": "Наряд B-10, mode sla-month, period 2026-10, scope client/client-demo-01, executor central. Договір супроводу (фікстура): критична - реакція 1 год, вирішення 2 календарні дні; календар у договорі не вказано. support-log.md має одне критичне звернення, отримане у п'ятницю 17:00. Підготуй місячний звіт SLA.",
+      "expected_output": "Календаря немає -> sla_calc з --calendar 24x7 / calendar-days (q34); у звіті позначка «календар за замовчуванням: календарні дні (q34), договір календаря не задає».",
+      "assertions": [
+        "sla_calc викликано з --calendar 24x7 або --unit calendar-days",
+        "Строк рахується в календарних днях, вихідні не пропускаються",
+        "У звіті є позначка «календар за замовчуванням» із посиланням на q34",
+        "Календар не вигадано (пн-пт 09:00-18:00 не застосовано)"
+      ],
+      "fixtures": "evals/fixtures/sla-month/",
+      "requires": [
+        "mock: Gmail MCP (search_threads, get_thread, create_draft — фіксує виклики)",
+        "mock: odoo-mcp (project.project, connection_id=flow; імена полів з flow/ODOO_SCHEMA.md фікстури)"
+      ],
+      "expected_checks": {
+        "SD-close": "FAIL (INC-103)",
+        "SD-dup": "FAIL (gmail:t-dup)",
+        "SD-protected": "PASS",
+        "SD-d02": "PASS",
+        "SD-report": "PASS після внесення причини INC-102",
+        "SD-sla-source": "PASS",
+        "SD-sla": "PASS",
+        "SD-pii": "PASS"
+      }
     }
   ]
 }
