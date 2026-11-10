@@ -1,6 +1,7 @@
 {
   "name": "flow-research",
   "description": "Дослідження до рішення «будуємо пакет?»: скоринг галузей, аналіз минулих проєктів, вибірка сегмента, мапа концепції, прототип і тест попиту.",
+  "icon": "./.claude-plugin/icon.png",
   "version": "0.1.0",
   "author": {
     "name": "tnizhnikovskyi-todo"
