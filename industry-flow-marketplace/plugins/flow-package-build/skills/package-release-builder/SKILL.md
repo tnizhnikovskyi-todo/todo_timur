@@ -4,7 +4,7 @@ description: >
   Запускай на кроці A-18 флоу галузевого пакета: приймання версії (package/ACCEPTANCE.md, A-17) підписано, або після
   hotfix A-19 з APPROVE гейтів A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує релізну гілку,
   package/CHANGELOG.md, шаблони package/templates/{migration-plan,training}.md, перевіряє установку в чисту базу Odoo 19
-  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N>; дефект пакета
+  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N> (припущення AI, див. open-questions.md п. 8 / В-9); дефект пакета
   пише в package/demo/release-defects.md і повертає в A-14. Тригери — «випусти версію пакета», «реліз пакета», «постав
   тег пакета», «CHANGELOG пакета», «A-18». НЕ для виправлення дефекту (A-19), гейтів (A-14), підпису ACCEPTANCE.md
   (A-17), оновлення в клієнта (B-11), міграції на нову Odoo (D-03), CI (C-03), плану міграції чи навчання (B-06/B-07).
@@ -20,10 +20,10 @@ description: >
 `release-defects.md` і повернення в A-14. Тег ставить лише фаза `tag` після кнопки «Затвердити»
 Власника продукту; AI кнопку не натискає.
 
-Змінні: `VER` = `vX.Y` | `vX.Y.Z` | `vX.Y-odoo<N>`; `TAG` = `package/$VER`; гілка `flow/<крок>-<scope>-<спроба>` (її створює runner).
+Змінні: `VER` = `vX.Y` | `vX.Y.Z` | `vX.Y-odoo<N>`; `TAG` = `package/$VER`; гілка `flow/<крок>-<scope>-<спроба>` (її створює runner). Суфікс `-odoo<N>` у теґу — припущення AI, див. open-questions.md п. 8 / В-9.
 Режими — `params.mode` наряду (`naryad-format.md`), правила — `references/versioning.md`; нижче в тексті внутрішні назви:
 - `release` = `params.mode: перша` (A-17 → `package/vX.Y`); `patch` = `hotfix` (A-19 → `package/vX.Y.Z`);
-  `odoo-upgrade` = `нова-версія` (D-03 → A-17 → `package/vX.Y-odoo<N>`).
+  `odoo-upgrade` = `нова-версія` (D-03 → A-17 → `package/vX.Y-odoo<N>` — припущення AI, див. open-questions.md п. 8 / В-9).
 Фази (`params.phase`): `release` (кроки 0-10, закінчується PR і гейтом) і `tag` (крок 11, другий наряд A-18 після «Затвердити»;
 перехід «гейт A-18 → наряд-тег» — рядок `flow-map.md`).
 

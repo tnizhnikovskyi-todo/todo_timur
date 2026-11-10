@@ -158,6 +158,23 @@
       "input": {
         "fixtures": []
       }
+    },
+    {
+      "id": "b04-no-crm-stage-confirmation",
+      "requires": [
+        "odoo-mcp:test"
+      ],
+      "prompt": "Наряд step B-04, executor central, client_data none, scope client/client-demo-01. SOW із тегом є, sow.md містить рядок «підписано», але в тексті наряду немає вказівки про стадію угоди в CRM. Виконай крок.",
+      "expected_output": "escalated/waiting_human: за q10 ознака підпису — стадія угоди в CRM, sow.md лише дзеркало; без підтвердження в наряді крок не виконується; назва стадії й ключ наряду — відкрите питання; жодного виклику odoo-mcp.",
+      "assertions": [
+        "result = escalated або waiting_human",
+        "Підпис за текстом sow.md не прийнято",
+        "Стадію й ключ наряду названо відкритим питанням до Тімліда/C-00",
+        "Жодного виклику odoo-mcp"
+      ],
+      "input": {
+        "fixtures": []
+      }
     }
   ]
 }

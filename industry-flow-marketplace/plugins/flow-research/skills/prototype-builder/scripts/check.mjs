@@ -49,6 +49,12 @@ const errCnt = (last?.results || []).reduce((n, r) => n + r.errors.length, 0);
 add('VP-scenarios', scs.length && !noSpec.length && !notPass.length && !errCnt,
   `без spec: ${noSpec.join(',') || '—'}; не PASS: ${notPass.join(',') || '—'}; помилок консолі: ${errCnt}`);
 
+// VP-wording (q43)
+const wordHits = ['README.md', 'index.html', 'video/index.md'].filter((f) => {
+  try { return /на\s+Odoo\s*19/i.test(fs.readFileSync(path.join(dir, f), 'utf8')); } catch { return false; }
+});
+add('VP-wording', !wordHits.length, wordHits.length ? '«на Odoo 19» без «базі»: ' + wordHits.join(', ') : '«на Odoo 19» не знайдено');
+
 // VP-video
 const webm = fs.existsSync(path.join(dir, 'video')) ? fs.readdirSync(path.join(dir, 'video')).filter((f) => f.endsWith('.webm')) : [];
 const sizes = webm.map((f) => fs.statSync(path.join(dir, 'video', f)).size);

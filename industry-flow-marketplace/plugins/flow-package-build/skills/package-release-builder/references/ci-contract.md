@@ -8,7 +8,7 @@ workflow C-03 можуть бути ще не створені — тоді ре
 |---|---|
 | `sha` | HEAD гілки runner (`git.head`) — лише коли коміт уже запушено (запуск 2) |
 | `package_tag` | тег-кандидат `$TAG` (`package/$VER`) |
-| `odoo_version` | порожньо (із суфікса `-odoo<N>` тега) |
+| `odoo_version` | порожньо (із суфікса `-odoo<N>` тега; припущення AI, див. open-questions.md п. 8 / В-9) |
 | `client` | порожньо (лише пакет) |
 | `odoo_task` | id задачі Odoo з наряду |
 

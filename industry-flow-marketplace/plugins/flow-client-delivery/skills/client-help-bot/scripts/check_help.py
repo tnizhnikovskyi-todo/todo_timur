@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Автоперевірки бота-помічника (B-07). Вихід: JSON [{id, status, msg}]. Лише stdlib.
 Використання: check_help.py --dir clients/<к>/help-bot [--prod-alias prod-ro-<к>] [--allowlist <prod-read-allowlist.md>]
-              [--mode prepare|answer] [--drafts <файл з текстами чернеток>] [--base <sha>]
+              [--prod-db <db>] [--mode prepare|answer] [--drafts <файл; у 0.1 не використовується runner-ом>]
 Чого не можна перевірити без вхідних файлів — SKIP, не PASS. Шаблони ПДн узгоджені з flow-core/references/pii-patterns.md (змінювати разом)."""
 import argparse, json, re
 from pathlib import Path
@@ -18,7 +18,7 @@ CODES = re.compile(r"\b[A-D]-\d{2}\b|\btd\.\w+|\bINC-\d+")
 READ_TOOLS = {"odoo_search_read", "odoo_get_fields"}
 REQ = {"help-log.md": ["Реєстр питань", "Передано в support-desk", "Прогалини матеріалів", "Журнал запусків"],
        "query-log.md": ["Журнал запитів до проду"], "kb-index.md": ["Теми", "Чек-лист передумов"]}
-HELP_COLS = ["id", "джерело", "дата", "роль", "переказ", "джерела", "статус"]
+HELP_COLS = ["id", "джерело", "дата", "роль", "переказ", "джерела", "статус", "чернетка"]
 QUERY_COLS = ["час", "id", "connection", "інструмент", "модель", "домен", "поля", "записів", "результат"]
 
 
@@ -56,13 +56,16 @@ def col(row, name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True); ap.add_argument("--prod-alias"); ap.add_argument("--allowlist")
-    ap.add_argument("--mode", default="answer", choices=["prepare", "answer"]); ap.add_argument("--drafts"); ap.add_argument("--base")
+    ap.add_argument("--mode", default="answer", choices=["prepare", "answer"]); ap.add_argument("--drafts"); ap.add_argument("--prod-db")
     a = ap.parse_args()
     res = []
     add = lambda i, s, m="": res.append({"id": i, "status": s, "msg": m})
     d = Path(a.dir)
     texts = {n: (d / n).read_text(encoding="utf-8") if (d / n).exists() else None for n in REQ}
     names = REQ if a.mode == "answer" else {"kb-index.md": REQ["kb-index.md"]}
+    if a.mode == "prepare" and texts["kb-index.md"] and re.search(r"^Стан:\s*бот не підключено:\s*\S+", texts["kb-index.md"], re.M):
+        add("HB-columns", "PASS"); add("HB-prepare", "PASS", "бот не підключено (рядок «Стан» у kb-index.md); чек-лист не потрібен")
+        print(json.dumps(res, ensure_ascii=False, indent=1)); return
     miss = sorted({f"{n}: немає файла" if texts[n] is None else f"{n}: немає розділу {h}"
             for n, hs in names.items() for h in hs if texts[n] is None or h not in sections(texts[n])})
     add("HB-columns", "FAIL" if miss else "PASS", "; ".join(miss))
@@ -73,8 +76,21 @@ def main():
         if bad:
             res[0] = {"id": "HB-columns", "status": "FAIL", "msg": "немає колонок: " + ", ".join(bad)}
         # HB-conn
-        wrong = [col(r, "connection") for r in qrows if a.prod_alias and a.prod_alias not in col(r, "connection") and col(r, "connection") != "flow"]
-        add("HB-conn", "SKIP" if not a.prod_alias else ("FAIL" if wrong else "PASS"), "інше підключення: " + ", ".join(sorted(set(wrong))) if wrong else ("немає --prod-alias" if not a.prod_alias else ""))
+        # клітинка: "<alias> (db <db>)"; alias порівнюється точно (перший токен), db — з --prod-db
+        def parse(c):
+            m = re.match(r"^\s*(\S+)\s*(?:\(\s*db\s+([^)\s]+)\s*\))?", c)
+            return (m.group(1), m.group(2)) if m else ("", None)
+        wrong, nodb = [], []
+        for r in qrows:
+            al, db = parse(col(r, "connection"))
+            if al == "flow": continue
+            if al != a.prod_alias: wrong.append(col(r, "connection") or "(порожньо)")
+            elif a.prod_db and db != a.prod_db: wrong.append(col(r, "connection") + f" (очікується db {a.prod_db})")
+            elif not a.prod_db: nodb.append(col(r, "id"))
+        if not a.prod_alias: add("HB-conn", "SKIP", "немає --prod-alias")
+        elif wrong: add("HB-conn", "FAIL", "інше підключення: " + ", ".join(sorted(set(wrong))))
+        elif nodb: add("HB-conn", "SKIP", "alias збігається, db не звірено: немає --prod-db")
+        else: add("HB-conn", "PASS")
         # HB-readonly
         nr = [col(r, "інструмент") for r in qrows if col(r, "інструмент") not in READ_TOOLS]
         body = texts["help-log.md"] + texts["query-log.md"]
@@ -103,7 +119,7 @@ def main():
         ns = [col(r, "id") for r in hrows if col(r, "статус").lower().startswith("чернетка") and not col(r, "джерела").strip()]
         add("HB-sources", "FAIL" if ns else "PASS", "без джерела: " + ", ".join(ns) if ns else "")
         # HB-limits
-        add("HB-limits", "FAIL" if len(qrows) > 60 else "PASS", f"запитів {len(qrows)} > 60" if len(qrows) > 60 else "ліміт 20 тредів на запуск — звіряє runner за --base (скрипт не бачить, які рядки нові)")
+        add("HB-limits", "FAIL" if len(qrows) > 60 else "SKIP", f"запитів {len(qrows)} > 60" if len(qrows) > 60 else "ліміт 60 запитів у межах; ліміт 20 тредів і запитів на запуск скрипт не бачить (немає розмежування запусків) — перевіряє Підтримка за «Журналом запусків»")
         # HB-pii, HB-codes
         pii = []
         for n in ("help-log.md", "query-log.md"):
@@ -114,13 +130,16 @@ def main():
         if dr:
             pii += [f"{t}:drafts:{i}" for i, l in enumerate(dr.splitlines(), 1) for t, p in PII if p.search(l)]
         add("HB-pii", "FAIL" if pii else "PASS", ", ".join(pii[:10]))
-        add("HB-codes", "SKIP" if dr is None else ("FAIL" if codes else "PASS"), "немає --drafts" if dr is None else ", ".join(codes[:10]))
+        add("HB-codes", "SKIP" if dr is None else ("FAIL" if codes else "PASS"), "чернетки не зберігаються в репо: HB-codes і ПДн чернеток — MANUAL (Підтримка)" if dr is None else ", ".join(codes[:10]))
     elif a.mode == "prepare" and not miss:
         t = texts["kb-index.md"]; sec = sections(t)
         boxes = [l for l in sec["Чек-лист передумов"] if l.strip().startswith("- [")]
         open_ = [l for l in boxes if l.strip().startswith("- [ ]")]
         add("HB-prepare", "FAIL" if (not boxes or open_) else "PASS", f"незаповнених пунктів: {len(open_)}" if open_ else ("немає чек-листа" if not boxes else ""))
         add("HB-pii", "FAIL" if any(p.search(t) for _, p in PII) else "PASS")
+        mrows = table(sec.get("Моделі allow-list для цього клієнта", []))[1]
+        badm = [col(r, "модель") for r in mrows if not re.match(r"(так|не перевірено|вилучено)", col(r, "підтверджено").lower())]
+        add("HB-models", "FAIL" if badm else "PASS", "немає значення «Підтверджено» (так / не перевірено / вилучено): " + ", ".join(badm) if badm else "")
     print(json.dumps(res, ensure_ascii=False, indent=1))
 
 

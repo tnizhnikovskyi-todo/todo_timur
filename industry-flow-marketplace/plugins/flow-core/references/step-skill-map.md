@@ -26,6 +26,8 @@
 | B-03 | flow-client-delivery:package-sow-builder | `main`\|`addendum` |
 | B-04 | flow-client-delivery:runbook-executor | застосувати |
 | B-06 | flow-client-delivery:client-data-migrator | `main`\|`reconcile`\|`return` (`returned_from` — з наряду) |
+| B-07 / бот `prepare` | flow-client-delivery:client-help-bot | `mode: prepare`; лише якщо в SOW є розділ бота; другий наряд кроку B-07 після матеріалів навчання (`user-training-builder` — перша частина, скіл організації, `skillRef` з картки) |
+| B-07 / бот `answer` | flow-client-delivery:client-help-bot | `mode: answer`, `period`; лише якщо в SOW є розділ бота й `prepare` = done; `odoo_connections` додатково `prod-ro-<клієнт>` (q37, лише читання). Відкрито: що створює наряд `answer` «на період» (розклад чи рішення PM) — скіл не визначає, до рішення наряд створює вручну PM/Підтримка |
 | B-08a / звірка | flow-client-delivery:runbook-executor | `mode: звірка` (перший наряд) |
 | B-08a / збіжність | odoo19-mvp-build:track-convergence | `mode: збіжність`; другий наряд після звірки (`convergence.md`; вхід `config-drift.md`) |
 | B-09 | flow-client-delivery:support-desk | `intake`\|`hypercare-close` |
@@ -41,4 +43,4 @@
 | D-04 | flow-package-evolution:product-decision-drafter | `нова-версія` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | D-05 | flow-package-evolution:product-decision-drafter | — (`pilot/decision.md`; AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 
-Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07, B-08c) — `skillRef` з картки.
+Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.

@@ -16,7 +16,7 @@
   `source` усе одно звірити першим запитом.
 - До flow-core: `naryad-format.md` не має `params.size/seed/regions/extra_kved` і `params.mode` для A-23
   (`список|адреси`); потрібен наряд `адреси` з `executor: central`.
-- До менеджера карток: оновити `skills`, `skillRef`, `gap` карток A-05, B-01, A-23 на
+- AI-чернеткою одним PR (q15; затверджує власник карток): оновити `skills`, `skillRef`, `gap` карток A-05, B-01, A-23 на
   `flow-research:segment-selector@0.1.0` (зараз A-05 — `client-web-researcher@<версія>` з `gap: true`, B-01 —
   `gap: true` і скіли sales-prep, A-23 — `client-followup-writer`); без цього runner не підвантажить скіл.
 - До `product-decision-drafter`: зафіксувати в `pilot/decision.md` один рядок рішення (`Рішення: тираж|доопрацювати`).

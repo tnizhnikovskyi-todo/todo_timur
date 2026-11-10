@@ -190,9 +190,9 @@ A-04 → A-20 (AND-join з A-03, A-06). Шлюз «Потрібні сесії �
 1. У `flow-map.md` немає переходу A-04 → A-02 (повернення при невдалому вході); до появи — ручне рішення ролі.
 2. Картка A-04: `skillRef` досі `reverse-spec`, `odoo-model-map`, а `raciR` — «AI-агент (reverse-spec…)». Пропозиція: `skillRef` →
    `flow-research:past-projects-analyzer@<версія>`, `boost:odoo-model-map@<версія>`, `gap: false`, `raciR` → «AI-агент
-   (past-projects-analyzer)»; змінює власник картки.
+   (past-projects-analyzer)»; вноситься AI-чернеткою одним PR (q15), затверджує власник картки.
 3. Ознака центрального агента в `conventions.md` відсутня (див. Крок 0).
-4. Картка A-04 (`done`/шаблон): ідентифікатор Fathom названо «URL запису»; скіл вимагає `fathom:<recording_id>` (share-URL заборонено, дає FAIL PP-pii). Замінити «URL Fathom» на «recording_id Fathom» у картці (власник картки); одним рядком у memo для перевіряльника.
+4. Картка A-04 (`done`/шаблон): ідентифікатор Fathom названо «URL запису»; скіл вимагає `fathom:<recording_id>` (share-URL заборонено, дає FAIL PP-pii). Замінити «URL Fathom» на «recording_id Fathom» у картці (AI-чернетка одним PR, q15; затверджує власник картки); одним рядком у memo для перевіряльника.
 5. Шаблон `docs/industries/_template/past-projects.md` — окремий крок або вручну (контракт runner: diff лише `where`)
 
 ## Чого НЕ робити

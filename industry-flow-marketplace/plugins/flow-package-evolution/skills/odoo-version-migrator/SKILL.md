@@ -44,7 +44,7 @@ PR у `upgrade/vX.Y-odoo<N>`. Звіт і PR пише runner; скіл пере�
 ## Що чиє
 | Питання | Власник |
 |---|---|
-| Тег `package/vX.Y-odoo<N>`, «Сумісність з Odoo», фінал CHANGELOG | `flow-package-build:package-release-builder` (режим `odoo-upgrade`, A-18) |
+| Тег `package/vX.Y-odoo<N>` (припущення AI, див. open-questions.md п. 8 / В-9), «Сумісність з Odoo», фінал CHANGELOG | `flow-package-build:package-release-builder` (режим `odoo-upgrade`, A-18) |
 | Гілка `upgrade/vX.Y-odoo<N>` від тега, перенесення демо-бази й `-u`, стенд нової версії, «Шлях міграції бази» | Тімлід |
 | Гейти A-14 | `flow-package-build:gates-aggregator` (до появи режиму `odoo-upgrade` — гейти напряму, В-2) |
 | Скрипт стенда й демо-дані | `flow-package-build:demo-base-builder` (A-15) |
@@ -221,7 +221,10 @@ lint, лог установки, лог міграції).
 - Рішення q20: доступ агента до коду Odoo Enterprise відкладено до реальної міграції; до того `odoo-src-ee` не надається, Enterprise-точки
   лишаються UNVERIFIED (не вгадувати). Повернутися до питання при старті першої міграції (D-03).
 - В-5. Чи дозволити скілу створювати `upgrade/vX.Y-odoo<N>` з тега, якщо її немає (зараз — Тімлід).
-- Рішення q19: версія модулів на цільовій Odoo -- `<N>.0.X.Y`, тег -- `package/vX.Y-odoo<N>` (суфікс `-odoo<N>` лише при переході на нову
-  мажорну Odoo). Назва гілки `upgrade/vX.Y-odoo<N>` рішенням не охоплена -- звірити з A-11 і C-03.
+- Рішення q19 (затверджено людиною): версія модулів `19.0.X.Y` (на цільовій Odoo `<N>.0.X.Y`), тег `package/vX.Y`; суфікс `-odoo<N>` -- для гілок переходу
+  на нову мажорну Odoo (`upgrade/vX.Y-odoo<N>`).
+- В-9 (Архітектор). Тег `package/vX.Y-odoo<N>` (режим `odoo-upgrade`, рядки вище) -- припущення AI, не рішення q19: рішення дає суфікс лише для гілок;
+  тег без суфікса `package/vX.Y` на Odoo 19 може зіткнутися з тегом на цільовій Odoo. Схему тегів переходу не вирішувати до відповіді; звірити з A-11 і C-03.
+- Рішення q15: картки кроків (D-03, `checkHow`, В-8) вносить AI-чернетка одним PR за таблицею «крок -> скіл»; затверджує власник картки.
 - В-7. Блок `upgrade_odoo` і ключі `inputs` `odoo-src`, `odoo-src-19`, `odoo-src-ee`, `odoo-release-notes`, `odoo-upgrade-analysis` — додати в `report-format.md`/`naryad-format.md`.
 - В-8. Картка в `checkHow` (людина, п. 3) називає виконавцем сценаріїв AI-агента із записом/скріншотом, скіл — CI з run id; уточнити картку.

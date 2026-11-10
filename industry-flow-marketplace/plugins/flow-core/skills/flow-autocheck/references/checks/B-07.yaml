@@ -7,7 +7,7 @@
    "id": "script-check-help",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/client-help-bot/scripts/check_help.py --dir clients/<к>/help-bot --prod-alias prod-ro-<scope.id> --allowlist <корінь плагіна flow-client-delivery>/skills/client-help-bot/references/prod-read-allowlist.md --mode prepare|answer [--drafts <файл з текстами чернеток>] [--base <git.base>]: HB-columns, HB-conn, HB-readonly, HB-allowlist, HB-logged, HB-sources, HB-limits, HB-pii, HB-codes (answer), HB-prepare (prepare) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано -> ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/client-help-bot/scripts/check_help.py --dir clients/<к>/help-bot --prod-alias prod-ro-<scope.id> --prod-db <db з наряду> --allowlist <корінь плагіна flow-client-delivery>/skills/client-help-bot/references/prod-read-allowlist.md --mode prepare|answer: HB-columns, HB-conn (alias точно + db; без --prod-db SKIP), HB-readonly, HB-allowlist, HB-logged, HB-sources, HB-limits (SKIP для 20 тредів), HB-pii (answer), HB-prepare і HB-models (prepare; HB-models — колонка «Підтверджено») без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано -> ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
@@ -23,7 +23,7 @@
    "id": "hb-manual",
    "prim": "manual",
    "args": {
-    "text": "зміст чернеток відповідей і правильність кроків UI — перевіряє Підтримка; надсилання чернеток — вручну; allow-list і групи технічного користувача — затверджує Тімлід",
+    "text": "зміст чернеток відповідей, відсутність внутрішніх кодів і ПДн у чернетках (HB-codes — скрипт не перевіряє, тексти не зберігаються в репо), ліміт 20 тредів і правильність кроків UI — перевіряє Підтримка; надсилання чернеток — вручну; allow-list і групи технічного користувача — затверджує Тімлід",
     "who": "Підтримка"
    }
   }

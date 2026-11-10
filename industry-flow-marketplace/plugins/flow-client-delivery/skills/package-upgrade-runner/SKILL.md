@@ -76,7 +76,7 @@ description: >
 позначити «не перевірено (стоп на U-01)» і завершити `escalated` Тімліду.
 
 ## Крок 1. Тег і хвиля (фази 0 і 1; у фазі 1 повторити, пілот міг відкотитися)
-1. Тег з `inputs` (from A-18) існує (`get_tag`; формат — `flow-core/references/id-patterns.md`: `package/vX.Y`; `vX.Y` у цьому скілі — скорочення цього тегу, суфікс `-odoo<N>` у id-patterns не заданий, див. В-9). Тег виду `vX.Y-odoo<N>`,
+1. Тег з `inputs` (from A-18) існує (`get_tag`; формат — `flow-core/references/id-patterns.md`: `package/vX.Y`; `vX.Y` у цьому скілі — скорочення цього тегу, суфікс `-odoo<N>` у id-patterns не заданий, див. В-0). Тег виду `vX.Y-odoo<N>`,
    де N не збігається з версією Odoo клієнта -> стоп, `escalated` Тімліду й Власнику продукту: «міграція клієнта на нову
    мажорну Odoo: окремий сценарій не спроєктовано».
 2. Поточний тег клієнта: `project.package_tag` (`flow`), `git.prev_tag` наряду й `clients/REGISTRY.md` на SHA наряду
@@ -92,7 +92,7 @@ description: >
 нові, змінені допустимі значення, видалені. Викликати `flow-client-delivery:package-sow-builder` (має бути в `called_skills` наряду, інакше `escalated`) у цьому ж запуску й гілці: `params: {mode: addendum,
 addendum_source: changelog}`, `inputs` = перелік VP (нові/змінені/видалені; значення за замовчуванням з CHANGELOG — лише
 як «потребує підтвердження Клієнтом», не як відповідь) із SHA, `where: clients/<к>/sow.md`, `odoo_connections` і `attempt`
-наряду. Результат лишається в гілці кроку. Немає `sow.md` або підписаного основного SOW -> `returned` PM
+наряду. Результат лишається в гілці кроку. Немає `sow.md` або підписаного основного SOW (q10: підпис — стадія угоди в CRM, підтверджена в тексті наряду; `sow.md` — лише дзеркало; див. `package-fit-gap/references/agreement-check.md`) -> `returned` PM
 (`returned_to: B-03`).
 
 ## Крок 3 (фаза 0). Кандидати на зняття
@@ -201,7 +201,7 @@ merge-коміт останнього PR B-04/B-05: `git log --merges --grep 'B-
 Очікування CI довше таймауту — В-4.
 
 ## Відкриті питання
-- В-9. Шаблон тегу `package/vX.Y-odoo<N>` відсутній у `flow-core/references/id-patterns.md`; додати або відмовитися від суфікса.
+- В-0. Шаблон тегу `package/vX.Y-odoo<N>` відсутній у `flow-core/references/id-patterns.md`; додати або відмовитися від суфікса.
 - В-1. Хто ставить наряд фази 1 — узгодити з `flow-orchestrator` (ключі `params.phase`, `params.reconcile` у `naryad-format.md` описані).
 - В-2. Розбіжність `ci-contract.md` двох скілів: `flow-core/.../ci-pipeline-builder` (фактичний) і `package-release-builder` (`tag_candidate`, `mode`, `prev_tag`); режим upgrade у CI (попередній тег -> новий -> smoke) не підтверджено.
 - В-3. Номер хвилі: ознака пілота — `project.pilot`/`params.pilot`; номер хвилі — рішення PM у наряді (поля немає).
@@ -210,7 +210,7 @@ merge-коміт останнього PR B-04/B-05: `git log --merges --grep 'B-
 - В-6. Розбіжність картки: `hours` 3 vs «8 покриває фази 0–1»; `answers.yaml` vs `questionnaire.md` у B-04.
 - Рішення q28 (було В-7): AI звіряє конфіг лише за метаданими, чернетку затверджує Тімлід. Лишається оновити failureMode/dataRule картки B-11; крок 8 до того вмикається лише ключем `params.reconcile: true`.
 - В-8. Сценарій міграції клієнта на нову мажорну Odoo не спроєктовано.
-- Рішення q03 (було В-9): версія 2 (клас бази `anon-<клієнт>`, крок-виробник знеособленої копії C-09) відкладена після пілоту; на пілоті — лише версія 1 на `test-<клієнт>`. Версія 2 не запускається (стоп «клас бази не визначено»).
+- Рішення q03: версія 2 (клас бази `anon-<клієнт>`, крок-виробник знеособленої копії C-09) відкладена після пілоту; на пілоті — лише версія 1 на `test-<клієнт>`. Версія 2 не запускається (стоп «клас бази не визначено»).
 - В-10. Семантику `installed_version`/`latest_version` у `ir.module.module` Odoo 19 взято зі звіту рецензента (`base/models/ir_module.py`); вихідного коду в середовищі немає, формулювання підтвердити через `boost:source-check`.
 
 ## Чого НЕ робити

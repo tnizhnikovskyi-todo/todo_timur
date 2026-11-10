@@ -11,4 +11,6 @@
 | Читання `res.users` автора за адресою відправника як обробка ПДн самого автора | Юрист |
 | Таймер для наряду `answer` до автоматизації C-01: розклад Claude Code чи ручний запуск Підтримкою | AI-інженер |
 | До go-live: чи читає бот `test-<к>` замість проду (навчання на пісочниці) | PM |
+| Ім'я поля груп `res.users` у Odoo 19 (`groups_id` чи `group_ids`) | Тімлід |
+| Ім'я поля груп `res.users` у Odoo 19 (`groups_id` чи `group_ids`) | Тімлід |
 | Зміни поза цим скілом: B-07 `answer` у flow-map.md/naryad-format.md, step-skill-map.md, `params.handoff` у support-desk | власники файлів |
