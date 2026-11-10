@@ -13,3 +13,5 @@
 - [ ] Джерело календаря `work_calendar` і `lease_factor` — `flow-orchestrator` (`dispatcher-config.md`).
 - [ ] Прапорець HTML у `message_post` (Odoo 19) — `flow-step-runner` (open-questions №11), `odoo-bridge.md` §4.
 - [ ] Кнопка зміни зрілості кроку і хто записує `maturity` — `flow-state-keeper`, `eval-builder`.
+- [ ] До першої диспетчеризації оновити в картках `skills`/`skillRef`/`gap`/`raciR` за `references/step-skill-map.md` (зараз жодна картка не посилається на скіл пакета).
+- [ ] `PGHOST`/`ODOO_CONF` скриптів `tools/odoo/` — лише непродовий сервер; `guard_db` перевіряє тільки ім'я бази, тож C-00 додає перевірку хоста в `_common.sh`.

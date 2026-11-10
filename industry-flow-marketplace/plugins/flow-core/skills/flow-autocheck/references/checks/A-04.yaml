@@ -6,7 +6,7 @@
    "id": "script-check-past-projects",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/past-projects-analyzer/scripts/check_past_projects.py --doc docs/industries/<галузь>/past-projects.md --sources docs/industries/<галузь>/_input/sources.md --repo <корінь> --scope-files docs/industries/<галузь>/past-projects.md,observations/ [--base --head] [--no-fathom]; перед цим --self-test. Усі PP-* без FAIL (PP-input -> waiting_human, PP-gitignore -> escalated). Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/past-projects-analyzer/scripts/check_past_projects.py --doc docs/industries/<галузь>/past-projects.md --sources docs/industries/<галузь>/_input/sources.md --repo <корінь> --scope-files docs/industries/<галузь>/past-projects.md,observations/ [--base --head] [--no-fathom]; перед цим --self-test. Усі PP-* без FAIL (PP-input -> waiting_human, PP-gitignore -> escalated). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

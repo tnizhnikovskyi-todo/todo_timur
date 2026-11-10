@@ -6,7 +6,7 @@
    "id": "script-check-fit-gap",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/package-fit-gap/scripts/check_fit_gap.py --client <к> --tag <тег> --base <git.base> --business-case <шлях> [--forbidden <файл>]: FG-class, FG-hours, FG-anchor, FG-source, FG-schema, FG-pii, FG-headings, FG-ignore, FG-scope, FG-threshold без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/package-fit-gap/scripts/check_fit_gap.py --client <к> --tag <тег> --base <git.base> --business-case <шлях> [--forbidden <файл>]: FG-class, FG-hours, FG-anchor, FG-source, FG-schema, FG-pii, FG-headings, FG-ignore, FG-scope, FG-threshold без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

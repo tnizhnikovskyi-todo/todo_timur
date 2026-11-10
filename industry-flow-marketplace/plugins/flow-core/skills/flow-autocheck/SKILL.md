@@ -61,7 +61,7 @@ SHA `origin/<base_branch>` на момент запуску (фіксуєтьс�
 найбільший `package/vX.Y` серед предків кандидата; немає — перевірки з ним `SKIP first-release`.
 
 ## Крок 1. Специфікація кроку
-Скрипт бере `references/checks/<step>.yaml` (A-09, A-10, A-14, A-17, A-18, C-05; контракт — `references/checks.md`). Для `result` завжди
+Скрипт бере `references/checks/<step>.yaml` (усі файли теки `references/checks/`; контракт — `references/checks.md`). Для `result` завжди
 додаються загальні перевірки C-06 (`where-only`, `where-exists`, `template-headings`, `no-pii`, `sources-hint`). Немає файлу кроку →
 `ERROR spec-missing`, речення `check.how` дослівно як `MANUAL`, вердикт `INCOMPLETE`. Перевірки з тексту `check.how` не домислювати.
 

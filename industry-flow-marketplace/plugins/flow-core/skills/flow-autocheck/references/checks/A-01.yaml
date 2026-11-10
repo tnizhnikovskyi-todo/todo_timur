@@ -41,7 +41,7 @@
    "id": "script-check-scoring",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/industry-scoring/scripts/check_scoring.py docs/industries/scoring.md --param <файл параметра> --metrics <json Q2–Q4> --snapshot <YYYY-MM> --exclude <розділи>: SC-count, SC-tag, SC-cols, SC-criterion, SC-level, SC-exclude, SC-sources, SC-nopii, SC-headers, SC-q, SC-order без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/industry-scoring/scripts/check_scoring.py docs/industries/scoring.md --param <файл параметра> --metrics <json Q2–Q4> --snapshot <YYYY-MM> --exclude <розділи>: SC-count, SC-tag, SC-cols, SC-criterion, SC-level, SC-exclude, SC-sources, SC-nopii, SC-headers, SC-q, SC-order без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

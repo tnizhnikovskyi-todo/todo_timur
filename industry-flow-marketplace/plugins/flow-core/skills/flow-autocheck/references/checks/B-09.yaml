@@ -6,7 +6,7 @@
    "id": "script-check-support-hypercare",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/support-desk/scripts/check_support.py clients/<к>/hypercare.md --base <git.base> [--mode intake|hypercare-close] --routes <корінь плагіна flow-client-delivery>/references/triage-routes.md [--tr <ТР.md>] [--other support-log.md]: SD-columns, SD-enums, SD-route, SD-route-table, SD-ac, SD-close, SD-pkg-defect, SD-d02, SD-protected, SD-dup, SD-pii, SD-14days (hypercare-close) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/support-desk/scripts/check_support.py clients/<к>/hypercare.md --base <git.base> [--mode intake|hypercare-close] --routes <корінь плагіна flow-client-delivery>/references/triage-routes.md [--tr <ТР.md>] [--other support-log.md]: SD-columns, SD-enums, SD-route, SD-route-table, SD-ac, SD-close, SD-pkg-defect, SD-d02, SD-protected, SD-dup, SD-pii, SD-14days (hypercare-close) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

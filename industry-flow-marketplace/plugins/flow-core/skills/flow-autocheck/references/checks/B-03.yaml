@@ -6,7 +6,7 @@
    "id": "script-check-sow",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/package-sow-builder/scripts/check_sow.py clients/<к>/sow.md --mode main|addendum --tag <тег> --fit-gap clients/<к>/fit-gap.md --answers clients/<к>/answers.yaml --data-policy package/DATA_POLICY.md --business-case docs/industries/<галузь>/business-case.md --reference-clients docs/industries/<галузь>/reference-clients.md [--base --source --tr --first-run|--rerun]: SOW-sections, -coverage, -price, -tag, -ac, -clarify, -answers, -nosla, -ai, -update, -pilot, -pii, -addendum-only, -addendum-ac без FAIL (без аргумента — SKIP, не PASS). Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/package-sow-builder/scripts/check_sow.py clients/<к>/sow.md --mode main|addendum --tag <тег> --fit-gap clients/<к>/fit-gap.md --answers clients/<к>/answers.yaml --data-policy package/DATA_POLICY.md --business-case docs/industries/<галузь>/business-case.md --reference-clients docs/industries/<галузь>/reference-clients.md [--base --source --tr --first-run|--rerun]: SOW-sections, -coverage, -price, -tag, -ac, -clarify, -answers, -nosla, -ai, -update, -pilot, -pii, -addendum-only, -addendum-ac без FAIL (без аргумента — SKIP, не PASS). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

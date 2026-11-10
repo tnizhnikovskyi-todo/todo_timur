@@ -6,7 +6,7 @@
    "id": "script-check-concept",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=<шлях> --input past-projects.md=<шлях> [--input protocol-…=<шлях>] --base <git.base>: CM-files, CM-src, CM-quote, CM-feat, CM-count, CM-trace, CM-signal, CM-ids, CM-pii, CM-scope без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=<шлях> --input past-projects.md=<шлях> [--input protocol-…=<шлях>] --base <git.base>: CM-files, CM-src, CM-quote, CM-feat, CM-count, CM-trace, CM-signal, CM-ids, CM-pii, CM-scope без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

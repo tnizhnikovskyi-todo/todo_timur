@@ -61,7 +61,7 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 | A-09 | `first`, `review` (через `phase: review`) | `review` — оркестратор після `resume` | `first` |
 | A-12 | `build`, `fix`, `new-version`, `validate` | `fix` — повернення з A-14; `new-version` — від D-04/D-05 | `build` |
 | A-15, A-22 | `перша`, `нова-версія` | `нова-версія` — змінені AC і `git.prev_tag` | `перша` |
-| B-06 | `phase: 0\|1`, `pilot`, `reconcile` | фазу 1 ставить оркестратор після «Затвердити» | `phase: 0` |
+| B-06 | `mode`: `main\|reconcile\|return` | `reconcile` — звірка після міграції; `return` — з `returned_from` | `main` |
 | C-04 | `weekly`, `init`, `regress` | `weekly` — за розкладом; `init`, `regress` ставить лише AI-інженер (нова модель/версія плагіна) | `weekly` |
 | C-07 | `incident` | після розбору `boost:debug-root-cause` у `flow/ai-incidents/<id>.md` | `incident` |
 | D-03 | `prepare`, `verify` | `verify` — після `prepare` і рішення людини | `prepare` |

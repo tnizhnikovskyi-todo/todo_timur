@@ -6,7 +6,7 @@
    "id": "script-check-config-log",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/runbook-executor/scripts/check_config_log.py --client-dir clients/<к> --package package --mode apply: headers, status-allowed, readback, anchor, vp-coverage, sow-assumptions, fg-coverage, roles, modules, modules-set, pii, no-prod-status без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/runbook-executor/scripts/check_config_log.py --client-dir clients/<к> --package package --mode apply: headers, status-allowed, readback, anchor, vp-coverage, sow-assumptions, fg-coverage, roles, modules, modules-set, pii, no-prod-status без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
