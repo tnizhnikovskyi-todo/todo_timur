@@ -2,25 +2,19 @@
 
 Мета етапу: перевірити, що скіли кроків A-01, A-03, A-04, A-05, A-20, A-21, A-23 (підготовка) знаходять свої входи, пишуть результат за `where`, проходять власні автоперевірки, і що формати сусідніх кроків зчіплюються (результат попереднього = вхід наступного). Odoo, черга, кнопки гейтів — поза етапом (розділ «Що тест НЕ перевіряє»).
 
-## (а) Підготовка репозиторію
-1. Створи **порожній** приватний GitHub-репо (напр. `industry-flow-test`), гілка `main`. Перший коміт може бути порожній `README`.
-2. Дай доступ **Claude GitHub App** до цього репо (GitHub -> Settings -> Applications -> Claude -> Repository access) і до `tnizhnikovskyi-todo/todo_timur`.
+## (а) Репозиторій уже готовий
+Цей репо (`tnizhnikovskyi-todo/industry-flow-test-mebli`) уже містить усе: копію пакета `industry-flow-marketplace/` (без `_work/`), 29 скілів у `.claude/skills/`, 7 агентів у `.claude/agents/` (flow-executor, flow-executor-{drive,mail,outreach,repo,research}, flow-reviewer), каркас пакета «меблі», наряди `tests/naryad/`, правила тестового режиму `CLAUDE.md`. Нічого копіювати чи запускати bootstrap не треба.
+Обмеження хмарних сесій: плагіни з `.claude/settings.json` не встановлюються, тому скіли лежать копіями в `.claude/skills/` — хмарна сесія підхоплює їх з клону.
 
 ## (б) Запуск хмарної сесії
-Варіант 1 (рекомендований): нова хмарна сесія Claude Code, у яку додано **два** репо — твій тестовий і `tnizhnikovskyi-todo/todo_timur` (гілка `claude/ecstatic-einstein-wf59oh`, у ній `industry-flow-marketplace/` і `industry-flow-test-kit/`). Репо мають лежати поруч (`ls ..` покаже обидва).
-Варіант 2: набір скопіювати вручну: з клону `todo_timur` взяти теки `industry-flow-marketplace/` і `industry-flow-test-kit/`, покласти їх поруч із тестовим репо й далі так само.
-Обмеження хмарних сесій: плагіни з `.claude/settings.json` не встановлюються; працюють файли з клону (`.claude/skills/`, `.claude/agents/`, `CLAUDE.md`). Тому bootstrap кладе скіли копіями у `.claude/skills/`.
+Нова хмарна сесія Claude Code лише з цим репо (гілка `main`). Перевір `/skills` — у списку мають бути скіли пакета (industry-scoring, concept-mapper, prototype-builder…). Якщо їх немає — відкрий сесію ще раз (скіли підхоплюються при старті).
 
 ## (в) Перший промпт
-Спочатку (у терміналі, не в Claude) перевір, що набір є в клоні: `ls ../todo_timur/industry-flow-test-kit/bootstrap.sh` (набір має бути закомічений і запушений у гілку `claude/ecstatic-einstein-wf59oh`; якщо файлу немає — набір не запушено, повідомити власника набору). Сесія має мати тестовий репо основним.
-Перший промпт сесії (текст для Claude, не для термінала):
 ```
-Виконай `bash ../todo_timur/industry-flow-test-kit/bootstrap.sh .`, потім закоміть і запуш результат.
+Запусти `bash tests/restore-input.sh`, прочитай CLAUDE.md і TEST-START.md і скажи, що готовий до кроку A-01.
 ```
-Скрипт друкує підсумок: скілів 29, агентів 7 (flow-executor, flow-executor-{drive,mail,outreach,repo,research}, flow-reviewer), шаблони. Потім: `git add -A && git commit`, `git push`.
-Якщо скіли не з'явились у списку (`/skills`) — скіли підхоплюються при старті сесії: **відкрий нову сесію на цьому репо** (тепер `.claude/` уже в клоні) і далі працюй там. Нову сесію знову відкривай з обома репо (тестовий + `todo_timur`), інакше `../todo_timur/industry-flow-test-kit/bootstrap.sh` не буде і `_input/crm.csv` не відновиться. Запасний варіант вручну: створи `docs/industries/mebli/_input/crm.csv` і `sources.md` з порожніми таблицями із заголовками з шаблону (`template/docs/industries/mebli/_input/`).
-`_input/` поза git (`sources-format.md`): у кожній новій сесії/клоні повторно запускай `bootstrap.sh` (відновить відсутні `crm.csv` і порожній `sources.md`; без `crm.csv` A-05 зупиниться «очікує людину: crm.csv»), а `sources.md` заповнюй заново в тій сесії, де запускаєш A-04.
-Повторний запуск bootstrap безпечний: пакет і скіли оновлюються, твої файли-шаблони не перезаписуються (без `--force`).
+`docs/industries/*/_input/` поза git (`sources-format.md`): у кожній новій сесії спершу `bash tests/restore-input.sh` (без `crm.csv` A-05 зупиниться «очікує людину: crm.csv»); `sources.md` заповнюй у тій сесії, де запускаєш A-04.
+Оновлення пакета (якщо скіли змінено в `tnizhnikovskyi-todo/todo_timur`, гілка `claude/ecstatic-einstein-wf59oh`) — `industry-flow-test-kit/bootstrap.sh` у тому репо; його запускає власник набору й пушить сюди.
 
 ## (г) Конектори (увімкнути до початку)
 | Конектор | Для чого | Кроки |
@@ -65,3 +59,10 @@
 - Кроки A-06 (сесії з еталонними клієнтами), A-22, A-23 `адреси` і `results` (розсилки немає), A-07 і далі (A-08…A-19), пули B, C, D; скіли `flow-package-build`, `flow-package-evolution`, `flow-client-delivery` (копіюються, але не тестуються).
 - Дані клієнтів і Fathom; прод Odoo; реальну розсилку.
 - Те, що плагіни в хмарі не встановлюються через `settings.json`: у тесті скіли — копії; перевірка встановлення плагінів (`claude plugin validate`, `skill_ref` з реальними версіями) — окремий етап.
+
+## (є) Очікувана поведінка тесту (не дефекти скілів)
+- A-04: у тесті без клієнтів виконавець `central`, а `client_data` — `personal`; це штатна розбіжність, рішення — за людиною (відкрите питання).
+- A-21: зупинка через `odoo_connections: []` очікувана; обхід не вигадувати.
+- A-03: `industry-briefing` може писати в `outputs/`, а не за `where` — запиши в `observations/`, не дефект.
+- A-23 `prep`: DT-consent = FAIL (плейсхолдер «текст згоди — Юрист») — очікувано.
+- Кількість агентів у bootstrap — 7 (не 2): flow-executor, п'ять flow-executor-*, flow-reviewer.
