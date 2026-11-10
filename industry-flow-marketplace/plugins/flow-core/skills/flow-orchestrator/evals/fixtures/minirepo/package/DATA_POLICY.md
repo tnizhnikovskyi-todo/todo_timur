@@ -8,3 +8,4 @@
 |---|---|
 | код/конфіг пакета | flow, test-<клієнт> |
 | D-01 collect | flow (дані — вивантаження людини, params.upload_path) |
+| client-help-bot (q37) | prod-ro-k01 (лише читання; `client_data: personal`, `executor: central`) |

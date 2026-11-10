@@ -169,6 +169,7 @@ description: >
 - Не кликати людину на кроках без гейта; не дублювати відкриті активності.
 
 ## Відкриті питання
+- `client-help-bot` (q37): скіла ще немає в `plugins/flow-client-delivery/skills`, а в `references/step-skill-map.md` немає його рядка (B-07 — «скіл організації, skillRef з картки»); правило `skill_ref[0] = flow-client-delivery:client-help-bot` для `prod-ro-<клієнт>` діє лише після появи скіла й рядка в step-skill-map/flow-map — вносить задача, що створює скіл.
 - C-00: автоматизація Odoo, що створює задачу C-01 `on-complete` на зміну стадії, і `flow/ODOO_SCHEMA.md` (логічні імена з `odoo-bridge.md` §2) — рішення q14: AI готує чернетку, Тімлід затверджує; до затвердження імена не вгадувати. Шлях карток `flow/cards/<код>.json` — відкрите.
 - `flow-state-keeper` (C-02): у режимі експорту немає кроку «`dispatch.skill_remarks` → `observations/<дата>-<скіл>.md`» (чинний крок 4 обробляє лише дії created/requeued/…); потрібне доповнення його SKILL.md (крок експорту + евал) — поза межами цього скіла; до того діє активність AI-інженеру (крок 10).
 - `report-format.md`: `returned_to` описано як один код; для A-14/A-17/A-18 потрібен список кодів (AND-розгалуження) — до зміни діє резервна таблиця `dispatch-rules.md` §8.

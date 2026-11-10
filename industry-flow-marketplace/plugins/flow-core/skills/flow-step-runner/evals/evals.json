@@ -184,6 +184,29 @@
         "Створено інцидент C-05 і зупинено запуск",
         "Усі дозволені виклики мають явний connection_id"
       ]
+    },
+    {
+      "id": "personal-exception-q01",
+      "prompt": "Агент типу employee (не central) бере наряд B-13 для клієнта k01 на test-k01 (client_data: personal, executor: any). Потім той самий агент намагається взяти наряд іншого personal-кроку (напр. B-06) з executor: central.",
+      "expected_output": "B-13 береться (виняток q01, лише test-k01); інший personal-крок не береться до оренди, відповідь у терміналі з причиною.",
+      "assertions": [
+        "B-13 на test-k01 взято агентом не-central",
+        "Наряд іншого personal-кроку не орендовано",
+        "Відмова містить причину (personal, агент не central)"
+      ],
+      "requires": [
+        "фікстура: картки B-13 немає у фікстурах runner (відкрито)"
+      ]
+    },
+    {
+      "id": "flow-stop-activity-q23",
+      "prompt": "Наряд за номером від людини, файлів flow-core/agents/flow-executor.md немає, alias flow у list_odoo_connections є.",
+      "expected_output": "Стоп до оренди; ненульовий код; рядок FLOW_STOP step0 no-agents у stderr; активність AI-інженеру в задачі (явний connection_id alias flow). Оренду не записано.",
+      "assertions": [
+        "Оренду не записано",
+        "Рядок FLOW_STOP step0 no-agents надруковано",
+        "Активність створено в заданій задачі з явним connection_id"
+      ]
     }
   ]
 }

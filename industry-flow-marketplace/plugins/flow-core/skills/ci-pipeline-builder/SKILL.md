@@ -120,7 +120,7 @@ actions). До 3 проходів; не APPROVE після 3 → ескалац�
    Перевір саме шлях пошуку споживача (`ci-contract.md`, «Статус на SHA»): прогін dispatch знаходиться за `event=workflow_dispatch` і
    SHA в `run-name`/`display_title` (не за `head_sha`), його conclusion = вердикт `ci`. Що MCP `github` повертає `display_title`, перевір на
    факті, не припускай; не підтвердилося — відкрите питання В-7 у `memo`. Логи — лише `get_job_logs` з tail/grep помилок.
-4. Прогін довший за `timeoutMin` → у звіті «очікує CI» з run id; доперевірку робить `flow-step-runner` (рішення q25: CI виноситься за таймаут кроку).
+4. Прогін довший за `timeoutMin` → у звіті «очікує CI» з run id; доперевірка за run id — відкрите питання (`flow-step-runner/references/open-questions.md` №15; рішення q25: CI виноситься за таймаут кроку).
 
 ## Крок 8. Повернути дані звіту
 `result`; `checks[]` (список вище + `config-matrix`, `probe-green`, `probe-red`, `pr-review`, `security-review`); `data_sources` (лише
@@ -141,7 +141,7 @@ actions). До 3 проходів; не APPROVE після 3 → ескалац�
 
 ## Відкриті питання (для `memo`, поки не закриті)
 - В-1: формат підсумку `run_tests.sh` і лічильник skipped (C-00). В-2: `odoo_task`/`sha` у dispatch — звірити з B-11 і gates-aggregator.
-- В-3: місце фікстур self-test. В-4: закрито q25 — довгий CI поза таймаутом кроку («очікує CI»). В-5: права технічного користувача — лише `message_post` на задачах.
+- В-3: місце фікстур self-test. В-4: q25 — довгий CI виноситься за таймаут кроку («очікує CI» з run id); **механіку доперевірки (хто й коли перечитує run id) не визначено — відкрито** (`flow-step-runner/references/open-questions.md` №15). В-5: права технічного користувача — лише `message_post` на задачах.
 - ~~В-7~~ закрито: `c03-lookup.md` шукає dispatch-прогін за SHA в `display_title`; рішення q24: чи повертає MCP `github` `display_title` — перевірити на першому прогоні, запасний пошук за SHA (commit status `ci`).
 - Джерело списку стандартних модулів Odoo для `config-check` (C-00); формат `REGISTRY.md` — `flow-core/references/flow-state.md`.
 
