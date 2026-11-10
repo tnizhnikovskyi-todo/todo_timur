@@ -36,3 +36,6 @@ python3 -I scripts/state_export.py verify  --merge --snapshot parts/ --dir <кл
 python3 -I scripts/state_export.py prune   --older-than 2026-01 --dir <клон репо>
 python3 -I scripts/state_export.py stats   --runs runs-p1.json runs-p2.json
 ```
+
+## Зрілість і рядок «Рішення:» (q16, q22)
+Після кнопки рішення про зрілість скіла keeper вписує нову `maturity` і рядок «Рішення: <скіл>, <стара> → <нова>, <користувач>, <дата кнопки>» у PR автоекспорту; дозволені лише шляхи `flow/**` (+ `clients/REGISTRY.md`) — інакше auto-merge не спрацює. Відкрито (не вигадувати): конкретний файл реєстру зрілості й формат рядка не визначені; до рішення рядок іде в опис PR і звіт, файл не створюється.

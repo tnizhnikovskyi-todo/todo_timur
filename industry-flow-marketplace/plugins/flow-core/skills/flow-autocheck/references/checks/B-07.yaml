@@ -1,0 +1,31 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+# Лише частина бота-помічника (client-help-bot). Перевірки навчальних матеріалів (user-training-builder) тут не описані — окреме питання.
+{
+ "step": "B-07",
+ "checks": [
+  {
+   "id": "script-check-help",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/client-help-bot/scripts/check_help.py --dir clients/<к>/help-bot --prod-alias prod-ro-<scope.id> --allowlist <корінь плагіна flow-client-delivery>/skills/client-help-bot/references/prod-read-allowlist.md --mode prepare|answer [--drafts <файл з текстами чернеток>] [--base <git.base>]: HB-columns, HB-conn, HB-readonly, HB-allowlist, HB-logged, HB-sources, HB-limits, HB-pii, HB-codes (answer), HB-prepare (prepare) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано -> ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "hb-conn-audit",
+   "prim": "manual",
+   "args": {
+    "text": "HB-conn/HB-readonly: усі виклики odoo-mcp з явним connection_id = prod-ro-<scope.id> або flow, connection.db збігається з нарядом, лише odoo_search_read/odoo_get_fields; фактичні виклики з журналу запуску звірені з query-log.md",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "hb-manual",
+   "prim": "manual",
+   "args": {
+    "text": "зміст чернеток відповідей і правильність кроків UI — перевіряє Підтримка; надсилання чернеток — вручну; allow-list і групи технічного користувача — затверджує Тімлід",
+    "who": "Підтримка"
+   }
+  }
+ ]
+}

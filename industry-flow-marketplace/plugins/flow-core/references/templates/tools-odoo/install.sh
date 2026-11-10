@@ -32,7 +32,7 @@ if [[ -n "$TAG" ]]; then
       "$REPO_R"/*) ;;
       *) echo "FLOW_STOP: --addons-src поза \$PKG_REPO: з --tag код тегу не гарантовано" >&2; exit 2 ;;
     esac
-    DIRTY="$(git -C "$PKG_REPO" status --porcelain --untracked-files=all -- "$SRC_R")" || { echo "FLOW_STOP: git status не вдався" >&2; exit 2; }
+    DIRTY="$(git -C "$PKG_REPO" status --porcelain --untracked-files=all --ignored -- "$SRC_R")" || { echo "FLOW_STOP: git status не вдався" >&2; exit 2; }
     [[ -z "$DIRTY" ]] || { echo "FLOW_STOP: у --addons-src є незакомічені/невідстежувані зміни (код не збігається з тегом $TAG)" >&2; exit 2; }
   fi
 fi
