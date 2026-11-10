@@ -159,6 +159,21 @@
         "Відповідь у терміналі містить ескалацію AI-інженеру",
         "Для виконання кроку не використано general-purpose агента"
       ]
+    },
+    {
+      "id": "called-skills-not-gate",
+      "prompt": "Візьми наряд B-11 із черги. У наряді skill_ref = [flow-client-delivery:package-upgrade-runner@0.1.0], called_skills = [flow-client-delivery:runbook-executor@0.1.0, flow-client-delivery:package-sow-builder@0.1.0], params.reconcile відсутній.",
+      "expected_output": "Крок 3 перевіряє точну версію плагінів і для skill_ref, і для called_skills; на Кроці 9 (д) гейти беруться лише з skill_ref[1:] (порожньо), runbook-executor і package-sow-builder не запускаються runner'ом.",
+      "assertions": [
+        "Версії плагінів з called_skills звірено на Кроці 3 точною рівністю",
+        "runbook-executor не запущено як скіл-гейт на Кроці 9 (д)",
+        "package-sow-builder не запущено як скіл-гейт на Кроці 9 (д)",
+        "Гейти взято лише з skill_ref[1:]"
+      ],
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ]
     }
   ]
 }

@@ -55,7 +55,7 @@ Runner — **диспетчер, не виконавець**: зміст вхо�
 Алгоритм — `odoo-bridge.md` §3: `description` — Html; взяти перший `<pre>`-блок (або ```` ```yaml ````), зняти теги, `html.unescape`, `yaml.safe_load`; дзеркальні поля звірити з YAML. Не «лагодити» наряд.
 Обов'язкові ключі: `step, scope, executor, skill_ref, model, inputs, where, done, check, limits, client_data, odoo_connections, repo, attempt`.
 Бракує ключа, немає YAML-блоку, помилка парсингу, розбіжність з дзеркальними полями або `limits.*` порожні → **не вгадувати і не підставляти дефолти**: стадія `stage.escalation`,
-`result: escalated`, `escalated_to: AI-інженер`, причина «наряд неповний/недійсний: <що>». `params`, `git`, `date` — необов'язкові (`naryad-format.md`; правила виведення без ключа — там же).
+`result: escalated`, `escalated_to: AI-інженер`, причина «наряд неповний/недійсний: <що>». `params`, `git`, `date`, `called_skills` — необов'язкові (`naryad-format.md`; правила виведення без ключа — там же).
 Наряд без alias `flow` або з будь-якою базою класу «прод» (`prod-*`) в allow-list (без винятків і рішень) → `escalated`, відмова; жодного виклику до проду.
 
 ## Крок 3. Звірити `скіл@версія`
