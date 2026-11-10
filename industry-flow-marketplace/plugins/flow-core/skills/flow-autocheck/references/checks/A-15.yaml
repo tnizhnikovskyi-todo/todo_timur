@@ -19,7 +19,8 @@
     "to": "head",
     "allow": [
      "package/demo/",
-     "package/templates/demo-README.md"
+     "package/templates/demo-README.md",
+     "observations/"
     ]
    }
   },

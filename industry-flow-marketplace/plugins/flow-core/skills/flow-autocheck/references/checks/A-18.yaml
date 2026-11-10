@@ -29,7 +29,8 @@
      "package/CHANGELOG.md",
      "package/templates/migration-plan.md",
      "package/templates/training.md",
-     "package/templates/CHANGELOG.md"
+     "package/templates/CHANGELOG.md",
+     "observations/"
     ]
    }
   },

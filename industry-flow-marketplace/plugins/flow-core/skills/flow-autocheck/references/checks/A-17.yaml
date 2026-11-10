@@ -29,7 +29,8 @@
     "to": "extract:head:package/ACCEPTANCE.md",
     "allow": [
      "package/CHECKS.md",
-     "package/demo/**"
+     "package/demo/**",
+     "observations/"
     ]
    }
   },

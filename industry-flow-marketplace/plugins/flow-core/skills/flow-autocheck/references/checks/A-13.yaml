@@ -19,7 +19,8 @@
     "to": "head",
     "allow": [
      "package/master-data/",
-     "package/templates/master-data.md"
+     "package/templates/master-data.md",
+     "observations/"
     ]
    }
   },
@@ -51,7 +52,7 @@
    "id": "script-check-master-data",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-package-build/skills/master-data-template-builder/scripts/check_master_data.py --dir package/master-data [--fields fields.json]: MD-rows, MD-readme, MD-pii, MD-td, MD-ref, MD-order (+MD-cols, MD-req) без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/master-data-template-builder/scripts/check_master_data.py --dir package/master-data [--fields fields.json]: MD-rows, MD-readme, MD-pii, MD-td, MD-ref, MD-order (+MD-cols, MD-req) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

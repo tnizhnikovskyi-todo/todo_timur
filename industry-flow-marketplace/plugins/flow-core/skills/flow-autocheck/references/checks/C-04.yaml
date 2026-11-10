@@ -9,7 +9,8 @@
     "from": "base",
     "to": "head",
     "allow": [
-     "evals/"
+     "evals/",
+     "observations/"
     ]
    }
   },

@@ -6,7 +6,7 @@
    "id": "script-check-support-sla",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-client-delivery/skills/support-desk/scripts/check_support.py clients/<к>/support-log.md --base <git.base> --mode sla-month --period РРРР-ММ --routes plugins/flow-client-delivery/references/triage-routes.md [--delivery-log <delivery-log.md>]: SD-columns, SD-enums, SD-route, SD-sla, SD-sla-source, SD-report, SD-protected, SD-pii без FAIL; sla_calc.py — розрахунок строків. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-client-delivery>/skills/support-desk/scripts/check_support.py clients/<к>/support-log.md --base <git.base> --mode sla-month --period РРРР-ММ --routes <корінь плагіна flow-client-delivery>/references/triage-routes.md [--delivery-log <delivery-log.md>]: SD-columns, SD-enums, SD-route, SD-sla, SD-sla-source, SD-report, SD-protected, SD-pii без FAIL; sla_calc.py — розрахунок строків. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

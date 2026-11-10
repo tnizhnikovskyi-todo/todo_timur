@@ -19,7 +19,8 @@
     "to": "head",
     "allow": [
      ".github/workflows/",
-     "package/templates/ci-workflow.md"
+     "package/templates/ci-workflow.md",
+     "observations/"
     ]
    }
   },
@@ -37,7 +38,7 @@
    "id": "script-check-ci",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-core/skills/ci-pipeline-builder/scripts/check_ci.py .github/workflows/ci.yml --registry clients/REGISTRY.md --scenarios package/demo/scenarios.md: placeholders, ci-contract, triggers, resolve-zones, dispatch-inputs, addons-path, client-tag, odoo-version, needs-exist, verdict-rules, tours-list, security без FAIL; actionlint, якщо встановлений. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/ci-pipeline-builder/scripts/check_ci.py .github/workflows/ci.yml --registry clients/REGISTRY.md --scenarios package/demo/scenarios.md: placeholders, ci-contract, triggers, resolve-zones, dispatch-inputs, addons-path, client-tag, odoo-version, needs-exist, verdict-rules, tours-list, security без FAIL; actionlint, якщо встановлений. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

@@ -14,7 +14,7 @@
    "id": "dt-honesty",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-research/skills/demand-test-runner/scripts/demand_tool.py honesty landing.md emails.md — без заборонених фраз, є «Прототип» і «пілот з» Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py honesty landing.md emails.md — без заборонених фраз, є «Прототип» і «пілот з» Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
@@ -22,7 +22,7 @@
    "id": "dt-complexity",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-research/skills/demand-test-runner/scripts/demand_tool.py complexity --complexity <complexity.md> --landing landing.md — F-xx «код/складно» мають «у плані пілоту» Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py complexity --complexity <complexity.md> --landing landing.md — F-xx «код/складно» мають «у плані пілоту» Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
@@ -30,7 +30,7 @@
    "id": "dt-utm",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-research/skills/demand-test-runner/scripts/demand_tool.py utm landing.md emails.md — utm_campaign, utm_content, utm_term=F-xx на #F-xx Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py utm landing.md emails.md — utm_campaign, utm_content, utm_term=F-xx на #F-xx Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
@@ -38,7 +38,7 @@
    "id": "dt-no-pii",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-research/skills/demand-test-runner/scripts/demand_tool.py pii <файли, які пише скіл, і _input/*> (mailing-list.* не перевіряється) Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/demand-test-runner/scripts/demand_tool.py pii <файли, які пише скіл, і _input/*> (mailing-list.* не перевіряється) Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

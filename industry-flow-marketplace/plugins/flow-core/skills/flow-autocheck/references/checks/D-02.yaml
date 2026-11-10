@@ -28,29 +28,10 @@
    }
   },
   {
-   "id": "scope-backlog",
-   "prim": "git_diff_allowed",
-   "args": {
-    "from": "base",
-    "to": "head",
-    "allow": [
-     "package/backlog.md"
-    ]
-   }
-  },
-  {
-   "id": "signature-by-ai-backlog",
-   "prim": "signature_by_ai",
-   "args": {
-    "file": "package/backlog.md",
-    "heading": "(?i)рішення власника продукту"
-   }
-  },
-  {
    "id": "script-backlog-check",
    "prim": "manual",
    "args": {
-    "text": "python3 -I plugins/flow-package-evolution/skills/backlog-triage/scripts/backlog_check.py --selftest; потім --phase draft --backlog package/backlog.md [--base <git.base-копія>] --sources <extracted.json> [--mode b|c|d --trigger-ref <шлях>] [--rerun]; після підпису — --phase post-sign --src-old <тека> --src-new <тека>: BT-* без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-package-evolution>/skills/backlog-triage/scripts/backlog_check.py --selftest; потім --phase draft --backlog package/backlog.md [--base <git.base-копія>] --sources <extracted.json> [--mode b|c|d --trigger-ref <шлях>] [--rerun]; після підпису — --phase post-sign --src-old <тека> --src-new <тека>: BT-* без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },

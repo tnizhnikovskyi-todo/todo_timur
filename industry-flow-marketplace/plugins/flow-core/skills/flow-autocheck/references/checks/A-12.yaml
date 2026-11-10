@@ -22,7 +22,8 @@
     "to": "head",
     "allow": [
      "package/config/",
-     "package/addons/"
+     "package/addons/",
+     "observations/"
     ]
    }
   },
@@ -64,14 +65,6 @@
     "paths": [
      "package/config/"
     ]
-   }
-  },
-  {
-   "id": "signature-by-ai-config",
-   "prim": "signature_by_ai",
-   "args": {
-    "file": "package/config/CONFIG.md",
-    "heading": "(?i)відкриті питання"
    }
   },
   {

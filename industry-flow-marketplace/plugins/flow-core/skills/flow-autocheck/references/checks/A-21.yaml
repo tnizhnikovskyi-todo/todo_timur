@@ -6,7 +6,7 @@
    "id": "script-check-prototype",
    "prim": "manual",
    "args": {
-    "text": "node plugins/flow-research/skills/prototype-builder/scripts/check.mjs <prototype-dir> [--concept <dir>]: VP-files, VP-screens, VP-scenarios, VP-video, VP-offline, VP-complexity, VP-imitation, VP-data, VP-size без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "node <корінь плагіна flow-research>/skills/prototype-builder/scripts/check.mjs <prototype-dir> [--concept <dir>]: VP-files, VP-screens, VP-scenarios, VP-video, VP-offline, VP-complexity, VP-imitation, VP-data, VP-size без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (інструкції у flow-step-runner ще немає, див. README «Відомі обмеження»), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "who": "runner"
    }
   },
