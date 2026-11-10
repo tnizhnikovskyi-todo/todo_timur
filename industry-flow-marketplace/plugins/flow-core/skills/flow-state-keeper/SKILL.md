@@ -3,12 +3,12 @@ name: flow-state-keeper
 description: >
   Запускай на кроці C-02 флоу галузевого пакета: після звіту кроку в задачі Odoo, після кнопки «Затвердити / Повернути»
   на гейті, для автоекспорту стану в git і щотижневої звірки. Переносить у базу Odoo flow облік запуску, журнал рішень
-  людей, «Параметри флоу», ростер і стан/прапорці клієнта; експортує flow/*.md, flow/runs/, clients/REGISTRY.md.
-  Режими (params.mode): record, export, reconcile. Тригерні фрази — "онови стан флоу", "запиши рішення гейта",
-  "журнал рішень", "експортуй state.md", "статистика спроб за тиждень", "запиши решение в журнал". НЕ використовуй для постановки кроків у чергу (flow-core:flow-orchestrator), виконання кроку й звіту
-  запуску (flow-core:flow-step-runner), перевірки артефактів (flow-core:flow-autocheck), пам'яті сесії
-  (boost:cloud-memory), реєстру інцидентів (odoo19-implementation:hypercare-tracker), реєстру ТР
-  (odoo19-tr-authoring:tr-registry-update). Результат — записи в Odoo flow і PR автоекспорту.
+  людей, «Параметри флоу», ростер і стан клієнта; експортує flow/*.md, flow/runs/, clients/REGISTRY.md. Режими
+  (params.mode): record, export, reconcile. Тригери — "онови стан флоу", "запиши рішення гейта", "журнал рішень",
+  "експортуй state.md", "запиши решение в журнал". НЕ використовуй для постановки кроків у чергу
+  (flow-core:flow-orchestrator), виконання кроку (flow-core:flow-step-runner), перевірки артефактів
+  (flow-core:flow-autocheck), реєстру інцидентів (odoo19-implementation:hypercare-tracker), реєстру ТР
+  (odoo19-tr-authoring:tr-registry-update), пам'яті сесії (boost:cloud-memory). Результат — записи в Odoo flow і PR автоекспорту.
 ---
 
 # Flow State Keeper — стан флоу й журнал рішень (C-02)

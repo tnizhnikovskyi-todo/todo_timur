@@ -1,0 +1,46 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-22",
+ "checks": [
+  {
+   "id": "connection",
+   "prim": "manual",
+   "args": {
+    "text": "усі виклики odoo-mcp з явним connection_id; connection.db ∈ allow-list (emu-*), не прод і не клієнтська база",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-code",
+   "prim": "manual",
+   "args": {
+    "text": "немає ir.actions.server state='code', жодного нового модуля проти переліку ir.module.module, знятого перед збіркою (emulation.md), усі моделі й поля з префіксом x_",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "substituted-labelled",
+   "prim": "manual",
+   "args": {
+    "text": "кожен підставлений результат має позначку в полі й рядок у таблиці emulation.md",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "emulation-sections",
+   "prim": "manual",
+   "args": {
+    "text": "заголовки emulation.md за references/emulation-template.md (grep -ci): Адреса і доступ, Ролі, Сценарії A-20, Підставлено не розраховано, Скидання, Строк доступу, Що НЕ є реальною логікою, Маніфест",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "synthetic-data",
+   "prim": "manual",
+   "args": {
+    "text": "demo-data-rules.md: e-mail лише example.com, назви «Демо-…», реальних назв і контактів немає",
+    "who": "runner"
+   }
+  }
+ ]
+}

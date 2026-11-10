@@ -1,0 +1,70 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-11",
+ "checks": [
+  {
+   "id": "u-conn",
+   "prim": "manual",
+   "args": {
+    "text": "U-01: підключення лише з allow-list, кожен виклик з connection_id, журнал викликів — лише odoo_search_read",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-tag",
+   "prim": "manual",
+   "args": {
+    "text": "U-02: тег A-18 = тег-кандидат = clients/REGISTRY.md = package_tag CI; U-05: CI run на SHA гілки, job кожного td_<к>_* pass (skipped = FAIL)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-answers",
+   "prim": "manual",
+   "args": {
+    "text": "U-03: кожен новий/змінений VP з проміжних CHANGELOG є в додатку й answers.yaml; U-04: кожен кандидат у «Зняті відхилення й кастом»",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-modules",
+   "prim": "manual",
+   "args": {
+    "text": "U-06: ir.module.module — усі модулі тегу й доробок installed, latest_version = маніфест тегу",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-log",
+   "prim": "manual",
+   "args": {
+    "text": "U-07: «Лог установки» заповнено не AI (git log/blame clients/<к>/upgrade-log.md, автор ≠ технічний користувач агента); U-08, U-09, U-10: маршрути дефектів, «Відкат», гейти",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-headings",
+   "prim": "manual",
+   "args": {
+    "text": "U-12: усі заголовки шаблону upgrade-log.md, зокрема «Відтворення доробок (Тімлід)»",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "u-pii",
+   "prim": "manual",
+   "args": {
+    "text": "U-11: pii-patterns.md + суми у upgrade-log.md й лозі установки",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-sign",
+   "prim": "manual",
+   "args": {
+    "text": "підпис додатка до SOW, рішення по кандидатах, «Перелік втраченого конфігу», підпис Тімліда — очікує людини",
+    "who": "PM; Тімлід"
+   }
+  }
+ ]
+}

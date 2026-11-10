@@ -1,0 +1,102 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-12",
+ "checks": [
+  {
+   "id": "config-files",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/config/CONFIG.md",
+     "package/config/manifest.yaml",
+     "package/config/vp-map.yaml",
+     "package/config/install-log.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-config-only",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/config/",
+     "package/addons/"
+    ]
+   }
+  },
+  {
+   "id": "config-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/config/CONFIG.md",
+    "headings": [
+     "Модулі до установки",
+     "Параметри установки",
+     "Команда установки",
+     "Ручні кроки"
+    ]
+   }
+  },
+  {
+   "id": "install-log-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/config/install-log.md",
+    "headings": [
+     "Прогін 1",
+     "Прохід 2",
+     "Read-back VP",
+     "Config-log"
+    ]
+   }
+  },
+  {
+   "id": "vendored-license",
+   "prim": "vendored_license",
+   "args": {}
+  },
+  {
+   "id": "no-pii-config",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/config/"
+    ]
+   }
+  },
+  {
+   "id": "signature-by-ai-config",
+   "prim": "signature_by_ai",
+   "args": {
+    "file": "package/config/CONFIG.md",
+    "heading": "(?i)відкриті питання"
+   }
+  },
+  {
+   "id": "cfg-static",
+   "prim": "manual",
+   "args": {
+    "text": "CFG-modules, CFG-order, CFG-vp-coverage, CFG-no-const, CFG-ac-trace, CFG-xmlid, CFG-schema, CFG-secrets, CFG-td-isolation, CFG-vendored — статичні перевірки за таблицею «Автоперевірка» config-as-code (скрипта немає)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "cfg-db",
+   "prim": "manual",
+   "args": {
+    "text": "CFG-install, CFG-idempotent (created=0, updated=0 на 2-му проході), CFG-readback (значення VP у базі = answers.example.yaml) за install-log.md; база — тестова пакета, connection_id явний",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "gates",
+   "prim": "manual",
+   "args": {
+    "text": "boost:odoo19-lint по package/config/ і вендорених модулях; odoo19-mvp-build:config-review (даних у базі немає — N/A, не done)",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

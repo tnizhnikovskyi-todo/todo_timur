@@ -2,13 +2,13 @@
 name: product-decision-drafter
 description: >
   Запускай на кроках A-07, A-17, D-04, D-05 флоу галузевого пакета Odoo 19, коли входи кроку готові і треба підготувати
-  Власнику продукту чернетку рішення за шаблоном кроку: факти з посиланнями файл@SHA, варіанти, рекомендація AI (не рішення),
-  допущення, відкриті питання, порожній блок підпису. Режими: A-07 business-case.md; A-17 ACCEPTANCE.md; D-04
-  release-plan-X.Y.md; D-05 pilot/decision.md. Тригери: "чернетка рішення", "підготуй business-case", "будуємо пакет?",
-  "чернетка ACCEPTANCE", "реліз-план версії", "рішення по пілоту", "тираж чи доопрацювання", "подготовь решение для
-  владельца продукта". НЕ використовуй для акта приймання замовнику (odoo19-implementation:acceptance-act-builder), тріажу
-  беклогу (flow-package-evolution:backlog-triage), тега й випуску (flow-package-build:package-release-builder), зведення гейтів
-  A-14 (flow-package-build:gates-aggregator), ухвалення рішення замість людини.
+  Власнику продукту чернетку рішення за шаблоном кроку: факти з посиланнями файл@SHA, варіанти, рекомендація AI (не
+  рішення), допущення, відкриті питання, порожній блок підпису. Режими: A-07 business-case.md; A-17 ACCEPTANCE.md; D-04
+  release-plan-X.Y.md; D-05 pilot/decision.md. Тригери: "чернетка рішення", "підготуй business-case", "чернетка
+  ACCEPTANCE", "реліз-план версії", "рішення по пілоту", "тираж чи доопрацювання", "подготовь решение для владельца". НЕ
+  використовуй для акта приймання замовнику (odoo19-implementation:acceptance-act-builder), тріажу беклогу
+  (flow-package-evolution:backlog-triage), тега й випуску (flow-package-build:package-release-builder), гейтів A-14
+  (flow-package-build:gates-aggregator), ухвалення рішення замість людини.
 ---
 
 # Product Decision Drafter — чернетка рішення Власника продукту (A-07, A-17, D-04, D-05)

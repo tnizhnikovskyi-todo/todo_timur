@@ -1,0 +1,30 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-03",
+ "checks": [
+  {
+   "id": "script-check-sow",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/package-sow-builder/scripts/check_sow.py clients/<к>/sow.md --mode main|addendum --tag <тег> --fit-gap clients/<к>/fit-gap.md --answers clients/<к>/answers.yaml --data-policy package/DATA_POLICY.md --business-case docs/industries/<галузь>/business-case.md --reference-clients docs/industries/<галузь>/reference-clients.md [--base --source --tr --first-run|--rerun]: SOW-sections, -coverage, -price, -tag, -ac, -clarify, -answers, -nosla, -ai, -update, -pilot, -pii, -addendum-only, -addendum-ac без FAIL (без аргумента — SKIP, не PASS). Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "sow-sign",
+   "prim": "manual",
+   "args": {
+    "text": "SOW-sign: підписи сторін і погодження PM/Тімліда — очікує людини (не PASS)",
+    "who": "PM; Тімлід"
+   }
+  },
+  {
+   "id": "sow-pii",
+   "prim": "manual",
+   "args": {
+    "text": "SOW-pii: шаблони pii-patterns.md; назви юрособи й ЄДРПОУ клієнта не в репо за політикою DATA_POLICY",
+    "who": "runner"
+   }
+  }
+ ]
+}

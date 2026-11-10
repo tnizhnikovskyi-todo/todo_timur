@@ -58,3 +58,18 @@ weight: 1
 
 ## Після прогону
 Стиснути `res.json` у `evals/results/<YYYY-MM-DD>-<mode>.json` (кейс, score, runs, модель, версія, $). Повний JSON і `<tmp>` у git не йдуть.
+
+## Генерація файлів кейсів: scripts/evals_to_cli.py
+`python3 scripts/evals_to_cli.py <evals.json> --out <tmp>/<плагін>/flow-evals [--set <набір>]`; перевірка самого скрипта: `--self-test`
+(прогін на evals.json 3+ скілів пакета з різних плагінів у тимчасову теку).
+- Вхід: формат пакета `{"skill_name","evals":[{id,prompt,expected_output,assertions[],expected_checks[]?,must_not[]?,requires?,needs_write?}]}` або формат репо флоу `{"skill","cases":[{id,status,prompt,requires,input,expected:{checks,must_not}}]}` (статуси `skipped`/`queued` - пропуск). Помилка входу - stderr, exit 2. Перед генерацією `<набір>__*` в out видаляються; `--manifest-dir` виносить manifest з eval dir.
+- Вихід: `<набір>__<id>/prompt.md` (frontmatter `max_turns: 10`, `allowed_tools: [Read, Glob, Grep, Skill]`, +Write, Edit при `needs_write`),
+  `graders/00-expected.md` (expected_output), `NN-check.md` (одна assertion = один грейдер), `99-must-not.md`; `mocks/` поруч із evals.json копіюється;
+  `manifest-<набір>.json` - згенеровані й пропущені кейси.
+- Пропуск з причиною: `requires` з префіксом odoo-mcp, step-run, github, playwright, agents, web, odb-catalog або точне `fixtures` (довжина тексту не важлива);
+  `mock:` без теки mocks/ поруч - «немає заглушки». Вільний текст без відомого префікса (в т.ч. `fixtures/make_repo.sh ...`) - NOTE у stdout і `notes` в manifest, кейс генерується.
+- Обгрунтування формату: `claude plugin eval --help` (кейси `<eval dir>/**/case.yaml` або `prompt.md` + `graders/*.md`) і вивід `init --bare`
+  (prompt.md з `max_turns`, `allowed_tools`; грейдер з `type: llm`, `weight`).
+- Припущення (у довідці CLI не описані, перевірити першим прогоном на 1 кейсі): імена грейдерів довільні, бо CLI бере всі `graders/*.md`; `weight: 1`
+  для всіх; `type` лише `llm` (`contains` для формальних полів скрипт не генерує - додає runner вручну); `case.yaml` не генерується.
+- Не підтримано: фікстури (`fixtures`, `files`, `input`) не копіюються (їх розкладає runner за `evals-format.md`): кейс генерується з `fixtures_pending` у manifest і WARN у stdout, не проганяти до розкладки; `requires: odoo-mcp:*`/`step-run` лишаються відкритим питанням (README п.14а).

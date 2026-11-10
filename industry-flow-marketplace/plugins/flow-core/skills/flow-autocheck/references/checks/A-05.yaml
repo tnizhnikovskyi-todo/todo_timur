@@ -1,0 +1,62 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-05",
+ "checks": [
+  {
+   "id": "ss-registry",
+   "prim": "manual",
+   "args": {
+    "text": "SS-registry: кожен ЄДРПОУ шортліста — 8 цифр, є в odb-catalog, status='зареєстровано', has_financials=1, kved_2010 у фільтрі сегмента (запит S5, пакетами ≤500)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ss-unique-exclude",
+   "prim": "manual",
+   "args": {
+    "text": "SS-unique, SS-exclude: ЄДРПОУ й K-xx унікальні, немає перетину з «конкурент»/«клієнт» і попередніми раундами",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ss-size",
+   "prim": "manual",
+   "args": {
+    "text": "SS-size: 5–6 кандидатів зі статусом «кандидат», є резерв",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ss-round",
+   "prim": "manual",
+   "args": {
+    "text": "SS-round: «Раунд N: <дата>», N = попередній+1; колонки частини 2 нових рядків порожні, рядка завершення частини 2 немає",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ss-tag-pii",
+   "prim": "manual",
+   "args": {
+    "text": "SS-tag: кожна фінцифра має [odb YYYY-MM] = дата знімка; SS-pii: у репо немає email, телефонів, ПІБ, колонок ceo_name/phones/email/location (pii-patterns.md)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ss-repro",
+   "prim": "manual",
+   "args": {
+    "text": "SS-repro: розділ «SQL-запити» є; 3 випадкові рядки повторено запитом",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-consent",
+   "prim": "manual",
+   "args": {
+    "text": "частина 2: згоди й дати сесій вносить Sales; перевірка Керівника напряму",
+    "who": "Керівник напряму"
+   }
+  }
+ ]
+}

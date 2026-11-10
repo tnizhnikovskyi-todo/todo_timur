@@ -1,11 +1,11 @@
 ---
 name: eval-builder
 description: >
-  Запускай на кроці C-04 флоу галузевого пакета (щотижня, до першого прогону флоу, на нову модель чи версію плагіна) і на
-  кроці C-07 після розбору помилки AI. Робить евал-кейси зі спостережень, failureModes карток і розборів інцидентів, веде evals/INDEX.md, проганяє claude plugin eval як регрес і готує пропозиції
-  пониження чи повернення зрілості кроку для AI-інженера. Режими: weekly, init, regress (C-04), incident (C-07).
-  Тригерні фрази — "зроби евал із зауваження", "регрес скілів на новій моделі", "кейс-еталон з
-  інциденту", "прогони регресс скиллов", "понизить зрелость шага". НЕ використовуй для запису зауваження
+  Запускай на кроці C-04 флоу галузевого пакета (щотижня, до першого прогону флоу, на нову модель чи версію плагіна) і
+  на кроці C-07 після розбору помилки AI. Робить евал-кейси зі спостережень, failureModes карток і розборів інцидентів,
+  веде evals/INDEX.md, проганяє claude plugin eval як регрес і готує пропозиції пониження чи повернення зрілості кроку
+  для AI-інженера. Режими: weekly, init, regress (C-04), incident (C-07). Тригери — "зроби евал із зауваження", "регрес
+  скілів на новій моделі", "кейс-еталон з інциденту", "понизить зрелость шага". НЕ використовуй для запису зауваження
   (boost:skill-feedback), пошуку причини помилки (boost:debug-root-cause), правки скіла, запису рішення про зрілість
   (flow-core:flow-state-keeper), перевірки артефакта кроку (flow-core:flow-autocheck). Результат — evals/ +
   evals/INDEX.md у PR і блок evals у звіті задачі.
@@ -132,7 +132,10 @@ below the plugin», `--help`), тому копія плагіна точної �
 `<tmp>/<плагін>/flow-evals/<набір>__<case>/{prompt.md,graders/*.md}`; заглушки з `evals/<набір>/mocks/` копіювати в
 `<tmp>/<плагін>/flow-evals/mocks/`. Frontmatter: `max_turns`, `allowed_tools`: Read, Glob, Grep, Skill. Write/Edit — лише для
 кейсів `needs_write: true` разом із вузьким `--allow-tools Write Edit` (`run-eval.md`); усе — в тимчасовій теці. Згенероване в git не йде.
-Скрипт `scripts/evals_to_cli.py` **ще не створено** — розкласти вручну за `references/evals-format.md`.
+Генерує `scripts/evals_to_cli.py <evals.json> --out <tmp>/<плагін>/flow-evals [--set <набір>]` (stdlib; самотест `--self-test`): кейси з `requires`
+(odoo-mcp, step-run, github, playwright, agents:, web:, odb-catalog, точне `fixtures`) пропускає з причиною в `manifest-<набір>.json`; `mock:` без `evals/<набір>/mocks/` — теж пропуск; формат і припущення — `references/run-eval.md`.
+Читає обидва формати: `{skill, cases[]}` схеми `evals-format.md` (`expected.checks`/`must_not`; статуси `skipped`/`queued` — пропуск) і `{skill_name, evals[]}` пакета. Перелік `skipped` з manifest — у звіт.
+**Фікстури не розкладаються скриптом:** кейс із `input.fixtures`/`fixtures`/`files` генерується з `fixtures_pending` у manifest і WARN у stdout — такі кейси не проганяти, доки runner не розклав фікстури (інакше хибно-червоний результат); у звіт — перелік `fixtures_pending`. Вільний текст у `requires` — NOTE у stdout, передумову читає людина.
 
 **Ціль прогону за `set_kind`.**
 - `skill`: плагін скіла з INDEX на точній версії; фікстури — з `input.fixtures`.

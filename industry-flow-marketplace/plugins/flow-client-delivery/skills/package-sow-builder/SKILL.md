@@ -1,15 +1,14 @@
 ---
 name: package-sow-builder
 description: >
-  Запускай на кроці B-03 флоу галузевого пакета, коли fit-gap клієнта (B-02) затверджено і треба скласти
-  SOW, або коли до підписаного SOW потрібен додаток (AC доробок після B-05, зміна обсягу чи відповідей,
-  нові VP-xx на B-11 фаза 0). Режими: «основний» — clients/<к>/sow.md за шаблоном пакета (позиції fit-gap,
-  ціна з pricing.md, строки з Odoo, git-тег, приймання, договірні розділи); «додаток» — новий запис у
-  «Додатки» без зміни основного тексту. Тригерні фрази — "склади SOW", "SOW для клієнта", "додаток до
-  SOW", "B-03", "составь SOW". НЕ використовуй для вилки годин (odoo19-sales-prep:preliminary-estimate),
-  КП після discovery (odoo19-discovery-closeout:discovery-sow-builder), класифікації вимог
-  (flow-client-delivery:package-fit-gap), AC доробок (odoo19-tr-authoring:tr-usecases-acceptance), акта
-  приймання (odoo19-implementation:acceptance-act-builder). Результат — clients/<к>/sow.md.
+  Запускай на кроці B-03 флоу галузевого пакета, коли fit-gap клієнта (B-02) затверджено і треба скласти SOW, або коли
+  до підписаного SOW потрібен додаток (AC доробок після B-05, зміна обсягу чи відповідей, нові VP-xx на B-11 фаза 0).
+  Режими: «основний» — clients/<к>/sow.md за шаблоном пакета (позиції fit-gap, ціна з pricing.md, строки, git-тег,
+  приймання); «додаток» — новий запис у «Додатки» без зміни основного тексту. Тригери — "склади SOW", "SOW для клієнта",
+  "додаток до SOW", "B-03", "составь SOW". НЕ використовуй для вилки годин (odoo19-sales-prep:preliminary-estimate), КП
+  після discovery (odoo19-discovery-closeout:discovery-sow-builder), класифікації вимог
+  (flow-client-delivery:package-fit-gap), AC доробок (odoo19-tr-authoring:tr-usecases-acceptance), акта приймання
+  (odoo19-implementation:acceptance-act-builder). Результат — clients/<к>/sow.md.
 ---
 
 # Package SOW Builder — SOW клієнта на пакет і додатки до нього (B-03)

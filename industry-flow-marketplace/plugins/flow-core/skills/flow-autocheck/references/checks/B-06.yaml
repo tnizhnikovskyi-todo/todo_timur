@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-06",
+ "checks": [
+  {
+   "id": "script-check-migration",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/client-data-migrator/scripts/check_migration.py --client-dir clients/<к> --tag <тег> [--mode main|reconcile|return] [--readme <README тегу>]: MIG-headings, -coverage, -source, -recon, -required, -order, -tag, -registry, -pii, -git, -draft, -d02, -return без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-pii",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/client-data-migrator/scripts/check_pii.py --path clients/<к>/migration-plan.md --path clients/<к>/migration/mapping.yaml — чисто. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "mig-conn",
+   "prim": "manual",
+   "args": {
+    "text": "MIG-conn: усі виклики odoo-mcp з connection_id, connection.db = тестова; результати Odoo-кроків із журналу запуску",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-signoff",
+   "prim": "manual",
+   "args": {
+    "text": "підписи звірки клієнтом і повне завантаження — людські дії (очікує людину); перевіряє PM",
+    "who": "PM"
+   }
+  }
+ ]
+}

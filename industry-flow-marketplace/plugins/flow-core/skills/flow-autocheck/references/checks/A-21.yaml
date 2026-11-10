@@ -1,0 +1,30 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-21",
+ "checks": [
+  {
+   "id": "script-check-prototype",
+   "prim": "manual",
+   "args": {
+    "text": "node plugins/flow-research/skills/prototype-builder/scripts/check.mjs <prototype-dir> [--concept <dir>]: VP-files, VP-screens, VP-scenarios, VP-video, VP-offline, VP-complexity, VP-imitation, VP-data, VP-size без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "vp-data-fio",
+   "prim": "manual",
+   "args": {
+    "text": "VP-data: ПІБ-подібне — перевірка очима",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "human-scenarios",
+   "prim": "manual",
+   "args": {
+    "text": "сценарії клікабельні, дані правдоподібні, відео відповідають сценаріям (Власник продукту); complexity.md, «невпевнено» і всі «стандарт» (Архітектор)",
+    "who": "Власник продукту; Архітектор"
+   }
+  }
+ ]
+}

@@ -1,0 +1,30 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-20",
+ "checks": [
+  {
+   "id": "script-check-concept",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-research/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=<шлях> --input past-projects.md=<шлях> [--input protocol-…=<шлях>] --base <git.base>: CM-files, CM-src, CM-quote, CM-feat, CM-count, CM-trace, CM-signal, CM-ids, CM-pii, CM-scope без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "cm-pii-fio",
+   "prim": "manual",
+   "args": {
+    "text": "CM-pii: ПІБ-подібні рядки (три слова з великої) перевірено очима",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "human-spot",
+   "prim": "manual",
+   "args": {
+    "text": "3 вибіркові функції: біль і цитата справді з джерела; ролі повні; екрани й сценарії зрозумілі клієнту",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

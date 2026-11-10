@@ -3,12 +3,12 @@ name: config-as-code
 description: >
   Запускай на кроці A-12 флоу галузевого пакета, коли ALLOCATION.md (A-10), ТР/SPEC (A-08) і схема answers.yaml (A-09)
   затверджені й треба зібрати конфіг-пакет: перетворити CONFIG.md (config-spec) на дані package/config/ -- «Модулі до
-  установки» за ALLOCATION у порядку залежностей, кожна VP-xx як параметр (vp-map.yaml), вендорені «готове», застосування
-  в чисту тестову базу пакета через odoo-mcp, лог з ідемпотентністю й read-back. Версія 0.1: дані + контракт, скриптів
-  установки немає. Режими: перший запуск, повтор за правками CHECKS.md (A-14), нова версія. Тригери -- "конфіг-пакет",
-  "конфіг як код", "config as code", "модулі до установки", "конфиг-пакет". НЕ для CONFIG.md без установки (config-spec),
-  кліків BA (config-runbook), бази клієнта (runbook-executor, B-04), модулів td_* (A-11), майстер-даних
-  (master-data-template-builder). Результат -- package/config/ (CONFIG.md, manifest.yaml, vp-map.yaml, data/, install-log.md).
+  установки» за ALLOCATION у порядку залежностей, кожна VP-xx як параметр (vp-map.yaml), застосування в чисту тестову
+  базу пакета через odoo-mcp, лог з ідемпотентністю й read-back. Режими: перший запуск, повтор за правками CHECKS.md
+  (A-14), нова версія. Тригери -- "конфіг-пакет", "конфиг-пакет", "конфіг як код", "config as code", "модулі до установки". НЕ для
+  CONFIG.md без установки (config-spec), кліків BA (config-runbook), бази клієнта (runbook-executor, B-04), модулів td_*
+  (A-11), майстер-даних (master-data-template-builder). Результат -- package/config/ (CONFIG.md, manifest.yaml,
+  vp-map.yaml, data/, install-log.md).
 ---
 
 # Config as Code -- конфіг-пакет як дані (A-12)

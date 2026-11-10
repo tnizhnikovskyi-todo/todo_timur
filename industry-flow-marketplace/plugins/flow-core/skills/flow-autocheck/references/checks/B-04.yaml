@@ -1,0 +1,38 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-04",
+ "checks": [
+  {
+   "id": "script-check-config-log",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/runbook-executor/scripts/check_config_log.py --client-dir clients/<к> --package package --mode apply: headers, status-allowed, readback, anchor, vp-coverage, sow-assumptions, fg-coverage, roles, modules, modules-set, pii, no-prod-status без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "skip-closed",
+   "prim": "manual",
+   "args": {
+    "text": "SKIP не є PASS: connection (журнал запуску), існування груп у res.groups, «Модулі до установки» CONFIG.md закриває runner",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "smoke",
+   "prim": "manual",
+   "args": {
+    "text": "smoke C-00 (tools/odoo/...) ще не існує: до того «smoke: виконує Тімлід», крок done лише після його позначки",
+    "who": "Тімлід"
+   }
+  },
+  {
+   "id": "gate-config-review",
+   "prim": "manual",
+   "args": {
+    "text": "odoo19-mvp-build:config-review на тестовій базі клієнта — APPROVE (гейт запускає runner)",
+    "who": "Тімлід"
+   }
+  }
+ ]
+}

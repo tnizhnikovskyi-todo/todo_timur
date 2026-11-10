@@ -1,0 +1,46 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-02",
+ "checks": [
+  {
+   "id": "script-check-fit-gap",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/package-fit-gap/scripts/check_fit_gap.py --client <к> --tag <тег> --base <git.base> --business-case <шлях> [--forbidden <файл>]: FG-class, FG-hours, FG-anchor, FG-source, FG-schema, FG-pii, FG-headings, FG-ignore, FG-scope, FG-threshold без FAIL. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "fg-headings",
+   "prim": "manual",
+   "args": {
+    "text": "FG-headings: Джерела, Вимоги, Суперечності й відкриті питання, Рішення з сесій, Запити в D-02, Відповідність пакету, Факти для пілоту (clients/<к>/fit-gap.md)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "fg-agreement",
+   "prim": "manual",
+   "args": {
+    "text": "FG-agreement: угода про discovery з двома підписами з датами й пунктом про AI",
+    "who": "Керівник напряму"
+   }
+  },
+  {
+   "id": "fg-coverage",
+   "prim": "manual",
+   "args": {
+    "text": "FG-coverage: кожен запис журналу/наряду оброблено N/N; FG-d02: кожне «уточнити» з причиною «дефект» має рядок запиту D-02",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "human-decision",
+   "prim": "manual",
+   "args": {
+    "text": "шлюз «Пакет підходить?» — кнопка Керівника напряму",
+    "who": "Керівник напряму"
+   }
+  }
+ ]
+}

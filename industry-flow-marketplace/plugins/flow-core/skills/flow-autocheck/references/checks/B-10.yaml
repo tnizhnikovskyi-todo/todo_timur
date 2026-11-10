@@ -1,0 +1,22 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "B-10",
+ "checks": [
+  {
+   "id": "script-check-support-sla",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I plugins/flow-client-delivery/skills/support-desk/scripts/check_support.py clients/<к>/support-log.md --base <git.base> --mode sla-month --period РРРР-ММ --routes plugins/flow-client-delivery/references/triage-routes.md [--delivery-log <delivery-log.md>]: SD-columns, SD-enums, SD-route, SD-sla, SD-sla-source, SD-report, SD-protected, SD-pii без FAIL; sla_calc.py — розрахунок строків. Скрипт autocheck.py його не запускає: runner виконує команду й вставляє JSON у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "sd-manual",
+   "prim": "manual",
+   "args": {
+    "text": "SD-pii-name — MANUAL; баг конфіг/код закриті лише після B-12",
+    "who": "Підтримка"
+   }
+  }
+ ]
+}
