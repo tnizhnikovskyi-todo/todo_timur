@@ -1,0 +1,26 @@
+# ТЕСТОВИЙ наряд A-04 (етап 1, без Odoo). Скіл вимагає executor: central і client_data: personal (Крок 0) — тут виконує сама сесія в ролі центрального агента;
+# у тесті реальних клієнтів немає: режим «лише звіти» AIKB, Fathom не читається (DATA_POLICY). Порожня таблиця в _input/sources.md = штатний waiting_human.
+step: A-04
+scope: {kind: package, id: mebli}
+executor: central
+access_profile: research
+skill_ref: ["flow-research:past-projects-analyzer@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: "decision.md (A-02)", from: A-02, path: docs/industries/mebli/decision.md, sha: HEAD}
+  - {name: "sources.md (перелік П-xx; робоча тека, поза git)", from: human, path: docs/industries/mebli/_input/sources.md, sha: null}
+  - {name: "DATA_POLICY (розділ про матеріали минулих проєктів)", from: C-05, path: package/DATA_POLICY.md, sha: HEAD}
+where: docs/industries/mebli/past-projects.md
+template: "references/past-projects-template.md скіла past-projects-analyzer"
+done: "проєкти позначені кодами П-xx з sources.md; кожен рядок має опаковий ідентифікатор джерела без назви клієнта; є розділи «Що вже робили», «Модулі для повторного використання», «Болі клієнтів», «Прогалини»; є кількість проєктів у цільовому сегменті"
+check: {mode: both, how: "python3 -I check_past_projects.py (PP-*); 3 вибіркові посилання ведуть на реальні джерела; немає назв клієнтів, ПІБ, сум", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 45, lease_factor: 1.5, cost_limit_usd: 6, context_budget_tokens: 60000}
+client_data: personal
+data_rule: "package/DATA_POLICY.md — «Матеріали минулих проєктів і звернення клієнтів: підстава обробки й режим читання» (лише звіти, без Fathom)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-04-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

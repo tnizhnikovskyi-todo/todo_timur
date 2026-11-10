@@ -1,0 +1,27 @@
+# ТЕСТОВИЙ наряд A-01 (етап 1, без Odoo). Формат — flow-core/references/naryad-format.md §3.1.
+# inputs[].sha: HEAD = поточний коміт гілки, з якої стартує крок (у тесті SHA оркестратор не фіксує; сесія підставляє реальний SHA в git.base і у звіт).
+step: A-01
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: research
+skill_ref: ["flow-research:industry-scoring@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: "Критерій ранжування галузей", from: C-02, path: "flow/decisions.md#1", sha: HEAD}   # рядок №1; повний текст — flow/params.md
+  - {name: "Параметри флоу: A-01", from: C-02, path: flow/params.md, sha: HEAD}
+  - {name: "Текст критерію (значення --param check_scoring.py)", from: C-02, path: flow/params/A-01-criterion.md, sha: HEAD}
+  - {name: "Реєстр компаній (знімок з датою)", from: odb-catalog, path: "odb-catalog@2026-08", sha: null}   # дата знімка — з опису MCP odb-catalog («станом на серпень 2026»); у наряді продубльована за контрактом скіла
+where: docs/industries/scoring.md
+template: "docs/industries/_template/scoring.md — немає, створити з references/scoring-template.md"
+done: "топ-10 галузей з метриками, кожна цифра з реєстру з датою знімка"
+check: {mode: both, how: "3 випадкові цифри проти запиту з «SQL-запити»; дата знімка біля кожної цифри; python3 -I check_scoring.py", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 30000}
+client_data: none
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI» (none; лише агрегати КВЕД)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-01-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

@@ -1,0 +1,29 @@
+# ТЕСТОВИЙ наряд A-05 phase 1 (етап 1, без Odoo): шортліст еталонних клієнтів. Частина 2 (згоди, дати сесій) — Sales, у тесті не виконується.
+# Очікуваний результат скіла: waiting_human (role Sales, phase 2) — це штатне завершення частини 1.
+step: A-05
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: research
+skill_ref: ["flow-research:segment-selector@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: "decision.md (A-02)", from: A-02, path: docs/industries/mebli/decision.md, sha: HEAD}
+  - {name: "briefing.md (A-03)", from: A-03, path: docs/industries/mebli/briefing.md, sha: HEAD}
+  - {name: "crm.csv (у тесті — лише заголовок, CRM немає)", from: human, path: docs/industries/mebli/_input/crm.csv, sha: null}
+  - {name: "Реєстр компаній (знімок з датою)", from: odb-catalog, path: "odb-catalog@2026-08", sha: null}
+  - {name: "Параметри флоу: ваги вибірки (q39)", from: C-02, path: flow/params.md, sha: HEAD}
+where: docs/industries/mebli/reference-clients.md
+template: "docs/industries/_template/reference-clients.md — немає, створити з references/reference-clients-template.md скіла"
+done: "«Раунд 1: <дата>» і ранжований шортліст із резервом, 5–6 кандидатів зі статусом «кандидат», пріоритет, K-xx, ЄДРПОУ, критерій, фінпоказники з тегом [odb YYYY-MM]"
+check: {mode: both, how: "SS-registry/unique/exclude/pii/size/round/tag/repro; 3 випадкові ЄДРПОУ проти запиту", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 45, lease_factor: 1.5, cost_limit_usd: 5, context_budget_tokens: 50000}
+client_data: commercial
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI» (commercial: відкритий реєстр; без контактів і ПІБ)"
+odoo_connections: []
+params: {phase: 1}
+repo: {url: origin, base_branch: main, branch: flow/A-05-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

@@ -1,0 +1,29 @@
+# ТЕСТОВИЙ наряд A-23 `список` (етап 1, без Odoo): попередній крок перед `prep` (flow-map.md: A-23 `список` -> A-23 `prep`). Файл адрес (`адреси`) НЕ запускати: центральний агент, Drive не визначено.
+# Очікувано: меблі корпоративних адрес < 300 -> розділ «Нестача корпоративних адрес» у mailing-list.md (відоме відкрите питання пакета).
+step: A-23
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: research
+skill_ref: ["flow-research:segment-selector@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: "decision.md (A-02)", from: A-02, path: docs/industries/mebli/decision.md, sha: HEAD}
+  - {name: "briefing.md (A-03)", from: A-03, path: docs/industries/mebli/briefing.md, sha: HEAD}
+  - {name: "reference-clients.md (A-05; виключити K-xx)", from: A-05, path: docs/industries/mebli/reference-clients.md, sha: HEAD}
+  - {name: "crm.csv (лише заголовок)", from: human, path: docs/industries/mebli/_input/crm.csv, sha: null}
+  - {name: "Реєстр компаній (знімок з датою)", from: odb-catalog, path: "odb-catalog@2026-08", sha: null}
+where: docs/industries/mebli/demand/mailing-list.csv
+template: "references/mailing-list-format.md скіла segment-selector"
+done: "300–500 компаній з 2–3 варіантами цінності, лише корпоративні адреси (окремий файл, режим `адреси`), або явна «Нестача корпоративних адрес»"
+check: {mode: both, how: "SS-* (mode, registry, unique, exclude, pii, size, tag, repro); у репо немає адрес і телефонів", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 60, lease_factor: 1.5, cost_limit_usd: 8, context_budget_tokens: 50000}
+client_data: commercial
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI» (commercial; адреси не беруться)"
+odoo_connections: []
+params: {mode: список}
+repo: {url: origin, base_branch: main, branch: flow/A-23-spisok-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10

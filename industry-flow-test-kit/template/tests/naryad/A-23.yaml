@@ -1,0 +1,31 @@
+# ТЕСТОВИЙ наряд A-23 `prep` (етап 1, без Odoo): підготовка матеріалів тесту попиту (пороги, лендинг, листи, план розсилки). Нічого не надсилається й не публікується; `results` не запускається.
+# Передумови скіла (Крок 0 п.4), які виконує ЛЮДИНА до запуску: (1) рядок «A-21 … mebli … затверджено» у flow/decisions.md; (2) mailing-list.csv і .md від A-23-spisok;
+# (3) якщо mailing-list.md містить «Нестача корпоративних адрес» — рядок A-23 зі scope mebli і словом «досяжн» у коментарі (рішення людини: новий список / дзвінок / менший тест).
+# Очікувана FAIL-перевірка: DT-consent (у DATA_POLICY немає розділу про згоду/відписку -> плейсхолдер «текст згоди — Юрист») — це відоме відкрите питання, не помилка тесту.
+step: A-23
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: outreach
+skill_ref: ["flow-research:demand-test-runner@0.1.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: features.md, from: A-20, path: docs/industries/mebli/concept/features.md, sha: HEAD}
+  - {name: complexity.md, from: A-21, path: docs/industries/mebli/prototype/complexity.md, sha: HEAD}
+  - {name: mailing-list.csv, from: A-23, path: docs/industries/mebli/demand/mailing-list.csv, sha: HEAD}
+  - {name: mailing-list.md, from: A-23, path: docs/industries/mebli/demand/mailing-list.md, sha: HEAD}
+  - {name: "flow/decisions.md (затвердження A-21)", from: C-02, path: flow/decisions.md, sha: HEAD}
+where: docs/industries/mebli/demand/
+template: "references/thresholds-template.md, landing-template.md, email-template.md, mailing-plan-template.md скіла demand-test-runner"
+done: "thresholds.md зафіксовано до старту; landing.md (2–3 варіанти, форма «Заявка на пілот»), emails.md, mailing-plan.md готові; пороги — «оцінка AI, затверджує Власник продукту»"
+check: {mode: both, how: "scripts/demand_tool.py + DT-inputs/thresholds/variants/honesty/complexity/consent/utm/reach/wave", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 60, lease_factor: 1.5, cost_limit_usd: 8, context_budget_tokens: 60000}
+client_data: commercial
+data_rule: "package/DATA_POLICY.md — «Дозволено передавати в AI»; «Місця зберігання» (адрес у репо немає)"
+odoo_connections: []
+params: {mode: prep}
+repo: {url: origin, base_branch: main, branch: flow/A-23-prep-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-10
