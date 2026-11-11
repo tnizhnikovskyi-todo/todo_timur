@@ -1,0 +1,38 @@
+/* Фірмовий стиль ToDo для заставок, титрів і SHOW.html (flow-research/references/brand-todo/BRAND.md). Інтерфейс Odoo не фарбуємо.
+   @font-face сюди не пишемо: скрипти вбудовують Open Sans як data:-URI (lib.mjs fontCss) — файл не залежить від місця запуску. */
+:root { --todo-orange: #FE5000; --todo-dark: #101820; --todo-white: #FFFFFF; --todo-grey: #808080; --todo-light: #BFBFBF; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: 'Open Sans', sans-serif; }
+em { font-style: normal; color: var(--todo-orange); }
+/* заставки (rec_cards.mjs) */
+.card { position: absolute; inset: 0; overflow: hidden; background: var(--todo-dark); color: #fff; }
+.card .bg { position: absolute; inset: 0; background: radial-gradient(60% 50% at var(--gx, 20%) var(--gy, 30%), rgba(254,80,0,.28), transparent 70%); animation: glow 8s ease-in-out infinite alternate; }
+.card .bar { position: absolute; left: 0; top: 0; height: 10px; background: var(--todo-orange); animation: bar 7s ease-out forwards; }
+.card .stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 70px; }
+.f9x16 .stage { padding: 250px 56px; }
+.in { opacity: 0; transform: translateY(46px) scale(.97); animation: in .7s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: var(--d, 0s); }
+.out { opacity: 0; transform: translateY(46px); animation: in .7s cubic-bezier(.2,.8,.2,1) forwards var(--d, 0s), out .6s ease-in forwards var(--o, 3s); }
+.logo { background: #fff; border-radius: 24px; margin-bottom: 46px; }
+.hl { color: #fff; animation: hl .35s ease-out forwards var(--d, 0s); }
+.cta { background: var(--todo-orange); color: #fff; font-weight: 700; padding: .3em 1.1em; border-radius: 999px; }
+.drift { animation: drift 10s linear forwards; }
+@keyframes glow { to { --gx: 80%; --gy: 70%; transform: scale(1.15) rotate(3deg); } }
+@keyframes bar { from { width: 0; } to { width: 100%; } }
+@keyframes in { to { opacity: 1; transform: none; } }
+@keyframes out { to { opacity: 0; transform: translateY(-30px); } }
+@keyframes hl { to { color: var(--todo-orange); } }
+@keyframes drift { from { transform: scale(1); } to { transform: scale(1.06); } }
+/* SHOW.html (make_show.mjs) */
+.show { max-width: 1040px; margin: 0 auto; padding: 36px 40px 60px; color: var(--todo-dark); line-height: 1.5; }
+.show h1 { font-size: 30px; line-height: 1.2; margin: 18px 0 10px; }
+.show h2 { font-size: 21px; margin: 0 0 8px; color: var(--todo-dark); border-left: 8px solid var(--todo-orange); padding-left: 12px; }
+.show .blk { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; margin: 22px 0; break-inside: avoid; }
+.show .blk img { width: 100%; border-radius: 10px; box-shadow: 0 4px 18px rgba(16,24,32,.18); }
+.show .hero { background: var(--todo-dark); color: #fff; border-radius: 14px; padding: 26px 30px; }
+.show .hero .num { display: inline-block; margin-right: 26px; }
+.show .hero .num b { display: block; font-size: 34px; color: var(--todo-orange); line-height: 1.1; }
+.show .cta-box { background: var(--todo-orange); color: #fff; border-radius: 14px; padding: 20px 28px; font-weight: 700; font-size: 22px; break-inside: avoid; }
+.show .note { font-size: 12px; color: var(--todo-grey); margin-top: 22px; }
+/* рамка телефона (CSS, без чужих марок) для зображень SHOW (make_images.mjs) */
+.phone { position: relative; width: var(--pw, 390px); height: var(--ph, 844px); border-radius: calc(var(--pw, 390px) * .12); background: #0b0f14; padding: calc(var(--pw, 390px) * .03); box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 0 2px #2a333d; }
+.phone img { width: 100%; height: 100%; display: block; border-radius: calc(var(--pw, 390px) * .09); object-fit: cover; object-position: top; background: #fff; }

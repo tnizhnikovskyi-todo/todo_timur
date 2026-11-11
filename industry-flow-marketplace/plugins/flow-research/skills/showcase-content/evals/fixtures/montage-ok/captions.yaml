@@ -1,0 +1,22 @@
+# Фікстура: вигадані сцени D_demo (десктоп) і M_demo (телефон); усі числа — через {{fact:…}}
+version: 1
+lang: uk
+slug: demo
+cards:
+  intro: {format: 16x9, secs: 4, lines: ["Замовлення — **в таблицях**"], headline: "ToDo показує, як **Odoo 19** веде виробництво", note: "Вигадані дані"}
+  hook: {tpl: hook, format: 9x16, secs: 3, kicker: "Власнику виробництва", headline: "Маржу бачите **вже після відвантаження**?", sub: "Покажемо в Odoo"}
+  outro: {format: 16x9, secs: 4, headline: "ToDo — впровадження Odoo для виробництв", cta: "todo.ltd", tagline: "Покажемо на **ваших даних**", note: "Показ на вигаданих даних"}
+  outro_r: {tpl: outro, format: 9x16, secs: 3, headline: "ToDo — впровадження Odoo для виробництв", cta: "todo.ltd", tagline: "Покажемо на **ваших даних**", note: "Показ на вигаданих даних"}
+formats:
+  video_16x9:
+    pieces:
+      - {type: card, card: intro}
+      - {type: desk, clip: D_demo, from: 0, to: 9, speed: 1, block: director, titles: [{at: 0.4, secs: 3, kicker: "ВЛАСНИК", text: "Маржа **{{fact:margin}}** — до підтвердження"}, {at: 4, secs: 3, kind: pain, kicker: "БІЛЬ", text: "Маржу з'ясовують після відвантаження"}]}
+      - {type: phone, clip: M_demo, from: 0, to: 6, speed: 1, side: {kicker: "МЕНЕДЖЕР", pain: "Замовлення — в месенджерах"}, titles: [{at: 0.3, secs: 2.5, text: "Замовлення з телефона", big: "{{fact:margin}}", label: "маржа замовлення"}]}
+      - {type: card, card: outro}
+  reels_9x16:
+    pieces:
+      - {type: card, card: hook}
+      - {type: reel, clip: M_demo, from: 0, to: 4.5, speed: 1.5, block: director, titles: [{at: 0.3, kicker: "МЕНЕДЖЕР", text: "Маржа {{fact:margin}} з телефона"}]}
+      - {type: reel, clip: M_demo, from: 4.5, to: 7.5, speed: 1.2, titles: [{at: 0.3, kicker: "СКЛАД", text: "Залишки {{fact:stock}}"}]}
+      - {type: card, card: outro_r}

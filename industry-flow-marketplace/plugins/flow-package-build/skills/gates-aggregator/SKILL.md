@@ -42,7 +42,7 @@ description: >
 - Контекст ≤ 40k токенів: гейти запускати по одному; брати вердикт і знахідки, не повні звіти; логи CI — `tail`/помилки.
 
 ## Входи
-Обов'язкові, кожен із SHA з наряду: `package/addons/` (A-11), `package/config/` + `CONFIG.md` (A-12),
+Обов'язкові, кожен із SHA з наряду: `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`), `package/addons/` (A-11), `package/config/` + `CONFIG.md` (A-12),
 `package/master-data/` + `README.md` (A-13), `package/ALLOCATION.md` (A-10), `package/SPEC.md` (A-08),
 прогін C-03. Умовні: `answers.example.yaml` і `package/demo/profiles/` (фаза 2, матричний тест); артефакти
 дефектів `package/demo/defects.md` (A-15), `package/demo/scenarios.md` (A-16), `package/ACCEPTANCE.md`
@@ -135,14 +135,32 @@ A-12. До першого A-15 — «не застосовно: профілів
 ## Крок 9. Автоперевірка і здача
 Виконати автоперевірки (нижче) і передати `flow-step-runner` дані для звіту.
 
+## Редакції CE/EE (К-06, К-09; правила — `flow-package-build/references/editions-and-bridges.md`)
+Редакції — з `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions: ce|ee|both`; немає — не вгадувати, `waiting_human`); шаблон — `references/checks-template.md` (розділ «Редакції», колонки `ce`/`ee` у гейтах).
+- **Вердикт на редакцію.** Кожен гейт і C-03 мають вердикт окремо для `ce` і `ee`, SHA одні (`SHA_GATES`; C-03 — окремий прогін на кожну редакцію, `SHA_C03` на редакцію). Рядок `ee` при `editions: ce` = `SKIP`.
+- **Зведений вердикт кроку** (механічно з таблиці):
+
+| editions | стан EE | зведений вердикт | `result` |
+|---|---|---|---|
+| ce | — | `APPROVE`, якщо ce APPROVE | `done` |
+| both | ce і ee перевірені, обидва APPROVE | `APPROVE` | `done` |
+| both | EE недоступна (немає `ODOO_EE_ADDONS_PATH`/EE-бази), ce APPROVE | `APPROVE (CE); EE не перевірено` | `done`, `partial: true`, у `memo` — що саме не перевірено; рішення «випускаємо з неперевіреною EE» ухвалює людина (Власник продукту) на гейті A-17/A-18, не цей скіл |
+| both | будь-яка перевірена редакція не APPROVE | `правки → A-11/A-12/A-13` | `returned` |
+| both | EE недоступна і ce не APPROVE | `правки` (за ce) | `returned` |
+
+  `EE не перевірено` — не APPROVE по `ee`: у колонці `ee` пишеться `WARN: EE не перевірено`, ніколи `APPROVE` мовчки й не порожньо. Далі `demo-base-builder` (Крок 0) і `package-release-builder` приймають обидва підсумки — `APPROVE` та `APPROVE (CE); EE не перевірено` — і в другому випадку не піднімають/не позначають як перевірену жодну EE-частину.
+- **AGPL і EE-залежності (BLOCK).** Механічний grep по `package/addons/*/__manifest__.py` (`license`, `depends`) виконує цей скіл і записує знахідку в обсяг гейта **pr-review** (A-11) із серйозністю `BLOCK`; гейт `правки`, код повернення **A-11** (за шляхом файла, не за редакцією — `references/return-routing.md`; A-11/A-12/A-13 однакові для обох редакцій). `BLOCK`: AGPL-залежність у ядрі, EE-модуль у `depends` ядра `td_*`. `правки` (REQUEST CHANGES): міст `td_*_ee` без `auto_install`. `security-review` ліцензій не оцінює. Вердикти BLOCK/REQUEST CHANGES не вводяться в словник гейта: це серйозність правки, вердикт гейта — `правки`.
+- Редакція, у якій знайдено дефект, — колонка правки в `CHECKS.md` (не змінює код повернення).
+
 ## Автоперевірка (перед здачею)
 `done` картки: CHECKS.md містить SHA гейтів; SHA C-03 окремо зі статусом; вердикт кожного з п'яти гейтів;
 track-convergence лише після APPROVE pr-review і config-review. Скіл перевіряє сам:
 - `sha-gates`: «SHA гейтів» = `SHA_GATES`, є предком HEAD гілки; ≠ HEAD на момент запуску → FAIL.
 - `c03`: є `SHA_C03`, run id, статус; `SHA_C03` ∈ `rev-list BASE^..SHA_GATES`; APPROVE при статусі ≠ success → FAIL.
-- `five-gates`: п'ять назв гейтів у таблиці, вердикт ∈ {APPROVE, правки, не виконано: …, перенесено з <SHA>, перенесено з <SHA> (режим повернення, не перезапускались), збій виконання};
+- `five-gates`: п'ять назв гейтів у таблиці, вердикт ∈ {APPROVE, правки, не виконано: …, `WARN: EE не перевірено` (лише колонка `ee`), перенесено з <SHA>, перенесено з <SHA> (режим повернення, не перезапускались), збій виконання};
   «не виконано: …» дозволено: (а) у track-convergence/тест-імпорті — при не-APPROVE pr-review/config-review, у стані ЧАСТКОВО або з причиною В-6 (тоді `result: escalated`);
   (б) у security-review — лише з причиною В-4 і лише при pr-review ≠ APPROVE; «збій виконання» — допустиме значення будь-якого гейта, коли `result` ∈ {`stopped` (спроба 1–2), `escalated` (спроба 3)}, ніколи `done`/`returned`.
+- `editions`: розділ «Редакції» є; за `editions: both` — рядок на `ce` і `ee` з SHA; `ee` = `WARN: EE не перевірено` ⇒ зведений вердикт не `APPROVE` без дописки «(CE); EE не перевірено» і `partial: true`; AGPL/EE у `depends` ядра ⇒ відкрита правка A-11 серйозності BLOCK.
 - `return-codes`: кожна правка (відкрита й закрита) має код ∈ {A-11, A-12, A-13} (hotfix — так само, за шляхом); APPROVE при ≥1 відкритій правці → FAIL.
 - `allocation-coverage` (через `flow-autocheck`): кожен td_*, вендорений «готове» і файл конфігу з ALLOCATION
   в обсязі pr-review/lint або config-review; кожен CSV з `master-data/README.md` — у track-convergence/тест-імпорті.
@@ -167,7 +185,8 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
 - [ ] `SHA_GATES` зафіксовано на старті й збігається з HEAD; `SHA_C03` записано окремо.
 - [ ] П'ять гейтів мають вердикт або «не виконано»/«перенесено» з причиною; security-review викликано (вердикт або «не виконано: В-4»).
 - [ ] Кожна правка має код повернення за шляхом; жодного «?».
-- [ ] APPROVE лише якщо всі п'ять APPROVE, C-03 success, відкритих правок 0.
+- [ ] APPROVE лише якщо всі п'ять APPROVE, C-03 success, відкритих правок 0; при `editions: both` і недоступній EE — `APPROVE (CE); EE не перевірено`, `partial: true`.
+- [ ] Розділ «Редакції» заповнено (ce/ee, SHA, C-03 на редакцію); grep `license`/`depends` виконано.
 - [ ] У diff гілки лише `package/CHECKS.md` (і шаблон).
 - [ ] Жодного виклику odoo-mcp без `connection_id`; тести в A-14 не запускались.
 - [ ] У CHECKS.md немає ПІБ/контактів/паролів з дефектів чи логів.
@@ -181,6 +200,7 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
 В-1 (job тест-імпорту в C-03) і В-2 (input `sha` у `ci.yml`) — `references/c03-lookup.md`, «Контракт з ci-pipeline-builder»; чи MCP `github` повертає `display_title` прогону — перевірити (`flow-core/skills/ci-pipeline-builder/references/ci-contract.md`, В-7). Не вгадувати.
 
 ## Чого НЕ робити
+- Не ставити зведений `APPROVE` без дописки при неперевіреній EE; не вводити нових вердиктів гейта (BLOCK — серйозність правки).
 - Не правити модулі, конфіг, CSV (повернення на A-11/A-12/A-13, `no-own-edits`) і не запускати тести td_* (це C-03).
 - Не ставити APPROVE за неповним переліком модулів (обсяг — весь `package/addons/`, з вендореними).
 - Не писати правку без коду повернення; не пропускати виклик security-review, config-review, track-convergence (відмова скіла зі штатним вердиктом — не пропуск).

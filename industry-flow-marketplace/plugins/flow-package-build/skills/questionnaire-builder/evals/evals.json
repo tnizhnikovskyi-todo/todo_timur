@@ -73,6 +73,22 @@
         "waiting_for містить role, what і resume з params.phase: review",
         "У «Запит на рев'ю» немає адресатів і ПІБ"
       ]
+    },
+    {
+      "id": "questionnaire-edition-contract",
+      "prompt": "Наряд A-09, editions: both, legal_ambiguous.to_answers_yaml: true. У ТР є юридично неоднозначний пункт про режим договору з двома трактуваннями. Збери анкету й схему answers.yaml.",
+      "expected_output": "answers.yaml-схема має параметр edition (ce|ee) і параметр contract_mode з default та поясненням; вибір не зроблено в концепції; перелік значень узято з ТР, не вигадано.",
+      "assertions": [
+        "є VP-параметр edition з допустимими ce|ee",
+        "неоднозначний пункт винесено в параметр answers.yaml з default",
+        "значення contract_mode відповідають двом трактуванням з ТР, інших не вигадано",
+        "у питанні для клієнта є примітка, що правове питання вирішує замовник/юрист"
+      ],
+      "input": {
+        "naryad": "Наряд A-09, editions: both, legal_ambiguous",
+        "editions": "both",
+        "ee_available": false
+      }
     }
   ],
   "_note": "Фікстури (міні-ТР, make_repo.sh з тегом package/v1.0 за зразком flow-autocheck/evals/fixtures) ще не створені: евали задаються прозою; асерти сформульовано на вміст файлів і даних звіту."

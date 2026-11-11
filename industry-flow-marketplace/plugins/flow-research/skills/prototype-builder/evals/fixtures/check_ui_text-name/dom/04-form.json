@@ -1,0 +1,3 @@
+{"screen":"04-form","viewport":"desktop","items":[
+{"kind":"field","text":"","label":"partner_id","name":"partner_id","required":true},
+{"kind":"field","text":"Іваненко","label":"Відповідальний","name":"user_id","required":true}]}

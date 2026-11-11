@@ -1,0 +1,3 @@
+{"checks": [{"scene": "D_demo", "name": "margin", "expected": "31,5 %", "ok": true}],
+ "facts": {"D_demo": {"margin": "31,5 %", "orders": 12, "revenue": "4,2 млн грн"},
+           "M_demo": {"margin": "28,0 %", "stock": "94 %"}}}

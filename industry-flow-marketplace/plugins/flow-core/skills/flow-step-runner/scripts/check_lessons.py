@@ -2,14 +2,15 @@
 """check_lessons.py -- LSN-coverage: кожне зауваження людини в сесії кроку має observation ЦІЄЇ сесії.
 
 CLI (з кореня репо):
-  python3 -I check_lessons.py --remarks <файл зауважень> --observations observations/ [--task <id>] [--since YYYY-MM-DD]
+  python3 -I check_lessons.py --remarks <файл зауважень> --observations observations/ [--task <id>] [--since YYYY-MM-DD] [--expect-remarks]
 Файл зауважень (його веде runner; джерела -- чат людини, коментарі «Повернути», коментарі PR, самозвіт): рядки `- [R-NN] <суть>`;
   `(не помилка: <причина>)` у рядку = явне «не помилка» (покриття без observation; причину runner виносить і в memo звіту).
 Observation `observations/*.md` покриває зауваження, якщо має рядок `remark: R-NN`, непорожній текст і належить ЦІЙ сесії:
   --task <id> -- у тексті є `#<id>` (поле «репо/задача» `<owner/repo>#<id>`) або точний рядок <id>, якщо він не число;
   --since <дата> -- дата в імені файлу YYYY-MM-DD- не раніше. R-NN рахуються в межах сесії, тож без --task/--since
   старі observation можуть хибно покрити нове R-NN: тоді WARN «покриття не прив'язане до сесії».
-Відсутній файл зауважень або зауважень немає -> SKIP (код 0). Нерозпізнаний рядок `R-…` -> WARN.
+Відсутній файл зауважень або зауважень немає -> SKIP (код 0), КРІМ `--expect-remarks` (runner передає його при `returned_from` або `human_rounds > 0`:
+  людина вже давала зауваження): відсутній/порожній файл -> FAIL (випадок «зауваження не записано»). Нерозпізнаний рядок `R-…` -> WARN.
 Вихід: JSON [{"id","status","msg"}], код 1 при FAIL. Лише stdlib.
 """
 import argparse, glob, json, os, re, sys
@@ -40,9 +41,13 @@ def main(argv):
     ap.add_argument('--observations', required=True)
     ap.add_argument('--task', default=None)
     ap.add_argument('--since', default=None)
+    ap.add_argument('--expect-remarks', action='store_true')
     a = ap.parse_args(argv)
     res = []
     if not os.path.isfile(a.remarks):
+        if a.expect_remarks:
+            res.append({"id": "LSN-coverage", "status": "FAIL", "msg": "очікувались зауваження (повернення/раунди людини), але файл відсутній: %s" % a.remarks})
+            print(json.dumps(res, ensure_ascii=False)); return 1
         res.append({"id": "LSN-coverage", "status": "SKIP", "msg": "зауважень у сесії немає (файл відсутній: %s)" % a.remarks})
         print(json.dumps(res, ensure_ascii=False)); return 0
     rems = []
@@ -54,6 +59,9 @@ def main(argv):
             res.append({"id": "LSN-remark-format", "status": "WARN",
                         "msg": "нерозпізнаний рядок (потрібно `- [R-NN] суть`, NN = 2-3 цифри): %s" % line.strip()[:60]})
     if not rems:
+        if a.expect_remarks:
+            res.append({"id": "LSN-coverage", "status": "FAIL", "msg": "очікувались зауваження (повернення/раунди людини), але remarks.md без жодного `- [R-NN]`"})
+            print(json.dumps(res, ensure_ascii=False)); return 1
         res.append({"id": "LSN-coverage", "status": "SKIP", "msg": "зауважень у сесії немає"})
         print(json.dumps(res, ensure_ascii=False)); return 0
     if not a.task and not a.since:

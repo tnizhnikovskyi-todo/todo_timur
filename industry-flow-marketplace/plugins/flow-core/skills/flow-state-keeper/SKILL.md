@@ -120,7 +120,7 @@ runner/C-01): розходиться з `result` → запис у чаттер 
 «Відкрите питання: …» → посилання на рішення після закриття питання; інших полів не змінювати.
 
 ### Уроки й метрики якості (К-24)
-Подію `lesson:` задачі C-08R keeper заносить у знімок `lessons` і експортує лише `flow/lessons/INDEX.md` (`LSN-xxx.md` пише `skill-retro`); `reconcile` додає метрики якості (% повернень на скіл@версію, середні `review_rounds`, `human_rounds`, частка кроків із `human_rounds > 2`, частка правок людини, вартість) — `references/decisions-batch-and-lessons.md` §2–3.
+Подію `lesson:` задачі C-08R keeper заносить у знімок `lessons` (облік в Odoo); файли `flow/lessons/**` (`LSN-xxx.md`, `INDEX.md`, чернетки) пише лише `skill-retro` — keeper їх не рендерить; `reconcile` додає метрики якості (% повернень на скіл@версію, середні `review_rounds`, `human_rounds`, частка кроків із `human_rounds > 2`, частка правок людини, вартість) — `references/decisions-batch-and-lessons.md` §2–3.
 
 ## Крок 9. Звіт у задачу C-02
 `report-format.md` + розширення:

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Конкуренти: що всередині систем</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap">
+<style>
+:root{
+  --bg:#FCFBFA;--surface:#F3F1EE;--surface-2:#E9E6E2;--ink:#101820;--muted:#525B64;--line:#DEDAD5;
+  --accent:#FE5000;--accent-text:#B83A00;--accent-soft:#FFE9DE;
+  --good:#1F7A4D;--good-soft:#E2F2E9;--warn:#8A5A00;--warn-soft:#FBF0D9;--bad:#B4232C;--bad-soft:#FBE4E5;
+  --logo-bg:transparent;
+  --font:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --wide:1120px;--prose:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101820;--surface:#18222C;--surface-2:#212D38;--ink:#ECEFF2;--muted:#A3ADB7;--line:#2C3844;
+    --accent:#FE5000;--accent-text:#FF8A52;--accent-soft:#3A2015;
+    --good:#5CC48E;--good-soft:#173326;--warn:#E5B456;--warn-soft:#352A12;--bad:#F07A80;--bad-soft:#3A1C20;
+    --logo-bg:#F3F1EE;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101820;--surface:#18222C;--surface-2:#212D38;--ink:#ECEFF2;--muted:#A3ADB7;--line:#2C3844;
+  --accent:#FE5000;--accent-text:#FF8A52;--accent-soft:#3A2015;
+  --good:#5CC48E;--good-soft:#173326;--warn:#E5B456;--warn-soft:#352A12;--bad:#F07A80;--bad-soft:#3A1C20;
+  --logo-bg:#F3F1EE;color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:var(--accent-text);text-underline-offset:2px}
+a:hover{color:var(--ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:2px}
+h1,h2,h3{text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:800}
+h2{font-size:clamp(23px,3vw,30px);font-weight:700}
+h3{font-size:18px;font-weight:700}
+p{margin:0}
+code{font-family:var(--mono);font-size:.88em}
+.num,table{font-variant-numeric:tabular-nums}
+.wrap{max-width:var(--wide);margin-inline:auto}
+.prose{max-width:var(--prose)}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.eyebrow{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.small{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.hyp{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.tag.ok,.tag.std{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.tag.td{color:var(--accent-text);border-color:var(--accent-text);background:var(--accent-soft)}
+.tag.ce{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.tag.ee{color:var(--ink);background:var(--surface-2);border-color:var(--surface-2)}
+.tag.goal{color:var(--accent-text);border-style:dashed;border-color:var(--accent-text)}
+.sitenav{max-width:var(--wide);margin-inline:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;border-bottom:1px solid var(--line)}
+.sitenav .logo{display:inline-flex;align-items:center;background:var(--logo-bg);border-radius:8px;padding:4px 8px}
+.sitenav .logo img{height:30px;width:auto;display:block}
+.sitelinks{display:flex;flex-wrap:wrap;gap:4px}
+.sitelinks a{text-decoration:none;color:var(--muted);font-size:14px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid transparent}
+.sitelinks a:hover{color:var(--ink);background:var(--surface)}
+.sitelinks a[aria-current="page"]{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.masthead{padding-block:28px 32px;display:flex;flex-direction:column;gap:20px;border-bottom:1px solid var(--line)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:14px;color:var(--muted)}
+.verdict{border-left:4px solid var(--accent);background:var(--surface);padding:16px 20px;border-radius:0 8px 8px 0;max-width:var(--prose)}
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.nav-inner{max-width:var(--wide);margin-inline:auto;display:flex;gap:4px;overflow-x:auto;padding:8px 0}
+.nav a{flex:0 0 auto;text-decoration:none;color:var(--muted);font-size:14px;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid transparent}
+.nav a.on,.nav a:hover{color:var(--ink);background:var(--surface)}
+section{max-width:var(--wide);margin-inline:auto;padding-block:36px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:16px;scroll-margin-top:64px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.filters button{font:inherit;font-size:14px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+a.src{font-size:12px;font-family:var(--mono)}
+.scroll{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--surface);font-weight:700}
+td.r,th.r{text-align:right}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.btn{font:inherit;font-weight:600;font-size:14px;padding:8px 14px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.dec{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;padding-block:12px;border-bottom:1px solid var(--line)}
+.dec .opts{display:flex;flex-wrap:wrap;gap:8px 16px}
+.dec .note{width:100%;max-width:60ch;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.dec.closed{opacity:1}
+textarea[readonly]{width:100%;min-height:120px;font-family:var(--mono);background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
+</style>
+</head>
+<body>
+<header class="sitenav">
+  <a class="logo" href="index.html"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="ToDo" width="77" height="30"></a>
+  <nav class="sitelinks" aria-label="Сторінки набору"><a href="index.html">Концепція</a><a href="competitors.html" aria-current="page">Конкуренти</a><a href="rejected.html">Що відкинули</a></nav>
+</header>
+<div class="wrap"><div class="masthead"><span class="eyebrow">Конкуренти</span><h1>Конкуренти: що всередині систем</h1><p class="prose">Орієнтир ціни: <span data-fact="pricing.ce_entry">12 000 грн</span>.</p></div></div>
+<div class="nav"><div class="nav-inner"><a href="#findings">Висновки</a><a href="#landscape">Ландшафт</a><a href="#profiles">Профілі</a><a href="#matrix">Матриця</a><a href="#against">Що казати проти</a><a href="#quotes">Цитати користувачів</a><a href="#conclusions">По групах</a></div></div>
+<main>
+<section id="findings">
+  <span class="eyebrow">Висновки</span>
+  <h2>Головні висновки</h2>
+  <p class="prose">Текст</p>
+</section>
+<section id="landscape">
+  <span class="eyebrow">Ландшафт</span>
+  <h2>Реєстр за типами</h2>
+  <p class="prose">Текст</p>
+  <div class="scroll" tabindex="0" aria-label="Ландшафт"><table style="min-width:640px"><thead><tr><th>Тип</th><th>Кількість</th><th>Розібрано глибоко</th></tr></thead><tbody><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></tbody></table></div>
+</section>
+<section id="profiles">
+  <span class="eyebrow">Профілі</span>
+  <h2>Профілі систем (8–12)</h2>
+  <div class="grid2"><div class="card"><b>Текст</b><p class="small">Текст</p><p class="small">Що всередині: Текст. Чого немає: Текст</p><p class="small">Роль для нас: Текст</p><p class="small">Джерела: Текст</p></div></div>
+</section>
+<section id="matrix">
+  <span class="eyebrow">Матриця</span>
+  <h2>Матриця функцій (30–40 × 8–10 систем)</h2>
+  <div class="filters" id="grpFilter" role="group" aria-label="Фільтр груп матриці"><button type="button" data-g="all" aria-pressed="true">Усі</button><button type="button" data-g="Текст" aria-pressed="false">Текст</button><button type="button" data-g="Текст" aria-pressed="false">Текст</button><button type="button" data-g="Текст" aria-pressed="false">Текст</button></div>
+  <p class="prose">Рядки матриці мають <code>data-group="Текст"</code>; без JavaScript видно всі рядки. Рядки «Odoo 19 Community», «Odoo 19 Enterprise» — лише за edition-claims.md; рядок «наш пакет» — <span class="tag goal">◎ ціль, не факт</span>.</p>
+  <div class="scroll" tabindex="0" aria-label="Матриця"><table style="min-width:640px"><thead><tr><th>Функція</th><th>Текст</th><th>Текст</th><th>Odoo 19 Community</th><th>Odoo 19 Enterprise</th><th>наш пакет ◎</th></tr></thead><tbody><tr data-group="Текст"><td>Текст <a class="src" href="#matrix">research/competitor-features.md#Текст</a></td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td><td>Текст</td></tr></tbody></table></div>
+</section>
+<section id="against">
+  <span class="eyebrow">Продаж</span>
+  <h2>Що казати проти кожного</h2>
+  <div class="scroll" tabindex="0" aria-label="Що казати проти"><table style="min-width:640px"><thead><tr><th>Система</th><th>Що казати проти</th><th>Доказ</th></tr></thead><tbody><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></tbody></table></div>
+</section>
+<section id="quotes">
+  <span class="eyebrow">Голос користувачів</span>
+  <h2>Що кажуть користувачі конкурентів: лише звірені цитати</h2>
+  <p class="prose">Текст</p>
+  <div class="grid2"><div class="card"><p class="small">«Текст»</p><p class="small">Текст <a class="src" href="#quotes">Текст</a></p></div></div>
+</section>
+<section id="conclusions">
+  <span class="eyebrow">Висновки</span>
+  <h2>Висновки по групах</h2>
+  <p class="prose">Текст</p>
+</section>
+<section id="limits">
+  <span class="eyebrow">Обмеження</span>
+  <h2>Обмеження й чек-лист тріалу</h2>
+  <p class="prose">Текст</p>
+</section>
+</main>
+<footer class="small">Текст</footer>
+<!-- звідки: flow/A-03b-deep @008541f, docs/industries/mebli/research/owner-page/competitors.html. Каркас: плейсхолдери Текст; зміст еталона не переноситься. Контракт — references/PAGE-CONTRACT.md. -->
+<script>
+(function(){var f=document.getElementById("grpFilter");if(!f)return;f.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var g=b.getAttribute("data-g");[].forEach.call(f.querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});[].forEach.call(document.querySelectorAll("tr[data-group]"),function(r){r.hidden=!(g==="all"||r.getAttribute("data-group")===g);});});})();
+</script>
+</body>
+</html>

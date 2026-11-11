@@ -88,6 +88,24 @@
         "Коміт після CI змінює лише package/CHANGELOG.md, R-09 PASS за предком HEAD",
         "Помилка checkout (reference is not a tree) дає escalated_to Тімлід, а не рядок у release-defects.md і не returned A-14"
       ]
+    },
+    {
+      "id": "release-both-editions",
+      "prompt": "Наряд A-18, editions: both; приймання підписано; EE недоступна. Підготуй реліз.",
+      "expected_output": "CHANGELOG з розділами по редакціях; перевірка установки й оновлення на ce виконана, на ee = не перевірено (WARN); матеріали релізу не створюються, лише посилання на картку A-21c.",
+      "assertions": [
+        "CHANGELOG має окремі записи для CE і EE (мости td_*_ee)",
+        "перевірка установки/оновлення має колонку edition; ee = не перевірено",
+        "відео/one-pager не створено, є посилання на A-21c",
+        "тег не позначено як перевірений на EE",
+        "тег package/vX.Y не ставиться до рішення Власника продукту «випускаємо з неперевіреною EE?» (waiting_human); R-15 ee = WARN"
+      ],
+      "input": {
+        "naryad": "A-18, release",
+        "editions": "both",
+        "ee_available": false,
+        "checks_summary": "APPROVE (CE); EE не перевірено"
+      }
     }
   ]
 }

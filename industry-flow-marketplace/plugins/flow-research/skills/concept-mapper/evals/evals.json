@@ -189,11 +189,12 @@
     {
       "id": "check-concept-fixtures",
       "prompt": "Запусти check_concept.py з --research --intake --k1 на evals/fixtures/check_concept-ok, -bad і -bad-dnr.",
-      "expected_output": "-ok: жодного FAIL (код 0); -bad: CM-buyer FAIL (покупець без екрана-дашборда); -bad-dnr: CM-dnr FAIL (REJ-dnr: «Облік залишків» без K1). Без --research/--intake: CM-args FAIL. -warn (копія -ok із сумою без маркера в OWNER-BRIEF): код 0, CM-facts WARN (FACT-unmarked). Неіснуючий файл --input: CM-src FAIL «немає файла входу», без traceback.",
+      "expected_output": "-ok: жодного FAIL (код 0); -bad: CM-buyer FAIL (покупець без екрана-дашборда); -bad-dnr: CM-dnr FAIL (REJ-dnr: «Облік залишків» без K1). Без --research/--intake: CM-args FAIL. -warn (копія -ok із сумою без маркера в OWNER-BRIEF): код 0, CM-facts WARN (FACT-unmarked). Неіснуючий --intake або --k1 (шлях-«NOPE.md»): CM-dnr FAIL «немає файла» (не PASS). Неіснуючий файл --input: CM-src FAIL «немає файла входу», без traceback.",
       "assertions": [
         "ok: код виходу 0",
         "bad: CM-buyer FAIL з ROLE-06",
         "bad-dnr: CM-dnr FAIL з назвою позиції",
+        "bad-dnr з неіснуючим --intake …/NOPE.md: CM-dnr FAIL «немає файла», код 1 (не хибний PASS)",
         "Без --research і --intake скрипт дає CM-args FAIL (код 1); лише з явним --concept-only нові CM-* дають SKIP"
       ],
       "input": {

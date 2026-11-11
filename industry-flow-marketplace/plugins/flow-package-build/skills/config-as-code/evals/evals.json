@@ -130,6 +130,23 @@
         "CFG-readback не FAIL лише через те, що default_get не повернув related-поле",
         "xml-id із transform перед порівнянням розв'язано в res_id через ir.model.data"
       ]
+    },
+    {
+      "id": "config-both-editions",
+      "prompt": "Наряд A-12, режим build. editions: both, ALLOCATION з td_core (ядро), td_core_ee (міст) і стандартними CE/EE модулями; ODOO_EE_ADDONS_PATH немає. Збери конфіг-пакет.",
+      "expected_output": "manifest.yaml має edition_profiles ce та ee (ee ⊇ ce); vp-map має edition і contract_mode з default; застосування на CE-базі пройшло; ee-розділ install-log = не перевірено (WARN); ядро без EE у depends, міст з auto_install.",
+      "assertions": [
+        "manifest.yaml містить edition_profiles.ce і edition_profiles.ee, ee ⊇ ce",
+        "edition і contract_mode є параметрами з default; значення contract_mode не вигадані",
+        "td_core не має EE-модулів у depends; td_core_ee має auto_install",
+        "розділ ee в install-log.md = не перевірено (WARN), а не успіх",
+        "AGPL-залежностей у ядрі немає"
+      ],
+      "input": {
+        "naryad": "A-12",
+        "editions": "both",
+        "ee_available": false
+      }
     }
   ]
 }

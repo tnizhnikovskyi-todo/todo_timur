@@ -1,0 +1,36 @@
+{
+ "screen": "03-quotation",
+ "viewport": "desktop",
+ "items": [
+  {
+   "kind": "header",
+   "text": "Клієнт"
+  },
+  {
+   "kind": "label",
+   "text": "Дата замовлення"
+  },
+  {
+   "kind": "button",
+   "text": "Підтвердити"
+  },
+  {
+   "kind": "breadcrumb",
+   "text": "Пропозиції"
+  },
+  {
+   "kind": "breadcrumb",
+   "text": "ДЕМО-0001"
+  },
+  {
+   "kind": "field",
+   "text": "12 345,00",
+   "label": "Сума"
+  },
+  {
+   "kind": "cell",
+   "text": "7,5",
+   "label": "hours"
+  }
+ ]
+}

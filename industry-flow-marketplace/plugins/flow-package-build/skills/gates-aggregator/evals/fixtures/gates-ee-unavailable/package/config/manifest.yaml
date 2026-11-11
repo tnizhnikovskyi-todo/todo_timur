@@ -1,0 +1,10 @@
+format: 2
+odoo: "19.0"
+editions: both
+edition_profiles:
+  ce:
+    modules:
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-01]}
+  ee:
+    modules:
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-01]}

@@ -15,7 +15,7 @@ backlog_check.py --selftest
 import argparse, json, os, re, sys, tempfile
 
 HEADERS = ["Заголовний блок", "Запити", "Групи", "Причини відмов (агреговано)", "Без ID джерела",
-           "Рішення Власника продукту", "Журнал запусків"]
+           "Відкинуто", "Рішення Власника продукту", "Журнал запусків"]
 REQ_RE = re.compile(r"^REQ-([A-D]\d{2}[a-d]?)-([a-z0-9_]+)-([A-Za-z0-9][A-Za-z0-9-]*)$")
 DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 SHA_RE = re.compile(r"@[0-9a-fA-F]{7,40}\b")
@@ -107,6 +107,31 @@ def signature(sec):
     name = re.search(r"Ім'я:\s*([^\s_][^\n]*?)(?:\s{2,}|\s+Роль:|$)", s)
     date = re.search(r"Дата:\s*(\d{4}-\d{2}-\d{2})", s)
     return (name.group(1) if name else None), (date.group(1) if date else None)
+
+
+def rejected_check(a, req, sec=None):
+    """BT-rejected: реєстр відкинутого — розділ `## Відкинуто` у самому беклозі (узгоджено з D-02.yaml); кожне «відхилити» має
+    рядок `REJ-NNN` з посиланням на REQ; формат і do_not_reject перевіряє flow-core check_rejected.py над беклогом (--intake)."""
+    import subprocess
+    rej = [r.get("ID запиту", "") for r in req if "відхил" in (col(r, "Рішення") + col(r, "Рекомендація")).lower()]
+    if not rej:
+        return {"id": "BT-rejected", "status": "SKIP", "msg": "рішень/рекомендацій «відхилити» немає"}
+    reg_txt = "\n".join((sec or {}).get("Відкинуто", []))
+    miss = [i for i in rej if i and not re.search(r"(?<![A-Za-z0-9-])" + re.escape(i) + r"(?![A-Za-z0-9-])", reg_txt)]
+    scr = getattr(a, "check_rejected", None) or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "flow-core", "skills", "flow-autocheck", "scripts", "check_rejected.py"))
+    if not os.path.exists(scr):
+        return {"id": "BT-rejected", "status": "SKIP", "msg": "check_rejected.py не знайдено (--check-rejected); формат реєстру не перевірено"}
+    cmd = [sys.executable, "-I", scr, a.backlog]
+    if getattr(a, "intake", None):
+        cmd += ["--intake", a.intake]
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        bad = [f"{c['id']}: {c.get('msg', '')}" for c in json.loads(p.stdout) if c["status"] == "FAIL"]
+    except ValueError:
+        bad = ["вивід check_rejected.py не JSON"]
+    if miss:
+        bad.append("REQ без посилання в розділі «Відкинуто»: " + ", ".join(miss))
+    return {"id": "BT-rejected", "status": "FAIL" if bad else "PASS", **({"msg": "; ".join(bad)} if bad else {})}
 
 
 def run(a):
@@ -236,6 +261,7 @@ def run(a):
         add("BT-signed", not errs, "; ".join(errs))
         if a.src_old and a.src_new:
             add("BT-src-diff", *src_diff(a.src_old, a.src_new))
+    res.append(rejected_check(a, req, sec))
     return res
 
 
@@ -328,7 +354,7 @@ if __name__ == "__main__":
     p.add_argument("--phase", choices=["draft", "post-sign"])
     p.add_argument("--backlog")
     p.add_argument("--base"); p.add_argument("--sources"); p.add_argument("--src-old"); p.add_argument("--src-new")
-    p.add_argument("--mode", choices=["a", "b", "c", "d"]); p.add_argument("--trigger-ref"); p.add_argument("--rerun", action="store_true")
+    p.add_argument("--intake"); p.add_argument("--check-rejected"); p.add_argument("--mode", choices=["a", "b", "c", "d"]); p.add_argument("--trigger-ref"); p.add_argument("--rerun", action="store_true")
     ns = p.parse_args()
     if ns.selftest:
         sys.exit(selftest())

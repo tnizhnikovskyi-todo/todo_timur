@@ -1,0 +1,11 @@
+{"screen":"04-form","viewport":"desktop","items":[
+{"kind":"label","text":"Назва"},
+{"kind":"field","text":"Стіл офісний ДЕМО","label":"Назва","required":true},
+{"kind":"field","text":"12 345,00","label":"Ціна","required":false},
+{"kind":"field","text":"15.11.2026","label":"Дата","required":false},
+{"kind":"field","text":"Клієнт Демо","label":"Клієнт","required":true},
+{"kind":"flag","text":"true","label":"Активний","required":false},
+{"kind":"flag","text":"image","label":"Зображення","required":false},
+{"kind":"field","text":"","label":"Примітка","required":false},
+{"kind":"breadcrumb","text":"Вироби"},
+{"kind":"cell","text":"7,5","label":"hours"}]}

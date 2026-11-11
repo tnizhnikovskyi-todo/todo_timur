@@ -8,25 +8,37 @@
 ```
 package/config/
   CONFIG.md          зміст config-spec + розділи-контракти (config-md-additions.md)
-  manifest.yaml      версія формату, Odoo, редакція, модулі, порядок файлів даних
-  vp-map.yaml        VP-xx -> {track, kind, anchor, transform, ac}
+  manifest.yaml      версія формату (2), Odoo, профілі модулів на редакції `edition_profiles`, порядок файлів даних
+  vp-map.yaml        VP-xx -> {track, kind, anchor, transform, ac}; параметри `edition`, `contract_mode`
   data/NN_<область>.yaml
-  install-log.md     (install-log-template.md)
+  install-log.md     (install-log-template.md; розділ на кожну редакцію)
   (еталони install.sh, apply.py, validate.py -- `flow-core/references/templates/tools-odoo/` (q17); C-00 копіює в `tools/odoo/`; сигнатури еталонів відрізняються від «CLI-контракту» нижче -- розбіжність у README «Лишається відкритим»)
 package/addons/<готове>/                      вендорене (vendoring.md)
 ```
 
 ## manifest.yaml
 ```yaml
-format: 1
+format: 2                 # 1 = старий плоский `modules:` з `edition:`; нові пакети -- лише 2
 odoo: "19.0"
-edition: ce|ee
-modules:                  # порядок = порядок установки
-  - {name: sale_management, source: standard, ac: [AC-01]}
-  - {name: ready_x, source: vendored, ac: [AC-09], path: package/addons/ready_x}
+editions: both            # з docs/industries/<галузь>/OWNER-INTAKE.md (ce|ee|both); не вгадується
+edition_profiles:         # ce завжди; ee -- при editions: both|ee; ee ⊇ ce
+  ce:
+    modules:              # порядок = порядок установки
+      - {name: sale_management, origin: std-ce, source: standard, ac: [AC-01]}
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+      - {name: ready_x, origin: todo-ready, source: vendored, ac: [AC-09], path: package/addons/ready_x}
+  ee:
+    modules:              # усе з ce + EE + мости
+      - {name: sale_management, origin: std-ce, source: standard, ac: [AC-01]}
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+      - {name: ready_x, origin: todo-ready, source: vendored, ac: [AC-09], path: package/addons/ready_x}
+      - {name: <EE-модуль>, origin: std-ee, source: standard, ac: [AC-12]}
+      - {name: td_mebli_core_ee, origin: td, source: code, ac: [AC-12]}   # міст: auto_install, лише в ee
 data_files: [data/10_settings.yaml, data/20_groups.yaml]
 ```
-`source`: `standard` | `config` | `vendored`. Усі `name` -- технічні імена з ALLOCATION (колонка «модуль Odoo»).
+`origin` (хто автор): `std-ce` | `std-ee` | `td` (наш `td_*`, A-11) | `todo-ready` (готовий модуль ToDo з `REUSE.md`, A-03c, рішення «беремо/адаптуємо»; трек «готове» в ALLOCATION) | `integration` (інтеграційний/сторонній вендорений за q42).
+`source` (як потрапляє): `standard` | `code` | `vendored`; відповідність: `std-ce`/`std-ee` ↔ `standard`; `td` ↔ `code`; `todo-ready`/`integration` ↔ `vendored` (`vendoring.md`). Поле `config` не є модулем -- у `modules:` не вноситься.
+Правила: `std-ee` і `td_*_ee` -- лише в профілі `ee`; `td_*` ядра без EE у `depends`; жодної AGPL-залежності (`license` залежностей); при `editions: ce` ключа `ee` немає. Усі `name` -- технічні імена з ALLOCATION (колонка «модуль Odoo»).
 
 ## vp-map.yaml
 ```yaml
@@ -36,7 +48,11 @@ VP-02:
   anchor: "ir.config_parameter:[key=sale.x]:value"   # див. формат якоря
   transform: {"1": "...", "2": "...", "3": "..."}   # значення VP -> значення в Odoo (або identity)
   ac: [AC-03]
+# параметри редакції і режиму договору -- звичайні VP-записи з default (kind: config_param/td_param за ALLOCATION):
+edition:       {track: config, kind: td_param, anchor: "ir.config_parameter:[key=td_<пакет>.edition]:value", transform: identity, default: ce}   # ce|ee
+contract_mode: {track: config, kind: td_param, anchor: "ir.config_parameter:[key=td_<пакет>.contract_mode]:value", transform: identity, default: "<від власника/ТР>"}
 ```
+Перелік значень `contract_mode` скіл не вигадує (рішення власника, §21 №17). `edition` у `answers.yaml` має збігатися з профілем, на який застосовується пакет.
 Трек `code`: `kind: td_param`, `anchor: "ir.config_parameter:[key=td_<пакет>.vp_xx]:value"` (`<пакет>` = `scope.id`, дефіси -> `_`),
 у CONFIG.md позначка «реалізує модуль td_* (A-11)». Ключ за замовчуванням -- контракт до рішення A-11 (`WARN` у `checks`);
 A-11 читає той самий ключ.

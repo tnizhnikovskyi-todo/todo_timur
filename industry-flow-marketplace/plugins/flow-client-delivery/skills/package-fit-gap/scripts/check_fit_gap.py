@@ -5,7 +5,7 @@
 import argparse, json, re, subprocess, sys
 
 HEAD = ["Джерела", "Вимоги", "Суперечності й відкриті питання", "Рішення з сесій",
-        "Запити в D-02", "Відповідність пакету", "Факти для пілоту"]
+        "Запити в D-02", "Відкинуто", "Відповідність пакету", "Факти для пілоту"]
 CLASSES = {"з пакета", "доналаштування", "доробка"}
 PII = {  # дзеркало flow-core/references/pii-patterns.md (strict)
     "email": r"[\w.+-]+@[\w-]+\.[\w.-]+",
@@ -52,6 +52,8 @@ def main():
     ap.add_argument("--base", required=True, help="git.base з наряду (SHA)")
     ap.add_argument("--business-case", help="шлях до business-case.md (від кореня репо) для FG-threshold")
     ap.add_argument("--repo", default=".")
+    ap.add_argument("--check-rejected", help="шлях до flow-core/skills/flow-autocheck/scripts/check_rejected.py (типово — сусідній плагін)")
+    ap.add_argument("--intake", help="шлях до OWNER-INTAKE.md (do_not_reject) для REJ-dnr у FG-rejected")
     ap.add_argument("--forbidden", help="файл зі забороненими рядками (назва юрособи, ЄДРПОУ), по одному в рядку")
     a = ap.parse_args()
     res = []
@@ -208,6 +210,33 @@ def main():
                 if re.search(p, l): hits.append(f"{k}:{n}:{i}")
             if any(f.lower() in l.lower() for f in forb): hits.append(f"forbidden:{n}:{i}")
     add("FG-pii", "FAIL" if hits else "PASS", ", ".join(hits[:20]))
+    # FG-rejected: розділ «Відкинуто» за flow-core/references/rejected-register.md
+    import os, tempfile
+    rsec = section(fg, "Відкинуто")
+    if rsec is None:
+        add("FG-rejected", "FAIL", "розділу «## Відкинуто» немає: додай реєстр REJ-NNN або рядок «нічого не відкинуто»")
+    else:
+        scr = a.check_rejected or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "flow-core", "skills", "flow-autocheck", "scripts", "check_rejected.py"))
+        bad = []
+        # зв'язок: кожна вимога «поза пакетом» / «немає в пакеті» має REJ-NNN (у тексті вимоги) і цей REJ є в реєстрі
+        for r in reqs:
+            place = r[ip].strip().lower() if ip is not None and ip < len(r) else ""
+            if place == "немає в пакеті" or "поза пакетом" in " ".join(r).lower():
+                m = re.findall(r"REJ-\d{3}", " ".join(r))
+                if not m:
+                    bad.append(f"{r[0]}: вимога поза пакетом без посилання REJ-NNN")
+                elif any(x not in rsec for x in m):
+                    bad.append(f"{r[0]}: REJ з вимоги немає в реєстрі")
+        if not os.path.exists(scr):
+            add("FG-rejected", "FAIL" if bad else "SKIP", "; ".join(bad) or "check_rejected.py не знайдено (--check-rejected)")
+        else:
+            cmd = [sys.executable, "-I", scr, f"{a.repo}/{base}/fit-gap.md"] + (["--intake", a.intake] if a.intake else [])
+            pr = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                bad += [f"{c['id']}: {c.get('msg', '')}" for c in json.loads(pr.stdout) if c["status"] == "FAIL"]
+            except ValueError:
+                bad.append("вивід check_rejected.py не JSON")
+            add("FG-rejected", "FAIL" if bad else "PASS", "; ".join(bad))
     # FG-ignore: _input поза git
     rc2, _ = sh(["git", "check-ignore", "-q", f"{base}/_input/x"], a.repo)
     import os

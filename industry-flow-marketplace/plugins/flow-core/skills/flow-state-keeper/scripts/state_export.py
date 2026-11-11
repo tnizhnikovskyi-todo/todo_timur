@@ -213,11 +213,7 @@ def render_all(snap):
         months.setdefault((r.get("finished") or "н/д")[:7], []).append(runs_row(r))
     for m, rows in months.items():
         files["flow/runs/%s.md" % m] = h + "\n# Запуски %s\n\n" % m + table(["step", "scope", "attempt", "result", "skill_versions", "usage", "задача"], rows)
-    les = sorted(snap.get("lessons") or [], key=lambda r: nat(r.get("lsn")))
-    if les:  # К-24: лише INDEX.md; файли LSN-xxx.md пише skill-retro (єдиний автор формату lesson-format.md)
-        files["flow/lessons/INDEX.md"] = h + "\n# Реєстр уроків\n\n" + table(["LSN", "дата", "крок", "суть", "скіл", "статус"],
-            [{"LSN": l.get("lsn"), "дата": l.get("date"), "крок": l.get("step"), "суть": (l.get("summary") or "")[:200],
-              "скіл": "%s@%s" % (l.get("skill"), l.get("skill_version") or "н/д"), "статус": l.get("status")} for l in les])
+    # уроки: flow/lessons/** пише лише skill-retro (INDEX.md, LSN-xxx.md); тут лише облік у знімку (lessons) для stats/reconcile
     reg_cols = [("ідентифікатор клієнта", "client_id"), ("стан", "state"), ("пілот (так/ні)", "pilot"), ("package_tag", "package_tag"),
                 ("candidate_tag", "candidate_tag"), ("go-live (дата)", "go_live"), ("alias тест-бази", "test_alias"),
                 ("згода на агрегати (так/ні)", "aggregates_consent"),

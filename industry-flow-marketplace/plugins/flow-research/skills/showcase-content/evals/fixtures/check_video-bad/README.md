@@ -1,0 +1,1 @@
+Фікстура check_video-bad: smoke.sh генерує `ffmpeg -f lavfi color` статичне відео 5 с 1920×1080 (video/bad-16x9.mp4) і запускає check_video.py --sample. Очікується: код 1, VID-freeze FAIL (статичний кадр >2 с), VID-format FAIL (5 с поза 10–20 с).

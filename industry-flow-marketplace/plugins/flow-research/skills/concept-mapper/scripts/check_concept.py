@@ -234,6 +234,8 @@ def main():
         # CM-dnr
         if not a.intake:
             add("CM-dnr", False, "не передано --intake (OWNER-INTAKE.md)")
+        elif not os.path.isfile(a.intake) or (a.k1 and not os.path.isfile(a.k1)):
+            add("CM-dnr", False, "немає файла " + ", ".join(x for x in (a.intake, a.k1) if x and not os.path.isfile(x)))
         else:
             args = [str(rd / "REJECTED.md"), "--intake", a.intake] + (["--k1", a.k1] if a.k1 else [])
             out, why = run_aux("check_rejected.py", *args)
@@ -243,7 +245,11 @@ def main():
                 man = [f"{x['id']}: {x['msg']}" for x in out if x["status"] == "MANUAL"]
                 if bad: add("CM-dnr", False, "; ".join(bad)[:600])
                 elif man: add("CM-dnr", False, "; ".join(man)[:300], status="MANUAL")
-                else: add("CM-dnr", True)
+                else:
+                    dnr = [x for x in out if x["id"] == "REJ-dnr"]
+                    if dnr and dnr[0]["status"] in ("SKIP", "WARN"):
+                        add("CM-dnr", False, "REJ-dnr " + dnr[0]["status"] + ": " + dnr[0].get("msg", "") + " (розібрати в memo)", status="WARN")
+                    else: add("CM-dnr", True)
         # CM-facts
         fy = a.facts or str(rd / "facts.yaml")
         if not os.path.exists(fy):

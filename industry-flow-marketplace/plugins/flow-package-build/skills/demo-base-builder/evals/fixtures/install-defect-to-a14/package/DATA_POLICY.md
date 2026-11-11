@@ -4,4 +4,4 @@
 |---|---|---|
 | flow | flow | читання наряду |
 | demo-demo-pkg | demo | A-15: читання |
-| emu-mebli | emu | A-22: створення |
+| demo-mebli-slice | demo | A-22: база зрізу |

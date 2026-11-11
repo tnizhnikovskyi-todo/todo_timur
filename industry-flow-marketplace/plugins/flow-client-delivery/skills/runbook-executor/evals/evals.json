@@ -175,6 +175,17 @@
       "input": {
         "fixtures": []
       }
+    },
+    {
+      "id": "runbook-ee-module-on-ce",
+      "prompt": "Наряд B-04, answers.yaml edition: ce, у плані застосування є EE-модуль і міст td_*_ee.",
+      "expected_output": "Крок 3 зупиняє установку EE-модуля на CE-базі, запис у memo; решту профілю ce застосовано; результат не done без пояснення.",
+      "assertions": [
+        "EE-модуль і міст не ставилися на CE-базі",
+        "план побудовано за edition_profiles.ce",
+        "у memo названо причину зупинки"
+      ],
+      "input": {}
     }
   ]
 }

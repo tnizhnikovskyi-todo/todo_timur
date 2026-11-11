@@ -104,7 +104,12 @@
         "Файли поза package/CHECKS.md (і шаблон) не змінено (no-own-edits)",
         "Усі виклики odoo-mcp мають явний connection_id"
       ],
-      "fixtures": "evals/fixtures/track-convergence-refuses-package-mode/"
+      "fixtures": "evals/fixtures/track-convergence-refuses-package-mode/",
+      "input": {
+        "naryad": "Наряд A-14, версія 2, pr-review і config-review APPROVE",
+        "editions": "див. prompt",
+        "ee_available": false
+      }
     },
     {
       "id": "security-review-refuses-on-pr-changes",
@@ -132,6 +137,29 @@
         "Усі виклики odoo-mcp мають явний connection_id"
       ],
       "fixtures": "evals/fixtures/carry-over-unchanged-addons/"
+    },
+    {
+      "id": "gates-ee-unavailable",
+      "prompt": "Наряд A-14, editions: both. pr-review/security-review/config-review на ce — APPROVE. EE-бази й EE-коду немає. Одна залежність ядра має license AGPL-3. Зведи гейти.",
+      "expected_output": "CHECKS.md має вердикт окремо для ce та ee; ee = WARN: EE не перевірено; AGPL-залежність у ядрі дає правку A-11 серйозності BLOCK (вердикт pr-review = правки), result: returned -> A-11; загального APPROVE немає. Без AGPL-залежності (інший варіант фікстури) зведений вердикт = «APPROVE (CE); EE не перевірено», result: done, partial: true.",
+      "assertions": [
+        "є окремі вердикти edition: ce і edition: ee з SHA",
+        "ee = WARN: EE не перевірено, а не APPROVE мовчки",
+        "AGPL у ядрі -> правка A-11 серйозності BLOCK (вердикт гейта — правки, не новий вердикт)",
+        "при AGPL загальний APPROVE не виданий; без AGPL — «APPROVE (CE); EE не перевірено» + partial: true"
+      ],
+      "input": {
+        "naryad": "A-14, params.mode: перевірка",
+        "editions": "both",
+        "ee_available": false,
+        "reference": "меблі (еталон): package/ SHA з наряду",
+        "files": [
+          "evals/fixtures/gates-ee-unavailable/"
+        ]
+      },
+      "fixtures": [
+        "evals/fixtures/gates-ee-unavailable/"
+      ]
     }
   ]
 }

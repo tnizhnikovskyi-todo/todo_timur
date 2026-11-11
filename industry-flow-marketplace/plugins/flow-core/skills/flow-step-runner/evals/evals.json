@@ -221,13 +221,15 @@
         "Observation створено в тому ж ході, окремим комітом у гілці кроку, з посиланням на задачу/PR",
         "Повторна перевірка check_lessons.py на check_lessons-ok дає код 0",
         "Спроба виконавця за FAIL check_lessons не рахується",
-        "Дані клієнта в observation лише як коди"
+        "Дані клієнта в observation лише як коди",
+        "Якщо remarks.md не створено після «Повернути» (returned_from/human_rounds>0), `check_lessons.py --expect-remarks` дає FAIL, а не SKIP"
       ],
       "preconditions": [
         "python3 -I scripts/check_lessons.py --remarks evals/fixtures/check_lessons-bad/remarks.md --observations evals/fixtures/check_lessons-bad/observations --task 101 --since 2026-11-11 -> код 1",
         "те саме на check_lessons-ok -> код 0",
         "check_lessons-noremarks (файлу remarks.md немає) -> SKIP, код 0",
-        "check_lessons-stale-observation (старий observation з R-01 іншої задачі) --task 101 --since 2026-11-11 -> FAIL, код 1"
+        "check_lessons-stale-observation (старий observation з R-01 іншої задачі) --task 101 --since 2026-11-11 -> FAIL, код 1",
+        "наряд має returned_from або human_rounds>0 -> runner передає --expect-remarks; фікстура evals/fixtures/check_lessons-noremarks/ (без remarks.md) -> FAIL"
       ]
     },
     {

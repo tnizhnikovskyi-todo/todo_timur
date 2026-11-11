@@ -1,0 +1,5 @@
+{"screen":"05-order-lines","viewport":"desktop","items":[
+ {"kind":"header","text":"Доставлено"},
+ {"kind":"cell","text":"0,00","label":"qty_delivered"},
+ {"kind":"cell","text":"0,00","label":"discount"},
+ {"kind":"cell","text":"12,00","label":"product_uom_qty"}]}

@@ -112,6 +112,28 @@
         "result = escalated, escalated_to = PM, Sales; профіль «без AI» не пропонується",
         "Файли fit-gap.md, questionnaire.md, answers.yaml не створено"
       ]
+    },
+    {
+      "id": "fitgap-ce-client-rejected",
+      "prompt": "Наряд B-02, клієнт з edition: ce. Вимога «Shop Floor» закривається лише EE-мостом td_*_ee; вимога «інтеграція з ERP банку» поза пакетом.",
+      "expected_output": "Для CE-клієнта вимога Shop Floor — доробка/поза пакетом (не «з пакета»); обидві позиції мають FG-N і рядок REJ-NNN у розділі «Відкинуто»; check_fit_gap FG-rejected без FAIL.",
+      "assertions": [
+        "класифікація йде за профілем ce тега",
+        "розділ «Відкинуто» є, рядки мають 8 колонок",
+        "FG-N лишилися у Вимогах з посиланням на REJ-NNN",
+        "internal-raw у fit-gap немає"
+      ],
+      "fixtures": [
+        "evals/fixtures/check_fit_gap-ok/",
+        "evals/fixtures/check_fit_gap-bad/",
+        "evals/fixtures/build_repo.sh"
+      ],
+      "requires": "тимчасовий git-репо: sh evals/fixtures/build_repo.sh <нова тека> ok|bad; запуск check_fit_gap.py з --intake <OWNER-INTAKE.md>, коли анкета є; ok -> код 0, bad -> FG-rejected FAIL",
+      "input": {
+        "naryad": "Наряд B-02, клієнт з edition: ce",
+        "editions": "див. prompt",
+        "ee_available": false
+      }
     }
   ]
 }

@@ -178,17 +178,16 @@
     {
       "id": "lessons-export",
       "prompt": "Задача C-08R дала подію lesson: LSN-001 (A-20c, md замість сторінки). Експортуй облік уроків. Знімок: evals/fixtures/lessons-snapshot.json.",
-      "expected_output": "render створює лише flow/lessons/INDEX.md (LSN-xxx.md не створює: їх пише skill-retro); verify ok:true; check_retro.py на теці з файлами skill-retro + INDEX.md від keeper дає RET-index PASS; у експорті немає текстів зауважень людей; метрики human_rounds=3 у stats.",
+      "expected_output": "Облік: подія lesson: потрапляє в знімок `lessons`; render НЕ створює жодного файлу в flow/lessons/ (INDEX.md і LSN-xxx.md пише лише skill-retro); verify ok:true; у експорті немає текстів зауважень людей; метрики human_rounds=3 у stats.",
       "requires": [
         "odoo-mcp:fixtures"
       ],
       "assertions": [
-        "INDEX.md має колонки LSN | дата | крок | суть | скіл | статус",
+        "render не створює і не перезаписує flow/lessons/INDEX.md та LSN-*.md",
         "skill і skill_version окремими полями (без e-mail-подібного skill@версія у знімку)",
         "verify --snapshot дає ok:true",
         "stats містить review_rounds і human_rounds",
-        "Файли flow/lessons/LSN-*.md render не створює і не перезаписує",
-        "INDEX.md від keeper + LSN-xxx.md від skill-retro -> check_retro.py без RET-index/RET-draft FAIL"
+        "Тексти зауважень людей не потрапляють в експорт"
       ],
       "step": "C-02",
       "source": "К-24",

@@ -21,10 +21,10 @@
 Зауваження, що не є помилкою скіла (побажання, зміна рішення власника), записується з `(не помилка: <причина>)`; без причини — вважається помилкою. Кожну таку позначку runner **виносить у `memo` звіту** («не помилка: R-NN — причина»), щоб людина бачила її на гейті; C-08R звіряє сигнали `chat`/`review-comment` з observations і ловить позначки, яких людина не підтвердила.
 
 ## 3. Перевірка перед «done»: `check_lessons.py` (LSN-coverage)
-`python3 -I ${CLAUDE_PLUGIN_ROOT}/skills/flow-step-runner/scripts/check_lessons.py --remarks $T/remarks.md --observations observations/ --task <id задачі наряду> --since <дата початку сесії>` (крок 9 (з); результат у `checks[]`).
+`python3 -I ${CLAUDE_PLUGIN_ROOT}/skills/flow-step-runner/scripts/check_lessons.py --remarks $T/remarks.md --observations observations/ --task <id задачі наряду> --since <дата початку сесії> [--expect-remarks]` (крок 9 (з); результат у `checks[]`). **`--expect-remarks` runner додає, якщо наряд має `returned_from` або `human_rounds > 0`** (людина вже давала зауваження): тоді відсутній чи порожній `remarks.md` = FAIL, а не SKIP (випадок «зауваження не записано»).
 - **Прив'язка до сесії**: номери `R-NN` рахуються в межах сесії, а `observations/` накопичується між кроками. Тому observation покриває зауваження лише якщо має `remark: R-NN`, його дата в імені файлу ≥ `--since` і в тексті є `#<id задачі>` (поле «репо/задача»). Без `--task`/`--since` скрипт дає WARN `LSN-session-scope`; runner їх передає завжди.
 - `FAIL` = у сесії є зауваження без observation цієї сесії -> створити observation і повторити перевірку (спроба виконавця не рахується).
-- Файлу `remarks.md` немає або зауважень немає -> `SKIP`, код 0 («зауважень у сесії немає»); так само в C-08R і в daily-прогоні. Нерозпізнаний рядок `R-…` (напр. `[R-1]`) -> `WARN` `LSN-remark-format`.
+- Файлу `remarks.md` немає або зауважень немає і прапорця `--expect-remarks` немає -> `SKIP`, код 0 («зауважень у сесії немає»); так само в C-08R і в daily-прогоні. Нерозпізнаний рядок `R-…` (напр. `[R-1]`) -> `WARN` `LSN-remark-format`.
 - Режиму «перевірка проти `flow/lessons/`» скрипт не має: у C-08R покриття сигналів перевіряє `skill-retro/scripts/check_retro.py` (ЗАПИТ до WP-03: у `C-08R.yaml` викликати його, а не `check_lessons.py`).
 
 ## 4. Раунди (N-10)

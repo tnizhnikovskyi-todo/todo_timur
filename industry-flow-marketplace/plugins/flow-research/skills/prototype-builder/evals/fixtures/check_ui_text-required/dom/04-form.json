@@ -1,0 +1,4 @@
+{"screen":"04-form","viewport":"desktop","items":[
+{"kind":"field","text":"","label":"Клієнт","required":true},
+{"kind":"field","text":"","label":"Примітка","required":false},
+{"kind":"cell","text":"0,00","label":"hours"}]}

@@ -1,0 +1,4 @@
+{"screen":"06-operations","viewport":"desktop","items":[
+ {"kind":"header","text":"Трудомісткість"},
+ {"kind":"cell","text":"0,0 год","label":"td_hours"},
+ {"kind":"cell","text":"0,00","label":"qty_delivered"}]}

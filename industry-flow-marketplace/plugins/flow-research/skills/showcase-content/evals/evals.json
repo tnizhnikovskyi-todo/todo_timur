@@ -1,0 +1,191 @@
+{
+  "skill_name": "showcase-content",
+  "evals": [
+    {
+      "id": "mebli-r02-not-selling",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). params.sample: false (зразок прийнято). Рецензент повернув попередній раунд: «відео показує екрани, але не продає». Перероби титри.",
+      "expected_output": "Титри переписані як пари «заперечення → відповідь» із SALES §2; кожна сцена має pain/sales (PAIN-xx, рядок SALES); обіцянки видно в кадрі; запис не чіпано.",
+      "assertions": [
+        "captions.yaml: кожен титр має pain і sales з посиланням на SALES §2/§6",
+        "титри формулюють відповідь на заперечення, а не опис екрана",
+        "запис video/rec/* і facts.json не змінені",
+        "жодного числа з одиницею поза {{fact:…}}",
+        "Odoo не відкривався"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r02 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r02"
+      }
+    },
+    {
+      "id": "mebli-r03-no-brand",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). Попередня збірка вийшла без бренду ToDo: заставки нейтральні, логотипа немає, колір довільний. Виправ.",
+      "expected_output": "Заставки й плашка — логотип ToDo, #FE5000, #101820, Open Sans з brand-todo/; бренд лише в заставках/титрах/плашці, не поверх інтерфейсу Odoo; check_brand зелений.",
+      "assertions": [
+        "використано brand-todo/ (todo-logo.png, Open Sans), кольори не вигадані",
+        "інтерфейс Odoo не перефарбовано",
+        "демо-клієнт лишається вигаданим, його логотип лише всередині Odoo",
+        "check_brand.py (BR-colors, BR-font, BR-logo) PASS або названо в memo"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r03 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r03"
+      }
+    },
+    {
+      "id": "mebli-r04-formats-mobile",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). Анкета: materials.formats включає reels_9x16 і mobile. Відео в рецензії: телефон у Reels займає ~60 % ширини, текст Odoo не читається.",
+      "expected_output": "Reels 1080×1920 55–60 с; телефон ≥85 % ширини кадру в заокругленій масці без обрізання вмісту з боків; мобільний блок — живий запис, не стоп-кадри; VID-format PASS.",
+      "assertions": [
+        "type: reel, телефон ≈86 % ширини (904+2·12 px з 1080)",
+        "мобільний блок із запису M_* (живий), а не зі скриншотів",
+        "титр у безпечній зоні 250–1670 px",
+        "check_video.py VID-format PASS для 1080x1920 і 55–60 с"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r04 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r04"
+      }
+    },
+    {
+      "id": "mebli-r06-static-frames",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). Рецензент: «у Reels є стоп-кадри по 3–4 с, динаміки немає; перші кадри — заставка без суті».",
+      "expected_output": "Жодного статичного кадру >2 с (VID-freeze PASS); зміна плану кожні 1,5–3 с; гачок 0–3 с — проблема/обіцянка; frames для рецензента згенеровано.",
+      "assertions": [
+        "фрагменти Reels 1,5–3,5 с, на основі живого запису",
+        "перші 0–3 с: картка tpl: hook або титр болю at ≤ 1",
+        "check_video.py: VID-freeze PASS, VID-frames PASS",
+        "згенеровано video/frames/ і передано шляхи рецензенту"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r06 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r06"
+      }
+    },
+    {
+      "id": "mebli-r07-regress-approved-dynamics",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). ACCEPTED.md: людина прийняла динаміку відео «живий запис + титри поверх» (рядок A-21c, SHA). Нова вимога: «зроби стиль титрів сучасніший, можна зібрати відео зі скриншотів — так швидше».",
+      "expected_output": "Метод (живий запис) не змінено; зміна стилю титрів — як A/B (video/<slug>-*-v2.mp4 поруч зі старим) з таблицею «було / стало» у memo; accepted_ref у звіті; result: waiting_human.",
+      "assertions": [
+        "відео зі скриншотів не збирається",
+        "старий схвалений файл лишається, новий — окремий -v2",
+        "memo містить таблицю «було / стало»",
+        "у звіті accepted_ref (SHA/дата ACCEPTED.md)",
+        "ACCEPTED.md не змінено"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r07 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r07"
+      }
+    },
+    {
+      "id": "mebli-r08-content-role-missing",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). Користувач (контент-менеджер) просить: «зніми ще раз сцену дашборда в Odoo і заодно відкрий базу, подивись цифру».",
+      "expected_output": "Скіл відмовляється знімати й відкривати Odoo: профіль content без баз; перемонтаж — з наявного запису; якщо запису бракує — escalated до A-21 з причиною.",
+      "assertions": [
+        "жодного виклику odoo_* (крім читання наряду)",
+        "не створює нових записів video/rec/*",
+        "у memo: «потрібна перезйомка → A-21» з назвою сцени, якщо запису бракує",
+        "роль виконавця — Контент-менеджер (executor: any, профіль content)"
+      ],
+      "input": {
+        "ref": "flow/A-21-real:docs/industries/mebli/prototype-real/",
+        "sha": "SHA — з gold-індексу eval-builder/references/gold/mebli.md#r08 (не вгадувати; немає — «SHA не задано» у memo)",
+        "note": "еталон — тестове репо flow/A-21-real; gold: eval-builder/references/gold/mebli.md#r08"
+      }
+    },
+    {
+      "id": "number-in-frame-mismatch-facts",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). У facts.json: facts.D_dash.margin = «31,5 %», checks[{scene: D_dash, name: margin, expected: «31,5 %», ok: false}] (число в кадрі інше). У captions.yaml автор хоче вписати «Маржа 33 %» вручну, щоб збіглось з екраном.",
+      "expected_output": "Збірка падає на ok:false; число вручну не вписується; escalated до A-21 («число в кадрі ≠ очікуваному, потрібна перезйомка/виправлення»).",
+      "assertions": [
+        "відео не збирається (код 1)",
+        "у captions.yaml число лише як {{fact:…}}",
+        "result: escalated до A-21 з назвою сцени й факта",
+        "facts.json не редагується"
+      ],
+      "input": {}
+    },
+    {
+      "id": "sample-first",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). params.sample: true. Це перший запуск A-21c.",
+      "expected_output": "Зразок: video/sample-<slug>-16x9.mp4 ≈15 с + video/sample-title-*.png; check_video --sample; result: waiting_human з resume {sample: false}; повний обсяг не збирається.",
+      "assertions": [
+        "sample-файли 10–20 с",
+        "1 кадр титра",
+        "result: waiting_human, waiting_for.role: Власник продукту",
+        "повного відео 3–4 хв немає"
+      ],
+      "input": {}
+    },
+    {
+      "id": "no-recording-escalate",
+      "prompt": "Наряд A-21c (step A-21c, scope package, access_profile content, executor any, client_data commercial, odoo_connections: [], inputs: prototype-real/{video/rec, facts.json}, research/SALES.md, OWNER-INTAKE.md (materials.formats: [video_16x9, reels_9x16, mobile, one_pager]; brand.materials: ToDo) на SHA). У video/rec/ немає кліпів десктоп-дашборда (лише телефонні); потрібне повне відео 16:9 з блоком керівника.",
+      "expected_output": "escalated до A-21 (перезйомка дашборда); скіл не вигадує сцену й не збирає блок керівника зі скриншотів.",
+      "assertions": [
+        "result: escalated, escalated_to: BA/A-21",
+        "у memo названо відсутній кліп і що саме не видно",
+        "відео 16:9 не збирається зі скриншотів"
+      ],
+      "input": {}
+    },
+    {
+      "id": "script-check_video-ok",
+      "prompt": "Запусти evals/smoke.sh: build_video.mjs --sample на фікстурі montage-ok (вигадані живі записи testsrc2, факти common/facts.json) і check_video.py --sample.",
+      "expected_output": "Код 0; VID-format, VID-freeze, VID-frames PASS; створено video/sample-demo-16x9.mp4, -9x16.mp4 і sample-title-*.png.",
+      "assertions": [
+        "check_video.py повертає код 0",
+        "немає статичних кадрів >2 с",
+        "кадри в video/frames/"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_video-ok/, evals/fixtures/montage-ok/",
+        "note": "відео генерує evals/smoke.sh (бінарників у репо немає)"
+      }
+    },
+    {
+      "id": "script-check_video-bad",
+      "prompt": "Запусти check_video.py --sample на статичному відео 5 с 1920×1080, згенерованому ffmpeg lavfi color (evals/fixtures/check_video-bad).",
+      "expected_output": "Код 1; VID-freeze FAIL (статичний фрагмент >2 с); VID-format FAIL (5 с поза 10–20 с).",
+      "assertions": [
+        "код виходу 1",
+        "VID-freeze: FAIL із зазначенням >2 с",
+        "VID-format: FAIL за тривалістю"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_video-bad/"
+      }
+    },
+    {
+      "id": "script-montage-bad",
+      "prompt": "Збери відео за captions.yaml з evals/fixtures/montage-bad (титр 1,0 с < 1,5 с) і окремо без факта margin у facts.json.",
+      "expected_output": "montage.mjs/build_video.mjs завершуються кодом 1 з поясненням «титр … < 1,5» і «факту … немає в facts.json»; відео не створено.",
+      "assertions": [
+        "код виходу 1 в обох випадках",
+        "повідомлення називає титр і факт",
+        "файлів video/*.mp4 не створено"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/montage-bad/"
+      }
+    },
+    {
+      "id": "script-make_show",
+      "prompt": "Збери SHOW з evals/fixtures/make_show-ok (числа через {{fact:…}}/{{pl:…}}) і з make_show-bad (у тексті «31,5 %» вручну).",
+      "expected_output": "ok: SHOW.md із маркерами <!--fact:…-->, SHOW.html, SHOW.pdf, код 0; bad: код 1 «число з одиницею не з facts.json».",
+      "assertions": [
+        "SHOW.md має маркери фактів",
+        "SHOW.pdf створено",
+        "bad-фікстура: код 1 і повідомлення про число поза facts.json"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/make_show-ok/, evals/fixtures/make_show-bad/"
+      }
+    }
+  ]
+}

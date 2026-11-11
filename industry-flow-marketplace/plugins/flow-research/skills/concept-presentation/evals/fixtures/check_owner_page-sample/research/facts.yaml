@@ -1,0 +1,5 @@
+# facts.yaml (фікстура): єдине джерело чисел
+meta:
+  industry: "mebli"
+pricing:
+  ce_entry: 12000

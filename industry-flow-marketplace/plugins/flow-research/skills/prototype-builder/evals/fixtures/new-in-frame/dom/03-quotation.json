@@ -1,0 +1,28 @@
+{
+ "screen": "03-quotation",
+ "viewport": "mobile",
+ "items": [
+  {
+   "kind": "header",
+   "text": "Customer"
+  },
+  {
+   "kind": "button",
+   "text": "Confirm"
+  },
+  {
+   "kind": "breadcrumb",
+   "text": "Новий"
+  },
+  {
+   "kind": "field",
+   "text": "",
+   "label": "Сума"
+  },
+  {
+   "kind": "cell",
+   "text": "0,0",
+   "label": "hours"
+  }
+ ]
+}

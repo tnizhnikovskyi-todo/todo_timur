@@ -1,0 +1,1 @@
+{"checks":[{"scene":"03-quotation","name":"маржа","expected":"100 %","ok":true}],"facts":{"03-quotation":{"маржа":"100 %","сума":"12 400 грн"}}}

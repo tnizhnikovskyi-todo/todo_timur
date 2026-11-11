@@ -117,7 +117,7 @@
     {
       "id": "check-retro-script",
       "prompt": "Перевір скрипт звірки: python3 -I scripts/check_retro.py --signals evals/fixtures/check_retro-ok/signals.json --lessons evals/fixtures/check_retro-ok/lessons --today 2026-11-11 --root evals/fixtures/check_retro-ok, потім те саме на check_retro-bad.",
-      "expected_output": "На -ok код 0 без FAIL; на -bad код 1: RET-coverage (SIG-005), RET-draft, RET-repeat, RET-pii, RET-stale.",
+      "expected_output": "На -ok код 0 без FAIL; на -bad код 1: RET-coverage (SIG-20261111-005), RET-draft, RET-repeat, RET-pii, RET-stale.",
       "assertions": [
         "-ok: код 0",
         "-bad: код 1 і п'ять типів FAIL",
@@ -168,21 +168,42 @@
       }
     },
     {
-      "id": "keeper-index-and-retro-files-consistent",
-      "prompt": "keeper зробив render (INDEX.md), skill-retro записав LSN-xxx.md і drafts/. Запусти check_retro на теці.",
-      "expected_output": "INDEX.md пише лише keeper, skill-retro його не чіпає; RET-index PASS або WARN «рядок з'явиться після експорту C-02» (не FAIL); RET-draft PASS (шлях чернетки існує); LSN-xxx.md пише лише skill-retro.",
+      "id": "retro-owns-index-and-lessons",
+      "prompt": "skill-retro записав LSN-xxx.md, drafts/ і перебудував INDEX.md; keeper лише веде облік у Odoo. Запусти check_retro на теці; потім на теці без INDEX.md.",
+      "expected_output": "INDEX.md пише лише skill-retro на кожному прогоні (на першому прогоні створює); keeper його не рендерить; RET-index PASS на повному INDEX.md і FAIL, якщо файлу немає або немає рядка уроку; RET-draft PASS.",
       "assertions": [
-        "LSN-xxx.md пише лише skill-retro",
-        "skill-retro не створює і не змінює flow/lessons/INDEX.md; відсутній рядок у INDEX — лише WARN"
+        "LSN-xxx.md і flow/lessons/INDEX.md пише лише skill-retro",
+        "RET-index = FAIL при відсутньому/неповному INDEX.md, PASS при повному",
+        "keeper INDEX.md не рендерить"
       ],
       "step": "C-08R",
       "source": "К-24",
       "must_not": [
+        "залишити створення INDEX.md на експорт keeper",
         "перезаписати LSN-xxx.md від keeper"
       ],
       "input": {
         "fixtures": "evals/fixtures/check_retro-ok/",
         "root": "evals/fixtures/check_retro-ok"
+      }
+    },
+    {
+      "id": "retro-baddate-pii-signals",
+      "prompt": "Запусти check_retro на фікстурі evals/fixtures/check_retro-baddate/ (повтор закритого уроку з датою 11.11.2026, немає INDEX.md, `сигнали:` не збігаються з signals.json).",
+      "expected_output": "Без трасування: RET-close FAIL «дата не ISO»; RET-index FAIL; RET-signals WARN (формат ID SIG-YYYYMMDD-NNN і розбіжність із signals.json); код 1. RET-pii скануватиме також drafts/, PACKAGE-*.md і файл сигналів.",
+      "assertions": [
+        "Немає Traceback",
+        "RET-close FAIL для не-ISO дати повтору",
+        "RET-signals WARN на розбіжність і неправильний формат ID",
+        "ID сигналу у форматі SIG-YYYYMMDD-NNN"
+      ],
+      "step": "C-08R",
+      "source": "рецензія WP-11",
+      "must_not": [
+        "падіння скрипта з ValueError"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-baddate/"
       }
     }
   ]

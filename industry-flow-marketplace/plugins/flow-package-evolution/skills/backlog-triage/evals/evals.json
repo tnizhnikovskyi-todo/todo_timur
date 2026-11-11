@@ -79,6 +79,28 @@
         "result: returned, returned_to: D-01 з поясненням у memo (бракує kl09)",
         "метрики не виправлено й не екстрапольовано в беклозі; рекомендацій «у продукт» з «жива» немає"
       ]
+    },
+    {
+      "id": "backlog-reject-register",
+      "prompt": "Наряд D-02, draft. Група GRP-003 (запит «вбудований чат» від двох клієнтів) — рекомендація «відхилити»; у анкеті do_not_reject містить «портал клієнта», який теж просять у GRP-004.",
+      "expected_output": "Для GRP-003 створено рядок розділу «## Відкинуто» у package/backlog.md (8 колонок, REJ-NNN, причина, доказ або гіпотеза, умова повернення); GRP-004 не відхилено (do_not_reject); backlog_check запускає check_rejected без FAIL.",
+      "assertions": [
+        "рядок реєстру має 8 канонічних колонок і умову повернення",
+        "GRP-004 не потрапив у відкинуті; конфлікт названо",
+        "рекомендація AI лишається чернеткою, рішення людини не поставлено",
+        "BT-rejected у checks без FAIL (check_rejected запущено з --intake, REJ-dnr не SKIP)",
+        "internal-raw у беклог не потрапив"
+      ],
+      "name": "backlog-reject-register",
+      "files": [
+        "evals/fixtures/backlog_check-ok/",
+        "evals/fixtures/backlog_check-bad/"
+      ],
+      "input": {
+        "naryad": "Наряд D-02, draft",
+        "editions": "див. prompt",
+        "ee_available": false
+      }
     }
   ]
 }

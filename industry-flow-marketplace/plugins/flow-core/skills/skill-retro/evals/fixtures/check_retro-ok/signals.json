@@ -1,4 +1,4 @@
-[{"id":"SIG-001","source":"return","ref":"odoo:task/101","lesson":"LSN-001","not_error":null},
- {"id":"SIG-002","source":"observation","ref":"observations/2026-11-11-concept-presentation-md-not-page.md","lesson":"LSN-001","not_error":null},
- {"id":"SIG-003","source":"human-edit","ref":"pr#14","lesson":"LSN-002","not_error":null},
- {"id":"SIG-004","source":"chat","ref":"odoo:task/105#9","lesson":null,"not_error":"побажання власника про порядок блоків, скіл не порушено"}]
+[{"id":"SIG-20261111-001","source":"return","ref":"odoo:task/101","lesson":"LSN-001","not_error":null},
+ {"id":"SIG-20261111-002","source":"observation","ref":"observations/2026-11-11-concept-presentation-md-not-page.md","lesson":"LSN-001","not_error":null},
+ {"id":"SIG-20261111-003","source":"human-edit","ref":"pr#14","lesson":"LSN-002","not_error":null},
+ {"id":"SIG-20261111-004","source":"chat","ref":"odoo:task/105#9","lesson":null,"not_error":"побажання власника про порядок блоків, скіл не порушено"}]

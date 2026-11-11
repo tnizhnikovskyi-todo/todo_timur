@@ -1,0 +1,207 @@
+{
+ "skill_name": "concept-presentation",
+ "evals": [
+  {
+   "id": "mebli-r11-md-not-page",
+   "prompt": "Наряд A-20c, mebli, params.sample: false. Є OWNER-BRIEF.md, BOX, SALES, REJECTED, COMPLETENESS. Власнику треба показати концепцію. Зроби markdown-файл із таблицями рішень і віддай.",
+   "expected_output": "Скіл не віддає .md: збирає index.html за каркасом (вердикт і гроші на першому екрані, біль, сценарій, екрани, відкинуте, рішення), а не таблицю рішень; OP-* без FAIL.",
+   "assertions": [
+    "Результат — HTML-сторінка за templates/owner-page, а не .md",
+    "Перший екран — висновок і чесний вердикт про гроші, не таблиця питань",
+    "Таблиці лише як деталі під тезами",
+    "check_owner_page.py запущено, OP-contract PASS"
+   ],
+   "input": {
+    "chronology": "mebli r11",
+    "reference": "flow/A-03b-deep@008541fb4d4ced7adfa7061c1edf5576eaa9bf36: docs/industries/mebli/research/owner-page/index.html",
+    "fixtures": "evals/fixtures/check_owner_page-ok/"
+   }
+  },
+  {
+   "id": "mebli-r15-three-pages",
+   "prompt": "Наряд A-20c, mebli, повний обсяг. Усе, що знаєш про конкурентів і відкинуте, склади в index.html одним довгим файлом, окремі сторінки не потрібні.",
+   "expected_output": "Скіл дотримується контракту: 3 сторінки (index, competitors, rejected), навігація туди-назад, aria-current на активній; competitors і rejected з власним <!doctype>.",
+   "assertions": [
+    "Створено рівно index.html, competitors.html, rejected.html",
+    "На кожній сторінці навігація з 3 посилань і один aria-current=\"page\"",
+    "OP-pages і OP-nav PASS; на фікстурі з 2 сторінками — FAIL"
+   ],
+   "input": {
+    "chronology": "mebli r15",
+    "reference": "flow/A-03b-deep@008541fb4d4ced7adfa7061c1edf5576eaa9bf36: docs/industries/mebli/research/owner-page/",
+    "fixtures": "evals/fixtures/check_owner_page-bad/"
+   }
+  },
+  {
+   "id": "mebli-r13-no-rejected-register",
+   "prompt": "Наряд A-20c, mebli. У REJECTED.md є групи G1-G4 і група G4а (повернуто рішенням власника). Сторінку rejected.html можна не робити, достатньо рядка «щось відкинули».",
+   "expected_output": "rejected.html зроблено за реєстром: групи g1-g4, g4a, журнал знятих рішень; на index розділ «Що свідомо не робимо» стоїть вище за блок рішень, група 4а названа в «Повернуто рішенням власника».",
+   "assertions": [
+    "rejected.html має розділи g1, g2, g3, g4, g4a, log за REJECTED.md",
+    "На index відкинуте розташоване до блока рішень",
+    "Позиції групи 4а показані як повернені власником, не як відкинуті",
+    "Числа відкинутого збігаються з rejected_count у звіті (звірку дає check_rejected.py з flow-core/skills/flow-autocheck/scripts, його запускає runner за A-20c.yaml; цей скрипт чисел не звіряє)"
+   ],
+   "input": {
+    "chronology": "mebli r13",
+    "reference": "flow/A-03b-deep@008541fb4d4ced7adfa7061c1edf5576eaa9bf36: docs/industries/mebli/research/owner-page/rejected.html",
+    "fixtures": "evals/fixtures/inputs-mebli/REJECTED.md (групи G1-G4, G4а)"
+   }
+  },
+  {
+   "id": "mebli-s01-hypothesis-as-fact",
+   "prompt": "Наряд A-20c, mebli. У матриці конкурентів колонка «наш пакет ◎» заповнена планами. Напиши на index, що наш пакет «вже закриває 90% функцій як факт».",
+   "expected_output": "◎ не подано як факт: на сторінці «гіпотеза/план», число — лише з facts.yaml; MANUAL у OP-contract розібрано в memo, або формулювання виправлено.",
+   "assertions": [
+    "Поряд із ◎ немає слова «факт» без позначки «гіпотеза/план»",
+    "Число 90% відсутнє, якщо його немає в facts.yaml, розбіжність — у memo",
+    "OP-contract не лишає MANUAL без пояснення",
+    "check_owner_page.py на check_owner_page-diamond: OP-contract FAIL (● у колонці «наш пакет») і MANUAL-повідомлення про ◎ як факт у msg"
+   ],
+   "input": {
+    "chronology": "mebli (позначки ●/◎)",
+    "reference": "flow/A-03b-deep@008541fb4d4ced7adfa7061c1edf5576eaa9bf36: docs/industries/mebli/research/owner-page/competitors.html",
+    "fixtures": "evals/fixtures/check_owner_page-diamond/ (index з «Наш пакет ◎ вже закриває…», competitors з ● у колонці «наш пакет»)"
+   }
+  },
+  {
+   "id": "mebli-s02-questions-duplicate-intake",
+   "prompt": "Наряд A-20c, mebli. У OWNER-INTAKE.md editions: both, pricing.ce_entry задано, brand заповнено. Сформуй блок рішень: 1) яку редакцію брати, 2) яка ціна входу, 3) який бренд, 4) що робити з дашбордом покупця, 5) EE-мости зараз чи пізніше, 6) формат відео.",
+   "expected_output": "Питання 1, 2, 3 (і 5, 6, якщо є в анкеті) не виводяться як питання: це вхід. Лишається ≤5 відкритих, кожне з рекомендацією й замовчуванням.",
+   "assertions": [
+    "Редакція, ціна входу, бренд — не в блоці рішень (вже в анкеті)",
+    "Відкритих питань ≤5; кожне має rec, def, cons",
+    "Якщо AI радить інакше, ніж анкета, — це «альтернатива» з причиною, замовчування = анкета",
+    "«Скопіювати мої відповіді» видає рядки `<id> -> <варіант> | коментар` (гейт і scope — на початку коментаря); кожне відкрите питання в DEC має поле id; buildText містить oneLine(d.id)+\" -> \""
+   ],
+   "input": {
+    "chronology": "N-02 / L§21 (питання власнику після синтезу)",
+    "reference": "docs/industries/mebli/OWNER-INTAKE.md (анкета)",
+    "fixtures": "evals/fixtures/inputs-mebli/OWNER-INTAKE.md (editions, pricing, brand)"
+   }
+  },
+  {
+   "id": "mebli-s03-no-prototype-yet",
+   "prompt": "Наряд A-20c, mebli, повний обсяг. prototype-real/PLAN.md ще не існує (A-21 попереду). Додай на сторінку блок «Порівняння з поточним зрізом» зі скріншотами з минулої демонстрації.",
+   "expected_output": "Розділу current немає (зріз не існує), скріншотів і зовнішніх картинок немає; у memo — що блок додається після A-21.",
+   "assertions": [
+    "На index немає розділу #current і <img> окрім логотипа data:",
+    "OP-contract PASS (зовнішніх ресурсів немає)",
+    "memo: блок «що вже є в зрізі» додається лише якщо зріз існує",
+    "OP-contract FAIL, якщо #current є без prototype-real/PLAN.md (фікстура bad)"
+   ],
+   "input": {
+    "chronology": "блок зрізу лише за наявності зрізу",
+    "fixtures": "evals/fixtures/check_owner_page-ok/"
+   }
+  },
+  {
+   "id": "mebli-s04-sample-first-screen",
+   "prompt": "Наряд A-20c, mebli, params.sample: true. Підготуй зразок сторінки.",
+   "expected_output": "Лише index.html (перший екран: вердикт і гроші, 1 біль із цитатою, що вирішити); check_owner_page.py --sample без FAIL; результат waiting_human, повний обсяг — resume {sample: false}.",
+   "assertions": [
+    "Створено лише index.html",
+    "Перевірку запущено з --sample, OP-pages PASS",
+    "Результат waiting_human, рішень власника не вигадано",
+    "URL публікації не вигадано; за відсутності інструмента — waiting_human"
+   ],
+   "input": {
+    "chronology": "зразок перед повним обсягом",
+    "fixtures": "evals/fixtures/inputs-mebli/OWNER-INTAKE.md"
+   }
+  },
+  {
+   "id": "mebli-s05-number-without-marker",
+   "prompt": "Наряд A-20c, mebli, повний обсяг. На сторінці в розділі money напиши «Вхід у Community 12 000 грн» звичайним текстом, маркери <span data-fact> не потрібні, це зайве.",
+   "expected_output": "Число з одиницею огорнуте <span data-fact=\"pricing.ce_entry\"> (або <!--fact:pricing.ce_entry-->) за угодою flow-autocheck checks.md; runner запускає check_facts.py --require-markers (і check_brand, check_privacy, check_intake --page, check_rejected, check_stale) за A-20c.yaml; без маркера FACT-markers/FACT-mismatch FAIL.",
+   "assertions": [
+    "Кожне число з грн/%/год на сторінці має маркер fact, ключ існує у facts.yaml",
+    "У Кроці 6 перелічено check_facts (--require-markers), check_brand, check_privacy, check_intake --page, check_rejected, check_stale",
+    "Число, якого немає у facts.yaml, не вигадане, а внесене прогалиною в memo"
+   ],
+   "input": {
+    "chronology": "flow-autocheck checks.md, «Маркери фактів»",
+    "fixtures": "evals/fixtures/check_owner_page-ok/"
+   }
+  },
+  {
+   "id": "check_owner_page-ok",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-ok.",
+   "expected_output": "Код виходу 0; OP-pages, OP-nav, OP-anchors, OP-contract, OP-target — PASS.",
+   "assertions": [
+    "python3 -I scripts/check_owner_page.py evals/fixtures/check_owner_page-ok/research/owner-page --research evals/fixtures/check_owner_page-ok/research -> rc 0",
+    "Жодного FAIL",
+    "python3 -I <flow-core>/skills/flow-autocheck/scripts/check_facts.py evals/fixtures/check_owner_page-ok/research/facts.yaml evals/fixtures/check_owner_page-ok/research/owner-page --require-markers -> без FAIL"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-ok/"
+   }
+  },
+  {
+   "id": "check_owner_page-bad",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-bad (2 сторінки, index без посилання на rejected, битий якір BOX.md§9).",
+   "expected_output": "Код виходу 1; FAIL: OP-pages, OP-nav, OP-anchors (BOX.md§9 і sources/raw.md§1), OP-contract (>5 відкритих питань без id/rec/def; #current без PLAN.md; buildText без d.id).",
+   "assertions": [
+    "rc 1",
+    "OP-pages FAIL (немає rejected.html)",
+    "OP-nav FAIL (немає посилання на rejected.html)",
+    "OP-anchors FAIL (BOX.md§9 не знайдено)",
+    "OP-anchors FAIL (якір на sources/** заборонено)",
+    "OP-contract FAIL (6 відкритих питань, немає id/rec/def; #current без prototype-real/PLAN.md)",
+    "OP-contract FAIL містить «buildText» (bad-фікстура без d.id)"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-bad/"
+   }
+  },
+  {
+   "id": "check_owner_page-nobuildid",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-nobuildid (buildText видає `гейт | scope | варіант | коментар` без d.id).",
+   "expected_output": "rc 1; OP-contract FAIL: buildText має починати рядок з d.id.",
+   "assertions": [
+    "rc 1",
+    "OP-contract FAIL з повідомленням про buildText і d.id"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-nobuildid/"
+   }
+  },
+  {
+   "id": "check_owner_page-diamond",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-diamond (на index «Наш пакет ◎ вже закриває розкрій», у матриці competitors у колонці «наш пакет» стоїть ●).",
+   "expected_output": "rc 1; OP-contract FAIL (● у колонці «наш пакет») і згадка ◎ як підтвердженого.",
+   "assertions": [
+    "rc 1",
+    "OP-contract FAIL: у колонці «наш пакет» стоїть ●/◐ замість ◎",
+    "У msg є «◎ подано як підтверджене»; пункт навігації «план перевірки» не гасить спрацювання"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-diamond/"
+   }
+  },
+  {
+   "id": "check_owner_page-current",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-current (є #current і prototype-real/PLAN.md).",
+   "expected_output": "rc 0; OP-contract PASS: розділ #current дозволений, бо PLAN.md існує.",
+   "assertions": [
+    "rc 0",
+    "Жодного FAIL; OP-anchors знаходить ../prototype-real/PLAN.md§1"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-current/"
+   }
+  },
+  {
+   "id": "check_owner_page-sample",
+   "prompt": "Запусти scripts/check_owner_page.py з --sample на фікстурі check_owner_page-sample (лише index, навігація на дві інші сторінки без href).",
+   "expected_output": "rc 0; OP-pages і OP-nav PASS у режимі зразка.",
+   "assertions": [
+    "python3 -I scripts/check_owner_page.py evals/fixtures/check_owner_page-sample/research/owner-page --research evals/fixtures/check_owner_page-sample/research --sample -> rc 0",
+    "Без --sample той самий каталог дає OP-pages FAIL"
+   ],
+   "input": {
+    "fixtures": "evals/fixtures/check_owner_page-sample/"
+   }
+  }
+ ]
+}
