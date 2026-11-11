@@ -112,22 +112,28 @@
     {
       "id": "decision-alternatives-tariffs",
       "prompt": "Наряд A-07, є BOX §1 (CE-вхід, EE-апгрейд, легкий ФОП) і SALES §3. Підготуй чернетку рішення «будуємо пакет?».",
-      "expected_output": "Чернетка має розділ «Альтернативи, що не обрано» у форматі реєстру з порожнім полем рішення людини; тарифи CE-вхід/EE-апгрейд/легкий ФОП лише з BOX/SALES; твердження про EE з EC-xxx або «не перевірено».",
+      "expected_output": "Чернетка має розділ `## Відкинуто` у форматі реєстру з порожнім полем рішення людини; тарифи CE-вхід/EE-апгрейд/легкий ФОП лише з BOX/SALES; твердження про EE з EC-xxx або «не перевірено».",
       "assertions": [
         "розділ альтернатив має колонки реєстру і умову повернення",
         "поле рішення людини порожнє",
         "цифри тарифів мають посилання на BOX §1/SALES §3",
-        "розрахунки відокремлено від Фактів"
+        "розрахунки відокремлено від Фактів",
+        "`check_rejected.py` на файлі проходить без FAIL (REJ-exists, REJ-fields)"
       ],
       "step": "",
       "source": "",
       "must_not": [],
-      "files": "",
+      "files": [
+        "evals/fixtures/decision-alternatives-tariffs/"
+      ],
       "input": {
         "naryad": "Наряд A-07, є BOX §1 (CE-вхід, EE-апгрейд, легкий ФОП) і SALES §3",
         "editions": "див. prompt",
         "ee_available": false
-      }
+      },
+      "fixtures": [
+        "evals/fixtures/decision-alternatives-tariffs/"
+      ]
     }
   ]
 }

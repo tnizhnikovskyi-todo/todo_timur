@@ -120,7 +120,13 @@
         "naryad": "Наряд B-06, клієнт edition: ce",
         "editions": "both",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/migrator-box-edition/"
+      ],
+      "fixtures": [
+        "evals/fixtures/migrator-box-edition/"
+      ]
     }
   ]
 }

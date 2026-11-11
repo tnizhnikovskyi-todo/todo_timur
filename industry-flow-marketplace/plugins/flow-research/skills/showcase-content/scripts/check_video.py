@@ -26,10 +26,15 @@ def has_audio(f):
     return bool(run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", f]).stdout.strip())
 
 def intake_formats(path):
+    """Рядковий `formats: [a, b]` або блоковий список `formats:` + `- a`; коментарі в рядках відкидаються."""
     if not path or not os.path.exists(path): return None
     t = open(path, encoding="utf-8").read()
-    m = re.search(r"^\s*materials:\s*\n(?:[ \t]+.*\n)*?[ \t]+formats:\s*\[([^\]]*)\]", t, re.M)
-    return [x.strip().strip("'\"") for x in m.group(1).split(",") if x.strip()] if m else None
+    m = re.search(r"formats:[ \t]*\[([^\]]*)\]", t)
+    if m: fm = [re.sub(r"\s+#.*$", "", x).strip().strip("'\"") for x in m.group(1).split(",") if x.strip()]
+    else:
+        m = re.search(r"(?m)^([ \t]*)formats:[ \t]*(?:#.*)?\n((?:[ \t]*-[ \t]*[^\n]*\n?)+)", t)
+        fm = [re.sub(r"\s+#.*$", "", x.strip()[1:]).strip().strip("'\"") for x in m.group(2).splitlines() if x.strip().startswith("-")] if m else []
+    return [x for x in fm if x] or None
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("video"); ap.add_argument("--intake"); ap.add_argument("--sample", action="store_true")
@@ -40,6 +45,8 @@ def main():
         return out()
     if not os.path.isdir(vd):
         add("VID-format", "FAIL", f"немає теки {vd}"); return out()
+    if a.intake and not os.path.isfile(a.intake):
+        add("VID-format", "FAIL", f"--intake {a.intake}: файла немає (шлях — docs/industries/<галузь>/OWNER-INTAKE.md від кореня репо)"); return out()
     fm = intake_formats(a.intake)
     if fm is None:
         add("VID-format", "WARN", "анкета без materials.formats — беру video_16x9, reels_9x16" if a.intake else "--intake не задано — беру video_16x9, reels_9x16"); fm = ["video_16x9", "reels_9x16"]
@@ -60,6 +67,8 @@ def main():
                 if abs(pr["fps"] - 30) > 1: bad.append(f"{pr['fps']:.1f} fps ≠ 30")
                 if not (lo <= pr["dur"] <= hi): bad.append(f"тривалість {pr['dur']:.1f} с поза {lo}–{hi}")
                 add("VID-format", "FAIL" if bad else "PASS", f"{n}: " + ("; ".join(bad) if bad else f"{W}x{H}, {pr['dur']:.1f} с"))
+                mb = os.path.getsize(p) / 1048576
+                if mb > 50: add("VID-format", "WARN", f"{n}: {mb:.0f} МБ > 50 МБ — ризик ліміту push GitHub (100 МБ); див. video-spec.md, відкрите питання про LFS")
                 if not has_audio(p): add("VID-format", "WARN", f"{n}: немає аудіодоріжки (очікується тиха ambient)")
                 videos.append((p, pr["dur"]))
         elif f == "mobile":

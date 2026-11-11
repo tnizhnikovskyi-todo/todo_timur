@@ -15,6 +15,22 @@
    }
   },
   {
+   "id": "script-check-completeness",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/completeness-audit/scripts/check_completeness.py docs/industries/<галузь>/research/COMPLETENESS.md --brief docs/industries/<галузь>/research/OWNER-BRIEF.md: CA-* без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/completeness-audit/scripts/check_completeness.py",
+     "docs/industries/<галузь>/research/COMPLETENESS.md",
+     "--brief",
+     "docs/industries/<галузь>/research/OWNER-BRIEF.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
    "id": "completeness-headings",
    "prim": "headings",
    "args": {

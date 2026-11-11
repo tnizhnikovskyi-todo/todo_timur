@@ -114,6 +114,7 @@ ALLOCATION -> не переносити, у «Відкриті питання».
 Studio) -> `manual: true` з причиною.
 
 ## Крок 4. Модулі до установки
+- Профілі: «Модулі до установки» окремо для `ce` і `ee` (при `editions: ce` профілю `ee` немає); у ядрі — без EE та AGPL у `depends`.
 `M_std ∪ M_ready`. Спершу `odoo_execute` model `ir.module.module`, method `update_list`, ids `[]` (`connection_id`). Далі:
 - «стандарт/конфіг» -- наявність у `ir.module.module` бази;
 - «готове» (`origin: todo-ready` з `REUSE.md`; `integration` -- стороннє за q42; обидва `source: vendored`, `references/vendoring.md`) -- за `package/addons/<модуль>/__manifest__.py` **і** за записом у `ir.module.module` після `update_list`;
@@ -141,6 +142,7 @@ Studio) -> `manual: true` з причиною.
 Застарілі поля 17->19 -- `references/odoo19-config-pitfalls.md`; сумнів -> `boost:source-check`.
 
 ## Крок 7. Застосування й read-back
+- Застосування й read-back — на CE-базі і (при `editions: both`) на EE-базі; EE-бази немає — «не перевірено» (WARN).
 Скриптів немає -> **одразу `mcp-fallback`** за `references/apply-semantics.md` (приклади викликів там): модулі -> дані ->
 settings; потім 2-й прохід-порівняння за xml-id (без записів) і read-back кожного VP: для `settings` -- поле `related` (`company_id.*`) за якорем `res.company`, решта полів через `default_get`
 на `res.config.settings`; для решти VP -- за якорем (`config-package-format.md`). Лічильники
@@ -159,13 +161,14 @@ config-log. Даних у базі немає (установка не відб�
 `git diff --stat` -- лише `package/config/**` і `package/addons/<готове>/**`. Передати runner `checks`, `data_sources`
 (SHA і alias), `memo`, `phase: null`, `partial: false`.
 
-## Редакції CE/EE (К-06, К-09; правила — `flow-package-build/references/editions-and-bridges.md`; формат -- `references/config-package-format.md`, `format: 2`)
+## Редакції CE/EE (правила — `flow-package-build/references/editions-and-bridges.md`; формат -- `references/config-package-format.md`, `format: 2`)
 - `manifest.yaml` має два профілі `edition_profiles.ce` / `edition_profiles.ee` (`ee` ⊇ `ce`); редакції беруться з `editions` анкети (`OWNER-INTAKE.md`), не вгадуються. «Модулі до установки» складаються окремо на кожен профіль у порядку залежностей; кожен модуль має `origin` (`std-ce|std-ee|td|todo-ready|integration`).
 - `vp-map.yaml`/`answers.yaml` мають параметри `edition` (`ce|ee`) і `contract_mode` (юридично неоднозначне -> параметр, §21 №17; значення задає власник/ТР, перелік не вигадувати), обидва з `default`.
 - Ядро `td_*` без EE у `depends`; EE-частина — мости `td_*_ee` з `auto_install` (лише в профілі `ee`). Порушення — дефект для `build-allocator`/`code-dev`, не правка тут.
 - Застосування й read-back — на **двох** чистих тестових базах (CE і, при `editions: both`, EE; `ODOO_EDITION`, `tools/odoo/preflight.sh --edition`). `install-log.md` — окремий розділ на редакцію. EE-база недоступна -> розділ `ee` = «не перевірено» (WARN), крок не позначати як повний.
-- Перевірки редакцій (`CFG-editions`): `edition_profiles` відповідають `editions`; `ee ⊇ ce`; `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` є у `vp-map.yaml` і схемі з `default`; `origin` у кожного модуля; `install-log.md` має розділ на кожну редакцію; розділ `ee` при недоступній EE -- «не перевірено».
-- Залежності від AGPL-модулів (включно з OCA) у «Модулі до установки» ядра не вносити: OCA — лише ідея (К-09).
+- Ліцензії залежностей ядра: для кожного імені з `depends` `td_*` шукати маніфест у `package/addons/` і в `ODOO_ADDONS_PATH`; `AGPL-3` -> дефект (не вносити); не знайдено і модуль не стандартний Odoo -> «невідома залежність, ліцензія не перевірена» (WARN, не PASS).
+- Перевірки редакцій (`CFG-editions`): `edition_profiles` відповідають `editions` (при `editions: ce` ключа `ee` немає — це норма, не FAIL; при `both|ee` `ee` обов'язковий); `ee ⊇ ce`; `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` є у `vp-map.yaml` і схемі з `default`; `origin` у кожного модуля; `install-log.md` має розділ на кожну редакцію; розділ `ee` при недоступній EE -- «не перевірено».
+- Залежності від AGPL-модулів (включно з OCA) у «Модулі до установки» ядра не вносити: OCA — лише ідея.
 
 ## Автоперевірка (перед здачею)
 | ID | FAIL, коли |
@@ -182,11 +185,12 @@ config-log. Даних у базі немає (установка не відб�
 | `CFG-readback` | значення VP у базі != `answers.example.yaml` після `transform`; обов'язковий; `MANUAL` лише для пунктів `manual: true`; пункт `settings` без read-back (`default_get` або якір `related`) -- FAIL, не MANUAL |
 | `CFG-td-isolation` | у даних є моделі/поля `td_*` (дозволено лише `td_param`) |
 | `CFG-vendored` | у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом, або ліцензія поза переліком q42 (MIT, BSD, Apache-2.0, LGPL-3) |
-| `CFG-editions` | немає `edition_profiles`/`format: 2`; `ee` не ⊇ `ce`; `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра; розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
+| `CFG-editions` | немає `edition_profiles`/`format: 2`; ключ `ee` є при `editions: ce` або немає при `both|ee`; `ee` не ⊇ `ce`; `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра (маніфест — у `package/addons/` або `ODOO_ADDONS_PATH`; не знайдено й не стандартний — WARN «ліцензія не перевірена»); розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
 | `CFG-checks-closed` | правка A-12 з CHECKS.md без рядка «закрито: файл/пункт» |
 | `CFG-scope` | diff поза `package/config/**` і `package/addons/<готове>/**` |
 | `CFG-secrets` | збіг із шаблоном secret з `pii-patterns.md` у файлах чи лозі |
 | `lint`, `config-review` | знахідки 18->19; вердикт не APPROVE; `config-review: N/A` |
+| `ED-edition` | PASS — `edition_profiles` відповідають `editions`; `ee ⊇ ce`; `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` у `vp-map.yaml` із `default`; `install-log.md` — розділ на кожну редакцію; FAIL — порушено будь-яке з правил профілів або AGPL у ядрі; WARN — розділ `ee` без EE-бази — «не перевірено», не PASS |
 
 ### Статуси checks -> result
 | Стан | result |

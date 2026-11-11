@@ -88,7 +88,11 @@
         "naryad": "Наряд A-09, editions: both, legal_ambiguous",
         "editions": "both",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/questionnaire-edition-contract/OWNER-INTAKE.md",
+        "evals/fixtures/questionnaire-edition-contract/ТР.md"
+      ]
     }
   ],
   "_note": "Фікстури (міні-ТР, make_repo.sh з тегом package/v1.0 за зразком flow-autocheck/evals/fixtures) ще не створені: евали задаються прозою; асерти сформульовано на вміст файлів і даних звіту."

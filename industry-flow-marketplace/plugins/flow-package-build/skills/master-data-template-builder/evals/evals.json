@@ -86,7 +86,11 @@
         "розбіжності з BOX названо в memo",
         "EE-тест-імпорт = не перевірено (WARN)"
       ],
-      "files": [],
+      "files": [
+        "evals/fixtures/master-data-box-editions/OWNER-INTAKE.md",
+        "evals/fixtures/master-data-box-editions/research/BOX.md",
+        "evals/fixtures/master-data-box-editions/ALLOCATION.md"
+      ],
       "ci_note": "",
       "input": {
         "naryad": "Наряд A-13, editions: both, є research/BOX",

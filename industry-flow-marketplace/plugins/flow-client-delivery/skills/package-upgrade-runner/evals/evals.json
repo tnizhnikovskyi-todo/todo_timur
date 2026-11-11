@@ -140,7 +140,12 @@
         "naryad": "Наряд B-11, клієнт edition: ce; у запиті просять заодно перейти на EE і поставит",
         "editions": "both",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/upgrade-edition-switch/clients/k01/answers.yaml",
+        "evals/fixtures/upgrade-edition-switch/package/config/manifest.yaml",
+        "evals/fixtures/upgrade-edition-switch/request.md"
+      ]
     }
   ]
 }

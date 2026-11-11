@@ -1,0 +1,10 @@
+format: 2
+editions: both
+edition_profiles:
+  ce:
+    modules:
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+  ee:
+    modules:
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+      - {name: td_mebli_core_ee, origin: td, source: code, ac: [AC-12]}

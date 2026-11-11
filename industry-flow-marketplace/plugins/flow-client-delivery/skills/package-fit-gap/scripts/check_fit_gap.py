@@ -160,6 +160,23 @@ def main():
         errs += [f"{k}: значення поза схемою" for k, v in got.items() if k in allowed and v and v.lower() != "уточнити" and v.lower() not in allowed[k]]
         add("FG-schema", "FAIL" if errs else ("PASS" if allowed else "MANUAL"),
             "; ".join(errs) if errs else ("" if allowed else "ключі збігаються; допустимі значення схеми не розпізнано — звірити вручну"))
+    # FG-edition: ключ edition в answers.yaml (пише B-02; від нього залежать B-03, B-04, B-06, B-11)
+    ans_e = files.get("answers.yaml")
+    if ans_e is None:
+        add("FG-edition", "FAIL", "answers.yaml відсутній")
+    else:
+        me = re.search(r"(?m)^edition\s*:\s*([^#\n]*?)\s*(#.*)?$", ans_e)
+        ev = me.group(1).strip().strip("'\"").lower() if me else None
+        if ev is None:
+            add("FG-edition", "FAIL", "ключа edition немає в answers.yaml (ce|ee|уточнити)")
+        elif ev not in ("ce", "ee", "уточнити"):
+            add("FG-edition", "FAIL", f"edition: значення поза ce|ee|уточнити")
+        elif ev == "уточнити":
+            q = files.get("questionnaire.md") or ""
+            ok = re.search(r"(?i)редакці|edition|enterprise|community", q)
+            add("FG-edition", "PASS" if ok else "FAIL", "" if ok else "edition: уточнити, але в questionnaire.md немає питання про редакцію")
+        else:
+            add("FG-edition", "PASS")
     # FG-d02
     d02 = section(fg, "Запити в D-02") or ""
     h2, r2 = table(d02)

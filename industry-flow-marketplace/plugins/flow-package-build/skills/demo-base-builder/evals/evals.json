@@ -155,12 +155,17 @@
         "шлях опису бази береться з where наряду; якщо where немає — waiting_human, шлях не вигадано",
         "скидання описано як 'золота копія' + підкрок Тімліда; видалень через odoo-mcp немає"
       ],
-      "source": "К-11: A-22 = база зрізу для гарячого ліда; failureMode A-22: емуляція замість зрізу",
+      "source": "conventions.md: A-22 = база зрізу для гарячого ліда; failureMode A-22: емуляція замість зрізу",
       "input": {
         "naryad": "Наряд A-22, галузь mebli, demo_edition: ce",
         "editions": "див. prompt",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/slice-base-no-emulation/package/addons/td_mebli_core/__manifest__.py",
+        "evals/fixtures/slice-base-no-emulation/prototype-real/facts.json",
+        "evals/fixtures/slice-base-no-emulation/prototype-real/shoot/build_db.sh"
+      ]
     },
     {
       "id": "stand-ce-ee-editions",
@@ -177,7 +182,12 @@
         "editions": "both",
         "ee_available": false,
         "checks_summary": "APPROVE (CE); EE не перевірено"
-      }
+      },
+      "files": [
+        "evals/fixtures/stand-ce-ee-editions/OWNER-INTAKE.md",
+        "evals/fixtures/stand-ce-ee-editions/package/CHECKS.md",
+        "evals/fixtures/stand-ce-ee-editions/package/config/manifest.yaml"
+      ]
     }
   ]
 }

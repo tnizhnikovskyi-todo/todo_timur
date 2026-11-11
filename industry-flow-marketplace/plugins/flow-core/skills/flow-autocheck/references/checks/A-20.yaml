@@ -18,8 +18,30 @@
    "id": "script-check-concept",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=<шлях> --input past-projects.md=<шлях> [--input protocol-…=<шлях>] --base <git.base>: CM-files, CM-src, CM-quote, CM-feat, CM-count, CM-trace, CM-signal, CM-ids, CM-pii, CM-scope без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
-    "who": "runner"
+    "text": "python3 -I <корінь плагіна flow-research>/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=docs/industries/<галузь>/briefing.md --input past-projects.md=docs/industries/<галузь>/past-projects.md --base <git.base> --research docs/industries/<галузь>/research --intake docs/industries/<галузь>/OWNER-INTAKE.md --k1 docs/industries/<галузь>/research/K1.md --facts docs/industries/<галузь>/research/facts.yaml --autocheck-dir <корінь плагіна flow-core>/skills/flow-autocheck/scripts [--input protocol-<ід>-<дата>.md=<шлях>, якщо протокол названо в inputs]: CM-args, CM-files, CM-src, CM-quote, CM-feat, CM-count, CM-trace, CM-signal, CM-ids, CM-pii, CM-scope, CM-research, CM-buyer, CM-roles-scenarios, CM-base-edition, CM-dnr, CM-facts без FAIL (без --research/--intake скрипт дає CM-args = FAIL; режим --concept-only для A-20 не використовувати). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "who": "runner",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/concept-mapper/scripts/check_concept.py",
+     "docs/industries/<галузь>/concept",
+     "--input",
+     "briefing.md=docs/industries/<галузь>/briefing.md",
+     "--input",
+     "past-projects.md=docs/industries/<галузь>/past-projects.md",
+     "--base",
+     "<git.base>",
+     "--research",
+     "docs/industries/<галузь>/research",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md",
+     "--k1",
+     "docs/industries/<галузь>/research/K1.md",
+     "--facts",
+     "docs/industries/<галузь>/research/facts.yaml",
+     "--autocheck-dir",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts"
+    ]
    }
   },
   {

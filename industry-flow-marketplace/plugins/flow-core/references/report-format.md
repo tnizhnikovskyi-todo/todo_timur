@@ -58,6 +58,7 @@ sample: true|false              # це зразок (N-18); кроки зі зр
 accepted_ref: <шлях|null>       # N-11: ACCEPTED.md, що фіксує прийняте людиною (SHA/дата/хто)
 stale: []                       # N-07: артефакти, застарілі після зміни рішення/факту (вихід check_stale.py, який виконує runner у наряді-джерелі події: C-02 record/decisions-batch, A-02b amend, PR із facts.yaml); перерахунок — по наряду params.mode: recalc на крок-власник
 ```
+Поля `review_rounds`, `human_rounds`, `rejected_count`, `rejected_ref`, `completeness`, `sample`, `accepted_ref` переносить у облік запуску `flow-state-keeper` (`record`) і рахує в `reconcile`; `stale` читає `skill-retro`; решта полів — для людини й рецензента.
 `data_sources[]` — об'єкти `{id: <ідентифікатор>, class: none|commercial|personal|internal-aggregated|internal-raw}`; старі рядки-ідентифікатори читаються як `class` невідомий -> WARN. `internal-raw` у `data_sources` дозволено лише кроку з профілем `research-internal` (A-03b, A-03c, A-04 тощо); сирі спостереження — лише в `research/sources/` (К-07, К-19). FAIL (`check_privacy.py`, PRV-raw-place) — коли сирий вміст (коди K-xx із цитатами, ПІБ, суми) опинився в `research/*.md`, `owner-page/` чи `prototype-real/`, або коли `internal-raw` є в `data_sources` кроків A-20c, A-21c, A-23 (публічні й продаючі артефакти). Класи даних: `none | commercial | personal | internal-aggregated | internal-raw` (`data-policy-template.md`).
 
 ## Блок `evals:` (eval-builder, C-04/C-07)

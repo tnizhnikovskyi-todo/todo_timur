@@ -19,6 +19,9 @@
 ## UTM-схема
 `utm_campaign=demand-<галузь>`, `utm_content=<A|B|C>`, `utm_term=F-xx` (для посилань на функцію).
 
+## Матеріали A-21c
+<Reels `video/*-9x16.mp4` — канали Sales; повне відео й `SHOW.pdf` — у лендингу/листі; шляхи за SHA, `materials-a21c.md`>.
+
 ## Канал і відправник
 Канал: <Odoo Email Marketing | Gmail — вирішує Sales>. Надсилає: Sales. Адреси: <ідентифікатор теки Drive з `mailing-list.md` (не URL, не в репо)>.
 

@@ -12,8 +12,10 @@ A-09, A-12, A-13, A-14, A-15 (+A-22), A-18.
 - `config-as-code` — конфігурація Odoo як код
 - `master-data-template-builder` — шаблони майстер-даних
 - `gates-aggregator` — зведення результатів гейтів
-- `demo-base-builder` — збірка демо-бази
+- `demo-base-builder` — демо-стенд пакета (A-15) і база зрізу для гарячого ліда (A-22; без емуляції Studio/`x_`)
 - `package-release-builder` — складання релізу пакета
+
+У 0.2.0: ядро пакета — Odoo 19 CE, Enterprise — окремі мости `td_*_ee`; CI й перевірки на обох редакціях (`references/editions-and-bridges.md`); без EE-доступу EE-перевірки — WARN/«не перевірено».
 
 (Тексти скілів — у `skills/<скіл>/SKILL.md`.)
 

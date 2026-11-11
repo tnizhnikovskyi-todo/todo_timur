@@ -30,6 +30,37 @@ mk mbad montage-bad; expect 1 "montage на титрі 1,0 с (очікуєть�
 # 4. факт відсутній / ok:false -> падає
 mk nofact montage-ok; sed -i 's/"margin": "31,5 %", //' "$W/nofact/facts.json"; expect 1 "montage без факта margin (очікується помилка)" node "$S/montage.mjs" --root "$W/nofact" full --sample
 mk badchk montage-ok; sed -i 's/"ok": true/"ok": false/' "$W/badchk/facts.json"; expect 1 "facts.json з ok:false (очікується помилка)" node "$S/montage.mjs" --root "$W/badchk" full --sample
+# 4а. повна збірка (без --sample): спершу картки (rec_cards), далі три окремі мутації, у кожній перевіряється своє повідомлення
+mk full montage-ok; node "$S/rec_cards.mjs" --root "$W/full" >"$W/cards.log" 2>&1 || { echo "FAIL  rec_cards.mjs (картки для повної збірки)"; tail -5 "$W/cards.log"; FAILS=$((FAILS+1)); }
+chk() { grep -q "$1" "$W/last.log" && echo "PASS  $2" || { echo "FAIL  $2 (немає «$1» у виводі)"; tail -5 "$W/last.log"; FAILS=$((FAILS+1)); }; }
+fm() { # <тека> <sed-вираз>: копія full з картками й мутацією captions.yaml
+  rm -rf "$W/$1"; cp -r "$W/full" "$W/$1"; [ -n "$2" ] && sed -i "$2" "$W/$1/captions.yaml"; }
+fm nodir 's/, block: director//g'
+expect 1 "montage full без block: director (очікується помилка)" node "$S/montage.mjs" --root "$W/nodir" full
+chk 'блоку керівника' "повний режим: правило «блок керівника»"
+fm nohook 's/{type: card, card: hook}/{type: card, card: outro_r}/'
+expect 1 "montage reels без гачка (очікується помилка)" node "$S/montage.mjs" --root "$W/nohook" reels
+chk 'не гачок' "повний режим: правило «гачок Reels»"
+# хронометраж (VID-format) перевіряє check_video.py: короткі файли без --sample -> FAIL; 200 с / 58 с -> PASS
+mkdir -p "$W/dur/video"; cp "$FX/montage-ok/captions.yaml" "$W/dur/captions.yaml"; echo "# SHOW (заглушка для перевірки формату)" > "$W/dur/SHOW.md"
+ffmpeg -v error -y -f lavfi -i "testsrc2=s=1920x1080:r=30:d=20" -c:v libx264 -pix_fmt yuv420p "$W/dur/video/demo-16x9.mp4"
+ffmpeg -v error -y -f lavfi -i "testsrc2=s=1080x1920:r=30:d=20" -c:v libx264 -pix_fmt yuv420p "$W/dur/video/demo-9x16.mp4"
+expect 1 "check_video без --sample на 20 с (очікується FAIL хронометражу)" python3 -I "$S/check_video.py" "$W/dur/video" --intake "$W/OWNER-INTAKE.md" --no-frames
+chk 'VID-format' "хронометраж: названо VID-format"
+ffmpeg -v error -y -f lavfi -i "testsrc2=s=1920x1080:r=30:d=200" -c:v libx264 -preset ultrafast -pix_fmt yuv420p "$W/dur/video/demo-16x9.mp4"
+ffmpeg -v error -y -f lavfi -i "testsrc2=s=1080x1920:r=30:d=58" -c:v libx264 -preset ultrafast -pix_fmt yuv420p "$W/dur/video/demo-9x16.mp4"
+expect 0 "check_video без --sample на 200 с / 58 с (позитивний повний прогін)" python3 -I "$S/check_video.py" "$W/dur/video" --intake "$W/OWNER-INTAKE.md" --no-frames
+# 4б. позитивна повна збірка (без --sample)
+expect 0 "montage full (позитив)" node "$S/montage.mjs" --root "$W/full" full
+expect 0 "montage reels (позитив)" node "$S/montage.mjs" --root "$W/full" reels
+[ -s "$W/full/video/demo-16x9.mp4" ] && [ -s "$W/full/video/demo-9x16.mp4" ] && echo "PASS  demo-16x9.mp4 і demo-9x16.mp4 створено" || { echo "FAIL  demo-*.mp4 не створено"; FAILS=$((FAILS+1)); }
+# 4в. анкета з блоковим списком formats (video_16x9 + one_pager): Reels не вимагається, SHOW перевіряється
+mkdir -p "$W/blk/video"; cp "$W/dur/video/demo-16x9.mp4" "$W/blk/video/"; cp "$W/dur/SHOW.md" "$W/blk/"; cp "$FX/montage-ok/captions.yaml" "$W/blk/captions.yaml"
+printf 'materials:\n  formats:\n    - video_16x9   # основне\n    - one_pager\n' > "$W/blk-intake.md"
+expect 0 "check_video: блокова анкета (Reels не вимагається)" python3 -I "$S/check_video.py" "$W/blk/video" --intake "$W/blk-intake.md" --no-frames
+grep -q 'one_pager: SHOW' "$W/last.log" && echo "PASS  блокова анкета: SHOW перевірено" || { echo "FAIL  блокова анкета: SHOW не перевірено"; FAILS=$((FAILS+1)); }
+rm "$W/blk/SHOW.md"; expect 1 "check_video: one_pager без SHOW (очікується FAIL)" python3 -I "$S/check_video.py" "$W/blk/video" --intake "$W/blk-intake.md" --no-frames
+expect 1 "check_video: --intake на неіснуючий файл (очікується FAIL)" python3 -I "$S/check_video.py" "$W/blk/video" --intake "$W/немає.md" --no-frames
 # 5. SHOW: ok і число не з facts.json
 mk show make_show-ok; expect 0 "make_show (ok)" node "$S/make_show.mjs" --root "$W/show"
 grep -q 'fact:D_demo.margin\|fact:facts.D_demo.margin' "$W/show/SHOW.md" && echo "PASS  SHOW.md має маркери фактів" || { echo "FAIL  у SHOW.md немає маркерів фактів"; FAILS=$((FAILS+1)); }

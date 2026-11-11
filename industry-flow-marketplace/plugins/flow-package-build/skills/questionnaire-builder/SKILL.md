@@ -56,6 +56,7 @@ description: >
 | Вхід | Шлях | Обов'язковий |
 |---|---|---|
 | ТР галузі (A-08) на SHA з `inputs` | `docs/industries/<галузь>/ТР.md`: розділ VP (таблиця), AC, «Зміни версії X.Y» | так |
+| Редакції й юридично неоднозначне (A-02b) | `docs/industries/<галузь>/OWNER-INTAKE.md`: `editions`, `legal_ambiguous.to_answers_yaml` | так |
 | Шаблон анкети | `package/templates/questionnaire.md`; немає → формат із `references/questionnaire-template.md` | так |
 | DATA_POLICY | `package/DATA_POLICY.md` | так |
 | Схема й анкета попереднього тега | `git show <git.prev_tag>:package/templates/answers.yaml`, `…:package/questionnaire.md` | `new-version` |
@@ -97,12 +98,14 @@ description: >
 **попередньому** тегу, видалити.
 
 ## Крок 4. Питання (мова клієнта)
+- Редакція: питання про `edition` (і `contract_mode`) — мовою клієнта, з поясненням, що від нього залежить.
 Правила, пари «погано / добре» і зразки по типах (`enum`, `multi`, `bool`, `int`) — `references/question-style.md`. Головне:
 одна VP → одне основне питання; без термінів Odoo; закритий список (>=2 варіантів 1:1 зі значеннями `allowed`; `bool` — Так/Ні;
 `int` — число з діапазону ТР) плюс останній «Не знаю / потрібна консультація» (не значення VP); `Q-NN` наскрізні й стабільні;
 залежності — у «Залежності питань» і `applies_if`. Колонки таблиці — `references/questionnaire-template.md`.
 
 ## Крок 5. Схема й приклад
+- Схема: параметри `edition` (`ce|ee`; для `editions: ce` — лише `ce`) і `contract_mode` з `default` і поясненням.
 `package/templates/answers.yaml` з реєстру за `references/answers-schema.md`: ключі лише `VP-\d{2,3}`, порядок за номером,
 заголовок `# tr: <шлях>@<sha>` і `# schema: 1`. `allowed` — дослівно з ТР. `answers.example.yaml` = `default` кожної не-deprecated VP.
 Шаблон `package/templates/questionnaire.md` створюється **лише якщо цей шлях є у `where` наряду** (на першому запуску, якщо його немає);
@@ -120,13 +123,12 @@ description: >
 ## Крок 7. Режим `return`
 Виправляти лише пункти з `returned_from`; `Q-NN` і порядок ключів не змінювати; решта файлів без змін.
 
-## Редакція клієнта й режим договору (К-06, §21 №17; правила — `flow-package-build/references/editions-and-bridges.md`)
-- **Входи (повні шляхи):** `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`) і `legal_ambiguous.to_answers_yaml`; їх SHA — у `Входи` наряду (немає в `inArtifacts` картки — запит до WP-01, не вгадувати).
+## Редакція клієнта й режим договору (правила — `flow-package-build/references/editions-and-bridges.md`)
+- Входу немає в `inputs` наряду — читати з HEAD гілки кроку, SHA записати у звіт, у `memo` — «вхід не в картці»; файла немає — `waiting_human`/`escalated`. Розбіжність із картками передати власнику flow-map/step-cards (крок F або OPEN-ISSUES).
 - Схема `answers.yaml` і анкета мають параметр `edition` (`ce|ee`; для пакета `editions: ce` — лише `ce`) з поясненням для клієнта: від нього залежать модулі (профіль `edition_profiles`) і мости `td_*_ee`.
 - Патерн «юридично неоднозначне -> параметр `answers.yaml`, а не вибір у концепції» (`legal_ambiguous.to_answers_yaml`): кожне таке місце ТР/SPEC стає VP-параметром (зокрема `contract_mode`) з `default`, поясненням «що це змінює» і приміткою «правове питання — рішення замовника/юриста». Перелік значень бере з ТР/анкети власника, не вигадує.
 
 ## Автоперевірка
-Перевірка `ED-edition` (у `checks[]`): у схемі й анкеті є `edition` (і `contract_mode`) з `default` і поясненням; для `editions: ce` значення `ee` недопустиме; EE без доступу = `WARN`, не `PASS`.
 **(а) Виконує `flow-autocheck`** (`checks/A-09.yaml`; ID дослівно; у `checks[]` без позначки джерела):
 | ID | Що реально перевіряє |
 |---|---|
@@ -140,6 +142,7 @@ description: >
 | `allowed-eq-tr` (manual) | Архітектор рішення: `allowed` = варіанти таблиці ТР |
 | `question-param-link` (manual) | Архітектор рішення: прив'язка питань до параметрів |
 | `answer-unambiguity` (manual) | Тімлід: відповіді однозначно дають значення VP |
+| `ED-edition` | PASS — у схемі й анкеті є `edition` (і `contract_mode`) з `default` і поясненням; FAIL — немає `edition` або `ee` при `editions: ce`; WARN — EE без доступу — «не перевірено», не PASS |
 Додатково діють generic-перевірки (напр. `where-only`: зміни лише у файлах `where`, `observations/`).
 
 **(б) Самоперевірка скіла** — у `checks[]` кожен рядок має `source: self`; ніколи не видавати за результат autocheck:
@@ -203,7 +206,7 @@ FAIL з виправною причиною виправити в межах с�
 в задачі; AI кнопку не натискає). Після затвердження — A-10; «Повернути» з причиною в ТР — A-08.
 
 ## Чого НЕ робити
-- Не пропускати редакційні/BOX-входи, не вгадувати `editions`/`edition` і не видавати «не перевірено» (EE) за PASS.
+- Не вгадувати `editions` (лише з `OWNER-INTAKE.md`); `edition` — параметр анкети, не припущення.
 - Не вигадувати VP, варіанти, діапазони; default поза ТР — лише технічний `default_from: ai` за Кроком 2. Не правити ТР, не запускати `tr-review`.
 - Не писати питання мовою Odoo і відкриті питання без закритого списку.
 - Не створювати друге основне питання на ту саму VP; не залишати не-дефектну VP без ключа.

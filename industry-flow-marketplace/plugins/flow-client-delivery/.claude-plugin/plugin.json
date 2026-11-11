@@ -2,7 +2,7 @@
   "name": "flow-client-delivery",
   "description": "Впровадження пакета в клієнта: fit-gap, SOW, виконання ранбука, міграція даних, підтримка, оновлення пакета в клієнта.",
   "icon": "./.claude-plugin/icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "tnizhnikovskyi-todo"
   },

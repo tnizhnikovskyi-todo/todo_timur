@@ -1,0 +1,7 @@
+format: 2
+edition_profiles:
+  ce:
+    - {name: td_mebli_core, origin: td, source: package/addons, ac: [AC-01]}
+  ee:
+    - {name: td_mebli_core, origin: td, source: package/addons, ac: [AC-01]}
+    - {name: td_mebli_shopfloor_ee, origin: td, source: package/addons, ac: [AC-02]}

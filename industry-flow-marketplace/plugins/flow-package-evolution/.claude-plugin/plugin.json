@@ -2,7 +2,7 @@
   "name": "flow-package-evolution",
   "description": "Розвиток пакета: метрики використання, тріаж беклогу, чернетки рішень Власника продукту, міграція на нову версію Odoo.",
   "icon": "./.claude-plugin/icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "tnizhnikovskyi-todo"
   },

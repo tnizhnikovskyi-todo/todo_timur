@@ -45,7 +45,7 @@
 - `skillRef`: flow-research:reuse-modules
 - `access_profile`: research-internal
 - `inArtifacts`: OWNER-INTAKE.md (`reuse`); research/FUNCTIONAL-MAP.md
-- `outArtifacts`: research/REUSE.md (REUSE-xx, години перераховано)
+- `outArtifacts`: research/{reuse-inventory.md (режим `inventory`), reuse-session.md (`session`), REUSE.md (`decide`; REUSE-xx, години перераховано), sources-log.md}
 - гейт: так: гейт «беремо / адаптуємо / ні» після сесії з власником (К-18)
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -58,8 +58,8 @@
 - `executor`: any
 - `skillRef`: flow-research:concept-mapper
 - `access_profile`: research
-- `inArtifacts`: OWNER-INTAKE.md; research/FUNCTIONAL-MAP.md; REUSE.md; briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
-- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{OWNER-BRIEF.md, BOX.md, SALES.md}; дописує в існуючий `research/REJECTED.md` (A-03b) лише рядки G4/G4а, не перезаписуючи чужі
+- `inArtifacts`: OWNER-INTAKE.md; research/{FUNCTIONAL-MAP.md, K1.md, REJECTED.md, facts.yaml, REUSE.md, edition-claims.md}; briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
+- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{OWNER-BRIEF.md, BOX.md, SALES.md, facts.yaml (доповнює)}; дописує в існуючий `research/REJECTED.md` (A-03b) лише рядки G4/G4а, не перезаписуючи чужі
 - гейт: ні (гейт перенесено в A-20c, К-04)
 - `review.checklists`: [concept.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -73,7 +73,7 @@
 - `skillRef`: flow-research:completeness-audit
 - `access_profile`: base
 - `inArtifacts`: concept/*; research/*.md; OWNER-INTAKE.md
-- `outArtifacts`: research/COMPLETENESS.md (G-xx)
+- `outArtifacts`: research/{COMPLETENESS.md (G-xx), OWNER-BRIEF.md, BOX.md, SALES.md, REJECTED.md, facts.yaml}; concept/* (кабінетні прогалини G-xx типу desk закриваються тут, без зайвого кола A-20 `recalc`)
 - гейт: ні
 - `review.checklists`: [completeness.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -87,7 +87,7 @@
 - `skillRef`: flow-research:concept-presentation
 - `access_profile`: base
 - `inArtifacts`: research/*; concept/*; COMPLETENESS.md
-- `outArtifacts`: research/owner-page/{index,competitors,rejected}.html; owner-page/PUBLISHED.md
+- `outArtifacts`: research/owner-page/{index,competitors,rejected}.html; owner-page/PUBLISHED.md; research/owner-page/screens-390/**, research/owner-page/screens-1280/** (знімки 390/1280 px)
 - гейт: так: гейт концепції; Повернути -> A-20 / A-03b / A-03c (`gate.return_to`)
 - `review.checklists`: [owner-page.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: true (перший екран сторінки)
@@ -129,12 +129,12 @@
 - `skillRef`: flow-package-build:demo-base-builder
 - `access_profile`: base
 - `inArtifacts`: package/addons/td_<галузь>_*; prototype-real/facts.json; запит гарячого ліда з A-23
-- `outArtifacts`: окрема демо-база зі зрізу `td_*` (без `x_`, К-11); опис бази — відкрите питання: шлях не визначено (див. «Відкриті питання»; чинний скіл пише `prototype/emulation.md`)
+- `outArtifacts`: окрема демо-база зі зрізу `td_*` (без `x_`, К-11); опис бази — `docs/industries/<галузь>/prototype-real/lead-base/…` (за `base-description` в `A-22.yaml`)
 - гейт: ні
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
 - ліміти: sonnet/medium; 2 год; $8; стартова зрілість: 1
-- примітки: Лише allow-list демо-баз; нічне скидання — лише за описом бази (відкрите питання про шлях)
+- примітки: Лише allow-list демо-баз; нічне скидання — за описом бази
 - ескалація: немає зрізу A-21 -> `escalated` до BA
 
 ### A-23. Тест попиту: список / адреси / prep / results
@@ -142,8 +142,8 @@
 - `executor`: any; central (адреси)
 - `skillRef`: flow-research:demand-test-runner (prep/results); flow-research:segment-selector (список/адреси)
 - `access_profile`: outreach (prep/results); research-internal (список/адреси)
-- `inArtifacts`: prototype-real/ (ACCEPTED); матеріали A-21c: video/*-16x9.mp4, video/*-9x16.mp4, SHOW.*, captions.yaml; research/OWNER-BRIEF.md, concept/features.md; mailing-list
-- `outArtifacts`: demand-test/{plan.md, thresholds.md, landing.md, results.md}; mailing-list.csv (+ парний .md)
+- `inArtifacts`: OWNER-INTAKE.md; prototype-real/ (ACCEPTED); матеріали A-21c: video/*-16x9.mp4, video/*-9x16.mp4, SHOW.*, captions.yaml; research/OWNER-BRIEF.md, concept/features.md; mailing-list
+- `outArtifacts`: demand/{risk-plan.md, emails.md, mailing-plan.md, thresholds.md, landing.md} (`prep`), demand/results.md (`results`; склад — за «Запис» скіла demand-test-runner); mailing-list.csv (+ парний .md)
 - гейт: ні; результати нижче порогів 2–3 тижні -> рішення Власника продукту
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -197,4 +197,4 @@
 Картки посилаються на файли: `research.md`, `edition-claims.md` (A-03b, A-20, A-20c), `concept.md` (A-20), `completeness.md` (A-20b), `owner-page.md` (A-20c), `prototype.md` (A-21), `video-materials.md` (A-21c). Назви — контракт: файли створюються з цими іменами; при зміні назви правляться картки тут. Для кроків із `[]` чек-лист не потрібен.
 
 ## Відкриті питання
-- A-22: шлях опису демо-бази зрізу (`outArtifacts`) не визначено; чинний скіл `demo-base-builder` пише `prototype/emulation.md`. Рішення — власник скіла; до того не вгадувати.
+- Немає відкритих питань (відкриті питання пакета — у плані §5).

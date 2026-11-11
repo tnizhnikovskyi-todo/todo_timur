@@ -105,7 +105,12 @@
         "editions": "both",
         "ee_available": false,
         "checks_summary": "APPROVE (CE); EE не перевірено"
-      }
+      },
+      "files": [
+        "evals/fixtures/release-both-editions/OWNER-INTAKE.md",
+        "evals/fixtures/release-both-editions/package/CHECKS.md",
+        "evals/fixtures/release-both-editions/package/ACCEPTANCE.md"
+      ]
     }
   ]
 }

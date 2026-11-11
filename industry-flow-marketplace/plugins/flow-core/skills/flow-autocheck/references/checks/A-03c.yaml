@@ -36,7 +36,61 @@
      "docs/industries/<галузь>/research/REUSE.md"
     ]
    },
-   "when": "mode:inventory|decide"
+   "when": "mode:decide"
+  },
+  {
+   "id": "reuse-inventory-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/reuse-inventory.md"
+    ]
+   },
+   "when": "mode:inventory"
+  },
+  {
+   "id": "script-check-reuse-inventory",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py docs/industries/<галузь>/research/reuse-inventory.md --mode inventory: RU-inv-file, RU-id без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py",
+     "docs/industries/<галузь>/research/reuse-inventory.md",
+     "--mode",
+     "inventory"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:inventory"
+  },
+  {
+   "id": "reuse-session-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/reuse-session.md"
+    ]
+   },
+   "when": "mode:session"
+  },
+  {
+   "id": "script-check-reuse-decide",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py docs/industries/<галузь>/research/REUSE.md --inventory docs/industries/<галузь>/research/reuse-inventory.md: RU-* без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py",
+     "docs/industries/<галузь>/research/REUSE.md",
+     "--inventory",
+     "docs/industries/<галузь>/research/reuse-inventory.md"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:decide"
   },
   {
    "id": "rejected-register",
@@ -59,7 +113,7 @@
    "id": "reuse-ids",
    "prim": "manual",
    "args": {
-    "text": "кожен модуль — рядок REUSE-NN (унікальні); критерії (Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій) заповнені; права на код невідомі -> «ні» до уточнення; години перераховано (К-18)",
+    "text": "inventory: кожен кандидат — рядок REUSE-NN у research/reuse-inventory.md (унікальні; нуль кандидатів — рядок «кандидатів не знайдено (переглянуто N …)»); decide: REUSE-NN у REUSE.md; критерії (Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій) заповнені; права на код невідомі -> «ні» до уточнення; години перераховано (К-18, лише decide)",
     "who": "runner"
    },
    "when": "mode:inventory|decide"

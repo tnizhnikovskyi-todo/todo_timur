@@ -138,7 +138,13 @@
         "naryad": "Наряд B-03, клієнт edition: ee, є BOX §1–2 (коробки, тарифи, план запуску)",
         "editions": "both",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/sow-edition-box/"
+      ],
+      "fixtures": [
+        "evals/fixtures/sow-edition-box/"
+      ]
     }
   ]
 }

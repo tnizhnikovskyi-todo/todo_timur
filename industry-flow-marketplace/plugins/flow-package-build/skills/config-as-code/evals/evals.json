@@ -146,7 +146,13 @@
         "naryad": "A-12",
         "editions": "both",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/config-both-editions/"
+      ],
+      "fixtures": [
+        "evals/fixtures/config-both-editions/"
+      ]
     }
   ]
 }

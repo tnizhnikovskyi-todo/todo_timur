@@ -12,6 +12,8 @@ B-02, B-03, B-04, B-06, B-07 (бот-помічник), B-09/B-10, B-11 (+B-13).
 - `package-sow-builder` — SOW на впровадження пакета
 - `runbook-executor` — виконання ранбука й звірка конфігурації
 - `client-data-migrator` — міграція даних клієнта в тестову базу
+
+У 0.2.0: редакція клієнта (CE/EE) і реєстр відкинутого враховуються в fit-gap і SOW (`references/client-edition-and-rejected.md`).
 - `client-help-bot` — бот-помічник користувачів клієнта (B-07; після go-live — відповіді-чернетки за config-log, матеріалами й read-only читанням проду `prod-ro-<клієнт>`; виняток q37, лише цей скіл)
 - `support-desk` — тріаж і відповіді підтримки
 - `package-upgrade-runner` — оновлення пакета в клієнта

@@ -19,13 +19,14 @@
 #   BRAND_KIT_DIR (каталог brand-todo/ для A-21c), FLOW_SOURCES_PUSH_ALLOWED=yes|no (рішення людини C-00: чи дозволено середовищу пушити research/sources/).
 # Свідомо без `set -e`/`set -u`: збій однієї перевірки не обриває решту.
 EDITION="${ODOO_EDITION:-ce}"
-PROFILE=""; NEEDS=""; HAVE_NEEDS=0; UNKNOWN_PROFILE=0
+PROFILE=""; NEEDS=""; HAVE_NEEDS=0; UNKNOWN_PROFILE=0; STEP=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --edition) EDITION="${2:-ce}"; shift 2 || shift ;;
     --profile) PROFILE="${2:-}"; shift 2 || shift ;;
     --needs) NEEDS="${2:-}"; HAVE_NEEDS=1; shift 2 || shift ;;
     --step)
+      STEP="${2:-}"
       case "${2:-}" in
         A-21) NEEDS="odoo,browser,video"; HAVE_NEEDS=1 ;;
         A-21c) NEEDS="browser,video"; HAVE_NEEDS=1 ;;
@@ -95,6 +96,11 @@ if need odoo && { have "$ob" || [[ -x "$ob" ]]; }; then
   if [[ -z "$oh" ]]; then add odoo-lang-opts WARN "odoo-bin --help порожній: --load-language/--i18n-overwrite не звірено"
   elif grep -q -- '--load-language' <<<"$oh" && grep -q -- '--i18n-overwrite' <<<"$oh"; then add odoo-lang-opts PASS "odoo-bin підтримує --load-language і --i18n-overwrite"
   else add odoo-lang-opts WARN "у odoo-bin --help немає --load-language або --i18n-overwrite: install.sh/reset.sh --lang не працюватимуть, адаптувати (C-00)"; fi
+fi
+# Старт сервера для зйомки A-21: tools/odoo/serve.sh або ODOO_SERVE_CMD (run_all.sh інакше зупиниться з FLOW_STOP)
+if need odoo && [[ "${STEP:-}" == "A-21" ]]; then
+  if [[ -x "$(dirname "${BASH_SOURCE[0]}")/serve.sh" || -n "${ODOO_SERVE_CMD:-}" ]]; then add odoo-serve PASS "є serve.sh або ODOO_SERVE_CMD"
+  else add odoo-serve FAIL "немає tools/odoo/serve.sh і ODOO_SERVE_CMD: зйомка A-21 зупиниться після збірки бази"; fi
 fi
 # Копія check_core_deps.py (C-03, К-06): кладе C-00
 if need odoo; then

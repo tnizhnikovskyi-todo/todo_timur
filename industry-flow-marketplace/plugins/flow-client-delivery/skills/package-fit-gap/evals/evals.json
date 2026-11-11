@@ -123,17 +123,18 @@
         "FG-N лишилися у Вимогах з посиланням на REJ-NNN",
         "internal-raw у fit-gap немає"
       ],
-      "fixtures": [
-        "evals/fixtures/check_fit_gap-ok/",
-        "evals/fixtures/check_fit_gap-bad/",
-        "evals/fixtures/build_repo.sh"
-      ],
       "requires": "тимчасовий git-репо: sh evals/fixtures/build_repo.sh <нова тека> ok|bad; запуск check_fit_gap.py з --intake <OWNER-INTAKE.md>, коли анкета є; ok -> код 0, bad -> FG-rejected FAIL",
       "input": {
         "naryad": "Наряд B-02, клієнт з edition: ce",
         "editions": "див. prompt",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/fitgap-ce-client-rejected/clients/k01/answers.yaml",
+        "evals/fixtures/fitgap-ce-client-rejected/package/config/manifest.yaml",
+        "evals/fixtures/fitgap-ce-client-rejected/requirements.md",
+        "evals/fixtures/check_fit_gap-ok/clients/k01/fit-gap.md"
+      ]
     }
   ]
 }

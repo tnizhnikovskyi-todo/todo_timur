@@ -141,24 +141,30 @@
     {
       "id": "gates-ee-unavailable",
       "prompt": "Наряд A-14, editions: both. pr-review/security-review/config-review на ce — APPROVE. EE-бази й EE-коду немає. Одна залежність ядра має license AGPL-3. Зведи гейти.",
-      "expected_output": "CHECKS.md має вердикт окремо для ce та ee; ee = WARN: EE не перевірено; AGPL-залежність у ядрі дає правку A-11 серйозності BLOCK (вердикт pr-review = правки), result: returned -> A-11; загального APPROVE немає. Без AGPL-залежності (інший варіант фікстури) зведений вердикт = «APPROVE (CE); EE не перевірено», result: done, partial: true.",
+      "expected_output": "CHECKS.md має вердикт окремо для ce та ee; ee = WARN: EE не перевірено; AGPL-залежність у ядрі дає правку A-11 серйозності BLOCK (вердикт pr-review = правки), result: returned -> A-11; загального APPROVE немає. Без AGPL-залежності (інший варіант фікстури) зведений вердикт = «APPROVE (CE); EE не перевірено», result: done, partial: true. Залежність `oca_agpl_dep` лежить не в package/addons, а в addons-path (`tools/odoo/addons`): її маніфест знайдено, `AGPL-3` -> BLOCK; `oca_unknown_dep` ніде немає й вона не стандартна -> «невідома залежність, ліцензія не перевірена» (WARN, не PASS).",
       "assertions": [
         "є окремі вердикти edition: ce і edition: ee з SHA",
         "ee = WARN: EE не перевірено, а не APPROVE мовчки",
         "AGPL у ядрі -> правка A-11 серйозності BLOCK (вердикт гейта — правки, не новий вердикт)",
-        "при AGPL загальний APPROVE не виданий; без AGPL — «APPROVE (CE); EE не перевірено» + partial: true"
+        "при AGPL загальний APPROVE не виданий; без AGPL — «APPROVE (CE); EE не перевірено» + partial: true",
+        "залежність з addons-path знайдено за маніфестом; невідому залежність не зараховано як PASS",
+        "транзитивна AGPL-залежність (td_mebli_core -> td_mebli_mid -> oca_agpl_deep) знайдена обходом `depends` -> BLOCK із ланцюжком у знахідці",
+        "варіант `editions: ee` з недоступною EE (OWNER-INTAKE-ee-only.md): не APPROVE, ee = WARN, result: waiting_human"
       ],
       "input": {
         "naryad": "A-14, params.mode: перевірка",
         "editions": "both",
         "ee_available": false,
-        "reference": "меблі (еталон): package/ SHA з наряду",
-        "files": [
-          "evals/fixtures/gates-ee-unavailable/"
-        ]
+        "reference": "меблі (еталон): package/ SHA з наряду"
       },
-      "fixtures": [
-        "evals/fixtures/gates-ee-unavailable/"
+      "files": [
+        "evals/fixtures/gates-ee-unavailable/package/CHECKS.md",
+        "evals/fixtures/gates-ee-unavailable/package/config/manifest.yaml",
+        "evals/fixtures/gates-ee-unavailable/package/config/OWNER-INTAKE-ee-only.md",
+        "evals/fixtures/gates-ee-unavailable/package/addons/td_mebli_core/__manifest__.py",
+        "evals/fixtures/gates-ee-unavailable/package/addons/td_mebli_mid/__manifest__.py",
+        "evals/fixtures/gates-ee-unavailable/tools/odoo/addons/oca_agpl_dep/__manifest__.py",
+        "evals/fixtures/gates-ee-unavailable/tools/odoo/addons/oca_agpl_deep/__manifest__.py"
       ]
     }
   ]

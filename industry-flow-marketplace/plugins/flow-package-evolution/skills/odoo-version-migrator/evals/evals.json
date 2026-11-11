@@ -101,7 +101,12 @@
         "naryad": "Наряд D-03, фаза prepare, Odoo 20",
         "editions": "див. prompt",
         "ee_available": false
-      }
+      },
+      "files": [
+        "evals/fixtures/migrate-agpl-ban/OWNER-INTAKE.md",
+        "evals/fixtures/migrate-agpl-ban/package/addons/td_mebli_core/__manifest__.py",
+        "evals/fixtures/migrate-agpl-ban/tools/odoo/addons/oca_agpl_dep/__manifest__.py"
+      ]
     }
   ]
 }

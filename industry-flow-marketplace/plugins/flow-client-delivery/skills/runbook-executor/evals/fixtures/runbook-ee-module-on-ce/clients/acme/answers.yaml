@@ -1,0 +1,2 @@
+edition: ce
+contract_mode: ""   # задає власник/юрист

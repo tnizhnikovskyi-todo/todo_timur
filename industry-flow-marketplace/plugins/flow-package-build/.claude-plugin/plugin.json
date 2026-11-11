@@ -2,7 +2,7 @@
   "name": "flow-package-build",
   "description": "Збірка тиражованого пакета: анкета, конфігурація як код, шаблони майстер-даних, агрегація гейтів, демо-база, реліз пакета.",
   "icon": "./.claude-plugin/icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "tnizhnikovskyi-todo"
   },

@@ -52,6 +52,7 @@ params:                          # блок режимів кроку; став�
   group: <ключ>                  # злиття паралельних нарядів
   resume: {…}                    # перезапуск після waiting_human (K1 в A-03b, зразок кроків із `params.sample: true` за карткою (A-03b, A-20c, A-21, A-21c); A-03b: `{sample: false}` або `{k1_answers: <посилання>}`; A-03c: `session` -> `decide`, анкета A-02b: що саме прийшло від людини + посилання на повідомлення)
   sample: true|false             # зразок (N-18) перед повним обсягом; кроки зі зразком і його обсяг — з картки (`step-cards.md`: A-03b, A-20c, A-21, A-21c); зразок -> waiting_human, повний обсяг — resume з `sample: false`
+  lessons: [LSN-NNN, …]          # C-04 (eval-builder): уроки з `eval_статус: запропоновано`, з яких робити евал-кейси; без ключа eval-builder weekly підбирає їх сам
   stale: [<шлях>, …]             # mode: recalc: застарілі артефакти цього кроку-власника (збігаються з `where`)
   reconcile: true|false          # B-11 фаза 1: звірка (у B-06 режим звірки — `mode: reconcile`)
   maturity: <0..3>               # C-07: поточна зрілість кроку (для maturity_proposals)

@@ -29,12 +29,12 @@ reachable() { curl -fsS -o /dev/null --max-time 5 "$BASE/web/login" 2>/dev/null;
 # 1. база (перестворення обов'язкове перед кожною зйомкою) + штамп: старі сесії недійсні
 if [[ $NOBUILD -eq 0 ]]; then "$HERE/build_db.sh" "$DB" "$MODS" "$SEED" --lang "$LANG_CODE" --check-table "$CHK"; fi
 mkdir -p "$SHOOT"; touch "$SHOOT/.db_stamp"
-# 2. сервер Odoo на BASE: $TOOLS/serve.sh або ODOO_SERVE_CMD; іншого способу немає (відкрите питання C-00: ЗАПИТ до WP-02 — serve.sh)
+# 2. сервер Odoo на BASE: $TOOLS/serve.sh або ODOO_SERVE_CMD; іншого способу немає (шаблон serve.sh — flow-core/references/templates/tools-odoo/)
 if ! reachable; then
   PORT="${BASE##*:}"; PORT="${PORT%%/*}"
   if [[ -n "${ODOO_SERVE_CMD:-}" ]]; then nohup bash -c "$ODOO_SERVE_CMD" >"$SHOOT/odoo-serve.log" 2>&1 &
   elif [[ -x "$T/serve.sh" ]]; then nohup "$T/serve.sh" "$DB" "$PORT" >"$SHOOT/odoo-serve.log" 2>&1 &
-  else echo "FLOW_STOP: Odoo недоступний за $BASE, а команди старту немає (немає $T/serve.sh і ODOO_SERVE_CMD). ЗАПИТ до WP-02: serve.sh <db> <port>; підніми сервер вручну і повтори з --no-build" >&2; exit 2; fi
+  else echo "FLOW_STOP: Odoo недоступний за $BASE, а команди старту немає (немає $T/serve.sh і ODOO_SERVE_CMD). шаблон serve.sh <db> <port> — у flow-core/references/templates/tools-odoo/; підніми сервер вручну і повтори з --no-build" >&2; exit 2; fi
   for _ in $(seq 1 60); do reachable && break; sleep 2; done
 fi
 reachable || { echo "FLOW_STOP: Odoo недоступний за $BASE після старту (хвіст $SHOOT/odoo-serve.log)" >&2; exit 2; }

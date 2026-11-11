@@ -136,6 +136,19 @@
       ],
       "input": "fixtures/check_reuse-empty/REUSE.md",
       "fixtures": "evals/fixtures/check_reuse-empty/"
+    },
+    {
+      "id": "mebli-reuse-found-after-concept",
+      "prompt": "Наряд A-03c, mode decide, галузь mebli. У хронології «меблів» готовий модуль ToDo знайшли вже після концепції (A-20): години F-07 у FUNCTIONAL-MAP пораховано з нуля. Склади REUSE.md і перерахуй години.",
+      "expected_output": "REUSE.md із розділами «Реєстр», «Вплив на години» (до/після для F-07, години перераховано за К-18), «Відкинуто»; рішення «беремо/адаптуємо/ні» лише від власника; після гейта — перерахунок A-20 (recalc) за DEPENDS.yaml, а не мовчазна правка концепції.",
+      "assertions": [
+        "Є таблиця «Вплив на години» з до/після для кожного прийнятого модуля",
+        "Права на код невідомі — рішення «ні» до уточнення",
+        "Рішення не ухвалено без власника",
+        "Наслідок для A-20 названо: recalc, а не правка вручну"
+      ],
+      "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli), хронологія: блок готових модулів з'явився після концепції (SHA кроку A-03c — відкрите питання, план §5)",
+      "fixtures": "evals/fixtures/check_reuse-ok/"
     }
   ]
 }

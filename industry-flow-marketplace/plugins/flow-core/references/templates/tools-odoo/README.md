@@ -28,6 +28,7 @@
 | `reset.sh` | `<db> --yes [--modules m] [--tag T] [--demo] [--lang L]` (`--lang` лише з `--modules`, інакше `FLOW_STOP`) | clean_db + install; знімків немає (`PKG_REPO` для `--tag`) |
 | `preflight.sh` | `[--edition ce\|ee\|both] [--profile P]` | передпольотна перевірка середовища, JSON, без побічних дій |
 | `check_core_deps.py` | `--addons package/addons [--licenses F] [--ee-modules F] [--odoo-addons D1,D2]` | копія зі складу `ci-pipeline-builder/scripts/` (кладе C-00, див. `c00-checklist.md`); JSON `CORE-*`, код 1 при FAIL; лише stdlib |
+| `serve.sh` | `<db> <port>` | старт HTTP-сервера Odoo (`--http-port`, `--workers=0`) для зйомки A-21; викликає `prototype-builder/run_all.sh` (альтернатива — `ODOO_SERVE_CMD`); без обох зйомка зупиняється з `FLOW_STOP` |
 | `smoke.sh` | `<db> <modules>` | модулі `installed` + оновлення без ERROR |
 
 ## apply.py / validate.py (еталони, рішення q17)

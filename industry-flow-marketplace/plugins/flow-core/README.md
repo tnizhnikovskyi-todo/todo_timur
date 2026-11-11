@@ -4,7 +4,7 @@
 
 ## Кроки флоу
 
-Наскрізний: C-06 (цикл AI-кроку), C-05, C-07, C-08; вхід для всіх кроків флоу.
+Наскрізний: C-06 (цикл AI-кроку), C-05, C-07, C-08, C-08R (ретро скілів); вхід для всіх кроків флоу.
 
 ## Скіли
 
@@ -14,11 +14,12 @@
 - `flow-autocheck` — автоперевірка артефактів за checkHow картки
 - `ci-pipeline-builder` — збирає CI для репозиторіїв пакета
 - `eval-builder` — будує евали скілів і статистику за версіями
+- `skill-retro` (C-08R, нова) — ретро скілів: уроки `flow/lessons/LSN-xxx.md` з observations і подій («Повернути», `escalated`, червоний CI)
 
 (Тексти скілів — у `skills/<скіл>/SKILL.md`.)
 
 ## Агенти плагіна
-- Профільні виконавці `flow-executor-mail|-research|-outreach|-drive|-repo` (`agents/`): той самий виконавець + мінімальний набір конекторів за `access_profile` наряду (`step-skill-map.md`); без запису в Gmail/Drive/GitHub, окрім чернеток Gmail.
+- Профільні виконавці `flow-executor-mail|-research|-research-internal|-content|-outreach|-drive|-repo` (`agents/`): той самий виконавець + мінімальний набір конекторів за `access_profile` наряду (`step-skill-map.md`); без запису в Gmail/Drive/GitHub, окрім чернеток Gmail.
 - `flow-core:flow-executor` (`agents/flow-executor.md`) — субагент-виконавець кроку: лише файли результату, читання odoo-mcp; без Bash, git, gh, запису в Odoo.
 - `flow-core:flow-reviewer` (`agents/flow-reviewer.md`) — субагент-рецензент кроку: лише читання.
 Їх використовує `flow-step-runner` (крок 0 перевіряє наявність).
@@ -36,4 +37,4 @@ claude plugin install flow-core@industry-flow
 ```
 
 ## Спільні references
-`references/`: `conventions.md` (конвенції), `naryad-format.md` і `report-format.md` (наряд і звіт, `params`, `waiting_human`), `odoo-bridge.md` (читання/запис задач, рішення vs коментар, активності), `flow-map.md` (карта переходів), `flow-step-run.md` (шаблони задач), `flow-state.md` (стан і автоекспорт), `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`, `data-and-connections.md`. Технічні імена кастомних полів Odoo визначає C-00 (`flow/ODOO_SCHEMA.md`); до того — стоп і питання Тімліду.
+`references/`: `conventions.md` (конвенції), `naryad-format.md` і `report-format.md` (наряд і звіт, `params`, `waiting_human`), `odoo-bridge.md` (читання/запис задач, рішення vs коментар, активності), `flow-map.md` (карта переходів), `flow-step-run.md` (шаблони задач), `flow-state.md` (стан і автоекспорт), `data-policy-template.md`, `pii-patterns.md`, `id-patterns.md`, `data-and-connections.md`, `step-cards.md`, `step-skill-map.md`, `rejected-register.md`, `review-checklists/` (чек-листи рецензента), `templates/tools-odoo/` (скрипти середовища; `ODOO_EDITION=ce|ee`, `preflight.sh`). `flow-autocheck`: 43 yaml-специфікації перевірок. Технічні імена кастомних полів Odoo визначає C-00 (`flow/ODOO_SCHEMA.md`); до того — стоп і питання Тімліду.

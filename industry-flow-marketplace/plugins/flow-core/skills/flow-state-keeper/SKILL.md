@@ -68,6 +68,7 @@ C-02 сам пише звіт у свою задачу (`flow-core/references/re
 
 ## Крок 2. Валідація запуску (`run:`)
 За `references/state-model.md` §2 мають бути: `step, scope, attempt, started, finished, result, skill_versions` (точний semver), `usage.cost_usd`, `usage.tokens_in/out`, `pr` (або `null` з причиною), `data_sources`.
+- Необов'язкові метрики звіту переносити в облік запуску як є (не добудовувати): `review_rounds`, `human_rounds`, `rejected_count` (+ `rejected_ref`), `completeness` {closed, partial, open}, `sample`, `accepted_ref`; відсутні — порожньо.
 - `client_data: personal` (з наряду) → `data_sources` непорожній.
 - `returned` → `returned_to` (реальний код картки); `escalated` → `escalated_to` + дата; `waiting_human` → `waiting_for` {role, what, resume}; `phase`, `release`, `partial` — переносити, якщо є.
 - `data_sources` — перевірка командою: `python3 -I scripts/state_export.py check-ids --ids ids.json` (префікси `aikb:`, `fathom:`, `odoo-mcp:`, `repo:<path>@<sha>`, `drive:`, `gmail:`; шаблони — `id-patterns.md`, `pii-patterns.md`). Код виходу 1 → відхилити елементи з `failed` як «вміст замість ідентифікатора».
@@ -113,7 +114,7 @@ runner/C-01): розходиться з `result` → запис у чаттер 
 
 ## Крок 8. `reconcile` + статистика для C-04
 Перевірки з розділу «Автоперевірка»; «файли = Odoo» — `verify --merge` зі свіжими частинами (порціями по проєкту) проти клону репо; розбіжність `pr` ↔ `where` (діф PR через `github`: змінені файли лише в `where` наряду).
-Тижнева статистика — `references/stats-queries.md`: вибірка `odoo_search_read` у файли, **групує й додає `state_export.py stats`**, не модель. $ — лише статистика: **жодних
+Тижнева статистика (додатково до існуючих метрик: сума `rejected_count` за крок, останній `completeness` A-20b/A-20c, частка зразків `sample: true`) — `references/stats-queries.md`: вибірка `odoo_search_read` у файли, **групує й додає `state_export.py stats`**, не модель. $ — лише статистика: **жодних
 лімітів, залишків і «бюджет вичерпано»** (місячного бюджету AI немає). Розбіжності → у звіт і активності власникам
 (Тімлід; параметр без ролі → Тімлід; ростер → Керівник напряму). `reconcile --rebuild` — порціями по проєкту, решта наступному
 запуску, у звіт «оброблено частково». Окремий PR до картки (лише `reconcile`): у `flow/cards/<code>.json` поле `notes` —

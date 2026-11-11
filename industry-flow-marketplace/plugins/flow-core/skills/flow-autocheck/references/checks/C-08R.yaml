@@ -13,18 +13,20 @@
    "when": "mode:daily|event"
   },
   {
-   "id": "script-check-lessons",
+   "id": "script-check-retro",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-step-runner/scripts/check_lessons.py --remarks <файл зауважень сесії> --observations observations/: LSN-coverage без FAIL. Кожне зауваження людини за сесію має observation і (за подією) урок LSN-NNN. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/skill-retro/scripts/check_retro.py --signals flow/lessons/signals-<дата>.json --lessons flow/lessons/ --today <дата>: RET-coverage, RET-draft, RET-repeat, RET-pii, RET-stale, RET-close, RET-index, RET-signals без FAIL. Кожен сигнал має урок LSN-NNN або «не помилка» з причиною. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
-     "<корінь плагіна flow-core>/skills/flow-step-runner/scripts/check_lessons.py",
-     "--remarks",
-     "<файл зауважень сесії>",
-     "--observations",
-     "observations/"
+     "<корінь плагіна flow-core>/skills/skill-retro/scripts/check_retro.py",
+     "--signals",
+     "flow/lessons/signals-<дата>.json",
+     "--lessons",
+     "flow/lessons/",
+     "--today",
+     "<дата>"
     ],
     "who": "runner"
    }

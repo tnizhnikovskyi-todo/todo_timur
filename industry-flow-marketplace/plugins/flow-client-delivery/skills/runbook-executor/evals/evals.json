@@ -185,7 +185,13 @@
         "план побудовано за edition_profiles.ce",
         "у memo названо причину зупинки"
       ],
-      "input": {}
+      "input": {},
+      "files": [
+        "evals/fixtures/runbook-ee-module-on-ce/"
+      ],
+      "fixtures": [
+        "evals/fixtures/runbook-ee-module-on-ce/"
+      ]
     }
   ]
 }

@@ -7,7 +7,7 @@
   complexity --complexity complexity.md --landing landing.md   F-xx «код/складно» -> «у плані пілоту»
   risks --features features.md --plan risk-plan.md   кожна F-xx зі статусом owner-decision / «ризик:» має рядок плану перевірки (N-12) з експериментом, порогом і «якщо не підтвердиться»
   exp --plan risk-plan.md --landing landing.md        експерименти плану (fake-door / pack / price) мають блок у лендингу; тест ціни — лише з позначкою «гіпотеза, не пропозиція»
-  materials --landing landing.md --plan mailing-plan.md [--emails emails.md] --proto prototype-real [--intake OWNER-INTAKE.md]   матеріали A-21c з анкети видані й використані
+  materials --proto prototype-real [--intake OWNER-INTAKE.md] [--landing landing.md] [--plan mailing-plan.md] [--emails emails.md]   без --landing/--plan/--emails: лише «видано A-21c» (передперевірка); з ними — ще й використані (SHOW у emails.md або mailing-plan.md)
   raw FILE...        посилання на research/sources/ (internal-raw) у файлах скіла заборонені
   rejected --results results.md [--fail-variants A,C]   розділ «Відкинуто»: 8 колонок, REJ-ID, група, варіанти без порога внесені
   experiments --signals S.csv --start D --end D        агрегати експериментів групи 8 (колонки `експеримент`, `тариф` у signals.csv)
@@ -176,25 +176,44 @@ def exp(a):
         if not re.search(need[k], land): print(f"exp:{k}-block-missing"); rc = 1
     return rc
 
+DEFAULT_FORMATS = ["video_16x9", "reels_9x16", "one_pager"]
+
 def intake_formats(path):
-    if not path: return ["video_16x9", "reels_9x16", "one_pager"]
-    t = open(path, encoding="utf-8").read(); m = re.search(r"formats:\s*\[([^\]]*)\]", t)
-    return [x.strip().strip("'\"") for x in m.group(1).split(",") if x.strip()] if m else ["video_16x9", "reels_9x16", "one_pager"]
+    """Повертає (формати, попередження). Рядковий `formats: [a, b]` або блоковий список `formats:\n  - a`.
+    Не знайдено -> повний набір + попередження (друкується як materials:intake-formats-not-found)."""
+    if not path: return DEFAULT_FORMATS, None
+    t = open(path, encoding="utf-8").read()
+    m = re.search(r"formats:[ \t]*\[([^\]]*)\]", t)
+    if m: fm = [x.strip().strip("'\"") for x in m.group(1).split(",") if x.strip()]
+    else:
+        m = re.search(r"(?m)^([ \t]*)formats:[ \t]*(?:#.*)?\n((?:[ \t]*-[ \t]*[^\n]*\n?)+)", t)
+        fm = [re.sub(r"\s+#.*$", "", x.strip()[1:]).strip().strip("'\"") for x in m.group(2).splitlines() if x.strip().startswith("-")] if m else []
+    if fm: return fm, None
+    return DEFAULT_FORMATS, "materials:intake-formats-not-found (у анкеті немає materials.formats; перевірено повний набір)"
 
 def materials(a):
+    """Фаза 1 (без --landing/--plan/--emails): лише «видано A-21c» (файл існує й не порожній).
+    Фаза 2 (є --landing/--plan/--emails): ще й використання: відео 16x9 і SHOW у лендингу, Reels у плані/листах/лендингу, SHOW (one_pager) у листах або плані."""
     import glob, os
-    fm = intake_formats(a.intake); landing = open(a.landing, encoding="utf-8").read(); plan = open(a.plan, encoding="utf-8").read()
-    emails = open(a.emails, encoding="utf-8").read() if a.emails else ""; rc = 0
+    import os as _os
+    if a.intake and not _os.path.isfile(a.intake): print(f"materials:intake-missing:{a.intake}"); return 2
+    fm, warn = intake_formats(a.intake)
+    if warn: print(warn)
+    rd = lambda p: open(p, encoding="utf-8").read() if p else None
+    landing, plan, emails = rd(a.landing), rd(a.plan), rd(a.emails); rc = 0
     want = []
-    if "video_16x9" in fm: want.append(("video_16x9", "video/*-16x9.mp4", "landing"))
-    if "reels_9x16" in fm: want.append(("reels_9x16", "video/*-9x16.mp4", "plan"))
-    if "one_pager" in fm: want.append(("one_pager", "SHOW.pdf", "landing"))
-    for name, pat, where in want:
-        hits = [h for h in glob.glob(os.path.join(a.proto, pat)) if not os.path.basename(h).startswith("sample-")]
-        if not hits: print(f"materials:{name}-not-delivered (A-21c не віддав {pat})"); rc = 1; continue
+    if "video_16x9" in fm: want.append(("video_16x9", "video/*-16x9.mp4"))
+    if "reels_9x16" in fm: want.append(("reels_9x16", "video/*-9x16.mp4"))
+    if "one_pager" in fm: want.append(("one_pager", "SHOW.pdf"))
+    for name, pat in want:
+        hits = [h for h in glob.glob(os.path.join(a.proto, pat)) if not os.path.basename(h).startswith("sample-") and os.path.getsize(h) > 0]
+        if not hits: print(f"materials:{name}-not-delivered (A-21c не віддав непорожній {pat})"); rc = 1; continue
         base = os.path.basename(hits[0])
-        if base not in landing and where == "landing": print(f"materials:{name}-not-in-landing:{base}"); rc = 1
-        if where == "plan" and base not in plan and base not in emails and base not in landing: print(f"materials:{name}-not-in-plan:{base}"); rc = 1
+        if name == "video_16x9" and landing is not None and base not in landing: print(f"materials:{name}-not-in-landing:{base}"); rc = 1
+        if name == "reels_9x16" and (plan is not None or emails is not None or landing is not None) and not any(base in (x or "") for x in (plan, emails, landing)): print(f"materials:{name}-not-in-plan:{base}"); rc = 1
+        if name == "one_pager":
+            if landing is not None and base not in landing: print(f"materials:{name}-not-in-landing:{base}"); rc = 1
+            if (emails is not None or plan is not None) and not any(base in (x or "") for x in (emails, plan)): print(f"materials:{name}-not-in-emails-or-plan:{base}"); rc = 1
     return rc
 
 def raw(files):
@@ -213,6 +232,19 @@ def rejected(a):
         if not re.fullmatch(r"REJ-\d{3}", r[0]): print(f"rejected:row-{n}-id"); rc = 1
         if r[2] not in ("G1", "G2", "G3", "G4", "G4\u0430"): print(f"rejected:row-{n}-group"); rc = 1
         if not r[4]: print(f"rejected:row-{n}-proof"); rc = 1
+    if a.plan:
+        ids = sorted({x for ln in open(a.plan, encoding="utf-8") if ln.lstrip().startswith("|") for x in FX.findall(cells(ln)[0] if cells(ln) else "")})
+        sec = re.search(r"(?ms)^##\s+Перевірка ризиків\s*$(.*?)(?=^##\s|\Z)", t)
+        if not sec: print("rejected:no-risk-check-section"); rc = 1
+        else:
+            body = sec.group(1)
+            for x in ids:
+                ln = next((l for l in body.splitlines() if l.lstrip().startswith("|") and x in l), None)
+                if not ln: print(f"rejected:risk-{x}-not-checked"); rc = 1; continue
+                cs = cells(ln); verdict = cs[-1] if cs else ""; fact = cs[-2] if len(cs) >= 3 else ""
+                if not re.search(r"підтверджено|підтвердилось", verdict, re.I): print(f"rejected:risk-{x}-no-verdict"); rc = 1; continue
+                if not fact.strip(" —-"): print(f"rejected:risk-{x}-no-fact"); rc = 1; continue
+                if re.search(r"не підтверджено|не підтвердилось", ln, re.I) and not any(x in r[1] or x in " ".join(r) for r in rows): print(f"rejected:risk-{x}-unconfirmed-not-in-rejected"); rc = 1
     for v in [x.strip() for x in (a.fail_variants or "").split(",") if x.strip()]:
         if not any(re.search(rf"варіант\s+{re.escape(v)}\b", r[1]) for r in rows if len(r) > 1): print(f"rejected:variant-{v}-missing"); rc = 1
     return rc
@@ -240,7 +272,21 @@ def experiments(a):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd"); ap.add_argument("files", nargs="*")
     for k in ("signals", "calls", "list", "features", "start", "end", "complexity", "landing", "plan", "emails", "proto", "intake", "results", "fail-variants"): ap.add_argument("--" + k)
-    ap.add_argument("--hot", type=int, default=3); a = ap.parse_args(); rc = 0
+    ap.add_argument("--hot", type=int, default=3); ap.add_argument("--json", action="store_true"); a = ap.parse_args(); rc = 0
+    if a.json and a.cmd != "aggregate" and a.cmd != "experiments":
+        import io, contextlib
+        buf = io.StringIO(); code = 0
+        try:
+            with contextlib.redirect_stdout(buf): code = run(a)
+        except SystemExit as e: code = e.code or 0
+        msgs = [x for x in buf.getvalue().splitlines() if x]
+        ident = {"materials": "DT-materials", "risks": "DT-risks", "exp": "DT-exp", "raw": "DT-raw", "rejected": "DT-rejected", "pii": "DT-no-pii"}.get(a.cmd, "DT-" + a.cmd)
+        st = "FAIL" if code else ("WARN" if msgs else "PASS")
+        print(json.dumps([{"id": ident, "status": st, "msg": "; ".join(msgs)}], ensure_ascii=False)); sys.exit(code)
+    sys.exit(run(a))
+
+def run(a):
+    rc = 0
     if a.cmd == "aggregate": aggregate(a)
     elif a.cmd == "pii": rc = scan(list(PII.items()), a.files)
     elif a.cmd == "honesty":
@@ -271,6 +317,6 @@ def main():
         for x in sorted(hard):
             b = [s for s in blocks if s.startswith(x)]
             if not b or "у плані пілоту" not in b[0]: print(f"complexity:{x}"); rc = 1
-    sys.exit(rc)
+    return rc
 
 main()

@@ -46,3 +46,13 @@ Fable 5.2 після 3 раундів по кожному WP. WP-10 не вик�
 1. Реєстр відкинутого D-02 пишеться в окремий файл `package/backlog-rejected.md`. Контракт автоперевірки `flow-core/skills/flow-autocheck/references/checks/D-02.yaml` (WP-03) запускає `check_rejected.py 
 2. Не визначено результат кроку, коли `editions: both`, а EE недоступна (стан за замовчуванням, відкрите питання §5). Правило «загальний APPROVE лише якщо обидва APPROVE» плюс `ee = WARN` означає, що APP
 3. Пункт «профілі модулів ce/ee у manifest.yaml» виконано лише текстом у кінці SKILL.md. Еталон формату лишився старим: `edition: ce|ee` одним полем, плоский `modules:` із `source: standard|config|vendor
+
+# Фінальна пакетна рецензія Fable 5.2 (2026-11-11, після 1 кола виправлень): вердикт minor
+
+- minor: Не визначено, хто вносить рядок у `prototype-real/ACCEPTED.md` після приймання зразка. prototype-builder: «створює лише людина», відсутність файла після resume — `waiting_human`. showcase-content: «лю
+- minor: Розбіжність, хто пише рядки G4а. Реєстр п.5 і картка A-03b: «A-03b пише G1–G3, A-20 дописує G4/G4а». Скіл industry-deep-dive сам пише G4а для позицій, які власник повернув у K1 (інакше REJ-returned у 
+- minor: Написано, що поле звіту `stale` читає `skill-retro`. Насправді його читає `flow-orchestrator` (SKILL.md:186–188, `dispatch-rules.md` §4а), а в skill-retro «stale» — це інше (RET-stale, прострочені уро
+- minor: Кожен запуск перевірок створює `__pycache__` у теці скриптів плагіна. `.gitignore` його виключає, але при публікації копіюванням теки він потрапить у пакет. Я видалив теку, яка виникла під час моїх за
+- minor: Відкриті питання §5 винесено в README і скіли, мовчки не вирішено — це правильно. Але два з них прямо обмежують «результат рівня меблів з першого разу»: без доступу до EE всі EE-вердикти будуть «не пе
+
+WP-10 після 3 раундів: `intake_formats` у `check_video.py` розпізнає лише рядковий список `formats: [a, b]` під `materials:`. Блоковий YAML (`formats:` і рядки `- video_16x9`) дає None: скрипт пише WARN «анкета без material — перевірено менеджером: блоковий YAML у check_video.intake_formats уже підтримано.

@@ -38,7 +38,7 @@
    "id": "base-description",
    "prim": "manual",
    "args": {
-    "text": "ВІДКРИТЕ ПИТАННЯ: шлях опису демо-бази зрізу (outArtifacts A-22) не визначено у step-cards.md; до рішення перевіряє людина",
+    "text": "опис демо-бази зрізу існує в docs/industries/<галузь>/prototype-real/lead-base/ (шлях — outArtifacts A-22 у step-cards.md); перевіряє людина",
     "who": "Архітектор"
    }
   }

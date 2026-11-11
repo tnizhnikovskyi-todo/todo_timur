@@ -1,0 +1,14 @@
+format: 2
+odoo: "19.0"
+editions: both
+edition_profiles:
+  ce:
+    modules:
+      - {name: sale_management, origin: std-ce, source: standard, ac: [AC-01]}
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+  ee:
+    modules:
+      - {name: sale_management, origin: std-ce, source: standard, ac: [AC-01]}
+      - {name: td_mebli_core, origin: td, source: code, ac: [AC-02]}
+      - {name: <EE-модуль>, origin: std-ee, source: standard, ac: [AC-12]}
+      - {name: td_mebli_core_ee, origin: td, source: code, ac: [AC-12]}
