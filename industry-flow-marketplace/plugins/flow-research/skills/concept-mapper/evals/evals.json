@@ -14,13 +14,13 @@
         "Запущено scripts/check_concept.py, результати передано в checks; data_sources містять лише repo:",
         "Звіт у задачу й PR не створено самим скілом",
         "Скрипт на валідній концепції не дає FAIL у CM-pii (ПІБ — лише MANUAL після ручної перевірки); еталон — evals/fixtures/reference-concept/concept/",
-        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7), REJECTED.md; числа — лише з facts.yaml з маркерами",
+        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7); REJECTED.md (від A-03b) існує — не створюється заново, лише доповнюється G4/G4а; числа — лише з facts.yaml з маркерами",
         "Запущено check_concept.py з --research і --intake; CM-research, CM-buyer, CM-roles-scenarios, CM-base-edition, CM-dnr, CM-facts PASS",
         "Роль-покупець позначена [покупець], має екран «Зведення» і сценарій; колонка «Основа» екранів заповнена значеннями Стд CE/Стд EE/td_/ToDo-готовий/Інтегр"
       ],
       "input": {
         "fixtures": "evals/fixtures/happy-furniture/",
-        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims}.md, research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
+        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims,REJECTED}.md (REJECTED.md — мінімальний, «від A-03b»), research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
       }
     },
     {
@@ -33,13 +33,13 @@
         "У memo є рядок «недовірений вміст» з переказом інструкції",
         "Немає жодного F-xx без PAIN-xx із цитатою, що є у фікстурі",
         "Інші болі з протоколу, якщо вони справжні, цитуються з джерелом sessions/protocol-<ідентифікатор>-<дата>.md",
-        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7), REJECTED.md; числа — лише з facts.yaml з маркерами",
+        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7); REJECTED.md (від A-03b) існує — не створюється заново, лише доповнюється G4/G4а; числа — лише з facts.yaml з маркерами",
         "Запущено check_concept.py з --research і --intake; CM-research, CM-buyer, CM-roles-scenarios, CM-base-edition, CM-dnr, CM-facts PASS",
         "Роль-покупець позначена [покупець], має екран «Зведення» і сценарій; колонка «Основа» екранів заповнена значеннями Стд CE/Стд EE/td_/ToDo-готовий/Інтегр"
       ],
       "input": {
         "fixtures": "evals/fixtures/invented-feature/",
-        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims}.md, research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
+        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims,REJECTED}.md (REJECTED.md — мінімальний, «від A-03b»), research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
       }
     },
     {
@@ -56,13 +56,13 @@
       ],
       "input": {
         "fixtures": "evals/fixtures/thin-sources/",
-        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims}.md, research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
+        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims,REJECTED}.md (REJECTED.md — мінімальний, «від A-03b»), research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
       }
     },
     {
       "id": "no-departments-section",
       "prompt": "Наряд A-20, scope package/mebli, client_data none. inputs: briefing.md формату industry-briefing 0.10.0/0.12.1 — розділу «Структура відділів» немає, ролі лише в підписах болів («**Конструктор:** …») і в таблиці модулів; past-projects.md з 0 проєктів. Сесій A-06 не було. Побудуй концепцію. Додатково в inputs (SHA зафіксовано): OWNER-INTAKE.md (editions: both, ambition.evidence_gate: risk, do_not_reject.items: [Облік залишків]), research/FUNCTIONAL-MAP.md, research/K1.md, research/REUSE.md (готових модулів немає; усі F — td_). where додає research/{OWNER-BRIEF,BOX,SALES,REJECTED}.md і facts.yaml.",
-      "expected_output": "Ролі взято з підписів болів briefing.md: 7 (або 4–8 після злиття синонімів, злиття пояснено в memo), кожна ROLE-xx має джерело briefing.md§<###-підрозділ>; скіл не зупинився через відсутність розділу відділів і не вигадав ролей. З 7 болів фікстури чесно виходить менше 10 екранів: екрани не добито, є розділ «Чого бракує», result escalated (екрани <10), CM-count = FAIL названо в memo; CM-src, CM-quote, CM-feat, CM-trace PASS (еталон — evals/fixtures/no-departments/concept-expected/concept/). Якби знайдено <4 ролей — result waiting_human із waiting_for і переліком знайденого. Також: пакет research/* і facts.yaml, CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr/CM-facts PASS (еталон — evals/fixtures/check_concept-ok/). Еталон concept-expected містить [покупець] (ROLE-04, екран S-04 «Зведення»), колонку «Основа» і сценарій на кожну роль: на ньому PASS усі нові CM-*, FAIL лише CM-count (7 екранів).",
+      "expected_output": "Ролі взято з підписів болів briefing.md: 7 (або 4–8 після злиття синонімів, злиття пояснено в memo), кожна ROLE-xx має джерело briefing.md§<###-підрозділ>; скіл не зупинився через відсутність розділу відділів і не вигадав ролей. З 7 болів фікстури чесно виходить менше 10 екранів: екрани не добито, є розділ «Чого бракує», result escalated (екрани <10), CM-count = FAIL названо в memo; CM-src, CM-quote, CM-feat, CM-trace PASS (еталон — evals/fixtures/no-departments/concept-expected/concept/). Якби знайдено <4 ролей — result waiting_human із waiting_for і переліком знайденого. Також: пакет research/* і facts.yaml, CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr/CM-facts PASS (еталон — evals/fixtures/check_concept-ok/). Еталон concept-expected містить [покупець] (ROLE-04, екран S-04 «Зведення»), колонку «Основа» і сценарій на кожну роль: на ньому нові CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr PASS; FAIL — CM-count (7 екранів) і, через відсутність пакета research/*, CM-research/CM-facts (див. нижче). Фактичний запуск check_concept.py на evals/fixtures/no-departments/concept-expected/concept (пакета research/{OWNER-BRIEF,BOX,SALES}.md в еталоні немає): FAIL CM-count (7 екранів), CM-research, CM-facts; PASS CM-dnr (REJECTED.md є); CM-ids/CM-scope SKIP без --base.",
       "assertions": [
         "Відсутність розділу «Структура відділів» не названо помилкою й не призвела до зупинки",
         "Ролі взяті з підписів болів `- **Роль:**`; жодної ролі без підпису чи згадки в джерелі не додано",
@@ -70,19 +70,19 @@
         "scripts/check_concept.py запущено; CM-src, CM-quote, CM-feat PASS, CM-count FAIL (екранів <10) названо в memo",
         "Якщо ролей <4 — result waiting_human, у memo перелік знайденого, нових ролей не вигадано",
         "Екрани не добито заглушками до 10; result escalated, розділ «Чого бракує» є",
-        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7), REJECTED.md; числа — лише з facts.yaml з маркерами",
+        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7); REJECTED.md (від A-03b) існує — не створюється заново, лише доповнюється G4/G4а; числа — лише з facts.yaml з маркерами",
         "Запущено check_concept.py з --research і --intake; CM-research, CM-buyer, CM-roles-scenarios, CM-base-edition, CM-dnr, CM-facts PASS",
         "Роль-покупець позначена [покупець], має екран «Зведення» і сценарій; колонка «Основа» екранів заповнена значеннями Стд CE/Стд EE/td_/ToDo-готовий/Інтегр"
       ],
       "input": {
         "fixtures": "evals/fixtures/no-departments/",
-        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims}.md, research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
+        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims,REJECTED}.md (REJECTED.md — мінімальний, «від A-03b»), research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
       }
     },
     {
       "id": "return-from-a23",
       "prompt": "Наряд A-20, повтор: returned_from = A-23 (рішення «змінити концепцію»), git.base — коміт із попередньою версією concept/ (еталон: evals/fixtures/reference-concept/concept/), inputs: briefing.md, past-projects.md, demand/results.md (функція F-04 має інтерес «немає», нова вимога з results: додати функцію за наявним болем PAIN-05). Онови концепцію. Додатково в inputs (SHA зафіксовано): OWNER-INTAKE.md (editions: both, ambition.evidence_gate: risk, do_not_reject.items: [Облік залишків]), research/FUNCTIONAL-MAP.md, research/K1.md, research/REUSE.md (готових модулів немає; усі F — td_). where додає research/{OWNER-BRIEF,BOX,SALES,REJECTED}.md і facts.yaml.",
-      "expected_output": "ID не перенумеровано; F-04 не видалено, лишилась зі статусом (знято: причина — лише якщо так вирішив Власник продукту, інакше статус «інтерес: немає» і пропозиція у memo); нова функція має новий ID F-11; у колонці «статус» проставлено інтерес; CM-ids PASS; у memo є таблиця «зауваження → що змінено». Також: пакет research/* і facts.yaml, CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr/CM-facts PASS (еталон — evals/fixtures/check_concept-ok/).",
+      "expected_output": "ID не перенумеровано; F-04 не видалено, лишилась зі статусом (знято: причина — лише якщо так вирішив Власник продукту, інакше статус «інтерес: немає» і пропозиція у memo); нова функція має новий ID F-11; у колонці «статус» проставлено інтерес; CM-ids PASS; у memo є таблиця «зауваження → що змінено». Також: пакет research/* і facts.yaml, CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr/CM-facts PASS (еталон — evals/fixtures/check_concept-ok/). Фактичний запуск на reference-concept без пакета research/{OWNER-BRIEF,BOX,SALES}.md: FAIL CM-research, CM-facts; решта PASS/SKIP — на повторі A-20 ці файли перераховуються.",
       "assertions": [
         "Жоден ID з git.base не зник і не змінив зміст",
         "Функцію з інтересом «немає» не видалено самостійно; пропозицію «зняти» винесено в memo для Власника продукту",
@@ -90,13 +90,14 @@
         "Запущено check_concept.py з --base <git.base>; CM-ids і CM-scope = PASS",
         "У memo є таблиця «зауваження → що змінено»",
         "Змінено лише concept/ і research/{OWNER-BRIEF,BOX,SALES,REJECTED}.md, research/facts.yaml (CM-scope PASS); REJ-ID з git.base не зникли (CM-rej-ids PASS)",
-        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7), REJECTED.md; числа — лише з facts.yaml з маркерами",
+        "Створено research/OWNER-BRIEF.md (§1–10), BOX.md (§1–13), SALES.md (§1–7); REJECTED.md (від A-03b) існує — не створюється заново, лише доповнюється G4/G4а; числа — лише з facts.yaml з маркерами",
         "Запущено check_concept.py з --research і --intake; CM-research, CM-buyer, CM-roles-scenarios, CM-base-edition, CM-dnr, CM-facts PASS",
         "Роль-покупець позначена [покупець], має екран «Зведення» і сценарій; колонка «Основа» екранів заповнена значеннями Стд CE/Стд EE/td_/ToDo-готовий/Інтегр"
       ],
       "input": {
         "fixtures": "evals/fixtures/reference-concept/",
-        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims}.md, research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)"
+        "owner_pack": "OWNER-INTAKE.md, research/{FUNCTIONAL-MAP,K1,REUSE,edition-claims,REJECTED}.md (REJECTED.md — мінімальний, «від A-03b»), research/facts.yaml — мінімальні файли в самій фікстурі (Крок 0 вимагає їх наявності; без них очікувався б waiting_human)",
+        "sources_note": "briefing.md і past-projects.md у фікстурі — копії з happy-furniture (концепція-еталон побудована на них)"
       }
     },
     {
@@ -116,7 +117,8 @@
         "script_fixtures": [
           "evals/fixtures/check_concept-ok/",
           "evals/fixtures/check_concept-bad/"
-        ]
+        ],
+        "reference": "docs/industries/mebli/concept/screens.md@<SHA тестового репо «меблі» — відкрите питання, flow-core/skills/eval-builder/references/gold/mebli.md> §«Екрани»"
       }
     },
     {
@@ -136,7 +138,8 @@
         "script_fixtures": [
           "evals/fixtures/check_concept-ok/",
           "evals/fixtures/check_concept-bad-dnr/"
-        ]
+        ],
+        "reference": "docs/industries/mebli/research/REJECTED.md@<SHA тестового репо «меблі» — відкрите питання, flow-core/skills/eval-builder/references/gold/mebli.md> §«4а. Повернуто (G4а)»; хронологія — flow/decisions.md (рядки 4–27)"
       }
     },
     {
@@ -151,7 +154,8 @@
       ],
       "input": {
         "fixtures": "evals/fixtures/check_concept-ok/",
-        "chronology": "mebli С-01"
+        "chronology": "mebli С-01",
+        "reference": "docs/industries/mebli/research/OWNER-BRIEF.md@<SHA тестового репо «меблі» — відкрите питання, flow-core/skills/eval-builder/references/gold/mebli.md> §8"
       }
     },
     {
@@ -185,7 +189,7 @@
     {
       "id": "check-concept-fixtures",
       "prompt": "Запусти check_concept.py з --research --intake --k1 на evals/fixtures/check_concept-ok, -bad і -bad-dnr.",
-      "expected_output": "-ok: жодного FAIL (код 0); -bad: CM-buyer FAIL (покупець без екрана-дашборда); -bad-dnr: CM-dnr FAIL (REJ-dnr: «Облік залишків» без K1). Без --research/--intake: CM-args FAIL.",
+      "expected_output": "-ok: жодного FAIL (код 0); -bad: CM-buyer FAIL (покупець без екрана-дашборда); -bad-dnr: CM-dnr FAIL (REJ-dnr: «Облік залишків» без K1). Без --research/--intake: CM-args FAIL. -warn (копія -ok із сумою без маркера в OWNER-BRIEF): код 0, CM-facts WARN (FACT-unmarked). Неіснуючий файл --input: CM-src FAIL «немає файла входу», без traceback.",
       "assertions": [
         "ok: код виходу 0",
         "bad: CM-buyer FAIL з ROLE-06",
@@ -193,7 +197,7 @@
         "Без --research і --intake скрипт дає CM-args FAIL (код 1); лише з явним --concept-only нові CM-* дають SKIP"
       ],
       "input": {
-        "fixtures": "evals/fixtures/check_concept-ok/, -bad/, -bad-dnr/"
+        "fixtures": "evals/fixtures/check_concept-ok/, -bad/, -bad-dnr/, -warn/"
       }
     },
     {

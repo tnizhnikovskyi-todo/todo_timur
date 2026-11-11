@@ -56,15 +56,15 @@ description: >
 ## Формат ID і джерела
 - `ROLE-xx`, `PAIN-xx`, `F-xx`, `S-xx`, `SC-xx`. Не `R-xx`/`B-xx`/`P-xx`. Номери наскрізні, двозначні й більше. ID не перенумеровуються між версіями.
 - Джерело болю — `<файл>§<заголовок>`; форми й правило цитати — `references/source-anchors.md` (включно з `K1.md`/`OWNER-INTAKE.md` для `owner-decision`).
-- Шаблони `concept/*` — `references/template/` цього скіла (еталон; збігається з `flow-research/references/concept-templates.md`); `research/*.md` — `flow-research/references/templates/{OWNER-BRIEF,BOX,SALES,REJECTED}.tpl.md`. Валідна концепція для звірки — `evals/fixtures/check_concept-ok/`.
+- Шаблони `concept/*` — `references/template/` цього скіла (еталон; узгоджені з `flow-research/references/concept-templates.md` — стислим контрактом); `research/*.md` — `flow-research/references/templates/{OWNER-BRIEF,BOX,SALES,REJECTED}.tpl.md`. Валідна концепція для звірки — `evals/fixtures/check_concept-ok/`.
 - Обов'язкові `##`-заголовки (контракт скрипта): features.md — Ролі, Болі, Функції, Поза концепцією, Відкриті питання; screens.md — Екрани; scenarios.md — Сценарії; `research/OWNER-BRIEF.md` — розділи `## 1.`…`## 10.`, `BOX.md` — `## 1.`…`## 13.`, `SALES.md` — `## 1.`…`## 7.`.
 - Колонка «Основа» екрана — лише `Стд CE · Стд EE · td_ · ToDo-готовий · Інтегр` (К-09). «OCA» — не основа: «ідея з OCA, пишемо в `td_`», години — як розробка; стан гілки OCA 19.0 — довідково. Ядро без AGPL-залежностей; ліцензія наших модулів — за `licenses.own_modules` анкети (LGPL-3 за замовчуванням, остаточно — рішення власника).
 
 ## Крок 0. Наряд і передумови
-Перевірити в наряді: `step: A-20`, `scope.kind: package`, `client_data: none`; у `inputs` є SHA для: `OWNER-INTAKE.md`, `research/FUNCTIONAL-MAP.md`, `research/K1.md`, `research/REUSE.md`, `research/edition-claims.md`, `research/facts.yaml`, `briefing.md`, `past-projects.md` — усі файли існують на цьому SHA. Немає `edition-claims.md` — усі твердження про редакції CE/EE у концепції й брифі лишаються «не перевірено» (нових вердиктів не вигадувати). `facts.yaml` створює A-03b: немає — `waiting_human` («очікує A-03b»). Протокол сесії береться, якщо він названий в `inputs` і в `sessions/README.md` (реєстр A-06, веде BA) є рядок «проведена» з цим файлом; інакше — не використовувати, `memo`. `past-projects.md` з 0 проєктів — валідний вхід.
+Перевірити в наряді: `step: A-20`, `scope.kind: package`, `client_data: none`; у `inputs` є SHA для: `OWNER-INTAKE.md`, `research/FUNCTIONAL-MAP.md`, `research/K1.md`, `research/REUSE.md`, `research/edition-claims.md`, `research/REJECTED.md` (створює A-03b), `research/facts.yaml`, `briefing.md`, `past-projects.md` — усі файли існують на цьому SHA. Немає `edition-claims.md` — усі твердження про редакції CE/EE у концепції й брифі лишаються «не перевірено» (нових вердиктів не вигадувати). `facts.yaml` створює A-03b: немає — `waiting_human` («очікує A-03b»). Протокол сесії береться, якщо він названий в `inputs` і в `sessions/README.md` (реєстр A-06, веде BA) є рядок «проведена» з цим файлом; інакше — не використовувати, `memo`. `past-projects.md` з 0 проєктів — валідний вхід.
 - Немає `OWNER-INTAKE.md` або в ньому не заповнені блокуючі ключі (`*`) → `waiting_human` («очікує A-02b»), нічого не писати.
 - Немає `REUSE.md` → `waiting_human` («очікує A-03c»; `waiting_for: {role: <за карткою A-20>, what: "завершити A-03c (reuse-modules decide)", resume: {step: A-20}}`). Без `REUSE.md` основа `ToDo-готовий` невідома.
-- Немає `FUNCTIONAL-MAP`/`K1.md` → «очікує A-03b». Немає `briefing.md`/`past-projects.md` → «очікує A-03/A-04».
+- Немає `REJECTED.md` → `waiting_human` («очікує A-03b»; самому не створювати). Немає `FUNCTIONAL-MAP`/`K1.md` → «очікує A-03b». Немає `briefing.md`/`past-projects.md` → «очікує A-03/A-04».
 Прочитати з анкети: `editions`, `demo_edition`, `ambition.{scope, evidence_gate}`, `pricing`, `icp`, `do_not_reject`, `licenses`, `legal_ambiguous`, `todo_data`. `ambition.scope: mvp` — зменшує обсяг екранів/функцій до MVP, але межі CM-count лишаються.
 
 ## Крок 1. Оглавлення, а не цілі файли
@@ -123,7 +123,7 @@ description: >
 ## Автоперевірка
 З кореня клону (stdlib; вивід — JSON `[{id,status,msg}]` для `checks`, `msg` лише для FAIL, код виходу 1 при FAIL):
 `python3 -I plugins/flow-research/skills/concept-mapper/scripts/check_concept.py docs/industries/<галузь>/concept --input briefing.md=docs/industries/<галузь>/briefing.md --input past-projects.md=docs/industries/<галузь>/past-projects.md [--input K1.md=docs/industries/<галузь>/research/K1.md] [--input protocol-<ід>-<дата>.md=docs/industries/<галузь>/sessions/protocol-<ід>-<дата>.md] --base <git.base> --research docs/industries/<галузь>/research --intake docs/industries/<галузь>/OWNER-INTAKE.md --k1 docs/industries/<галузь>/research/K1.md`
-Ключ `--input` = ім'я файлу з колонки «Джерело»; `--base` — `git.base` наряду (без нього CM-ids/CM-scope = SKIP — звіт без них неповний, не здавати); `--research`, `--intake` — обов'язкові для A-20: без них скрипт дає **CM-args = FAIL** (нові CM-* не виконуються); старий режим «лише concept/» — явний `--concept-only`, для A-20 не використовувати. Шлях до скриптів flow-core: `--autocheck-dir <…/flow-core/skills/flow-autocheck/scripts>` або змінна `FLOW_AUTOCHECK_DIR` (у кеші встановлених плагінів сусід може лежати деінде; без шляху CM-dnr/CM-facts дадуть FAIL із підказкою). Усі FAIL виправити до здачі, ліміт спроб — `max_attempts`.
+Ключ `--input` = ім'я файлу з колонки «Джерело»; `--base` — `git.base` наряду (без нього CM-ids/CM-scope = SKIP — звіт без них неповний, не здавати); `--research`, `--intake` — обов'язкові для A-20: без них скрипт дає **CM-args = FAIL** (нові CM-* не виконуються); старий режим «лише concept/» — явний `--concept-only`, для A-20 не використовувати. Шлях до скриптів flow-core: `--autocheck-dir <…/flow-core/skills/flow-autocheck/scripts>` або змінна `FLOW_AUTOCHECK_DIR` (у кеші встановлених плагінів сусід може лежати деінде; за замовчуванням скрипт шукає сусідній `../../../../flow-core/skills/flow-autocheck/scripts`; якщо не знайдено — CM-dnr/CM-facts дадуть FAIL із підказкою). Усі FAIL виправити до здачі, ліміт спроб — `max_attempts`.
 | ID | Перевірка | FAIL, коли |
 |---|---|---|
 | CM-files | три файли й заголовки `##` | немає файлу/розділу |
@@ -141,7 +141,7 @@ description: >
 | CM-roles-scenarios | кожна роль має SC; кожна F (не «знято») — у кроці SC; екран у SC містить роль SC | роль без сценарію, F без кроку, роль не з екрана |
 | CM-base-edition | колонка «Основа» екрана ∈ `Стд CE · Стд EE · td_ · ToDo-готовий · Інтегр` | колонки немає, порожньо, «OCA» тощо |
 | CM-dnr | `check_rejected.py` (REJ-*): позиція `do_not_reject` у відкинутому без K1 і не G4а; повернене власником не в G4а | будь-який FAIL REJ-*; MANUAL (неоднозначна відповідь) — розібрати в `memo` |
-| CM-facts | `check_facts.py` (FACT-*): число з маркером = значення в `facts.yaml`; маркер без ключа; для OWNER-BRIEF/BOX/SALES — `--require-markers` (число без маркера) | FACT-mismatch / FACT-orphan / FACT-markers |
+| CM-facts | `check_facts.py` (FACT-*): число з маркером = значення в `facts.yaml`; маркер без ключа; для OWNER-BRIEF/BOX/SALES — `--require-markers` (число без маркера) | FACT-mismatch / FACT-orphan / FACT-markers; файл без жодного маркера — FAIL; до 5 сум без маркера (FACT-unmarked) — **WARN**, розібрати в `memo`; понад 5 — FAIL; немає OWNER-BRIEF/BOX/SALES — FAIL |
 | CM-rej-ids | REJ-ID з `REJECTED.md` на `git.base` не зникли (потрібен `--base`) | REJ-ID зник — файл перезаписано |
 | CM-scope | `git diff --name-only <git.base>` ⊆ `concept/`, `research/{OWNER-BRIEF,BOX,SALES,REJECTED}.md`, `research/facts.yaml`, `_template/concept/` | зачеплено зайве |
 
@@ -168,6 +168,8 @@ description: >
 3. Ліцензія наших модулів — «LGPL-3 за замовчуванням, остаточно — рішення власника» (анкета `licenses.own_modules`); до рішення BOX §12 пише це як припущення.
 4. Доступ до Enterprise-бази в середовищі невідомий: без нього твердження про EE — `не перевірено` (WARN), не факт.
 5. Роль-покупець позначається `[покупець]` у колонці «Роль»: чи потрібне окреме поле в шаблоні — узгодити з власником пакета.
+6. Профіль `access_profile: research` у картці A-20 надлишковий (скіл не ходить у веб і зовнішні джерела): достатньо `base` — рішення за власником WP-01.
+7. Стик WP-01/WP-03: картки A-20/A-20b (`inArtifacts`: `K1`, `edition-claims`, `REJECTED`, `facts.yaml`; `outArtifacts`: `facts.yaml`, для A-20b — `research/{COMPLETENESS,OWNER-BRIEF,BOX,SALES,REJECTED}.md`, `concept/*`) і `A-20.yaml` (повна команда `check_concept.py` з `--research/--intake/--k1/--autocheck-dir` і новими CM-*) — розбіжність передано власникам WP-01/WP-03.
 
 ## Чого НЕ робити
 - Не створювати функції, ролі й екрани без болю з цитатою (або без `owner-decision` з K1/анкети); не називати їх «гіпотезами» і не вносити «на майбутнє».
