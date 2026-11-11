@@ -13,8 +13,8 @@
 ## 2. Облік уроків (К-24)
 Уроки створює `flow-core:skill-retro` (C-08R); keeper лише **веде облік і експортує** (не вигадує, не класифікує).
 - Подія `lesson:` у коментарі задачі C-08R: `lesson: {lsn, date, step, summary<=200, skill, skill_version, severity, class, status, repeat_of, evidence[], fix_ref, eval_ref, closed}` -> запис `lessons` у знімку (стабільний ключ `lsn`, ID `LSN-\d{3}`; `id-patterns.md`). `summary` без даних клієнта (лише коди K-xx, П-xx); `skill` і `skill_version` — окремими полями (не `skill@версія` в одному рядку: рядок з `@` схожий на e-mail і блокується фільтром ПДн).
-- Статуси: `відкрито -> правка внесена -> евал зелений -> закрито` (закрито лише за 2 тижні без повтору, SL §4); `повтор` — окремий статус для `repeat_of`.
-- Експорт: `state_export.py render` пише **лише** `flow/lessons/INDEX.md` (колонки `LSN | дата | крок | суть | скіл | статус`). Файли `flow/lessons/LSN-xxx.md` і чернетки `flow/lessons/drafts/` пише єдиний автор — `skill-retro` (формат `skill-retro/references/lesson-format.md`); keeper їх не рендерить і не перезаписує, тому формати не конфліктують (`check_retro.py` читає файли skill-retro). Урок не видаляється; закриття — зміна статусу.
+- Статуси — єдиний перелік у `skill-retro/references/lesson-format.md` §1 (`відкрито | правка внесена | евал зелений | закрито | не помилка`); keeper його не дублює й не вводить власних. Повтор — поле `repeat_of` при статусі «відкрито», не статус.
+- Експорт: `state_export.py render` — **єдиний автор** `flow/lessons/INDEX.md` (skill-retro його не пише; знімок без події `lesson:` -> файл не створюється, а не затирається порожнім)  (колонки `LSN | дата | крок | суть | скіл | статус`). Файли `flow/lessons/LSN-xxx.md` і чернетки `flow/lessons/drafts/` пише єдиний автор — `skill-retro` (формат `skill-retro/references/lesson-format.md`); keeper їх не рендерить і не перезаписує, тому формати не конфліктують (`check_retro.py` читає файли skill-retro). Урок не видаляється; закриття — зміна статусу.
 - Тексти зауважень людей у експорт не йдуть (лише `summary`).
 
 ## 3. Метрики якості (SL §4; `reconcile`)

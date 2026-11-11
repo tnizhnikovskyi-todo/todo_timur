@@ -112,10 +112,16 @@ def main():
         if not srcs or any(f not in inputs and Path(f).name not in {Path(k).name for k in inputs} for f in files):
             bad_src.append(pid); continue
         q = r[4].strip().strip('«»"')
-        body = [norm(Path(inputs.get(f) or next(v for k, v in inputs.items() if Path(k).name == Path(f).name)).read_text(encoding="utf-8")) for f in files]
+        try:
+            body = [norm(Path(inputs.get(f) or next(v for k, v in inputs.items() if Path(k).name == Path(f).name)).read_text(encoding="utf-8")) for f in files]
+        except (OSError, StopIteration):
+            bad_src.append(pid); continue
         if len(q.split()) > 25 or not q or not any(norm(q) in b for b in body):
             bad_q.append(pid)
-    add("CM-src", not bad_src, "джерело поза входами: " + ", ".join(bad_src))
+    no_file = sorted(k for k, v in inputs.items() if not Path(v).is_file())
+    add("CM-src", not bad_src and not no_file,
+        "; ".join(x for x in (("немає файла входу: " + ", ".join(f"{k}={inputs[k]}" for k in no_file)) if no_file else "",
+                              ("джерело поза входами або недоступне: " + ", ".join(bad_src)) if bad_src else "") if x))
     add("CM-quote", not bad_q, "цитата не знайдена/задовга: " + ", ".join(bad_q))
     # CM-feat, CM-signal
     bad_f, bad_s = [], []
@@ -244,12 +250,18 @@ def main():
             add("CM-facts", False, f"немає {fy} (єдине джерело чисел)")
         else:
             targets = [str(rd / f) for f in ("OWNER-BRIEF.md", "BOX.md", "SALES.md") if (rd / f).exists()]
-            out, why = run_aux("check_facts.py", fy, *targets, "--require-markers")  # число без маркера — FAIL/WARN
-            out2, why2 = run_aux("check_facts.py", fy, str(d))  # concept/*: годин і цін немає; маркери не вимагаємо
-            if out is None or out2 is None: add("CM-facts", False, why or why2)
+            if not targets:
+                add("CM-facts", False, "немає research/{OWNER-BRIEF,BOX,SALES}.md для перевірки чисел")
             else:
-                bad = [f"{x['id']}: {x['msg']}" for x in out + out2 if x["status"] == "FAIL"]
-                add("CM-facts", not bad, "; ".join(bad)[:600])
+                out, why = run_aux("check_facts.py", fy, *targets, "--require-markers")  # число без маркера — FAIL/WARN
+                out2, why2 = run_aux("check_facts.py", fy, str(d))  # concept/*: годин і цін немає; маркери не вимагаємо
+                if out is None or out2 is None: add("CM-facts", False, why or why2)
+                else:
+                    bad = [f"{x['id']}: {x['msg']}" for x in out + out2 if x["status"] == "FAIL"]
+                    soft = [f"{x['id']}: {x['msg']}" for x in out + out2 if x["id"] == "FACT-unmarked" and x["status"] in ("WARN", "MANUAL")]
+                    if bad: add("CM-facts", False, "; ".join(bad)[:600])
+                    elif soft: add("CM-facts", False, "; ".join(soft)[:600], status="WARN")  # FACT-unmarked: розібрати в memo
+                    else: add("CM-facts", True)
     # CM-scope
     if not a.base:
         res.append({"id": "CM-ids", "status": "SKIP", "msg": "немає --base"}); res.append({"id": "CM-scope", "status": "SKIP", "msg": "немає --base"})

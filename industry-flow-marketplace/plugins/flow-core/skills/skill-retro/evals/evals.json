@@ -170,10 +170,10 @@
     {
       "id": "keeper-index-and-retro-files-consistent",
       "prompt": "keeper зробив render (INDEX.md), skill-retro записав LSN-xxx.md і drafts/. Запусти check_retro на теці.",
-      "expected_output": "RET-index PASS, RET-draft PASS (шлях чернетки існує); один формат файлу уроку, keeper LSN-xxx.md не пише.",
+      "expected_output": "INDEX.md пише лише keeper, skill-retro його не чіпає; RET-index PASS або WARN «рядок з'явиться після експорту C-02» (не FAIL); RET-draft PASS (шлях чернетки існує); LSN-xxx.md пише лише skill-retro.",
       "assertions": [
         "LSN-xxx.md пише лише skill-retro",
-        "INDEX.md містить усі LSN"
+        "skill-retro не створює і не змінює flow/lessons/INDEX.md; відсутній рядок у INDEX — лише WARN"
       ],
       "step": "C-08R",
       "source": "К-24",

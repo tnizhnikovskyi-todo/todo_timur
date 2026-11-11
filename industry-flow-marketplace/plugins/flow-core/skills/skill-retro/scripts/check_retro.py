@@ -7,7 +7,8 @@ signals.json: [{"id":"SIG-001","source":"...","ref":"...","lesson":"LSN-001"|nul
 Урок flow/lessons/LSN-xxx.md: рядки `- ключ: значення` (дата, крок, скіл, версія_скіла, серйозність, клас, статус,
   repeat_of, сигнали, fix_ref, eval_ref, причина_не_помилка, примітка_повтору, ескальовано, евал_зелений, закрито).
 fix_ref -- шлях до чернетки `flow/lessons/drafts/LSN-xxx.md` (відносно --root) або `pr#N`; шлях має існувати.
-Перевірки: RET-coverage, RET-draft, RET-repeat, RET-pii, RET-stale (ескальовано -> WARN), RET-close, RET-index. Вихід JSON [{"id","status","msg"}], код 1 при FAIL. Лише stdlib.
+Додаткові поля: eval_статус (запропоновано|зелений), правка_внесена. INDEX.md пише keeper (C-02): його відсутність/неповнота -> WARN.
+Перевірки: RET-coverage, RET-draft, RET-repeat, RET-pii, RET-stale (лише статус «відкрито»; ескальовано -> WARN), RET-close, RET-index (WARN). Вихід JSON [{"id","status","msg"}], код 1 при FAIL. Лише stdlib.
 """
 import argparse, datetime, glob, json, os, re, sys
 
@@ -55,16 +56,20 @@ def main(argv):
         sigs = json.load(open(a.signals, encoding='utf-8'))
     except Exception as e:
         print(json.dumps([{"id": "RET-coverage", "status": "FAIL", "msg": "signals.json: %s" % e}], ensure_ascii=False)); return 1
+    if not isinstance(sigs, list) or not all(isinstance(s, dict) for s in sigs):
+        print(json.dumps([{"id": "RET-coverage", "status": "FAIL", "msg": "signals.json має бути масивом об'єктів"}], ensure_ascii=False)); return 1
     bad = 0
     def add(i, s, m):
         nonlocal bad
         res.append({"id": i, "status": s, "msg": m}); bad += s == 'FAIL'
     for s in sigs:
         les, ne = s.get('lesson'), (s.get('not_error') or '').strip()
-        if les and LSN.match(les) and les in lessons:
-            add('RET-coverage', 'PASS', '%s -> %s' % (s['id'], les))
+        if not s.get('id'):
+            add('RET-coverage', 'FAIL', 'сигнал без поля id: %s' % json.dumps(s, ensure_ascii=False)[:80])
+        elif isinstance(les, str) and LSN.match(les) and les in lessons:
+            add('RET-coverage', 'PASS', '%s -> %s' % (s.get('id'), les))
         elif ne:
-            add('RET-coverage', 'PASS', '%s: не помилка (%s)' % (s['id'], ne))
+            add('RET-coverage', 'PASS', '%s: не помилка (%s)' % (s.get('id'), ne))
         else:
             add('RET-coverage', 'FAIL', '%s без уроку й без причини «не помилка»' % s.get('id'))
     if not sigs:
@@ -80,7 +85,11 @@ def main(argv):
                 if '/' in fr and not os.path.isfile(os.path.join(a.root, fr)):
                     add('RET-draft', 'FAIL', '%s: fix_ref %s -- файлу чернетки немає' % (lid, fr))
                 else:
-                    add('RET-draft', 'PASS', lid)
+                    dtxt = open(os.path.join(a.root, fr), encoding='utf-8').read() if '/' in fr else ''
+                    if '/' in fr and 'Пропозиція евал-кейса' not in dtxt:
+                        add('RET-draft', 'WARN', '%s: у чернетці немає блоку «Пропозиція евал-кейса»' % lid)
+                    else:
+                        add('RET-draft', 'PASS', lid)
         rep = l.get('repeat_of', '').strip()
         if rep and rep.lower() not in ALLOWED_NOLINK:
             base = lessons.get(rep)
@@ -98,18 +107,26 @@ def main(argv):
         txt = l['_text']
         if any(p.search(txt) for p in PII):
             add('RET-pii', 'FAIL', '%s: ПДн-подібний текст (e-mail/телефон/ПІБ/ЄДРПОУ); лише коди K-xx, П-xx' % lid)
-        if st in ('відкрито', 'правка внесена', 'евал зелений') and l.get('дата'):
-            try:
+        try:
+            if st == 'відкрито' and l.get('дата'):
                 wd = workdays(datetime.date.fromisoformat(l['дата']), today)
                 if wd > 3 and l.get('ескальовано', '').strip().lower() not in ALLOWED_NOLINK:
                     add('RET-stale', 'WARN', '%s відкрито %d роб. днів (>3), ескальовано %s' % (lid, wd, l['ескальовано']))
                 elif wd > 3:
                     add('RET-stale', 'FAIL', '%s відкрито %d роб. днів (>3): ескалація AI-інженеру (поле «ескальовано: <дата>»)' % (lid, wd))
-            except ValueError:
-                add('RET-stale', 'WARN', '%s: дата не ISO' % lid)
+            elif st == 'правка внесена' and l.get('правка_внесена', '').strip().lower() not in ALLOWED_NOLINK:
+                wd = workdays(datetime.date.fromisoformat(l['правка_внесена']), today)
+                if wd > 5:
+                    add('RET-stale', 'WARN', '%s: правку внесено %d роб. днів тому, евал ще не зелений (без ескалації)' % (lid, wd))
+        except ValueError:
+            add('RET-stale', 'WARN', '%s: дата не ISO' % lid)
     for lid, l in lessons.items():
-        if l.get('статус') != 'закрито':
+        if l.get('статус') not in ('закрито', 'евал зелений'):
             continue
+        if l.get('eval_статус', '').strip() != 'зелений':
+            add('RET-close', 'FAIL', '%s: статус «%s» без `eval_статус: зелений`' % (lid, l.get('статус'))); continue
+        if l.get('статус') == 'евал зелений':
+            add('RET-close', 'PASS', '%s: евал зелений' % lid); continue
         try:
             green = datetime.date.fromisoformat(l.get('евал_зелений', ''))
             closed = datetime.date.fromisoformat(l.get('закрито', ''))
@@ -126,11 +143,11 @@ def main(argv):
     if lessons:
         idx = os.path.join(a.lessons, 'INDEX.md')
         itxt = open(idx, encoding='utf-8').read() if os.path.isfile(idx) else None
-        if itxt is None:
-            add('RET-index', 'FAIL', 'flow/lessons/INDEX.md відсутній (результат C-08R)')
+        miss = lessons.keys() if itxt is None else [k for k in lessons if k not in itxt]
+        if miss:
+            add('RET-index', 'WARN', 'рядок з\'явиться після експорту C-02 (INDEX.md пише flow-state-keeper): ' + ', '.join(sorted(miss)))
         else:
-            miss = [k for k in lessons if k not in itxt]
-            add('RET-index', 'FAIL' if miss else 'PASS', ('немає в INDEX.md: ' + ', '.join(miss)) if miss else 'INDEX.md повний')
+            add('RET-index', 'PASS', 'INDEX.md повний')
     if not any(r['id'] == 'RET-pii' for r in res):
         add('RET-pii', 'PASS', 'ПДн не знайдено')
     if not any(r['id'] == 'RET-stale' for r in res):
