@@ -1,0 +1,14 @@
+# Контракт сторінки (Artifact, обов'язково)
+- Файл: один .html БЕЗ <!doctype>, <html>, <head>, <body> — одразу <title>, <meta name="claude:viewport-fit-sides" content="cover">, <style>, контент, <script>.
+- <title> — назва 2–4 слова (напр. «Меблевий пакет ToDo»), без пояснень після тире.
+- Зовнішнє: лише Google Fonts (Open Sans) через <link>, скрипти лише з cdnjs з точною версією (краще без бібліотек). Mermaid — <pre class="mermaid"> рендериться нативно. Жодних iframe, зовнішніх картинок, fetch.
+- Логотип ToDo — data:URI (base64 PNG), файл передасть менеджер.
+- Кольори — токени на :root (світла тема), перевизначення у @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){…;color-scheme:dark}} і :root[data-theme="dark"]{…}. body має явний background з токена. Жодних літеральних кольорів у компонентах.
+- Бренд ToDo: акцент #FE5000, темний #101820, шрифт Open Sans; нейтралі злегка тоновані, не чистий сірий.
+- Адаптив: працює на 390px; body: padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); вертикальні — padding-block. Таблиці в контейнері overflow-x:auto. Ніякого горизонтального скролу сторінки. Flex/grid з gap, min-width:0 для дітей з текстом.
+- Липкий хедер: top: env(safe-area-inset-top,0px) + body::before смуга.
+- Стан сторінки повний без скролу/кліків: не ховати контент під opacity:0. Вкладки/акордеони — ок, але перша вкладка відкрита; навігація по hash (#scenario тощо, ASCII-імена, не settings/sidebar/customize/upgrade/downloads).
+- Без window.print, alert/confirm/prompt, <a download>. localStorage лише в try/catch.
+- tabular-nums для цифр, text-wrap: balance для заголовків, тексти ~65 символів шириною, prefers-reduced-motion, видимий focus.
+- Не робити: емодзі як маркери, нумерацію 01/02 де це не послідовність, однакові картки з тінню скрізь, градієнтний hero, 100vh hero.
+- Копірайт: прямо, коротко, без «варто зазначити», без тире-вставок; українська.
