@@ -1,0 +1,33 @@
+{
+ "id": "A-03b",
+ "code": "A-03b",
+ "title": "Глибокий аналіз галузі й конкурентів (K1 усередині)",
+ "executor": "any",
+ "skillRef": "flow-research:industry-deep-dive",
+ "access_profile": "research-internal",
+ "raciR": "BA (R); власник (K1)",
+ "preconditions": "A-02b done (OWNER-INTAKE.md, блокуючі поля заповнено); A-03 і A-04 done (і A-06, якщо сесії були)",
+ "inArtifacts": "OWNER-INTAKE.md; briefing.md; past-projects.md",
+ "inputs": "OWNER-INTAKE.md",
+ "outputs": "research/FUNCTIONAL-MAP.md; research/K1.md; research/REJECTED.md; research/DEPENDS.yaml",
+ "where": "research/FUNCTIONAL-MAP.md",
+ "gate": "ні; K1 — waiting_human + resume",
+ "params": {
+  "sample": true
+ },
+ "review": {
+  "checklists": [
+   "research.md",
+   "edition-claims.md"
+  ],
+  "max_rounds": 2
+ },
+ "model": "opus/sonnet",
+ "hours": 6,
+ "costLimit": 25,
+ "maturity": "1",
+ "per": "package",
+ "maxAttempts": 3,
+ "status": "draft",
+ "notes": "мінікартка фікстури за step-cards.md"
+}

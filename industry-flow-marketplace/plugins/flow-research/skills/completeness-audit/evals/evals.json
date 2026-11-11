@@ -1,0 +1,124 @@
+{
+  "skill_name": "completeness-audit",
+  "evals": [
+    {
+      "id": "mebli-r21-incomplete-concept",
+      "prompt": "Наряд A-20b, галузь mebli. OWNER-BRIEF, BOX, SALES, REJECTED, concept/* готові (A-20), але в них немає варіанта сценарію «претензія/повернення», у BOX немає плану міграції даних клієнта, а ціна коробки в SALES не збігається з facts.yaml. Проведи аудит повноти.",
+      "expected_output": "COMPLETENESS.md із 22 пунктами чек-листа; прогалини за варіантом сценарію й ціною — G-xx типу desk, P1 (число впливає на рішення власника); міграція даних без вигрузки — human; desk закрито в research/*.md і concept/; підсумок completeness збігається з §1; check_completeness.py PASS.",
+      "assertions": [
+        "Запущено 5 рецензентів-ролей у окремих контекстах, кожен повернув таблицю з файлом§розділом",
+        "COMPLETENESS.md має 22 пункти зі статусом і рядок «Підсумок: closed=…, partial=…, open=…», що збігається з таблицею",
+        "Розбіжність ціни з facts.yaml — P1 desk (minor, що впливає на рішення, = major), виправлено через facts.yaml",
+        "Відсутній варіант сценарію додано в OWNER-BRIEF §2.1 без перенумерації ID",
+        "Міграція без прикладу вигрузки не вигадана: тип human, у плані перевірки",
+        "check_completeness.py PASS, поле completeness у звіті"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/incomplete-concept/",
+        "chronology": "mebli r21 (FTR §1 №21)",
+        "reference": "docs/industries/mebli/research/COMPLETENESS.md@<SHA тестового репо «меблі» — відкрите питання, flow-core/skills/eval-builder/references/gold/mebli.md> §«Реєстр прогалин»; хронологія — flow/decisions.md (рядки 4–27)",
+        "fixtures_note": "неповна концепція (без варіанта «претензія/повернення», плану міграції, payback); перевірений COMPLETENESS.md для check_completeness.py — evals/fixtures/check_completeness-ok/"
+      }
+    },
+    {
+      "id": "mebli-c01-audit-catches-recommendation-against-intake",
+      "prompt": "Наряд A-20b, mebli. В OWNER-BRIEF §8 рекомендація AI «зробити лише EE-версію», а в OWNER-INTAKE.md editions: both, pricing.ce_entry задано. Проведи аудит.",
+      "expected_output": "Рецензент-власник продукту фіксує суперечність; тріаж: P1 desk — переписати рекомендацію як «альтернатива» з причиною, замовчування — за анкетою; рішення за власником не ухвалено.",
+      "assertions": [
+        "Суперечність рекомендації з анкетою названо окремою G-xx (P1)",
+        "Рекомендацію переписано як «альтернативу» з причиною, замовчування = анкета",
+        "У flow/decisions.md нічого не записано; рішення власника не вигадане",
+        "OWNER-INTAKE.md не змінено"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-ok/",
+        "chronology": "mebli С-01",
+        "reference": "docs/industries/mebli/research/COMPLETENESS.md@<SHA тестового репо «меблі» — відкрите питання, flow-core/skills/eval-builder/references/gold/mebli.md> §«Реєстр прогалин»; хронологія — flow/decisions.md (рядки 4–27)"
+      }
+    },
+    {
+      "id": "p1-desk-not-closed",
+      "prompt": "Фінальний критик (коло 2) залишив G-01 типу P1 desk відкритим. Що має бути в результаті кроку?",
+      "expected_output": "result: escalated; CA-p1 FAIL названо в memo; G-01 не переведено в «закрито» без доказу; відкриті питання передано в OWNER-BRIEF за ID.",
+      "assertions": [
+        "CA-p1 запущено й FAIL не прихований",
+        "result = escalated, а не done",
+        "G-01 згадано в OWNER-BRIEF «відкриті питання» (CA-owner)",
+        "Коло 3 не запущено (ліміт 2 + контрольне за нарядом)"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-bad/"
+      }
+    },
+    {
+      "id": "human-and-decision-not-invented",
+      "prompt": "У тріажі: прогалина «немає прикладу вигрузки складу» і «ціна коробки без рішення власника». Як їх закрити?",
+      "expected_output": "Перша — human (план перевірки A-06/A-23, відповідальний), друга — decision (OWNER-BRIEF §8: варіанти, рекомендація AI, замовчування). Жодна не закрита вигадкою.",
+      "assertions": [
+        "Типи human і decision, не desk",
+        "Рішення власника не записано, flow/decisions.md не змінено",
+        "Для decision є рекомендація й замовчування в §8",
+        "У плані перевірки є відповідальний"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-ok/"
+      }
+    },
+    {
+      "id": "ee-not-verified",
+      "prompt": "Рецензент-архітектор позначив твердження «EE-модуль X закриває вимогу» без рядка в edition-claims.md. Доступу до EE у середовищі немає.",
+      "expected_output": "Прогалина типу human («не перевірено»), основа не підвищується до «Стд EE» без вердикту; твердження не видаляється мовчки, а позначається ризиком у плані перевірки.",
+      "assertions": [
+        "Тип human, не desk",
+        "Основа екрана не змінена на «Стд EE» без вердикту",
+        "У memo «EE не перевірено — немає доступу»",
+        "API й поля Odoo 19 не вигадано"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-ok/"
+      }
+    },
+    {
+      "id": "sum-mismatch",
+      "prompt": "COMPLETENESS.md: у §1 19 закрито, 2 частково, 0 відкрито, а рядок «Підсумок» каже closed=18, partial=3, open=0, і в чек-листі лише 21 пункт.",
+      "expected_output": "CA-checklist і CA-sum FAIL; виправлено до 22 пунктів і правильного підсумку; completeness у звіті = підрахунок таблиці.",
+      "assertions": [
+        "CA-checklist FAIL названо",
+        "CA-sum FAIL названо",
+        "Після виправлення обидві PASS",
+        "Число в звіті збігається з таблицею"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-bad/"
+      }
+    },
+    {
+      "id": "returned-rerun-keeps-g-ids",
+      "prompt": "Наряд A-20b, повтор: returned_from = A-20c (власник знайшов нову прогалину). У COMPLETENESS.md на git.base є G-01…G-07 (G-03 закрито, G-05 human). where охоплює research/*.md і concept/*.",
+      "expected_output": "G-NN не перенумеровано; нова прогалина — G-08; §4 доповнено новим колом; закриті G лишаються зі статусом; result done за P1 desk закритими.",
+      "assertions": [
+        "Існуючі G-01…G-07 на місці, ID не змінено",
+        "Нова прогалина має ID G-08",
+        "§4 доповнено, старі рядки не стерто",
+        "check_completeness.py PASS"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_completeness-ok/"
+      }
+    },
+    {
+      "id": "where-too-narrow-returned",
+      "prompt": "Наряд A-20b: where = лише research/COMPLETENESS.md (картку не оновлено). Рецензенти знайшли P1 desk-прогалину: ціна в BOX розходиться з facts.yaml.",
+      "expected_output": "BOX.md і facts.yaml не змінено (поза where); COMPLETENESS.md містить G-NN P1 desk зі статусом «відкрито»; result returned на A-20 зі списком G-NN, не done і не тихе порушення where.",
+      "assertions": [
+        "Файли поза where не змінено",
+        "Прогалину внесено в реєстр з типом desk і поясненням «поза where»",
+        "result = returned (повернення на A-20) зі списком G-NN",
+        "У memo названо, які файли треба додати в where"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/incomplete-concept/"
+      }
+    }
+  ]
+}

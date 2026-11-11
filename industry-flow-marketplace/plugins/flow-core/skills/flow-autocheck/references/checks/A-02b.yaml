@@ -1,0 +1,63 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-02b",
+ "checks": [
+  {
+   "id": "intake-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-intake-structure",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md --allow-empty: INT-file, INT-block (лише наявність ключів) без FAIL. У prepare поля порожні за задумом: заповненість не перевіряється. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py",
+     "docs/industries/<галузь>/OWNER-INTAKE.md",
+     "--allow-empty"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:prepare"
+  },
+  {
+   "id": "script-check-intake",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md: INT-file, INT-block без FAIL. FAIL INT-block = блокуюче поле порожнє: крок `waiting_human`, не done. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:validate|amend"
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  },
+  {
+   "id": "owner-filled",
+   "prim": "manual",
+   "args": {
+    "text": "блокуючі поля (*) заповнив власник сам (≤20 хв), AI їх не вигадував і не підставляв замовчувань мовчки; питання власнику — ДО синтезу (К-02)",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

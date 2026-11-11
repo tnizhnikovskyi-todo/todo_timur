@@ -2,9 +2,10 @@
 name: flow-autocheck
 description: >
   Запускай, коли треба детерміновано перевірити входи або результат кроку флоу пакета Odoo 19 за карткою: звірка входів наряду
-  з flow/ARTIFACTS.md і SHA (режим inputs), автоперевірка C-06 (зміни лише в where, форма за шаблоном, перевірки кроку: AC ↔ ALLOCATION,
-  SHA і diff перед тегом package/vX.Y), перевір форму DATA_POLICY за шаблоном (режим form). Вихід — таблиця PASS/FAIL/WARN/SKIP/ERROR/MANUAL.
-  Тригери: "автоперевірка кроку", "перевір артефакт за карткою", "звір входи з ARTIFACTS", "чи всі AC в ALLOCATION", "проверь шаг по карточке".
+  з flow/ARTIFACTS.md і SHA (режим inputs; для кроків A-03b…A-21c ще й наявність OWNER-INTAKE.md), автоперевірка C-06 (зміни лише в where,
+  форма за шаблоном, перевірки кроку: AC ↔ ALLOCATION, реєстр відкинутого, анкета, факти, бренд, приватність, застарілі артефакти за DEPENDS.yaml),
+  перевір форму DATA_POLICY (режим form). Вихід — таблиця PASS/FAIL/WARN/SKIP/ERROR/MANUAL.
+  Тригери: "автоперевірка кроку", "перевір артефакт за карткою", "звір входи з ARTIFACTS", "чи всі AC в ALLOCATION", "що застаріло після рішення", "проверь шаг по карточке".
   НЕ для виконання кроку (flow-step-runner), постановки задач (flow-orchestrator), рев'ю коду/конфігу/безпеки (pr-review, config-review,
   security-review), зведення гейтів A-14 (gates-aggregator). Файли в репо й Odoo не змінює.
 ---
@@ -37,6 +38,13 @@ template, done, check.how, client_data, repo, attempt, returned_from`, `params.{
 Режими кроку (`params.mode`): A-17/A-18 `перша | нова-версія | hotfix` (hotfix: перевірки приймання й diff від ACCEPTANCE → `SKIP hotfix`);
 `нова-версія` додає `regression-row` (A-17). A-18 `params.phase: tag` (наряд-тег після гейта) — ті самі перевірки на `head` наряду-тега;
 тег ставить runner/CI, не цей скіл. Відсутній `params.mode` → `перша`.
+
+## Скрипти перевірок галузі
+Окремі `scripts/check_*.py` (`python3 -I`, лише stdlib, вихід JSON-список `{id,status,msg}`, код 1 при FAIL): `check_intake` (INT-*), `check_rejected` (REJ-*),
+`check_facts` (FACT-*), `check_brand` (BR-*), `check_privacy` (PRV-*), `check_stale` (STALE-list; його список — вхід наряду `params.mode: recalc`).
+`autocheck.py` їх не запускає: їх виконує runner за `args.cmd` специфікації кроку (Крок 9 (ж) flow-step-runner), результат вставляється в `checks[]`.
+Рядки специфікації для скриптів інших скілів (№3, 5, 6, 7, 10) — `manual who: runner`. Контракт CLI і ID — `references/checks.md`.
+У режимі `inputs` специфікація може вимагати `inputs_require` (анкета): без входу `OWNER-INTAKE.md` — `FAIL input-intake`, крок не стартує.
 
 ## Інструменти та доступи
 - `Bash`, лише `python3 -I <плагін>/skills/flow-autocheck/scripts/autocheck.py --mode <inputs|result|form> --naryad <f> --repo <тека>

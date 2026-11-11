@@ -13,6 +13,7 @@
 | `client` | порожньо | ідентифікатор клієнта за DATA_POLICY; порожньо — лише пакет |
 | `odoo_version` | порожньо | порожньо — із суфікса гілки `-odoo<N>` або тега `package/vX.Y-odoo<N>` (рішення q19), інакше 19 |
 | `sha` | порожньо | порожньо — HEAD гілки; інакше checkout саме цього SHA |
+| `edition` | порожньо | `ce` \| `ee` \| `both`; порожньо — `both` (ядро на CE, EE-підсилення `td_*_ee`); визначає матрицю `package-tests` |
 | `odoo_task` | порожньо | id задачі Odoo для звіту (розширення картки, відкрите В-2: звірити з B-11 і gates-aggregator) |
 
 Усі inputs мають реально використовуватися в `resolve`/checkout, а не лише бути оголошеними.
@@ -39,3 +40,8 @@ Job `report-odoo`: SHA, URL прогону, вердикти job'ів, лічи�
 немає (`PR_BODY` на push порожнє), тому `report-odoo` там дає лише notice: звіт у задачу Odoo з SHA пише `flow-step-runner`/`flow-state-keeper`;
 `Odoo-Task: <id>` в описі PR (`package/templates/pr-checklist.md`) читає вони, не CI. Секрети `ODOO_FLOW_URL/DB/API_KEY` задає Тімлід; немає — notice без падіння
 (відкрите В-5: права технічного користувача лише `message_post`). Джерело правди для гейтів — статус GitHub за SHA.
+
+## Редакції CE і EE (К-06)
+- `package-tests` — матриця `edition` (`ce` завжди присутня; `ee` — за `both`/`ee`); скрипти C-00 отримують `ODOO_EDITION` змінною.
+- Вердикти редакцій: CE — PASS/FAIL; EE — PASS/FAIL **або `WARN ee-unavailable`** (доступу до EE немає → «не перевірено»). `WARN` не є PASS: опис статусу `ci` має вигляд «CE PASS; EE WARN ee-unavailable (не перевірено)»; фраза «EE PASS» без реального прогону заборонена. Статус `success` при EE WARN чи `failure` — відкрите питання В-8 (рішення власника/C-00); споживач (A-14, `gates-aggregator`) читає опис, а не лише state.
+- Job `core-deps`: ядро (модулі без суфікса `_ee`) не залежить від `td_*_ee`, модулів з `license` OEEL/OPL і AGPL-залежностей; червоний `core-deps` → червоний `ci`.

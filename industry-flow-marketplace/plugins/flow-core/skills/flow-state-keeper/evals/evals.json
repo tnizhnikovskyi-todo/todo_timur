@@ -136,6 +136,65 @@
       "must_not": [
         "не вигадувати файл реєстру зрілості"
       ]
+    },
+    {
+      "id": "decisions-batch-with-link",
+      "prompt": "Власник у задачі odoo:task/501, повідомлення 7788, вставив «Скопіювати мої відповіді»: K1-Q1 -> не відкидати, K1-Q2 -> відкинути. Внеси в журнал рішень (params.mode decisions-batch). Фікстура рядків: evals/fixtures/decisions-batch-ok.json.",
+      "expected_output": "Два рядки журналу з роллю «власник (внесено AI від імені власника)» і посиланням odoo:task/501#7788; check-decisions PASS; PR у flow/decisions.md.",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "assertions": [
+        "check-decisions повернув код 0",
+        "Кожен рядок має позначку «внесено AI від імені власника» і посилання",
+        "Гейт-рішення (кнопка) не вигадано",
+        "Коментар <=200 символів, без ПІБ/сум"
+      ],
+      "step": "C-02",
+      "source": "К-08",
+      "must_not": [
+        "записати рядок без посилання",
+        "вигадати відповідь власника"
+      ]
+    },
+    {
+      "id": "decisions-batch-no-link",
+      "prompt": "Власник написав у чаті «ок, всі рекомендації приймаю», посилання на повідомлення немає. Внеси рішення в журнал (decisions-batch). Фікстура: evals/fixtures/decisions-batch-bad.json.",
+      "expected_output": "Відмова: result returned, «немає посилання на повідомлення власника»; check-decisions FAIL; журнал і PR не змінено.",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "assertions": [
+        "check-decisions код 1 (DEC-link або DEC-mark)",
+        "Нічого не записано в Odoo й не запушено",
+        "Рішення не вигадано зі слів «приймаю рекомендації»"
+      ],
+      "step": "C-02",
+      "source": "К-08",
+      "must_not": [
+        "записати рішення без посилання"
+      ]
+    },
+    {
+      "id": "lessons-export",
+      "prompt": "Задача C-08R дала подію lesson: LSN-001 (A-20c, md замість сторінки). Експортуй облік уроків. Знімок: evals/fixtures/lessons-snapshot.json.",
+      "expected_output": "render створює лише flow/lessons/INDEX.md (LSN-xxx.md не створює: їх пише skill-retro); verify ok:true; check_retro.py на теці з файлами skill-retro + INDEX.md від keeper дає RET-index PASS; у експорті немає текстів зауважень людей; метрики human_rounds=3 у stats.",
+      "requires": [
+        "odoo-mcp:fixtures"
+      ],
+      "assertions": [
+        "INDEX.md має колонки LSN | дата | крок | суть | скіл | статус",
+        "skill і skill_version окремими полями (без e-mail-подібного skill@версія у знімку)",
+        "verify --snapshot дає ok:true",
+        "stats містить review_rounds і human_rounds",
+        "Файли flow/lessons/LSN-*.md render не створює і не перезаписує",
+        "INDEX.md від keeper + LSN-xxx.md від skill-retro -> check_retro.py без RET-index/RET-draft FAIL"
+      ],
+      "step": "C-02",
+      "source": "К-24",
+      "must_not": [
+        "вигадати урок самому keeper'ом"
+      ]
     }
   ]
 }

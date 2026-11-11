@@ -1,0 +1,217 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-20c",
+ "inputs_require": [
+  "OWNER-INTAKE.md"
+ ],
+ "checks": [
+  {
+   "id": "depends-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/DEPENDS.yaml"
+    ]
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "owner-page-sample",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/owner-page/index.html"
+    ]
+   },
+   "when": "sample"
+  },
+  {
+   "id": "owner-page-files",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/owner-page/index.html",
+     "docs/industries/<галузь>/research/owner-page/competitors.html",
+     "docs/industries/<галузь>/research/owner-page/rejected.html",
+     "docs/industries/<галузь>/research/owner-page/PUBLISHED.md"
+    ]
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "intake-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-intake",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md --page docs/industries/<галузь>/research/owner-page/index.html: INT-file, INT-block, INT-dup (питання на сторінці не дублюють анкету) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py",
+     "docs/industries/<галузь>/OWNER-INTAKE.md",
+     "--page",
+     "docs/industries/<галузь>/research/owner-page/index.html"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-owner-page",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/concept-presentation/scripts/check_owner_page.py docs/industries/<галузь>/research/owner-page --research docs/industries/<галузь>/research: OP-pages, OP-nav, OP-anchors, OP-contract, OP-target без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/concept-presentation/scripts/check_owner_page.py",
+     "docs/industries/<галузь>/research/owner-page",
+     "--research",
+     "docs/industries/<галузь>/research"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-brand",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_brand.py docs/industries/<галузь>/research/owner-page --brand <корінь плагіна flow-research>/references/brand-todo/BRAND.md: BR-colors, BR-font, BR-logo без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_brand.py",
+     "docs/industries/<галузь>/research/owner-page",
+     "--brand",
+     "<корінь плагіна flow-research>/references/brand-todo/BRAND.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-facts",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py docs/industries/<галузь>/research/facts.yaml docs/industries/<галузь>/research/owner-page: FACT-mismatch, FACT-orphan без FAIL. Числа позначаються маркером <!--fact:ключ--> (docstring скрипта); FACT-orphan WARN не блокує. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py",
+     "docs/industries/<галузь>/research/facts.yaml",
+     "docs/industries/<галузь>/research/owner-page"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-facts-markers",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py docs/industries/<галузь>/research/facts.yaml docs/industries/<галузь>/research/owner-page --require-markers: FACT-markers, FACT-orphan без FAIL. Кожен файл із числами (грн, %, год…) мусить мати маркери <!--fact:ключ--> / data-fact (checks.md, «Маркери фактів»).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py",
+     "docs/industries/<галузь>/research/facts.yaml",
+     "docs/industries/<галузь>/research/owner-page",
+     "--require-markers"
+    ],
+    "who": "runner"
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "script-check-privacy",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_privacy.py docs/industries/<галузь>/research --pages docs/industries/<галузь>/research/owner-page --allow <корінь плагіна flow-research>/references/brand-todo/BRAND.md: PRV-pii, PRV-raw-place без FAIL. ПІБ-подібне (MANUAL) — перевірка очима. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими). Сирі цитати без маркера internal-raw скрипт не бачить — рецензент перевіряє очима; коди клієнтів K-xx/П-xx у публічних сторінках і матеріалах дають FAIL PRV-client-code.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_privacy.py",
+     "docs/industries/<галузь>/research",
+     "--pages",
+     "docs/industries/<галузь>/research/owner-page",
+     "--allow",
+     "<корінь плагіна flow-research>/references/brand-todo/BRAND.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REJECTED.md --intake docs/industries/<галузь>/OWNER-INTAKE.md --k1 docs/industries/<галузь>/research/K1.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Крок із переліку відбору без реєстру відкинутого (або з «нічого не відкинуто» без рядка) — FAIL (flow-core/references/rejected-register.md). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "docs/industries/<галузь>/research/REJECTED.md",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md",
+     "--k1",
+     "docs/industries/<галузь>/research/K1.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "playwright-widths",
+   "prim": "manual",
+   "args": {
+    "text": "Playwright на 390 і 1280 px: document.documentElement.scrollWidth <= clientWidth на кожній із 3 сторінок; перший екран — висновок і чесний вердикт про гроші",
+    "who": "runner"
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "gate-concept",
+   "prim": "manual",
+   "args": {
+    "text": "єдиний гейт концепції: рішення власника («Затвердити / Повернути», gate.return_to ∈ {A-20, A-03b, A-03c}) — людина; рядки в decisions.md — лише «внесено AI від імені власника» з посиланням на повідомлення (К-08)",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  },
+  {
+   "id": "script-check-stale",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_stale.py docs/industries/<галузь>/research/DEPENDS.yaml --base <git.head>: STALE-list без FAIL. Після перерахунку список має бути порожній. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_stale.py",
+     "docs/industries/<галузь>/research/DEPENDS.yaml",
+     "--base",
+     "<git.head>"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "reviewer-shots",
+   "prim": "manual",
+   "args": {
+    "text": "знімки 390/1280 px і кадри для рецензента збережено в research/owner-page/screens-390 і screens-1280 і їхні шляхи передано в брифі рецензента (рецензент лише читає файли й не запускає браузер: немає знімків -> major «runner не підготував», review-checklists)",
+    "who": "runner"
+   }
+  }
+ ]
+}

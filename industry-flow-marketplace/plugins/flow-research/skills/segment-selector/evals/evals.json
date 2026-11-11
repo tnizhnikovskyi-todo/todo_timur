@@ -95,6 +95,45 @@
         "Пошуків ≤2 на кандидата",
         "Для pool-top-ties.csv (--top 3) вивід збігається з expected-top-ties.md: WARN і таблиця для групи рівних, що має кандидата в шортлісті (k ≥ 3)"
       ]
+    },
+    {
+      "id": "icp-from-intake-no-marking",
+      "prompt": "Наряд A-05, раунд 1. OWNER-INTAKE.md: icp {min_employees: 10, revenue_min: 0, legal_forms: [ТОВ, ФОП], light_tariff_fop: true}, ambition.company_marking: false. decision.md задає лише КВЕД 31 і регіони. crm.csv є.",
+      "expected_output": "Фільтр сегмента посилається на icp анкети (поріг 10 працівників, юрформи); ФОП окремою групою «ФОП (легкий тариф)» поза ранжуванням; веб-перевірку сайтів не виконано (company_marking: false), у memo «розмітку вимкнено анкетою»; у раунді є «### Відкинуто» з класами (конкуренти CRM, клієнти, поза ICP) і лічильниками. (Трактування «розмітка = веб-перевірка» — робоче, до підтвердження власником продукту.)",
+      "assertions": [
+        "Діапазон розміру береться з icp анкети, не вигадується",
+        "Веб-пошуків немає, розмітки немає",
+        "Є «### Відкинуто» з колонкою ID або «нічого не відкинуто»",
+        "ФОП не відсічено порогом працівників",
+        "SS-icp і SS-rejected PASS"
+      ],
+      "fixtures_note": "Відтворюється без живого каталогу: OWNER-INTAKE.md і заглушка db_schema в evals/fixtures/icp-no-marking/. Трактування «розмітка = веб-перевірка» — відкрите питання до власника продукту (передано координатору).",
+      "fixtures": "evals/fixtures/icp-no-marking/ (OWNER-INTAKE.md + заглушка db_schema)"
+    },
+    {
+      "id": "icp-conflict-decision-vs-intake",
+      "prompt": "Наряд A-23 список. decision.md: діапазон 50-250 працівників; OWNER-INTAKE.md: min_employees 10.",
+      "expected_output": "Скіл не вибирає: result waiting_human (Власник продукту), розбіжність названо в memo, список не побудовано.",
+      "assertions": [
+        "result = waiting_human",
+        "Розбіжність діапазонів у memo з посиланнями на файли",
+        "Список не створено"
+      ],
+      "requires": [
+        "odb-catalog"
+      ],
+      "fixtures_note": "Кейс на живому odb-catalog; файли готує запускач."
+    },
+    {
+      "id": "fop-group-no-source",
+      "prompt": "Наряд A-05, OWNER-INTAKE icp.light_tariff_fop: true; db_schema odb-catalog не має поля юрформи й записів ФОП.",
+      "expected_output": "У вихідному файлі група «ФОП (легкий тариф): не перевірено, джерело відсутнє»; рядок у відкритих питаннях memo; ФОП не вигадано; check_rejected.py запущено для вихідного .md, REJ-* у checks; sources-log.md містить рядки джерел.",
+      "assertions": [
+        "ФОП не вигадано",
+        "check_rejected.py запущено",
+        "є запис sources-log.md"
+      ],
+      "input": "db_schema без юрформи"
     }
   ]
 }

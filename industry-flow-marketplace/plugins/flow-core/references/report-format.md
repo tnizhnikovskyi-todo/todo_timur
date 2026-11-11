@@ -47,6 +47,19 @@ partial: false                  # true — звіт неповний (state-keep
 
 Звіт постить runner (`odoo-bridge.md` §4): YAML у `<pre><code class="language-yaml">`, екранований.
 
+## Поля якості й походження (A-02b…A-21c, C-08R)
+```yaml
+rejected_count: <n>             # скільки позицій у реєстрі відкинутого артефакта (rejected-register.md); без реєстру в кроці з переліку — FAIL
+rejected_ref: <шлях>            # <артефакт>-rejected.md або розділ `## Відкинуто`
+completeness: {closed: <n>, partial: <n>, open: <n>}   # A-20b/A-20c: прогалини G-xx з COMPLETENESS.md
+review_rounds: <n>              # кругів рецензента (max_rounds 2 + 1 контрольний)
+human_rounds: <n>               # кругів людини (Повернути/правки); human_rounds > 2 -> сигнал C-08R (event)
+sample: true|false              # це зразок (N-18); кроки зі зразком — A-03b, A-20c, A-21, A-21c (за карткою); result зразка — `waiting_human`
+accepted_ref: <шлях|null>       # N-11: ACCEPTED.md, що фіксує прийняте людиною (SHA/дата/хто)
+stale: []                       # N-07: артефакти, застарілі після зміни рішення/факту (вихід check_stale.py, який виконує runner у наряді-джерелі події: C-02 record/decisions-batch, A-02b amend, PR із facts.yaml); перерахунок — по наряду params.mode: recalc на крок-власник
+```
+`data_sources[]` — об'єкти `{id: <ідентифікатор>, class: none|commercial|personal|internal-aggregated|internal-raw}`; старі рядки-ідентифікатори читаються як `class` невідомий -> WARN. `internal-raw` у `data_sources` дозволено лише кроку з профілем `research-internal` (A-03b, A-03c, A-04 тощо); сирі спостереження — лише в `research/sources/` (К-07, К-19). FAIL (`check_privacy.py`, PRV-raw-place) — коли сирий вміст (коди K-xx із цитатами, ПІБ, суми) опинився в `research/*.md`, `owner-page/` чи `prototype-real/`, або коли `internal-raw` є в `data_sources` кроків A-20c, A-21c, A-23 (публічні й продаючі артефакти). Класи даних: `none | commercial | personal | internal-aggregated | internal-raw` (`data-policy-template.md`).
+
 ## Блок `evals:` (eval-builder, C-04/C-07)
 ```yaml
 evals: {mode: weekly|incident|init|regress, cases_new: <n>, cases_red_new: <n>, not_reproduced: <n>,

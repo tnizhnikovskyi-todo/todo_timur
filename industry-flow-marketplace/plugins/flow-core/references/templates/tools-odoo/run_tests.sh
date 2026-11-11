@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Тести модуля. Використання:
-#   run_tests.sh <db> <module> [test-tags]     напр.: run_tests.sh test-pkg-x my_module /my_module:TestClass
+#   [ODOO_EDITION=ce|ee] run_tests.sh <db> <module> [test-tags]     напр.: run_tests.sh test-pkg-x my_module /my_module:TestClass
+# Редакція (К-06): ce за замовчуванням; ee — ODOO_EE_ADDONS_PATH; без доступу до EE — код 3 і "WARN ee-unavailable" (НЕ PASS, НЕ FAIL).
+# Друкує рядок "EDITION: ce|ee" окремо від "RESULT:" (формат RESULT не змінено).
 # <module> — ім'я модуля для `-u` (^[a-z0-9_]+$, має бути installed у базі). [test-tags] — значення --test-tags Odoo,
 # за замовчуванням "/<module>". Інші форми тегів C-00 перевіряє на реальному Odoo 19.
 # Друкує лише підсумок і помилки; повний лог у контекст не виводиться.
@@ -12,6 +14,8 @@
 source "$(dirname "$0")/_common.sh"
 DB="${1:-}"; MOD="${2:-}"; TAGS="${3:-/$MOD}"
 guard_db "$DB"
+check_edition
+echo "EDITION: $ODOO_EDITION"
 [[ "$MOD" =~ ^[a-z0-9_]+$ ]] || { echo "FLOW_STOP: потрібен <module> (^[a-z0-9_]+\$), отримано '$MOD'" >&2; exit 2; }
 [[ "$TAGS" =~ ^[-+A-Za-z0-9_:./,@]+$ ]] || { echo "FLOW_STOP: недопустимі test-tags '$TAGS'" >&2; exit 2; }
 TESTS_SUMMARY_RE="${TESTS_SUMMARY_RE:-[0-9]+ tests}"

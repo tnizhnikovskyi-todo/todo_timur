@@ -1,0 +1,74 @@
+# DEPENDS.yaml — залежності артефактів галузі (для перерахунку N-07 і check_stale.py).
+# звідки: нове (FTR N-07). Ключ — файл, що залежить; значення — файли/ключі, від яких він залежить; `sha` — коміт, на якому артефакт був узгоджений.
+# Схема: `artifacts: {<файл>: {depends_on: [...], sha: <коміт|null>}}`; її читають check_stale.py і check_facts.py.
+# check_stale.py <цей файл> --base <sha> → STALE-list: артефакти, чиї залежності змінились після `sha`.
+artifacts:
+  research/FUNCTIONAL-MAP.md:
+    depends_on: [OWNER-INTAKE.md, research/K1.md, research/facts.yaml, research/edition-claims.md, research/competitors-registry.md, research/competitors/, research/REUSE.md]
+    sha: null
+  research/OWNER-BRIEF.md:
+    depends_on: [research/FUNCTIONAL-MAP.md, research/facts.yaml, research/REJECTED.md, research/K1.md, concept/features.md, concept/screens.md, concept/scenarios.md, research/REUSE.md]
+    sha: null
+  research/BOX.md:
+    depends_on: [research/OWNER-BRIEF.md, research/facts.yaml, OWNER-INTAKE.md]
+    sha: null
+  research/SALES.md:
+    depends_on: [research/OWNER-BRIEF.md, research/facts.yaml]
+    sha: null
+  research/REJECTED.md:
+    depends_on: [OWNER-INTAKE.md, research/K1.md]
+    sha: null
+  research/COMPLETENESS.md:
+    depends_on: [research/OWNER-BRIEF.md, research/BOX.md, research/SALES.md, research/REJECTED.md]
+    sha: null
+  research/K1.md:
+    depends_on: [OWNER-INTAKE.md, research/competitors-registry.md]
+    sha: null
+  research/edition-claims.md:
+    depends_on: [research/odoo-ecosystem.md]
+    sha: null
+  research/odoo-ecosystem.md:
+    depends_on: [OWNER-INTAKE.md]
+    sha: null
+  research/competitors/:
+    depends_on: [research/competitors-registry.md]
+    sha: null
+  research/competitor-features.md:
+    depends_on: [research/competitors-registry.md, research/edition-claims.md]
+    sha: null
+  concept/features.md:
+    depends_on: [OWNER-INTAKE.md, research/FUNCTIONAL-MAP.md, research/REJECTED.md, research/facts.yaml]
+    sha: null
+  concept/screens.md:
+    depends_on: [concept/features.md]
+    sha: null
+  concept/scenarios.md:
+    depends_on: [concept/features.md, concept/screens.md]
+    sha: null
+  prototype-real/PLAN.md:
+    depends_on: [concept/features.md, concept/screens.md, concept/scenarios.md]
+    sha: null
+  prototype-real/facts.json:
+    depends_on: [research/facts.yaml, prototype-real/PLAN.md]
+    sha: null
+  prototype-real/SHOW.md:
+    depends_on: [prototype-real/PLAN.md, research/OWNER-BRIEF.md]
+    sha: null
+  prototype-real/ACCEPTED.md:
+    depends_on: [prototype-real/SHOW.md]
+    sha: null
+  demand/thresholds.md:
+    depends_on: [concept/features.md, research/facts.yaml, prototype-real/SHOW.md]
+    sha: null
+  demand/landing.md:
+    depends_on: [concept/features.md, research/facts.yaml, prototype-real/SHOW.md]
+    sha: null
+  research/owner-page/index.html:
+    depends_on: [research/OWNER-BRIEF.md, research/COMPLETENESS.md, research/facts.yaml]
+    sha: null
+  research/owner-page/competitors.html:
+    depends_on: [research/competitors-registry.md, research/competitor-features.md]
+    sha: null
+  research/owner-page/rejected.html:
+    depends_on: [research/REJECTED.md]
+    sha: null

@@ -1,0 +1,274 @@
+<title>{{Назва пакета}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap">
+<style>
+:root{
+  --bg:#FCFBFA;--surface:#F3F1EE;--surface-2:#E9E6E2;--ink:#101820;--muted:#525B64;--line:#DEDAD5;
+  --accent:#FE5000;--accent-text:#B83A00;--accent-soft:#FFE9DE;
+  --good:#1F7A4D;--good-soft:#E2F2E9;--warn:#8A5A00;--warn-soft:#FBF0D9;--bad:#B4232C;--bad-soft:#FBE4E5;
+  --logo-bg:transparent;
+  --font:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --wide:1120px;--prose:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101820;--surface:#18222C;--surface-2:#212D38;--ink:#ECEFF2;--muted:#A3ADB7;--line:#2C3844;
+    --accent:#FE5000;--accent-text:#FF8A52;--accent-soft:#3A2015;
+    --good:#5CC48E;--good-soft:#173326;--warn:#E5B456;--warn-soft:#352A12;--bad:#F07A80;--bad-soft:#3A1C20;
+    --logo-bg:#F3F1EE;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101820;--surface:#18222C;--surface-2:#212D38;--ink:#ECEFF2;--muted:#A3ADB7;--line:#2C3844;
+  --accent:#FE5000;--accent-text:#FF8A52;--accent-soft:#3A2015;
+  --good:#5CC48E;--good-soft:#173326;--warn:#E5B456;--warn-soft:#352A12;--bad:#F07A80;--bad-soft:#3A1C20;
+  --logo-bg:#F3F1EE;color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:var(--accent-text);text-underline-offset:2px}
+a:hover{color:var(--ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:2px}
+h1,h2,h3{text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:800}
+h2{font-size:clamp(23px,3vw,30px);font-weight:700}
+h3{font-size:18px;font-weight:700}
+p{margin:0}
+code{font-family:var(--mono);font-size:.88em}
+.num,table{font-variant-numeric:tabular-nums}
+.wrap{max-width:var(--wide);margin-inline:auto}
+.prose{max-width:var(--prose)}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.eyebrow{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.small{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.hyp{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.tag.ok,.tag.std{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.tag.td{color:var(--accent-text);border-color:var(--accent-text);background:var(--accent-soft)}
+.tag.ce{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.tag.ee{color:var(--ink);background:var(--surface-2);border-color:var(--surface-2)}
+.tag.goal{color:var(--accent-text);border-style:dashed;border-color:var(--accent-text)}
+.sitenav{max-width:var(--wide);margin-inline:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;border-bottom:1px solid var(--line)}
+.sitenav .logo{display:inline-flex;align-items:center;background:var(--logo-bg);border-radius:8px;padding:4px 8px}
+.sitenav .logo img{height:30px;width:auto;display:block}
+.sitelinks{display:flex;flex-wrap:wrap;gap:4px}
+.sitelinks a{text-decoration:none;color:var(--muted);font-size:14px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid transparent}
+.sitelinks a:hover{color:var(--ink);background:var(--surface)}
+.sitelinks a[aria-current="page"]{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.masthead{padding-block:28px 32px;display:flex;flex-direction:column;gap:20px;border-bottom:1px solid var(--line)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:14px;color:var(--muted)}
+.verdict{border-left:4px solid var(--accent);background:var(--surface);padding:16px 20px;border-radius:0 8px 8px 0;max-width:var(--prose)}
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.nav-inner{max-width:var(--wide);margin-inline:auto;display:flex;gap:4px;overflow-x:auto;padding:8px 0}
+.nav a{flex:0 0 auto;text-decoration:none;color:var(--muted);font-size:14px;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid transparent}
+.nav a.on,.nav a:hover{color:var(--ink);background:var(--surface)}
+section{max-width:var(--wide);margin-inline:auto;padding-block:36px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:16px;scroll-margin-top:64px}
+.scroll{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--surface);font-weight:700}
+td.r,th.r{text-align:right}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.btn{font:inherit;font-weight:600;font-size:14px;padding:8px 14px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.dec{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;padding-block:12px;border-bottom:1px solid var(--line)}
+.dec .opts{display:flex;flex-wrap:wrap;gap:8px 16px}
+.dec .note{width:100%;max-width:60ch;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.dec.closed{opacity:1}
+textarea[readonly]{width:100%;min-height:120px;font-family:var(--mono);background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
+</style>
+<header class="sitenav">
+  <a class="logo" href="index.html"><img src="{{LOGO_DATA_URI}}" alt="ToDo" width="77" height="30"></a>
+  <nav class="sitelinks" aria-label="Сторінки набору"><a href="index.html" aria-current="page">Концепція</a><a href="competitors.html">Конкуренти</a><a href="rejected.html">Що відкинули</a></nav>
+</header>
+<div class="wrap"><div class="masthead"><span class="eyebrow">Концепція для власника продукту</span><h1>{{Назва пакета}}</h1>
+<div class="meta"><span>{{дата}}</span><span class="tag hyp">{{статус}}</span></div>
+<div class="verdict"><p>{{Висновок і чесний вердикт про гроші}}</p></div></div></div>
+<div class="nav"><div class="nav-inner"><a href="#verdict">Вердикт і гроші</a><a href="#pain">Для кого і який біль</a><a href="#scenario">Наскрізний сценарій</a><a href="#day">День з життя ролей</a><a href="#screens">Екрани MVP</a><a href="#current">Порівняння з поточним зрізом</a><a href="#competitors">Конкуренти</a><a href="#not-doing">Що свідомо не робимо</a><a href="#signals">Внутрішні сигнали ToDo</a><a href="#money">Гроші</a><a href="#box">Коробка</a><a href="#sales">Продаж</a><a href="#returned">Повернуто</a><a href="#risks">Головні ризики і що з ними робити</a><a href="#completeness">Повнота концепції</a><a href="#decisions">Рішення власника</a><a href="#chain">Ланцюг</a><a href="#evidence">Докази</a><a href="#limits">Обмеження й план перевірки</a><a href="#sources">Джерела (шляхи в репо)</a></div></div>
+<main>
+<section id="verdict">
+  <span class="eyebrow">Висновок</span>
+  <h2>Вердикт і гроші</h2>
+  <p class="prose">{{Вердикт одним абзацом: чи варто, за яких умов; окупність і чутливість до N (числа з facts.yaml)}}</p>
+</section>
+<section id="pain">
+  <span class="eyebrow">Біль</span>
+  <h2>Для кого і який біль</h2>
+  <p class="prose">{{Підсегменти з оцінками болю/доказів, ринок за смугами, дослівні цитати з джерелами того самого підсегмента}}</p>
+</section>
+<section id="scenario">
+  <span class="eyebrow">Сценарій</span>
+  <h2>Наскрізний сценарій</h2>
+  <p class="prose">{{Кроки: хто, що в системі, що змінюється; варіанти сценарію}}</p>
+  <div class="scroll" tabindex="0" aria-label="Сценарій"><table style="min-width:640px"><thead><tr><th>Крок</th><th>Хто</th><th>Що в системі</th><th>Що змінюється</th></tr></thead><tbody><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr></tbody></table></div>
+</section>
+<section id="day">
+  <span class="eyebrow">Ролі</span>
+  <h2>День з життя ролей</h2>
+  <div class="grid2"><div class="card"><b>Зараз</b><p class="small">{{…}}</p></div><div class="card"><b>З пакетом</b><p class="small">{{…}}</p></div></div>
+</section>
+<section id="screens">
+  <span class="eyebrow">Екрани</span>
+  <h2>Екрани MVP</h2>
+  <p class="prose">{{Екрани із позначкою основи: <span class="tag std">Стд CE</span> <span class="tag ee">Стд EE</span> <span class="tag td">td_</span>; частка покриття стандартом}}</p>
+  <div class="scroll" tabindex="0" aria-label="Екрани"><table style="min-width:640px"><thead><tr><th>Екран</th><th>Основа</th><th>Функція (ID)</th><th>Доказ</th></tr></thead><tbody><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr></tbody></table></div>
+</section>
+<section id="current">
+  <span class="eyebrow">Порівняння</span>
+  <h2>Порівняння з поточним зрізом</h2>
+  <p class="prose">{{Показувати лише якщо зріз A-21 уже існує; перелік — з PLAN.md та screens/, а не зі скрінів на сторінці}}</p>
+</section>
+<section id="competitors">
+  <span class="eyebrow">Конкуренти</span>
+  <h2>Конкуренти</h2>
+  <p class="prose">{{Коротко + посилання на <a href="competitors.html">сторінку конкурентів</a>}}</p>
+</section>
+<section id="not-doing">
+  <span class="eyebrow">Межі</span>
+  <h2>Що свідомо не робимо</h2>
+  <p class="prose">{{Зведення по групах; повний реєстр — <a href="rejected.html">Що відкинули</a>}}</p>
+</section>
+<section id="signals">
+  <span class="eyebrow">Сигнали</span>
+  <h2>Внутрішні сигнали ToDo (лише знеособлені агрегати)</h2>
+  <p class="prose">{{Висновки групи 1 каталогу джерел (needs-sources-catalog.md): скільки проєктів/звернень/угод, які теми повторюються; лише агрегати без назв клієнтів, ПІБ, контактів і сум; рядки SRC-NNN; дата й межі вибірки}}</p>
+</section>
+<section id="money">
+  <span class="eyebrow">Гроші</span>
+  <h2>Гроші: коробка, TCO, окупність</h2>
+  <p class="prose">{{Діаграми до масштабу; явні припущення; чутливість до N}}</p>
+</section>
+<section id="box">
+  <span class="eyebrow">Коробка</span>
+  <h2>Коробка: що входить у продукт</h2>
+  <p class="prose">{{Склад коробки, тарифи, що в базовій і що в доплаті; джерело — <code>research/BOX.md</code>; числа з facts.yaml}}</p>
+</section>
+<section id="sales">
+  <span class="eyebrow">Продаж</span>
+  <h2>Продаж: як це продаємо</h2>
+  <p class="prose">{{Покупець, канал, аргументи, заперечення; джерело — <code>research/SALES.md</code>}}</p>
+</section>
+<section id="returned">
+  <span class="eyebrow">Повернуто</span>
+  <h2>Повернуто рішенням власника</h2>
+  <p class="prose">{{Позиції з групи 4а реєстру відкинутого (<code>research/REJECTED.md</code> §4а, позначка <code>owner-decision</code>), доказовість не підвищується; ризик «немає доказу попиту» і що перевірити. Повний реєстр — <a href="rejected.html">Що відкинули</a>}}</p>
+</section>
+<section id="risks">
+  <span class="eyebrow">Ризики</span>
+  <h2>Головні ризики і що з ними робити</h2>
+  <div class="scroll" tabindex="0" aria-label="Ризики"><table style="min-width:640px"><thead><tr><th>Ризик</th><th>Вплив</th><th>Що робити</th></tr></thead><tbody><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr><tr><td>{{…}}</td><td>{{…}}</td><td>{{…}}</td></tr></tbody></table></div>
+</section>
+<section id="completeness">
+  <span class="eyebrow">Повнота</span>
+  <h2>Повнота концепції</h2>
+  <p class="prose">{{Закрито / частково / відкрито (COMPLETENESS.md); що відкрито й хто закриває}}</p>
+</section>
+<section id="decisions">
+  <span class="eyebrow">Рішення</span>
+  <h2>Рішення власника</h2>
+  <div class="verdict"><p>{{Статус рішень на дату; джерело статусу — flow/decisions.md}}</p></div>
+  <p class="small prose">Позначки зберігаються лише у вашому браузері як особиста чернетка. Ніхто інший їх не бачить; рішенням стає лише запис у <code>flow/decisions.md</code>.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" id="copyBtn" type="button">Скопіювати мої відповіді</button>
+    <button class="btn ghost" id="clearBtn" type="button">Очистити</button>
+  </div>
+  <p id="copyMsg" class="small" role="status" aria-live="polite"></p>
+  <textarea id="copyOut" readonly hidden aria-label="Текст відповідей для копіювання"></textarea>
+  <div id="decList"></div>
+  <noscript><p class="small">Для вибору варіантів потрібен JavaScript. Список рішень: {{перелік у тексті}}</p></noscript>
+</section>
+<section id="chain">
+  <span class="eyebrow">Ланцюг</span>
+  <h2>Ланцюг: від болю до екрана</h2>
+  <p class="prose">{{Трасування <code>ROLE → PAIN → F → S → SC</code> (ID з <code>concept/*</code>); непокрите — окремим рядком; результат автоперевірки трасування}}</p>
+</section>
+<section id="evidence">
+  <span class="eyebrow">Докази</span>
+  <h2>Докази: рівень і джерела тез</h2>
+  <p class="prose">{{Таблиця «теза → рівень доказу → рядок <code>SRC-NNN</code> журналу джерел»; частка <code>[не перевірено]</code>; що тримається лише на гіпотезі}}</p>
+</section>
+<section id="limits">
+  <span class="eyebrow">Обмеження</span>
+  <h2>Обмеження й план перевірки</h2>
+  <p class="prose">{{Що не перевірено, як і коли перевіряємо (A-06, A-23, тріали, юрист)}}</p>
+</section>
+<section id="sources">
+  <span class="eyebrow">Джерела</span>
+  <h2>Джерела (шляхи в репо)</h2>
+  <p class="prose">{{research/sources-log.md; кожна теза — з посиланням на рядок дослідження}}</p>
+</section>
+</main>
+<footer class="small">{{ToDo; дата; джерело даних і дата знімка}}</footer>
+<script>
+(function(){
+  /* Блок рішень: DEC заповнює скіл (concept-presentation). st: "done" | "open". */
+  var DEC=[ /* {"n":1,"q":"{{питання}}","st":"open","gate":"{{гейт/крок, напр. A-20}}","scope":"{{scope: код галузі}}","ctx":"{{контекст}}","opts":["{{варіант А}}","{{варіант Б}}"],"rec":"{{Рекомендація AI: варіант і причина}}","def":"{{що діє, якщо власник не відповів}}","cons":"{{наслідок вибору}}"}; закрите: {"n":2,"q":"…","st":"done","gate":"…","scope":"…","dec":"{{рішення, дата}}","hist":"{{рекомендація AI до рішення}}"} */ ];
+  var KEY="{{код}}-owner-decisions-v1";
+  var state={};
+  try{var raw=localStorage.getItem(KEY);if(raw){state=JSON.parse(raw)||{};}}catch(e){state={};}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+  var list=document.getElementById("decList");
+  function render(){
+    var html="";
+    DEC.forEach(function(d){
+      var n=d.n;
+      if(d.st==="done"){html+='<div class="dec closed"><span class="num">'+esc(n)+'</span><div class="stack"><div><b>'+esc(d.q)+'</b> <span class="tag ok">вирішено</span></div><p class="small">'+esc(d.dec||"")+'</p>'+(d.hist?'<p class="small"><b>Історія: рекомендація AI до рішення.</b> '+esc(d.hist)+'</p>':'')+'</div></div>';return;}
+      var opts="";
+      (d.opts||[]).forEach(function(o,j){var id="d"+n+"o"+j;opts+='<span><input type="radio" name="d'+n+'" id="'+id+'" value="'+j+'"> <label for="'+id+'">'+esc(o)+'</label></span>';});
+      html+='<div class="dec"><span class="num">'+esc(n)+'</span><div class="stack"><b>'+esc(d.q)+'</b><p class="small">'+esc(d.ctx||"")+'</p>'+(d.rec?'<p class="small"><b>Рекомендація AI (відкрите рішення).</b> '+esc(d.rec)+'</p>':'')+(d.def?'<p class="small"><b>Замовчування, якщо не відповісте.</b> '+esc(d.def)+'</p>':'')+(d.cons?'<p class="small"><b>Наслідок.</b> '+esc(d.cons)+'</p>':'')+'<div class="opts" role="radiogroup">'+opts+'</div><textarea class="note" id="note'+n+'" rows="2" aria-label="Нотатка до рішення '+esc(n)+'"></textarea></div></div>';
+    });
+    list.innerHTML=html;
+    DEC.forEach(function(d){
+      if(d.st==="done")return;
+      var s=state["d"+d.n]||{};
+      if(s.o!==undefined&&s.o!==null){var el=document.getElementById("d"+d.n+"o"+s.o);if(el)el.checked=true;}
+      if(s.t){document.getElementById("note"+d.n).value=s.t;}
+    });
+  }
+  render();
+  list.addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){var n=t.name.slice(1);state["d"+n]=state["d"+n]||{};state["d"+n].o=+t.value;save();}});
+  list.addEventListener("input",function(e){var t=e.target;if(t.classList.contains("note")){var n=t.id.slice(4);state["d"+n]=state["d"+n]||{};state["d"+n].t=t.value;save();}});
+  /* Формат відповідей — рядки для flow/decisions.md (колонки: flow-core/references/flow-state.md §3). */
+  function oneLine(t){return String(t||"").replace(/[\r\n|]+/g," ").trim();}
+  function buildText(){
+    var out=["Рішення власника: {{назва пакета}}, {{дата}}. Рядки: гейт/крок | scope | варіант, обраний власником (значення рішення) | коментар (≤200 символів). Це чернетка 4 з 9 колонок flow/decisions.md: №, дату, роль автора і задачу дописує flow-state-keeper у режимі decisions-batch, з посиланням на це повідомлення; колонки — flow-core/references/flow-state.md §3."];
+    DEC.forEach(function(d){
+      if(d.st==="done")return;
+      var s=state["d"+d.n]||{};
+      var choice=(s.o!==undefined&&s.o!==null)?d.opts[s.o]:"не вирішено";
+      var com=("№"+d.n+" "+oneLine(d.q)+(s.t?"; "+oneLine(s.t):"")).slice(0,200);
+      out.push([oneLine(d.gate)||"{{гейт}}",oneLine(d.scope)||"{{scope}}",oneLine(choice),com].join(" | "));
+    });
+    return out.join("\n");
+  }
+  var msg=document.getElementById("copyMsg"),outEl=document.getElementById("copyOut");
+  function fallback(text){outEl.hidden=false;outEl.value=text;outEl.focus();outEl.select();msg.textContent="Автоматичне копіювання недоступне. Текст виділено: Ctrl+C або Cmd+C.";}
+  document.getElementById("copyBtn").addEventListener("click",function(){
+    var text=buildText();
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){outEl.hidden=true;msg.textContent="Скопійовано відкриті рішення.";},function(){fallback(text);});}
+    else{fallback(text);}
+  });
+  document.getElementById("clearBtn").addEventListener("click",function(){
+    state={};save();
+    list.querySelectorAll("input[type=radio]").forEach(function(r){r.checked=false;});
+    list.querySelectorAll(".note").forEach(function(r){r.value="";});
+    outEl.hidden=true;msg.textContent="Позначки очищено.";
+  });
+  var links=[].slice.call(document.querySelectorAll(".nav a"));
+  var secs=links.map(function(a){return document.getElementById(a.getAttribute("href").slice(1));});
+  function onScroll(){var y=window.scrollY+90,cur=-1;secs.forEach(function(s,i){if(s&&s.offsetTop<=y)cur=i;});links.forEach(function(a,i){a.classList.toggle("on",i===cur);});}
+  window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+})();
+</script>
+<!-- звідки: flow/A-03b-deep @008541f, docs/industries/mebli/research/owner-page/index.html. Каркас: плейсхолдери {{…}}; зміст еталона не переноситься. Контракт — references/PAGE-CONTRACT.md. -->

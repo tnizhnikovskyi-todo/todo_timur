@@ -350,6 +350,30 @@ def run_checks(doc, sources, repos, scope_files="", base="", head="", stdin_name
     m = re.search(r"N\s*=\s*(\d+)", secs.get(SECTIONS[5], ""))
     add("PP-count", bool(m) and int(m.group(1)) == yes, f"у таблиці {yes}, у розділі {m.group(1) if m else 'немає N'}")
 
+    # PP-internal: розділ «Внутрішні сигнали ToDo» (К-07) необов'язковий; якщо є - кожен рядок має клас, вибірку й критерій
+    isec = secs.get("Внутрішні сигнали ToDo")
+    ibad = []
+    if isec is not None and (rows(isec) or "немає даних" not in isec.lower()):
+        # «немає даних» вимикає перевірку лише коли в розділі немає рядків таблиці
+        irows = rows(isec)
+        hl = next((l for l in isec.splitlines() if l.startswith("|")), "")
+        hdr = [c.lower() for c in cells(hl)] if hl else []
+        ic = {k: next((n for n, h in enumerate(hdr) if k in h), None) for k in ("клас", "вибірк")}
+        # «критері» - серед колонок, відмінних від знайденої для «вибірк» (заголовок «Вибірка (N, критерій)» не рахується)
+        ic["критері"] = next((n for n, h in enumerate(hdr) if "критері" in h and n != ic["вибірк"]), None)
+        if None in ic.values():
+            ibad.append("немає колонок «Клас», «Вибірка», «Критерій»")
+        else:
+            for r in irows:
+                if len(r) <= max(ic.values()) or r[ic["клас"]] != "internal-aggregated" or not r[ic["вибірк"]] or not r[ic["критері"]]:
+                    ibad.append(r[0][:40] if r else "?")
+    add("PP-internal", not ibad, "розділ «Внутрішні сигнали ToDo»: " + "; ".join(ibad[:5]))
+
+    # PP-rejected: реєстр відкинутого (flow-core/references/rejected-register.md); повну перевірку формату дає check_rejected.py
+    rsec = secs.get("Відкинуто")
+    rok = rsec is not None and (bool(re.search(r"нічого не відкинуто", rsec)) or bool(re.search(r"\|\s*ID\s*\|", rsec)))
+    add("PP-rejected", rok, "немає розділу «## Відкинуто» з таблицею реєстру (ID...) або рядка «нічого не відкинуто»")
+
     hits = pii_hits(text, deny, Path(doc).name)
     add("PP-pii", not hits, "збіги (значення не виводяться): " + ", ".join(hits[:8]))
 
@@ -410,6 +434,21 @@ def self_test():
         doc.write_text(tpl.replace("abc1234", sha) + "\nВигаданий Клієнт А скаржився.\n", encoding="utf-8")
         if all(o["status"] == "PASS" for o in run() if o["id"] == "PP-pii"):
             errs.append("PP-pii має ловити назву клієнта")
+        # реєстр відкинутого й внутрішні сигнали (К-07)
+        base_t = tpl.replace("abc1234", sha)
+        doc.write_text(base_t.split("## Відкинуто")[0], encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-rejected"][0]["status"] != "FAIL":
+            errs.append("PP-rejected має ловити відсутній розділ «Відкинуто»")
+        doc.write_text(base_t.replace("internal-aggregated", "internal-raw"), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-internal"][0]["status"] != "FAIL":
+            errs.append("PP-internal має ловити клас, що не internal-aggregated")
+        # порожній «Критерій відбору» і «немає даних» поруч із рядками таблиці не мають вимикати перевірку
+        doc.write_text(re.sub(r"(\| internal-aggregated \| [^|]*\|)[^|]*\|", r"\1 |", base_t, count=1) + "\n", encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-internal"][0]["status"] != "FAIL":
+            errs.append("PP-internal має ловити порожній «Критерій відбору»")
+        doc.write_text(base_t.replace("internal-aggregated", "internal-raw").replace("## Внутрішні сигнали ToDo", "## Внутрішні сигнали ToDo\n\nнемає даних (обхід)\n", 1), encoding="utf-8")
+        if [o for o in run() if o["id"] == "PP-internal"][0]["status"] != "FAIL":
+            errs.append("«немає даних» не має вимикати PP-internal за наявності рядків таблиці")
         doc.write_text(tpl.replace("abc1234", sha), encoding="utf-8")
         (d / "docs/industries/test/stray.md").write_text("x")
         if [o for o in run() if o["id"] == "PP-scope"][0]["status"] != "FAIL":

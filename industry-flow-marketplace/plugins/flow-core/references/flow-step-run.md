@@ -20,6 +20,8 @@
 ## 3. Підкрок людини (`task.kind = human_substep`) для `result: waiting_human`
 Створюється оркестратором у відповідь на `waiting_human` (`report-format.md`): `parent_id` = наряд, назва `Дія людини <код> · <що>`, `description` = `waiting_for.what` + інструкція, `user_id` = роль з `waiting_for.role`. Закриття (стадія `stage.done`) -> оркестратор створює наряд того самого кроку з `attempt` без збільшення, `params.resume` = `waiting_for.resume`.
 
+Приклади: A-02b (власник заповнює `OWNER-INTAKE.md`, ≤20 хв), A-03b K1 (відповіді на `K1-Q*`, кандидати на відкидання показані до синтезу), A-03c `session` (сесія з власником; матеріал готує AI-наряд `session`), зразок кроків із `params.sample: true` за карткою (A-03b, A-20c, A-21, A-21c). Для A-21c виконавець кроку — Контент-менеджер (`executor: any`, `step-cards.md`, «Ролі»).
+
 ## 4. Задача ролі (`task.kind = role_task`)
 Для кроків, де `executor: human` без AI (A-02, A-07, A-17, D-05, C-05, C-08, B-08b, B-08d, B-12): наряд з YAML (`executor: human`, `inputs`, `done`, `human_sla`), без `skill_ref`; виконавець — людина за RACI. Задача сама є гейтом (кнопки з §2). Підготовку матеріалів (напр. чернетку рішення) створює окремий наряд AI-кроку, який є входом.
 

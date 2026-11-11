@@ -1,0 +1,32 @@
+{
+ "id": "A-20b",
+ "code": "A-20b",
+ "title": "Аудит повноти",
+ "executor": "any",
+ "skillRef": "flow-research:completeness-audit",
+ "access_profile": "base",
+ "raciR": "BA (R); Архітектор (C)",
+ "preconditions": "A-20 done",
+ "inArtifacts": "concept/*; research/*.md; OWNER-INTAKE.md",
+ "inputs": "OWNER-INTAKE.md",
+ "outputs": "research/COMPLETENESS.md",
+ "where": "research/COMPLETENESS.md",
+ "gate": "ні",
+ "params": {
+  "sample": false
+ },
+ "review": {
+  "checklists": [
+   "completeness.md"
+  ],
+  "max_rounds": 2
+ },
+ "model": "opus",
+ "hours": 3,
+ "costLimit": 12,
+ "maturity": "1",
+ "per": "package",
+ "maxAttempts": 3,
+ "status": "draft",
+ "notes": "мінікартка фікстури за step-cards.md"
+}

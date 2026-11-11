@@ -1,0 +1,4 @@
+{"schema_version":1,"taken":"2026-11-11T10:00:00Z","repo_sha":"abc1234","package":{"industry":"mebli"},
+ "lessons":[{"lsn":"LSN-001","date":"2026-11-11","step":"A-20c","summary":"Сторінка для власника віддана як md, а не як HTML-сторінка","skill":"flow-research:concept-presentation","skill_version":"0.1.0","severity":"висока","class":"текст скіла + автоперевірка","status":"відкрито","evidence":["observations/2026-11-11-concept-presentation-md-not-page.md"],"fix_ref":null,"eval_ref":"mebli-r11-md-not-page"}],
+ "steps":[],"clients":[],"decisions":[],"runs":[{"step":"A-20c","scope":"industry/mebli","attempt":1,"result":"returned","finished":"2026-11-11T09:00:00Z","skill_versions":{"flow-research:concept-presentation":"0.1.0"},"usage":{"cost_usd":1.2},"task":"odoo:task/101","review_rounds":2,"human_rounds":3}],
+ "open_questions":[],"ai_stop":[]}

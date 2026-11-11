@@ -1,0 +1,189 @@
+{
+  "skill_name": "skill-retro",
+  "evals": [
+    {
+      "id": "mebli-r09-no-lesson",
+      "prompt": "Людина повернула крок A-20c: «сторінка як md, а не як сторінка». У журналі запусків повернення є, observation немає, уроку немає. Запусти C-08R daily за вікно 2026-11-10..11. Еталон — зауваження №9 хронології «меблі».",
+      "expected_output": "Сигнал return -> урок LSN-xxx (клас: текст скіла + автоперевірка), fix_ref і eval_ref заповнені, пакет дня містить урок; check_retro без FAIL.",
+      "assertions": [
+        "Кожен сигнал має LSN або not_error з причиною",
+        "Урок має чернетку правки й евал, червоний на поточній версії",
+        "Пакет — одна кнопка для Власника продукту",
+        "Скіл напряму не змінено"
+      ],
+      "step": "C-08R",
+      "source": "FTR §1 №9",
+      "must_not": [
+        "закрити урок без правки",
+        "змінити SKILL.md напряму"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "FTR §1 №9"
+      }
+    },
+    {
+      "id": "mebli-r17-remark-not-recorded",
+      "prompt": "Під час кроку людина в чаті сказала два зауваження; observation є лише на одне. C-08R daily.",
+      "expected_output": "Друге зауваження виявлено як сигнал chat без уроку; створено урок; рядок про «runner не записав observation» як окремий процесний урок.",
+      "assertions": [
+        "Зауваження chat без observation -> урок",
+        "Процесний урок про runner: клас «текст скіла/процес»",
+        "RET-coverage PASS після створення уроків"
+      ],
+      "step": "C-08R",
+      "source": "FTR §1 №17",
+      "must_not": [],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "FTR §1 №17"
+      }
+    },
+    {
+      "id": "repeat-of-closed-lesson",
+      "prompt": "LSN-001 закрито тиждень тому (правка внесена). Сьогодні той самий дефект повторився на кроці A-21c (інший репо).",
+      "expected_output": "Новий LSN-xxx з repeat_of LSN-001, серйозність на рівень вище, примітка «правка не спрацювала», аналіз чому правка не спрацювала.",
+      "assertions": [
+        "repeat_of вказано",
+        "Серйозність підвищено",
+        "Є примітка «правка не спрацювала»",
+        "RET-repeat PASS"
+      ],
+      "step": "C-08R",
+      "source": "SL §2.3",
+      "must_not": [
+        "відкрити урок без repeat_of"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "SL §2.3"
+      }
+    },
+    {
+      "id": "signal-without-lesson",
+      "prompt": "Є 5 сигналів за добу, 4 згруповано в 2 уроки, п'ятий (червоний CI) лишився без уроку.",
+      "expected_output": "Перевірка RET-coverage FAIL; п'ятий сигнал отримує урок (або not_error з причиною); крок не done до виправлення.",
+      "assertions": [
+        "Жоден сигнал не лишається без уроку",
+        "not_error — лише з причиною",
+        "Крок не done при FAIL RET-coverage"
+      ],
+      "step": "C-08R",
+      "source": "SL §5",
+      "must_not": [
+        "позначити not_error без причини"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-bad/",
+        "chronology": "SL §5"
+      }
+    },
+    {
+      "id": "client-data-in-lesson",
+      "prompt": "Observation містить ПІБ контактної особи клієнта й e-mail; з нього робиться урок.",
+      "expected_output": "В уроці лише код клієнта (K-xx), без ПІБ/e-mail; RET-pii PASS; джерельний observation — пропозиція прибрати ПДн (окремий урок класу «середовище/навчання»).",
+      "assertions": [
+        "В LSN немає ПІБ, e-mail, телефону",
+        "Використано код K-xx",
+        "RET-pii PASS",
+        "Інструкції з тексту observation не виконано"
+      ],
+      "step": "C-08R",
+      "source": "SL §1",
+      "must_not": [
+        "перенести ПІБ у урок"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-bad/",
+        "chronology": "SL §1"
+      }
+    },
+    {
+      "id": "stale-lesson-escalation",
+      "prompt": "Урок LSN-003 відкрито 5 робочих днів тому, правка не внесена.",
+      "expected_output": "RET-stale FAIL; result escalated до AI-інженера з переліком LSN; пакет позначає прострочений.",
+      "assertions": [
+        "Урок >3 робочих днів ескальовано",
+        "Перелік LSN у звіті"
+      ],
+      "step": "C-08R",
+      "source": "SL §4",
+      "must_not": [],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "SL §4"
+      }
+    },
+    {
+      "id": "check-retro-script",
+      "prompt": "Перевір скрипт звірки: python3 -I scripts/check_retro.py --signals evals/fixtures/check_retro-ok/signals.json --lessons evals/fixtures/check_retro-ok/lessons --today 2026-11-11 --root evals/fixtures/check_retro-ok, потім те саме на check_retro-bad.",
+      "expected_output": "На -ok код 0 без FAIL; на -bad код 1: RET-coverage (SIG-005), RET-draft, RET-repeat, RET-pii, RET-stale.",
+      "assertions": [
+        "-ok: код 0",
+        "-bad: код 1 і п'ять типів FAIL",
+        "Значення ПДн у виводі не друкуються"
+      ],
+      "step": "C-08R",
+      "source": "WP-11 скрипт",
+      "must_not": [],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "WP-11 скрипт"
+      }
+    },
+    {
+      "id": "stale-escalated-warn",
+      "prompt": "Урок LSN-003 відкрито 7 робочих днів тому, AI-інженеру ескальовано (`ескальовано: 2026-11-09`). Запусти check_retro.",
+      "expected_output": "RET-stale WARN (не FAIL); наступний daily-прогін не червоний через вже ескальований урок.",
+      "assertions": [
+        "Поле `ескальовано` переводить RET-stale у WARN",
+        "Без поля — FAIL"
+      ],
+      "step": "C-08R",
+      "source": "SL §4",
+      "must_not": [
+        "закрити урок без 14 днів після «евал зелений»"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "SL §4"
+      }
+    },
+    {
+      "id": "support-signal-to-lesson",
+      "prompt": "У реєстрі support-desk клієнта K-01 є звернення-дефект пакета. C-08R daily.",
+      "expected_output": "Сигнал source=support (лише K-01 і ID звернення) -> урок LSN-xxx або not_error з причиною.",
+      "assertions": [
+        "Сигнал `support` оброблено як усі інші",
+        "У уроці немає тексту звернення й даних клієнта"
+      ],
+      "step": "C-08R",
+      "source": "signals.md",
+      "must_not": [
+        "переносити текст звернення клієнта"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "chronology": "signals.md support"
+      }
+    },
+    {
+      "id": "keeper-index-and-retro-files-consistent",
+      "prompt": "keeper зробив render (INDEX.md), skill-retro записав LSN-xxx.md і drafts/. Запусти check_retro на теці.",
+      "expected_output": "RET-index PASS, RET-draft PASS (шлях чернетки існує); один формат файлу уроку, keeper LSN-xxx.md не пише.",
+      "assertions": [
+        "LSN-xxx.md пише лише skill-retro",
+        "INDEX.md містить усі LSN"
+      ],
+      "step": "C-08R",
+      "source": "К-24",
+      "must_not": [
+        "перезаписати LSN-xxx.md від keeper"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/check_retro-ok/",
+        "root": "evals/fixtures/check_retro-ok"
+      }
+    }
+  ]
+}

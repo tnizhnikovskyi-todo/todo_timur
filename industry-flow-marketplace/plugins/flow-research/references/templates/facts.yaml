@@ -1,0 +1,24 @@
+# facts.yaml — єдине джерело чисел для research/*.md, concept/*, owner-page/*.html, prototype-real/facts.json.
+# звідки: нове (FTR 2.4); перевіряє check_facts.py (FACT-mismatch, FACT-orphan): число в тексті = значення тут.
+meta:
+  industry: "{{код}}"
+  updated: "{{YYYY-MM-DD}}"
+market:
+  snapshot_date: "{{YYYY-MM-DD}}"      # дата знімка odb-catalog — з опису MCP або inputs наряду
+  source: "odb-catalog"
+  bands:                               # смуги чисельності
+    - {id: "m-01", label: "{{10–49}}", companies: null, revenue_uah: null, growth_pct: null}
+hours:
+  rate_uah_per_hour: null              # ставка розробки (припущення — рішення власника)
+  mvp_hours: {low: null, high: null}
+  bridges_hours: {low: null, high: null}   # від вердиктів edition-claims.md
+pricing:
+  currency: "UAH"
+  fx: {rate: null, date: "{{YYYY-MM-DD}}", source: "{{НБУ}}"}
+  ce_entry: null
+  ee_upgrade: null
+  competitors: []                      # [{id, price, unit, conditions, source_id: SRC-NNN}]
+payback:
+  n_customers_sensitivity: [1, 3, 5, 10]
+  breakeven_months: null
+sources: []                            # ID `SRC-NNN` рядків research/sources-log.md

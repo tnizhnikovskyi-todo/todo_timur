@@ -6,12 +6,18 @@
    "id": "mailing-list-exists",
    "when": "mode:список",
    "prim": "manual",
-   "args": {"text": "непорожній mailing-list.csv у where наряду (docs/industries/<галузь>/demand/)", "who": "runner"}
+   "args": {
+    "text": "непорожній mailing-list.csv у where наряду (docs/industries/<галузь>/demand/)",
+    "who": "runner"
+   }
   },
   {
    "id": "params-mode-set",
    "prim": "manual",
-   "args": {"text": "params.mode наряду задано (список|адреси|prep|results); без нього перевірки з when дають SKIP", "who": "runner"}
+   "args": {
+    "text": "params.mode наряду задано (список|адреси|prep|results); без нього перевірки з when дають SKIP",
+    "who": "runner"
+   }
   },
   {
    "id": "dt-structure",
@@ -75,6 +81,40 @@
     "text": "пороги не змінені після старту; сигнали Р3–Р5 пораховані окремо від кліків; карта інтересу прив'язана до F-xx A-20",
     "who": "Власник продукту"
    }
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/demand/thresholds.md --intake docs/industries/<галузь>/OWNER-INTAKE.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Відкинуті варіанти цінності/сегменти — розділ «## Відкинуто» в demand/thresholds.md. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "docs/industries/<галузь>/demand/thresholds.md",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:prep|results"
+  },
+  {
+   "id": "script-check-facts",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py docs/industries/<галузь>/research/facts.yaml docs/industries/<галузь>/demand/landing.md docs/industries/<галузь>/demand/thresholds.md: FACT-mismatch, FACT-orphan без FAIL. Числа позначаються маркером <!--fact:ключ--> (docstring скрипта); FACT-orphan WARN не блокує. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py",
+     "docs/industries/<галузь>/research/facts.yaml",
+     "docs/industries/<галузь>/demand/landing.md",
+     "docs/industries/<галузь>/demand/thresholds.md"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:prep|results"
   }
  ]
 }

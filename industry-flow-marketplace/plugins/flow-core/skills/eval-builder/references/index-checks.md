@@ -10,7 +10,7 @@
 | id | Режими | Перевірка |
 |---|---|---|
 | `skills-covered` | усі | множина скілів флоу (крок 1) входить у рядки INDEX; кожен зі статусом з `index-format.md` |
-| `source-filled` | усі | «Джерело евала» непорожнє, формат `failureMode картки <код>` / `observation <файл>` / `incident <id>`; код `^[ABCD]-\d{2}[a-z]?$` |
+| `source-filled` | усі | «Джерело евала» непорожнє, формат `failureMode картки <код>` / `observation <файл>` / `incident <id>` / `chronology <галузь> №<n>` / `lesson LSN-xxx`; код `^[ABCD]-\d{2}[a-z]?$` |
 | `gates-covered` | init і далі | 5 гейтових скілів мають >=1 кейс із `source` failureMode A-14/B-05/B-04 |
 | `obs-closed` | weekly | кожне `open` спостереження тижня має кейс або причину в таблиці 3 |
 | `escalations-covered` | weekly | кожен крок зі статистики C-02 за порогом має рядок у таблиці 4; статистики немає — SKIP з причиною («статистика відсутня») |

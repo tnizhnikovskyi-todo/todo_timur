@@ -1,0 +1,141 @@
+{
+  "skill_name": "reuse-modules",
+  "evals": [
+    {
+      "id": "mebli-r20-no-reuse-block",
+      "prompt": "Наряд A-03c, mode inventory, галузь mebli. OWNER-INTAKE.md: reuse.repos = [todo/example-addons], FUNCTIONAL-MAP має F-03, F-07, F-09. K1 закрито. Побудуй реєстр готових модулів.",
+      "expected_output": "research/reuse-inventory.md із розділами «Джерела», «Реєстр кандидатів» (REUSE-NN, 7 критеріїв), «Не знайдено / недоступно»; невідоме — «невідомо»; попередня оцінка — чернетка; рішення не ухвалено; профіль research-internal.",
+      "assertions": [
+        "Кожен кандидат має ID REUSE-NN і репо@sha",
+        "Версія Odoo береться з маніфесту, не здогадується",
+        "Рішення «беремо/адаптуємо/ні» не ухвалено",
+        "Є перелік переглянутих репо/модулів (повний перебір)"
+      ],
+      "input": "fixtures/check_reuse-ok/reuse-inventory.md",
+      "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli), FUNCTIONAL-MAP.md (немає блока готових модулів)",
+      "fixtures": "evals/fixtures/check_reuse-ok/reuse-inventory.md"
+    },
+    {
+      "id": "session-prepare",
+      "prompt": "Наряд A-03c, mode session; reuse-inventory.md готовий (3 кандидати).",
+      "expected_output": "research/reuse-session.md: таблиця кандидатів, ≤10 питань із рекомендацією й замовчуванням; result waiting_human з resume mode decide; питань, що закриває анкета, немає.",
+      "assertions": [
+        "result = waiting_human",
+        "≤10 питань, кожне з рекомендацією",
+        "resume.mode = decide",
+        "Сесію не проведено, рішення не вигадано"
+      ],
+      "input": "fixtures/check_reuse-ok/reuse-inventory.md",
+      "fixtures": "evals/fixtures/check_reuse-ok/reuse-inventory.md"
+    },
+    {
+      "id": "decide-valid",
+      "prompt": "Наряд A-03c, mode decide; власник відповів: REUSE-01 беремо, REUSE-02 адаптуємо, REUSE-03 ні (права невідомі). Посилання на повідомлення є.",
+      "expected_output": "REUSE.md проходить check_reuse (RU-* PASS); REUSE-03 у «Відкинуто» з REJ-001, умова повернення; години в «ні» — «—»; основа ToDo-готовий для REUSE-01/02.",
+      "assertions": [
+        "check_reuse без FAIL",
+        "REUSE-03 присутній у «Відкинуто»",
+        "Є посилання на рішення власника",
+        "FUNCTIONAL-MAP не змінено"
+      ],
+      "input": "fixtures/check_reuse-ok/REUSE.md",
+      "fixtures": "evals/fixtures/check_reuse-ok/REUSE.md"
+    },
+    {
+      "id": "decide-defects",
+      "prompt": "Перевір REUSE.md з дефектами: ID REUSE-1, основа OCA, невідома ліцензія при «беремо», «ні» з годинами, немає розділу «Відкинуто».",
+      "expected_output": "check_reuse дає FAIL за RU-file, RU-id, RU-verdict, RU-hours, RU-license, RU-rejected; скіл виправляє форму, але не змінює рішення власника.",
+      "assertions": [
+        "Усі шість перевірок FAIL",
+        "Рішення власника не змінено самостійно",
+        "Основа «OCA» замінена на «ідея з OCA, пишемо в td_»"
+      ],
+      "input": "fixtures/check_reuse-bad/REUSE.md",
+      "fixtures": "evals/fixtures/check_reuse-bad/REUSE.md"
+    },
+    {
+      "id": "agpl-and-unknown-rights",
+      "prompt": "Кандидат має ліцензію AGPL і невідомого автора; власник на сесії каже «беремо».",
+      "expected_output": "Скіл не пише «беремо»: запис «ні» до уточнення прав (К-09) з поясненням у memo й питанням до власника; ядро без AGPL.",
+      "assertions": [
+        "Рішення «беремо» не записано",
+        "Причина — права невідомі/AGPL",
+        "Питання винесено у «Відкриті питання»"
+      ],
+      "input": "fixtures/check_reuse-bad/REUSE.md",
+      "fixtures": "evals/fixtures/check_reuse-bad/REUSE.md"
+    },
+    {
+      "id": "empty-reuse-sources",
+      "prompt": "Наряд A-03c inventory; в OWNER-INTAKE.md reuse.repos і reuse.projects порожні.",
+      "expected_output": "result waiting_human: «вкажіть, де шукати готові модулі»; нічого не вигадано, файлів не створено.",
+      "assertions": [
+        "result = waiting_human",
+        "Репозиторії не вгадано",
+        "reuse-inventory.md не створено"
+      ],
+      "input": "fixtures/intake-ok (owner-questionnaire)",
+      "fixtures": "evals/fixtures/intake-ok"
+    },
+    {
+      "id": "inventory-where-is-inventory-file",
+      "prompt": "Наряд A-03c mode inventory, профіль research-internal, валідна анкета з reuse.repos. Виконай.",
+      "expected_output": "Записано лише research/reuse-inventory.md (+ sources-log.md); REUSE.md не створюється; автоперевірка: check_reuse.py reuse-inventory.md --mode inventory = PASS; reuse-exists для REUSE.md не вимагається.",
+      "assertions": [
+        "where = reuse-inventory.md",
+        "REUSE.md відсутній після inventory",
+        "запущено check_reuse.py --mode inventory"
+      ],
+      "must_not": [
+        "створювати REUSE.md у режимі inventory"
+      ],
+      "input": "fixtures/check_reuse-ok/reuse-inventory.md",
+      "fixtures": "evals/fixtures/check_reuse-ok/reuse-inventory.md"
+    },
+    {
+      "id": "decide-no-owner-decision",
+      "prompt": "Наряд A-03c mode decide: рішення власника є по REUSE-01 і REUSE-02, по REUSE-03 відповіді немає.",
+      "expected_output": "result waiting_human по REUSE-03 (або «ні (тимчасово, без рішення власника)», G2, умова повернення «рішення власника»); «ні» без рішення мовчки не записано.",
+      "assertions": [
+        "Відмову від імені власника не записано мовчки",
+        "У waiting_for названо REUSE-03"
+      ],
+      "input": "fixtures/check_reuse-ok/",
+      "fixtures": "evals/fixtures/check_reuse-ok/"
+    },
+    {
+      "id": "check_reuse-ok-rc",
+      "prompt": "python3 -I scripts/check_reuse.py evals/fixtures/check_reuse-ok/REUSE.md --inventory evals/fixtures/check_reuse-ok/reuse-inventory.md",
+      "expected_output": "rc=0, усі RU-* PASS",
+      "assertions": [
+        "код виходу 0"
+      ],
+      "input": "fixtures/check_reuse-ok/",
+      "fixtures": "evals/fixtures/check_reuse-ok/"
+    },
+    {
+      "id": "check_reuse-bad-rc",
+      "prompt": "python3 -I scripts/check_reuse.py evals/fixtures/check_reuse-bad/REUSE.md",
+      "expected_output": "rc=1; FAIL RU-id, RU-verdict, RU-hours, RU-license",
+      "assertions": [
+        "код виходу 1",
+        "RU-id один запис"
+      ],
+      "input": "fixtures/check_reuse-bad/",
+      "fixtures": "evals/fixtures/check_reuse-bad/"
+    },
+    {
+      "id": "no-reuse-modules",
+      "prompt": "Наряд A-03c, mode inventory, потім decide; OWNER-INTAKE.md: reuse.repos = \"—\", reuse.projects = \"—\". Готових модулів немає.",
+      "expected_output": "reuse-inventory.md з рядком «кандидатів не знайдено (переглянуто 0 репо/модулів)»; REUSE.md з «готових модулів немає; усі F-xx — td_ (новий)» і «нічого не відкинуто»; check_reuse без FAIL; не waiting_human.",
+      "assertions": [
+        "Результат inventory = done, не waiting_human",
+        "check_reuse приймає маркери порожнього реєстру",
+        "Усі F-xx лишаються td_ (новий)",
+        "Кандидатів не вигадано"
+      ],
+      "input": "fixtures/check_reuse-empty/REUSE.md",
+      "fixtures": "evals/fixtures/check_reuse-empty/"
+    }
+  ]
+}

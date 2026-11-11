@@ -1,0 +1,34 @@
+{
+ "tasks": [
+  {
+   "id": 920,
+   "step": "A-03b",
+   "scope": "package/mebli-1",
+   "stage": "На рішенні людини",
+   "report": {
+    "result": "waiting_human",
+    "waiting_for": {
+     "role": "власник",
+     "what": "відповісти на K1-Q1…K1-Q6",
+     "resume": {
+      "step": "A-03b",
+      "params": {
+       "k1_answers": "<посилання на повідомлення власника>"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": 921,
+   "kind": "human_substep",
+   "step": "A-03b",
+   "stage": "Черга"
+  }
+ ],
+ "preconditions_confirmed": [
+  "A-02b done",
+  "A-03 done",
+  "A-04 done"
+ ]
+}

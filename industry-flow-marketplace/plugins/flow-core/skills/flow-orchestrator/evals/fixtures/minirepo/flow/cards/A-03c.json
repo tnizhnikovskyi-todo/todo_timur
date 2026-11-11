@@ -1,0 +1,30 @@
+{
+ "id": "A-03c",
+ "code": "A-03c",
+ "title": "Готові модулі ToDo у збірку",
+ "executor": "any",
+ "skillRef": "flow-research:reuse-modules",
+ "access_profile": "research-internal",
+ "raciR": "Архітектор (R); власник (гейт)",
+ "preconditions": "A-03b done, K1 закрито (відповіді власника на K1-Q* є)",
+ "inArtifacts": "OWNER-INTAKE.md; research/FUNCTIONAL-MAP.md",
+ "inputs": "OWNER-INTAKE.md",
+ "outputs": "research/REUSE.md",
+ "where": "research/REUSE.md",
+ "gate": "так: «беремо / адаптуємо / ні»",
+ "params": {
+  "sample": false
+ },
+ "review": {
+  "checklists": [],
+  "max_rounds": 2
+ },
+ "model": "sonnet",
+ "hours": 3,
+ "costLimit": 10,
+ "maturity": "1",
+ "per": "package",
+ "maxAttempts": 3,
+ "status": "draft",
+ "notes": "мінікартка фікстури за step-cards.md"
+}

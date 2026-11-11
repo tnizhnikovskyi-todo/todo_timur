@@ -41,6 +41,20 @@
     "text": "шлюз «Пакет підходить?» — кнопка Керівника напряму",
     "who": "Керівник напряму"
    }
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py <where>: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Відкинуті вимоги/«не з пакета» — розділ «## Відкинуто» у fit-gap.md. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "<where>"
+    ],
+    "who": "runner"
+   }
   }
  ]
 }

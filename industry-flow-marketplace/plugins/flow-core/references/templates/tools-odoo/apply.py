@@ -52,8 +52,22 @@ def odoo_base():
     args = [os.environ.get("ODOO_BIN", "odoo-bin")]
     if os.environ.get("ODOO_CONF"):
         args += ["-c", os.environ["ODOO_CONF"]]
-    if os.environ.get("ODOO_ADDONS_PATH"):
-        args += ["--addons-path=" + os.environ["ODOO_ADDONS_PATH"]]
+    ap = os.environ.get("ODOO_ADDONS_PATH", "")
+    ed = os.environ.get("ODOO_EDITION", "ce")
+    ee = os.environ.get("ODOO_EE_ADDONS_PATH", "")
+    if ed == "ee":
+        # як _common.sh: EE-шлях додається лише при ee; без доступу -- код 3 (WARN ee-unavailable)
+        if not ee or not os.path.isdir(ee):
+            sys.stderr.write("WARN ee-unavailable: ODOO_EE_ADDONS_PATH не задано або каталогу немає; EE-перевірка не виконана (не перевірено)\n")
+            sys.exit(3)
+        ap = (ap + "," if ap else "") + ee
+    elif ed == "ce":
+        if ee and ee.rstrip("/") in [x.rstrip("/") for x in ap.split(",") if x]:
+            stop("ODOO_EDITION=ce, але ODOO_EE_ADDONS_PATH входить до ODOO_ADDONS_PATH")
+    else:
+        stop("ODOO_EDITION='%s' (очікується ce|ee)" % ed)
+    if ap:
+        args += ["--addons-path=" + ap]
     return args
 
 

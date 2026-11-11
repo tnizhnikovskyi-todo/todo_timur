@@ -69,6 +69,10 @@ description: >
   - Немає рядка в карті → **не вигадувати**: зупинитись, активність Тімліду «перехід відсутній у карті флоу» (з `from` і результатом).
   - Наступник гейта ставиться лише після рішення людини за `odoo-bridge.md` §5 (tracking-запис, автор не з технічних користувачів агентів); коментар не рахується.
   - `waiting_human` (`report-format.md`) → наступника за картою не ставити: `human_substep` ролі з `waiting_for.role` і дедлайном `humanSla`; після його `Готово` — наряд того самого кроку з `params.resume`, `attempt` без збільшення.
+  - Новий порядок пулу A (`flow-map.md`, К-03): `A-02 → A-02b → A-03 ‖ A-04 → шлюз «Потрібні сесії?» → A-03b → A-03c → A-20 → A-20b → A-20c → A-21 → A-21c → A-23`. Шлюз сесій читає `ambition.sessions_a05_a06` з `docs/industries/<галузь>/OWNER-INTAKE.md` (К-14), а не поле на гейті A-03; значення немає (анкета не пройшла `validate`) → стоп, активність Тімліду. A-05/A-06 — необов'язкова гілка з AND-join у A-03b.
+  - K1 (A-03b) і зразок будь-якого кроку з `params.sample: true` — `waiting_human` + `resume`: `human_substep` для власника/BA (`odoo-bridge.md` §4.1). **A-03c не ставити, доки власник не відповів на K1** (підкрок K1 не `Готово` або A-03b не `done`). Гейта A-20 немає: єдиний гейт концепції — A-20c; `gate.return_to` A-20c ∈ {A-20, A-03b, A-03c}, A-21c ∈ {A-21c, A-21}, зріз A-21 ∈ {A-21, A-20}; інше → відхилити, активність Тімліду.
+  - Перерахунок (`params.mode: recalc`, N-07; єдина модель — `dispatch-rules.md` §4а). `check_stale.py research/DEPENDS.yaml --base <sha>` виконує runner (не оркестратор) у наряді-джерелі події: C-02 `record`/`decisions-batch` після запису рішення власника, A-02b `amend`, або PR із `facts.yaml`; результат — `stale: [<шляхи>]` у його звіті. Оркестратор бере список лише з цього звіту (немає поля `stale` після такої події → стоп, активність Тімліду «check_stale не виконано»). Порожній список → нічого не ставити, рядок у звіт. Кожен застарілий шлях зіставляється з кроком-власником за `flow/ARTIFACTS.md` (`where`) і групується: **один наряд `recalc` на крок-власник** з `params.stale: [<шляхи цього кроку>]` і `where` = ці шляхи; порядок кроків — за `DEPENDS.yaml` (залежні після своїх входів). Ключ ідемпотентності — `(step, scope.id, mode=recalc, base_sha)` (`odoo-bridge.md` §7). Шлях, якого немає в `ARTIFACTS.md` → стоп, активність Тімліду.
+  - C-08R: `daily` — за розкладом sweep; `event` — після `Повернено`, `escalated`, червоного CI, `human_rounds > 2` у звіті (`sweep-rules.md` §4).
   - Фаза A-18: гейт «Затвердити» → другий наряд A-18 з `params.phase: tag`; повідомлення «Версія пакета випущена» (→ B-01, B-11) лише після `release.tag` у звіті фази tag.
 - `sweep`: `references/sweep-rules.md` (оренди, гейти, періодичні, відкладені за слотом).
 
@@ -97,7 +101,7 @@ description: >
 ## Крок 3. Скласти наряд
 З картки кроку за `flow-core/references/naryad-format.md`; ключ ідемпотентності й пошук дублів — `flow-core/references/odoo-bridge.md` §7 (`dispatch-rules.md` §2).
 - `executor`: з картки. Змішаний крок → **дві задачі**: AI-частина (executor картки) + людська задача ролі з `raciR`, залежна від AI-частини.
-- Другий наряд того самого кроку (A-23 `список` -> `prep`, B-08a `звірка` -> `збіжність`) — за рядками `flow-core/references/flow-map.md` з `params.mode` зі `step-skill-map.md`; ключ ідемпотентності включає `mode`.
+- Другий наряд того самого кроку (A-23 `список` -> `prep`, B-08a `звірка` -> `збіжність`) — за рядками `flow-core/references/flow-map.md` з `params.mode` зі `step-skill-map.md`; ключ ідемпотентності включає `mode` (для `recalc` — ще `base_sha`).
 - `called_skills` беруться з примітки `step-skill-map.md` (не з `skill_ref`; формат елемента як у `skill_ref`).
 - `skill_ref` — список; перший елемент веде крок. Таблиця «крок → skill_ref → params.mode» — `flow-core/references/step-skill-map.md` (картки можуть мати застарілі/порожні `skillRef`; поки C-00 їх не оновив, діє таблиця). Кожен елемент `<плагін>:<скіл>@<версія>`; версія — поле `version` у `plugins/<плагін>/.claude-plugin/plugin.json` каталогу організації
   (репо `industry-flow-marketplace`, тег/SHA каталогу зі `package/flow/dispatcher.yaml` → `catalog`), читання через `github`; **не** з локально встановлених плагінів.
@@ -109,6 +113,7 @@ description: >
   Інакше (будь-який крок з прод-базою поза винятком) → те саме.
 - `repo.branch = flow/<крок>-<scope>-<спроба>`, `attempt`, `returned_from` (код кроку/гейта + текст зауваження).
 - `executor: central` обов'язково для `client_data: personal`; виняток q01: B-13 і B-08a на `test-<клієнт>` (база з ПДн після B-06) — `executor: any`, будь-який агент.
+- Для A-02b…A-21c: `inputs` обов'язково містить `OWNER-INTAKE.md` (після A-02b `validate`); `access_profile` — за `step-skill-map.md` (`research-internal`, `content`, `repo`); `review.checklists`, `review.max_rounds: 2` — з картки (`step-cards.md`); `params.sample: true` для кроків зі зразком (за карткою: A-03b, A-20c, A-21, A-21c; N-18) — після зразка `waiting_human`, потім наряд із `sample: false`; `review.max_rounds` = `rounds.review_max` з `OWNER-INTAKE.md` (типово 2 + 1 контрольний); `odoo_connections` з alias `own-erp` (лише читання) — лише для профілю `research-internal` і якщо `todo_data` анкети це дозволяє, до валідної анкети — лише `internal-aggregated`; A-21c — `executor: any` (Контент-менеджер), без жодних баз Odoo.
 - `params` — за `naryad-format.md` і `flow-map.md`: `mode`, `phase` (A-14: 1|2; A-18: `release`|`tag`), `flow_version`, `period`, `pilot`, `group`, `resume`; блок `git:` (`base`, `head`, `prev_tag`) заповнює runner, не диспетчер.
 
 ## Крок 4. Створити задачу
@@ -175,3 +180,8 @@ description: >
 - `report-format.md`: `returned_to` описано як один код; для A-14/A-17/A-18 потрібен список кодів (AND-розгалуження) — до зміни діє резервна таблиця `dispatch-rules.md` §8.
 - `flow-autocheck` (inputs): підтримує один `where` на `from` (реєстр `ARTIFACTS.md` як dict за кодом кроку); до зміни autocheck або формату реєстру діє обхід кроку 2.5 (п. «Один `where` на крок-джерело»). Власник — власник `flow-autocheck`; при зміні переглянути крок 2.5.
 - `dispatcher.yaml`: ключ `catalog` — рішення q21: окремий репозиторій каталогу плагінів, версії закріплюються тегом релізу (`ref` = тег); `per_unit_steps`; календар свят — відкрите.
+
+## Передумова recalc
+- Runner у нарядах C-02 `record`/`decisions-batch`, A-02b `amend` і в кроці-власнику `facts.yaml` (A-03b, зокрема `recalc`) виконує `flow-autocheck/scripts/check_stale.py research/DEPENDS.yaml --base <sha>` і пише поле `stale: [<шляхи>]` у звіт.
+- Наряд-джерело для «PR із `facts.yaml`» — A-03b; `stale:` шукати в його звіті.
+- Поля немає — стоп, активність Тімліду «check_stale не виконано».

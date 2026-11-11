@@ -1,0 +1,181 @@
+{
+ "domain": [
+  [
+   "lost_reason",
+   "=",
+   "price"
+  ],
+  [
+   "kved_section",
+   "=",
+   "31"
+  ]
+ ],
+ "limit": 10,
+ "pages": 3,
+ "note": "УМОВНІ назви полів (lost_reason, kved_section) — синтетика, НЕ поля стандартного crm.lead; виконавець не переносить їх у реальний запит, а бере назви з odoo_get_fields. синтетика; повний перебір offset=0,10,20; перший прохід з limit=140 давав 17 (урок r19)",
+ "records_total": 23,
+ "records": [
+  {
+   "id": 1000,
+   "code": "K-01",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1001,
+   "code": "K-02",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1002,
+   "code": "K-03",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1003,
+   "code": "K-04",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1004,
+   "code": "K-05",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1005,
+   "code": "K-06",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1006,
+   "code": "K-07",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1007,
+   "code": "K-08",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1008,
+   "code": "K-09",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1009,
+   "code": "K-10",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1010,
+   "code": "K-11",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1011,
+   "code": "K-12",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1012,
+   "code": "K-13",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1013,
+   "code": "K-14",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1014,
+   "code": "K-15",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1015,
+   "code": "K-16",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1016,
+   "code": "K-17",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1017,
+   "code": "K-18",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1018,
+   "code": "K-19",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1019,
+   "code": "K-20",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1020,
+   "code": "K-21",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1021,
+   "code": "K-22",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  },
+  {
+   "id": 1022,
+   "code": "K-23",
+   "stage": "lost",
+   "lost_reason": "price",
+   "kved_section": "31"
+  }
+ ]
+}

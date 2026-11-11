@@ -1,0 +1,123 @@
+name: ci
+run-name: "ci ${{ inputs.sha || github.sha }} client=${{ inputs.client || '-' }} tag=${{ inputs.package_tag || '-' }}"
+
+on:
+  push:
+    branches: [main, "upgrade/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      package_tag: {description: "Тег пакета", required: false, default: ""}
+      client:      {description: "Ідентифікатор клієнта", required: false, default: ""}
+      odoo_version: {description: "Версія Odoo", required: false, default: ""}
+      sha:         {description: "SHA для перевірки", required: false, default: ""}
+      odoo_task:   {description: "id задачі Odoo", required: false, default: ""}
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || inputs.sha || github.sha }}-${{ inputs.client || 'all' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.r.outputs.sha }}
+      run_package: ${{ steps.r.outputs.run_package }}
+      clients: ${{ steps.r.outputs.clients }}
+      odoo_version: ${{ steps.r.outputs.odoo_version }}
+      odoo_supported: ${{ steps.r.outputs.odoo_supported }}
+      editions: ${{ steps.r.outputs.editions }}
+    steps:
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        with: {ref: "${{ inputs.sha || github.sha }}", fetch-depth: 0}
+      - id: r
+        env:
+          IN_TAG: ${{ inputs.package_tag }}
+          IN_CLIENT: ${{ inputs.client }}
+          IN_ODOO: ${{ inputs.odoo_version }}
+          IN_EDITION: ${{ inputs.edition }}
+          IN_SHA: ${{ inputs.sha }}
+        run: |
+          # зони: package/addons, package/config, clients/*/addons, .github/workflows/ci.yml; тег клієнта з clients/REGISTRY.md (кандидат пріоритетний)
+          # суфікс -odoo<N> -> odoo_version; editions: порожньо|both -> ["ce","ee"]
+          python3 -I tools/ci/resolve.py
+
+  package-tests:
+    needs: resolve
+    if: needs.resolve.outputs.run_package == 'true' && needs.resolve.outputs.odoo_supported == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - name: Доступ до EE
+        id: ee
+        if: matrix.edition == 'ee'
+        run: echo "ee_available=false" >> "$GITHUB_OUTPUT"
+      - name: Тести пакета
+        env: {ODOO_VERSION: "${{ needs.resolve.outputs.odoo_version }}", ODOO_EDITION: "${{ matrix.edition }}", EE_AVAILABLE: "${{ steps.ee.outputs.ee_available }}"}
+        run: |
+          set -o pipefail
+          if [ "$ODOO_EDITION" = "ee" ] && [ "$EE_AVAILABLE" != "true" ]; then
+            echo "WARN ee-unavailable" | tee run-tests.log
+          else
+            tools/odoo/run_tests.sh test-pkg-ci td_a 2>&1 | tee run-tests.log
+          fi
+      - name: Вердикт
+        if: always()
+        run: |
+          if grep -q "WARN ee-unavailable" run-tests.log; then echo "EE WARN ee-unavailable (не перевірено)"; exit 0; fi
+          grep -q "RESULT: PASS" run-tests.log || exit 1
+          if grep -Eq "[1-9][0-9]* skipped" run-tests.log; then echo "skipped > 0"; exit 1; fi
+          N="$(grep -Eo '[0-9]+ tests' run-tests.log | awk '{s+=$1} END{print s+0}')"; if [ "$N" -eq 0 ]; then exit 1; fi
+      - uses: actions/upload-artifact@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        if: always()
+        with: {name: "package-tests-log-${{ matrix.edition }}", path: run-tests.log}
+
+  client-tests:
+    needs: resolve
+    if: needs.resolve.outputs.clients != '[]' && needs.resolve.outputs.odoo_supported == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        client: ${{ fromJSON(needs.resolve.outputs.clients) }}
+    steps:
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        with: {ref: "${{ needs.resolve.outputs.sha }}", path: repo}
+      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        with: {ref: "${{ matrix.client.tag }}", path: package-at-tag}
+      - name: Тести клієнта
+        env: {ODOO_VERSION: "${{ needs.resolve.outputs.odoo_version }}", CLIENT: "${{ matrix.client.id }}"}
+        run: |
+          set -o pipefail
+          tools/odoo/run_tests.sh test-pkg-ci td_k 2>&1 | tee run-tests.log
+      - name: Вердикт
+        if: always()
+        run: |
+          grep -q "RESULT: PASS" run-tests.log || exit 1
+          if grep -Eq "[1-9][0-9]* skipped" run-tests.log; then exit 1; fi
+          N="$(grep -Eo '[0-9]+ tests' run-tests.log | awk '{s+=$1} END{print s+0}')"; if [ "$N" -eq 0 ]; then exit 1; fi
+
+  ci:
+    needs: [resolve, package-tests, client-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {contents: read, statuses: write}
+    steps:
+      - name: Агрегація
+        id: agg
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          # needs.*.result: failure/cancelled -> red; CE PASS; EE WARN ee-unavailable (не перевірено) -> не red, але ніколи "EE PASS"
+          python3 -I tools/ci/aggregate.py
+      - name: Commit status на input-SHA
+        if: always() && inputs.sha != ''
+        env: {GH_TOKEN: "${{ github.token }}", SHA: "${{ inputs.sha }}"}
+        run: python3 -I tools/ci/status.py

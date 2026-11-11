@@ -33,6 +33,20 @@
     "text": "години, доробки, інциденти — числа з джерелом (PD-10)",
     "who": "runner"
    }
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py <where>: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Відкинуті кейси/пропозиції — розділ «## Відкинуто» у файлі з where. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "<where>"
+    ],
+    "who": "runner"
+   }
   }
  ]
 }

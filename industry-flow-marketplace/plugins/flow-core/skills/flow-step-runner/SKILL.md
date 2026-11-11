@@ -42,6 +42,7 @@ Runner — **диспетчер, не виконавець**: зміст вхо�
 Тип агента: змінна `FLOW_AGENT_KIND` або локальний конфіг (`open-questions.md` №4); невідомо → `employee` (суворіше).
 `list_odoo_connections`, знайти alias `flow`. Немає → **стоп без звіту в Odoo**, відповідь у терміналі: «немає підключення до бази флоу».
 Технічний користувач агента перевіряється наприкінці кроку 1 (після запису оренди).
+**Крок 0б — preflight (N-08)**: до оренди й до витрати бюджету `tools/odoo/preflight.sh --profile <access_profile> --step <код>`; `FAIL` -> `waiting_human` (оренду не брати), `WARN` -> `memo` («не перевірено»); деталі — `references/lessons-and-rounds.md` §1.
 
 ## Крок 1. Взяти наряд (оренда)
 - Задача за номером від людини або пошук у стадії `stage.queue`; порядок — пріоритет, потім дата створення (домен — `odoo-bridge.md`). `executor ∈ {any, <тип агента>}`.
@@ -73,7 +74,8 @@ Runner — **диспетчер, не виконавець**: зміст вхо�
 ## Крок 5. Повернення людини
 `returned_from` не порожнє → `boost:skill-feedback` (скіл-виконавець, текст зауваження, код гейта, посилання на задачу; без даних клієнта) →
 шлях `observations/YYYY-MM-DD-<skill>-<slug>.md` у звіт `observations[]`, окремий коміт у гілці кроку. Повернений запуск був аудитом → `audit_failed: true`.
-Лічильник `returns` +1; `returns ≥ max_attempts` → ескалація Тімліду. Зауваження людини — частина брифу; далі з кроку 6 (контекст заново).
+Лічильник `returns` +1 (і `human_rounds` +1); `returns ≥ max_attempts` → ескалація Тімліду. Зауваження людини — частина брифу; далі з кроку 6 (контекст заново).
+**Observation за подією**: також при `escalated`, червоному CI і зауваженні людини під час кроку (`R-NN` у `$T/remarks.md`) — запис у тому ж ході з посиланням на задачу/PR (`references/lessons-and-rounds.md` §2); `human_rounds > 2` -> подія для C-08R.
 
 ## Крок 6. Контекст за SHA з фільтром DATA_POLICY
 Підготовка (у тимчасовій теці `$T`, поза репо): `inputs.json` = `inputs` наряду, де відсутні SHA заповнено `origin/<base_branch>` (`git rev-parse`) — ці SHA запишуться в `git.base`;
@@ -102,6 +104,7 @@ python3 -I ${CLAUDE_PLUGIN_ROOT}/skills/flow-step-runner/scripts/build_context.p
 Субагент `flow-core:flow-executor` (параметр `model` = модель з наряду або щабель драбини) із брифом за `references/executor-brief.md`: задача `skill_ref[0]`, `done`, `template`, `where`, `params`, тека контексту, правило `<untrusted>`, `connection_id` для читання.
 Субагент не має Bash: команди, яких потребує скіл (lint, тести, генератори), він не запускає, а перелічує у відповіді рядком «КОМАНДИ: …»; їх виконує runner на кроці 9 і результат віддає виконавцю як зауваження при повторі. Рядки `КОМАНДИ: gh workflow run …` і `КОМАНДИ: drive-create <тека з DATA_POLICY> <файл>` runner виконує на кроці 9 за правилами розділу «Інструменти». Для C-04/C-07 (`eval-builder`) дозволений перелік — `claude plugin eval|list`, `git`, `jq`: runner виконує їх одразу після відповіді (фаза `cases` -> регрес -> фаза `status`) і повертає вивід виконавцю другим проходом, що не рахується спробою. Виклики запису в Odoo виконавець повертає рядками «ODOO: {tool, connection_id, model, method, args}» (`naryad-format.md`, останній розділ): runner виконує їх лише для підключень класу `test-*|test-pkg-*|demo-*|emu-*` з `purpose` запису з `odoo_connections` наряду (рішення q13: запис у ці бази виконує runner за рядками «ODOO:» і allow-list, не окремий агент), решту (включно з будь-яким `prod-*`, також `prod-ro-*`) відхиляє: відмова, стоп, інцидент C-05. Евали runner: «ODOO:» на `prod-*` → відмова; наряд із `prod-*` → escalated. Субагент пише лише у файли `where`; `odoo_write`, push і PR виконує runner. Рядки `UNTRUSTED:` у відповіді → `untrusted_instructions` у звіті і рядок у пам'ятці.
 Відповідь `WAITING_HUMAN: роль=…; дія=…` → `result: waiting_human`, `waiting_for {role, what, resume}` (resume — `{step, params}` з наряду + що змінилось), `phase` з `params.phase`, стадія `stage.on_human` (не `stage.escalation`), оренду зняти, `attempt` не збільшувати; PR — лише якщо є незакомічена корисна зміна.
+`params.sample: true` -> лише зразок і `waiting_human` + `resume {sample: false}`; `prototype.fidelity: mock` -> `waiting_human`; схвалене (`ACCEPTED.md`) змінюється лише з «було / стало» (`lessons-and-rounds.md` §5–6).
 Перед кожним викликом моделі — перевірка лімітів (крок 11). Файли агентів є (крок 0), але виклик `flow-core:flow-executor` відхилено або агент не зареєстровано → `escalated` до AI-інженера звітом в Odoo, без обхідних шляхів.
 
 ## Крок 9. Автоперевірка
@@ -109,6 +112,7 @@ python3 -I ${CLAUDE_PLUGIN_ROOT}/skills/flow-step-runner/scripts/build_context.p
 (в) `boost:source-check` для тверджень про Odoo 19 без посилання; (г) `boost:odoo19-lint`, якщо змінено `*.py|*.xml|*.csv|__manifest__.py`;
 (д) скіли-гейти лише `skill_ref[1:]` (`called_skills` не запускати: їх викликає ведучий); (е) кожне твердження артефакту має посилання на ТР/SPEC/документацію Odoo 19.
 (ж) **Скрипти-перевірки скіла**: кожен запис yaml зі `prim: manual` і `args.who: runner`, з полем `args.cmd` (масив аргументів із заповнювачами-ключами наряду; `args.text` — лише для людини і прозу не розбирається; для старих записів без `cmd` — команда `python3 -I …` або `node …` з `args.text`), runner виконує сам (autocheck.py їх не запускає) і вносить у `checks[]`: код 0 → `PASS`, ненульовий → `FAIL` (FAIL скрипта = FAIL кроку), не виконано або скрипта немає → `ERROR`, не `PASS`. Записи з `when` runner виконує лише за справдженої умови (інакше `SKIP`, як в autocheck.py). Корінь плагіна, чий скрипт: `plugins/<плагін>/` у checkout каталогу за тегом `dispatcher.yaml → catalog` (плагін — той, що названо в тексті команди `<корінь плагіна X>`, а не `skill_ref[0]`: ведучий скіл другого наряду кроку може бути з іншого плагіна); `<к>`, `<тег>` — з наряду; інші заповнювачі (`<галузь>`, період тощо) беруться з `params`/`inputs` наряду, немає джерела → `ERROR` (не вгадувати); необов'язкові частини в `[...]` і прозу після команди runner не виконує, «перед цим --self-test» — окремий запуск. Крок, де всі перевірки yaml — `manual`, без виконаного (ж) не вважати підставою для зрілості 3.
+(з) **LSN-coverage**: `python3 -I scripts/check_lessons.py --remarks $T/remarks.md --observations observations/ --task <id задачі> --since <дата сесії>` перед `done` (`remarks.md` формується з чату, коментарів «Повернути» й PR, не лише з самозвіту; немає зауважень -> SKIP); FAIL = зауваження без observation цієї сесії -> створити й повторити (`lessons-and-rounds.md` §3).
 Результат — таблиця `checks[] {id, status, msg}`. UNVERIFIED із `source-check` → у «Невпевнений:» пам'ятки.
 
 ## Крок 10. Повтор
@@ -123,6 +127,7 @@ FAIL → новий виклик виконавця з текстом помил
 ## Крок 12. AI-рецензент
 `check.mode: both`, а також завжди при маршруті «людина». Агент `flow-core:flow-reviewer`, інша модель, ніж остання виконавча; runner кладе `git diff <git.base>...<git.head>` у `$T/ctx/diff.patch`, бриф — `executor-brief.md`.
 Блокуюче зауваження → ще одна спроба виконавця (рахується в `max_attempts`); решта → у «Що перевірити» пам'ятки.
+Бюджет кіл: `review.max_rounds` (типово 2) + 1 контрольний, далі не більше; `review_rounds` у звіт. Бриф рецензента містить `review.checklists` і вимагає **подивитись візуальний результат** (`lessons-and-rounds.md` §4, §6а); вимоги людини посеред циклу додаються лише в пізніші раунди.
 
 ## Крок 13. Маршрутизація
 Правила — `references/routing-and-tag.md`: до людини при `check.mode ∈ {human, both}` або `maturity < 3`, за ризиком за diff (ризик перекриває зрілість, зокрема `risk:money`) і в аудит кожного N-го запуску (`check.audit_every_n`, за замовчуванням 10; лічильник недоступний → аудит).
@@ -142,7 +147,7 @@ FAIL → новий виклик виконавця з текстом помил
 
 ### Звіт — доповнення, що пише runner
 `attempts_in_run`, `returns`, `models_used[]` (по порядку), `routing {to, reason}`, `audit`, `audit_failed`, `untrusted_instructions`, `lease {agent, until}`, `stop_reason`, `cost_estimated`, `base_sha`,
-а також ключі `report-format.md`: `waiting_for`, `phase`, `flow_version`, `release`, `project_fields`, `partial`. Ключі, яких немає в `report-format.md`, — `open-questions.md` №7.
+а також ключі `report-format.md`: `review_rounds`, `human_rounds`, `sample`, `accepted_ref`, `stale`, `waiting_for`, `phase`, `flow_version`, `release`, `project_fields`, `partial`. Ключі, яких немає в `report-format.md`, — `open-questions.md` №7.
 `flow/runs/` і `flow/ai-stop.md` runner не пише (автоекспорт `flow-state-keeper`).
 
 ## Крок 16. Відповідь у терміналі
@@ -161,6 +166,7 @@ FAIL → новий виклик виконавця з текстом помил
 - [ ] Пам'ятка починається з «Невпевнений:»; `checks[]` без FAIL або `result: escalated`/`waiting_human` з `waiting_for`.
 - [ ] У звіті, PR, observations немає ПІБ/контактів/сирих фрагментів даних клієнта (перевірка за `pii-patterns.md`) — лише ідентифікатори.
 - [ ] `models_used[]`: сусідні спроби різні; рецензент ≠ остання виконавча; `routing.reason` заповнено.
+- [ ] Кожне зауваження людини має observation (`check_lessons.py` без FAIL); `human_rounds`, `review_rounds` заповнені; preflight пройдено (або `waiting_human`).
 - [ ] Стадія відповідає результату; оренду знято; ліміти — з наряду, не з пам'яті.
 
 ## Наступний крок
@@ -174,6 +180,7 @@ FAIL → новий виклик виконавця з текстом помил
 - Не повторювати тією ж моделлю; не перевищувати `max_attempts`, `timeout_min`, `cost_limit_usd`; не вигадувати дефолти лімітів.
 - Не вводити місячний бюджет AI; не брати чужу активну оренду; не брати `executor: human` і `personal` не-центральним агентом (виняток q01: B-13/B-08a на `test-<клієнт>`).
 - Не завершувати запуск без звіту; не вигадувати години людини, тарифи, імена полів Odoo.
+- Не закривати крок `done` із зауваженням людини без observation; не змінювати схвалене (`ACCEPTED.md`) без «було / стало»; не робити більше `max_rounds` + 1 кіл; не пропускати preflight; не вигадувати відповіді власника для `resume`.
 - Не змінювати файли поза `where` наряду; не ставити задачі й не вести журнал (це оркестратор і state-keeper).
 
 ## Відкриті питання

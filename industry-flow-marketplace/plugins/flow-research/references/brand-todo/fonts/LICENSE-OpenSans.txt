@@ -1,0 +1,2 @@
+Open Sans (c) Steve Matteson / Google. Ліцензія: Apache License, Version 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+Файли OpenSans-*.ttf поширюються за цією ліцензією без змін. Повний текст ліцензії — за посиланням вище.

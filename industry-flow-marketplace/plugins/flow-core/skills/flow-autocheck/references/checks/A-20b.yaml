@@ -1,0 +1,210 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-20b",
+ "inputs_require": [
+  "OWNER-INTAKE.md"
+ ],
+ "checks": [
+  {
+   "id": "completeness-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/COMPLETENESS.md"
+    ]
+   }
+  },
+  {
+   "id": "completeness-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/COMPLETENESS.md",
+    "headings": [
+     "re:підсумок повноти",
+     "re:реєстр прогалин",
+     "re:що закриваємо кабінетно",
+     "re:статус прогалин"
+    ]
+   }
+  },
+  {
+   "id": "checklist-status",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/COMPLETENESS.md",
+    "require": [
+     [
+      "#"
+     ],
+     [
+      "Пункт чек-листа"
+     ],
+     [
+      "Статус"
+     ],
+     [
+      "Хто закриває"
+     ]
+    ],
+    "key": [
+     "#"
+    ],
+    "unique_key": true,
+    "rules": [
+     {
+      "col": [
+       "Статус"
+      ],
+      "kind": "enum",
+      "values": [
+       "закрито",
+       "частково",
+       "відкрито"
+      ],
+      "msg": "статус має бути закрито|частково|відкрито"
+     },
+     {
+      "when": {
+       "col": [
+        "Статус"
+       ],
+       "in": [
+        "частково",
+        "відкрито"
+       ]
+      },
+      "col": [
+       "Хто закриває"
+      ],
+      "kind": "nonempty",
+      "msg": "не вказано, хто закриває"
+     }
+    ],
+    "expect_rows": 22
+   }
+  },
+  {
+   "id": "gaps-register",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/COMPLETENESS.md",
+    "require": [
+     [
+      "ID"
+     ],
+     [
+      "Пріоритет"
+     ],
+     [
+      "Тип"
+     ],
+     [
+      "Прогалина"
+     ],
+     [
+      "Статус"
+     ]
+    ],
+    "key": [
+     "ID"
+    ],
+    "unique_key": true,
+    "rules": [
+     {
+      "col": [
+       "ID"
+      ],
+      "kind": "regex",
+      "pattern": "^G-\\d{2}$",
+      "msg": "ID прогалини має бути G-NN"
+     },
+     {
+      "col": [
+       "Пріоритет"
+      ],
+      "kind": "enum",
+      "values": [
+       "P1",
+       "P2",
+       "P3"
+      ],
+      "msg": "пріоритет P1|P2|P3"
+     },
+     {
+      "col": [
+       "Тип"
+      ],
+      "kind": "enum",
+      "values": [
+       "desk",
+       "human",
+       "decision"
+      ],
+      "msg": "тип desk|human|decision"
+     },
+     {
+      "when": [
+       {
+        "col": [
+         "Пріоритет"
+        ],
+        "in": [
+         "P1"
+        ]
+       },
+       {
+        "col": [
+         "Тип"
+        ],
+        "in": [
+         "desk"
+        ]
+       }
+      ],
+      "col": [
+       "Статус"
+      ],
+      "kind": "not_in",
+      "values": [
+       "відкрито"
+      ],
+      "msg": "P1-прогалина типу desk не може лишатись «відкрито» (закрий кабінетно)"
+     }
+    ]
+   }
+  },
+  {
+   "id": "checklist-22",
+   "prim": "manual",
+   "args": {
+    "text": "підсумок closed/partial/open збігається з рядками й іде в звіт `completeness`; кожен пункт має «де в документах» і відповідального (рівно 22 рядки перевіряє checklist-status)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-critical-desk",
+   "prim": "manual",
+   "args": {
+    "text": "у §2 P1/desk без «відкрито» перевіряє gaps-register; тут — лише §4: після кіл критика немає P1-прогалини типу desk зі статусом «відкрито» (тип — зі §2); human/decision-прогалини винесено у відкриті питання OWNER-BRIEF з власником і датою",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "five-roles",
+   "prim": "manual",
+   "args": {
+    "text": "перевірено 5 ролями (власник, галузевий експерт, архітектор Odoo, продавець, аудитор узгодженості); minor, що впливає на рішення власника, піднято до major",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  }
+ ]
+}

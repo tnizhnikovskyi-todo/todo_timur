@@ -1,0 +1,11 @@
+meta:
+  industry: "test"
+market:
+  snapshot_date: "2026-08-01"
+  bands:
+    - {id: "m-01", label: "10-49", companies: 1200, revenue_uah: 5000000, growth_pct: 4.5}
+pricing:
+  currency: "UAH"
+  ce_entry: 50000
+hours:
+  rate_uah_per_hour: 1000

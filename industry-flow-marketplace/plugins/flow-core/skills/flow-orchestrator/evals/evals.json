@@ -120,6 +120,40 @@
       "requires": [
         "фікстура: карток B-13, B-08a і кроку client-help-bot у minirepo/flow/cards немає (відкрито: додати картку кроку з бота-помічником у фікстуру); DATA_POLICY з рядком prod-ro-k01 додано"
       ]
+    },
+    {
+      "id": "k1-no-a03c-before-owner-answer",
+      "prompt": "Режим on-complete для A-03b (scope package/mebli-1): звіт result: waiting_human, waiting_for.role = власник, what = «відповісти на K1-Q1…K1-Q6»; human_substep K1 ще не Готово. Чи ставити A-03c? Стан у фікстурі.",
+      "expected_output": "Створено лише human_substep для власника з дедлайном human_sla і params.resume; A-03c НЕ створено; у звіті рядок flow-map «A-03b waiting_human».",
+      "assertions": [
+        "Створено human_substep для ролі власника з waiting_for.what і дедлайном human_sla",
+        "Задачу A-03c не створено (action skipped_precondition або відсутня), вигаданих кодів немає",
+        "Наступник за картою для waiting_human не ставиться",
+        "У звіті є номер рядка flow-map для A-03b"
+      ],
+      "fixtures": "evals/fixtures/k1-no-a03c/",
+      "source": "mebli-r24-owner-questions-after-synthesis",
+      "requires": [
+        "odoo-mcp:test"
+      ]
+    },
+    {
+      "id": "recalc-all-stale",
+      "prompt": "Власник змінив рішення (запис у flow/decisions.md, змінено facts.yaml). Runner у наряді C-02 `decisions-batch` виконав check_stale; у його звіті stale: concept/features.md, research/OWNER-BRIEF.md, research/owner-page/index.html (залежності в DEPENDS.yaml; за flow/ARTIFACTS.md перші два належать A-20, третій A-20c). Поставити перерахунок.",
+      "expected_output": "Створено рівно 2 наряди params.mode: recalc — по одному на крок-власник у порядку DEPENDS.yaml: A-20 (params.stale = features.md, OWNER-BRIEF.md; where = ці файли), потім A-20c (params.stale = owner-page/index.html); inputs[].sha нового коміту; повторний прохід не дублює.",
+      "assertions": [
+        "Створено рівно 2 наряди recalc: A-20 і A-20c (не по наряду на артефакт)",
+        "Наряд A-20 має params.stale з двома артефактами, A-20c — з одним; where збігається зі stale",
+        "Порядок кроків відповідає DEPENDS.yaml (A-20 раніше A-20c)",
+        "Кожен наряд має params.mode: recalc і inputs з OWNER-INTAKE.md та sha",
+        "Повторний виклик із тим самим base_sha не створює дублів (skipped; ключ step, scope.id, mode=recalc, base_sha)",
+        "Артефакти поза списком не перераховуються; check_stale оркестратор сам не запускає"
+      ],
+      "fixtures": "evals/fixtures/recalc-stale/",
+      "source": "mebli-r23-owner-returned-rejected",
+      "requires": [
+        "odoo-mcp:test"
+      ]
     }
   ]
 }

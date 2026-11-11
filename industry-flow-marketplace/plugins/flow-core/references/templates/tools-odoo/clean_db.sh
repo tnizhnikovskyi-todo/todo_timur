@@ -18,6 +18,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 guard_db "$DB"
+check_edition
 if [[ -n "$TAG" ]]; then
   [[ -n "${PKG_REPO:-}" ]] || { echo "FLOW_STOP: для --tag задайте PKG_REPO (шлях до репо пакета)" >&2; exit 2; }
   REPO="$PKG_REPO"

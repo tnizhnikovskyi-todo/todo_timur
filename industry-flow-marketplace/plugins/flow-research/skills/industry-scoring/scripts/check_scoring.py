@@ -76,6 +76,38 @@ def main():
     text = Path(a.file).read_text(encoding="utf-8"); secs = sections(text)
     miss = [h for h in HEADERS if h not in secs]
     ok("SC-headers", not miss, "немає: " + ", ".join(miss))
+    # SC-rejected: реєстр відкинутого (галузі поза топом; flow-core/references/rejected-register.md); повний формат - check_rejected.py
+    rsec = secs.get("Відкинуто")
+    has_table = rsec is not None and bool(re.search(r"\|\s*ID\s*\|", rsec))
+    nothing = rsec is not None and bool(re.search(r"нічого не відкинуто", rsec))
+    ok("SC-rejected", rsec is not None and (nothing or has_table),
+       "немає розділу «## Відкинуто» з таблицею реєстру (колонка ID) або рядка «нічого не відкинуто»")
+    # SC-rejected-empty: «нічого не відкинуто» суперечить рейтингу, де є галузі поза топ-10 або виключені розділи (Крок 5б)
+    full_rows = [r for r in rows(secs.get("Повний рейтинг", "")) if r and r[0]]
+    crit = secs.get("Критерій ранжування", "")
+    excl_decl = bool(re.search(r"Виключен\w*\s+розділ\w*:\s*\d", crit)) or bool(a.exclude)
+    if nothing and not has_table and (len(full_rows) > 10 or excl_decl):
+        ok("SC-rejected-empty", False, f"«нічого не відкинуто», але в «Повному рейтингу» {len(full_rows)} рядків (поза топ-10: {max(len(full_rows)-10,0)}) "
+           + ("і є виключені розділи" if excl_decl else "") + ": внести їх у реєстр (група G2 зведеним рядком, G1 — виключені)")
+    # SC-internal: розділ «Внутрішні сигнали ToDo» (необов'язковий): клас internal-aggregated у кожному рядку, без ЄДРПОУ/назв/сум (на бал не впливає)
+    isec = secs.get("Внутрішні сигнали ToDo")
+    bad_int = []
+    # «немає даних» вимикає перевірку лише коли в розділі немає рядків таблиці; ЄДРПОУ, суми й internal-raw - завжди
+    if isec is not None:
+        if "internal-raw" in isec:
+            bad_int.append("internal-raw")
+        trs = [l for l in isec.splitlines() if l.startswith("|") and not re.match(r"^\|[\s:|-]+\|$", l)]
+        for l in trs[1:]:
+            if "internal-aggregated" not in l:
+                bad_int.append("рядок без класу internal-aggregated")
+                break
+        if not trs[1:] and "internal-aggregated" not in isec and "немає даних" not in isec.lower():
+            bad_int.append("немає класу internal-aggregated")
+        if re.search(r"(?<!\d)\d{8}(?!\d)", isec):
+            bad_int.append("8-значний код (ЄДРПОУ?)")
+        if re.search(r"\d[\d\s.,]*\s*(грн|uah|usd|eur|\$|€|тис\.|млн|млрд)", isec, re.I):
+            bad_int.append("грошова сума")
+    ok("SC-internal", not bad_int, "розділ «Внутрішні сигнали ToDo»: " + ", ".join(sorted(set(bad_int))) + " (лише лічильники класу internal-aggregated)")
     if miss:
         print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1)
     snap = a.snapshot or (re.search(r"знімок реєстру:\s*(\d{4}-\d{2})", secs["Знімок даних"]) or [None, None])[1]

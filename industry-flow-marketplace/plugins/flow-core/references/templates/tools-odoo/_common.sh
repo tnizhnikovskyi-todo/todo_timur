@@ -28,10 +28,47 @@ guard_db() {
 # Параметри середовища (задає C-00): ODOO_BIN, ODOO_ADDONS_PATH, ODOO_CONF (необов'язково),
 # PGHOST/PGPORT/PGUSER/PGPASSWORD (стандартні змінні PostgreSQL-клієнтів).
 ODOO_BIN="${ODOO_BIN:-odoo-bin}"
+
+# Редакція Odoo (К-06): ODOO_EDITION=ce|ee, за замовчуванням ce. Ядро пакета працює на CE; ee — підсилення td_*_ee.
+# ee: ODOO_EE_ADDONS_PATH — каталог із модулями Enterprise (повний шлях; задає C-00/CI, лише якщо доступ до EE є).
+# Немає доступу до EE -> код 3 і рядок "WARN ee-unavailable" (це НЕ PASS і не помилка пакета: EE-перевірка «не перевірено»).
+# ce: каталог EE у ODOO_ADDONS_PATH заборонений (інакше «CE-прогін» мовчки бачить EE-модулі).
+ODOO_EDITION="${ODOO_EDITION:-ce}"
+check_edition() {
+  case "$ODOO_EDITION" in
+    ce)
+      if [[ -n "${ODOO_EE_ADDONS_PATH:-}" ]]; then
+        local p
+        for p in $(printf '%s' "${ODOO_ADDONS_PATH:-}" | tr ',' ' '); do
+          if [[ "${p%/}" == "${ODOO_EE_ADDONS_PATH%/}" ]]; then
+            echo "FLOW_STOP: ODOO_EDITION=ce, але ODOO_EE_ADDONS_PATH входить до ODOO_ADDONS_PATH" >&2; exit 2
+          fi
+        done
+      fi ;;
+    ee)
+      if [[ -z "${ODOO_EE_ADDONS_PATH:-}" || ! -d "${ODOO_EE_ADDONS_PATH}" ]]; then
+        echo "WARN ee-unavailable: ODOO_EE_ADDONS_PATH не задано або каталогу немає; EE-перевірка не виконана (не перевірено)" >&2; exit 3
+      fi ;;
+    *) echo "FLOW_STOP: ODOO_EDITION='$ODOO_EDITION' (очікується ce|ee)" >&2; exit 2 ;;
+  esac
+  return 0
+}
+
+# Параметри odoo-bin. ee: до addons-path додається ODOO_EE_ADDONS_PATH. Мова: ODOO_LANG (напр. uk_UA) -> --load-language;
+# ODOO_I18N_OVERWRITE=1 -> --i18n-overwrite (повторне оновлення з перезаписом перекладів: терміни нових view потрапляють у мову показу).
+# Обидві опції взято з робочого еталона build_db.sh (зріз «меблі», Odoo 19); C-00 звіряє з `odoo-bin --help` (відкрите питання).
 odoo_args() {
   ODOO_ARGS=()
+  check_edition
+  local ap="${ODOO_ADDONS_PATH:-}"
+  [[ "$ODOO_EDITION" == "ee" ]] && ap="${ap:+$ap,}${ODOO_EE_ADDONS_PATH}"
   [[ -n "${ODOO_CONF:-}" ]] && ODOO_ARGS+=(-c "$ODOO_CONF")
-  [[ -n "${ODOO_ADDONS_PATH:-}" ]] && ODOO_ARGS+=(--addons-path="$ODOO_ADDONS_PATH")
+  [[ -n "$ap" ]] && ODOO_ARGS+=(--addons-path="$ap")
+  if [[ -n "${ODOO_LANG:-}" ]]; then
+    [[ "$ODOO_LANG" =~ ^[a-z]{2,3}(_[A-Z]{2,4})?$ ]] || { echo "FLOW_STOP: недопустимий код мови '$ODOO_LANG'" >&2; exit 2; }
+    ODOO_ARGS+=(--load-language="$ODOO_LANG")
+  fi
+  [[ "${ODOO_I18N_OVERWRITE:-0}" == "1" ]] && ODOO_ARGS+=(--i18n-overwrite)
   return 0
 }
 

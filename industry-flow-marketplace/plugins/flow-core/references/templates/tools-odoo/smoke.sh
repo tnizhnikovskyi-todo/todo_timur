@@ -5,6 +5,7 @@
 source "$(dirname "$0")/_common.sh"
 DB="${1:-}"; MODS="${2:-}"
 guard_db "$DB"
+check_edition
 [[ -n "$MODS" ]] || { echo "Не задано модулі" >&2; exit 2; }
 psql -d "$DB" -Atc "select 1" >/dev/null || { echo "FAIL smoke: немає доступу до бази $DB"; exit 1; }
 require_installed "$DB" "$MODS" || { echo "FAIL smoke: модулі не installed у $DB"; exit 1; }

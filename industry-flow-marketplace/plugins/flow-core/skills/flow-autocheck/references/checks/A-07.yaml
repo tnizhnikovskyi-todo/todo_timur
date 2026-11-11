@@ -33,6 +33,22 @@
     "text": "підписи й рішення вписала людина, не агент",
     "who": "Власник продукту"
    }
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/business-case.md --intake docs/industries/<галузь>/OWNER-INTAKE.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Відкинуті варіанти (business-case.md, розділ «## Відкинуто»). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "docs/industries/<галузь>/business-case.md",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   }
   }
  ]
 }

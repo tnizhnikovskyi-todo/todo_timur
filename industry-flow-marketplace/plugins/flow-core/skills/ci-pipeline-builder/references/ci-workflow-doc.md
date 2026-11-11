@@ -11,14 +11,14 @@
 Порядок джерел і поведінка при непідтримці (`references/odoo-version-resolve.md`). Поточний стан підтримки N — з C-00.
 
 ## Jobs
-Перелік job'ів, команди з `tools/odoo/` (дослівно), що вважається червоним (`references/test-verdict-rules.md`), зразок рядка підсумку
+Перелік job'ів (включно з `core-deps` і матрицею `edition` у `package-tests`), команди з `tools/odoo/` (дослівно; `ODOO_EDITION`), що вважається червоним (`references/test-verdict-rules.md`), зразок рядка підсумку
 `run_tests.sh`.
 
 ## Версія 2 (знеособлена копія)
 Є/немає вхід C-09; якщо немає — «не генерується» (q02/q03: пілот без знеособлених копій, версія 2 — після пілоту).
 
 ## Умови зеленого
-Перелік умов, за яких `ci` зелений; N/A-job'и з причинами (`config-matrix`, `tours`, `self-test`).
+Редакції: CE — PASS обов'язково; EE — PASS або «WARN ee-unavailable (не перевірено)»; `core-deps` без AGPL/EE у ядрі. Перелік умов, за яких `ci` зелений; N/A-job'и з причинами (`config-matrix`, `tours`, `self-test`).
 
 ## Дії людини
 Required status check `ci` для `main` (дата; без фільтрів `paths`, щоб чужі PR не зависали), Environment `flow-report` і секрети `ODOO_FLOW_*` на ньому (report-odoo лише push/dispatch), видалення пробних гілок `flow/C-03-probe-*`.

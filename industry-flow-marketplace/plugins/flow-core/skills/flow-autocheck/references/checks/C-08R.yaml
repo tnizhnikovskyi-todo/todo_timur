@@ -1,0 +1,60 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "C-08R",
+ "checks": [
+  {
+   "id": "lessons-index",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "flow/lessons/INDEX.md"
+    ]
+   },
+   "when": "mode:daily|event"
+  },
+  {
+   "id": "script-check-lessons",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-step-runner/scripts/check_lessons.py --remarks <файл зауважень сесії> --observations observations/: LSN-coverage без FAIL. Кожне зауваження людини за сесію має observation і (за подією) урок LSN-NNN. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-step-runner/scripts/check_lessons.py",
+     "--remarks",
+     "<файл зауважень сесії>",
+     "--observations",
+     "observations/"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "lsn-format",
+   "prim": "manual",
+   "args": {
+    "text": "кожен файл flow/lessons/LSN-NNN.md має ID за шаблоном LSN-\\d{3}, рядок у INDEX.md, посилання на спостереження й правку скіла (PR)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-pii-lessons",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "flow/lessons/",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "daily-button",
+   "prim": "manual",
+   "args": {
+    "text": "щоденний пакет правок скілів — кнопка Власника продукту; AI скіли без рішення не зливає",
+    "who": "Власник продукту"
+   },
+   "when": "mode:daily"
+  }
+ ]
+}

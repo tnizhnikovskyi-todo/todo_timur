@@ -23,7 +23,7 @@
 | Поле | Обов'язкове | Зміст |
 |---|---|---|
 | `id` | так | kebab-case, унікальний у наборі |
-| `source` | так | формат: `failureMode картки <код>` / `observation <файл>` / `incident <id>` (перевірка `source-filled`) |
+| `source` | так | формат: `failureMode картки <код>` / `observation <файл>` / `incident <id>` / `chronology <галузь> №<n>` / `lesson LSN-xxx` (перевірка `source-filled`) |
 | `sources[]` | якщо >1 джерела | усі джерела після дедуплікації; `source` = перше |
 | `step` | для скіл-набору | код кроку, де помилку видно (`^[ABCD]-\d{2}[a-z]?$`) |
 | `status` | так | `regress` — зелений, у регресі; `new-red` — новий, червоний, скіл до виправлення; `not-reproduced` — новий, зелений, рішення Тімліда; `queued` — «немає — в черзі»; `declined-proposed` — пропозиція відхилити (рішення Тімліда); `skipped` — не прогнано через `requires` (з причиною) |

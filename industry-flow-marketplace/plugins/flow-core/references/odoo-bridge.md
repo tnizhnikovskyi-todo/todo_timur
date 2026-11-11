@@ -52,6 +52,10 @@
 - Після звіту — зміна `stage_id` на стадію за `result` (done -> `stage.autocheck` або `stage.on_human` за `check.mode`; returned -> `stage.returned`; escalated/waiting_human -> `stage.escalation`/`stage.on_human` за report-format.md; stopped -> `stage.stopped`). Стадію ставить лише runner, гейти — людина.
 - Читання останнього звіту: `odoo_search_read` `mail.message`, домен `[["model","=","project.task"],["res_id","=",<id>],["message_type","=","comment"],["body","ilike","run:"]]`, `order="id desc"`, `limit=5`; взяти перший, у якому після розекранування є YAML-ключ верхнього рівня `run:`.
 
+### 4.1 `human_substep` для K1, зразка й анкети; кнопка «пакет рішень»
+- K1 (A-03b), сесія з власником (A-03c `session`), зразок кроків із `params.sample: true` за карткою (A-03b, A-20c, A-21, A-21c) і заповнення анкети (A-02b) — `waiting_human` -> задача `human_substep` для власника/BA; відповіді власника фіксуються як повідомлення на цій підзадачі, їх посилання йде в `params.resume` і в журнал рішень (`flow-state.md` §3, режим `decisions-batch`). K1 не є кнопкою гейта.
+- Рішення пакета = `mail.message` на задачі `human_substep`, автор — з ростера ролі `waiting_for.role`, зміна поля `<task.decision_batch>` (назву фіксує C-00 в `ODOO_SCHEMA`; до того — відкрите питання). Коментар без зміни поля не є рішенням: стоп, питання власнику. Далі власник одним натисканням підтверджує набір рішень K1/анкети; AI вносить рядки в `flow/decisions.md` лише за цим повідомленням із позначкою «внесено AI від імені власника» (К-08). Немає кнопки в схемі — стоп і питання Тімліду (як у §5).
+
 ## 5. Як відрізнити рішення людини від коментаря
 Рішення гейта = `mail.message` на задачі **гейта** (`task.kind = gate`), для якого одночасно:
 - `message_type = "notification"` і `tracking_value_ids` містить запис з `field_id` = поле `gate.decision` або `stage_id` (перехід у `stage.done`/`stage.returned`);
@@ -67,7 +71,7 @@
 - Ключ запуску: `(task_id, attempt, run.started)`. Перед `message_post` перевірити §4 (останній `run:`): якщо вже є звіт з тим самим `attempt` і `finished` — не постити вдруге, лише виправити стадію.
 - Оренда: перехід `stage.queue -> stage.in_progress` разом із записом `task.lease_until = now + limits.timeout_min x limits.lease_factor` (фактор — з наряду, за замовчуванням 1,5 з `dispatcher-config.md`); робити в одному `odoo_write`. Читання стадії перед записом; стадія вже не `queue` — задачу взяв інший агент, зупинитися без запису.
 - `sweep` оркестратора: задачі в `stage.in_progress` з `lease_until < now` (лише це порівняння, без власної формули) — повернути в `stage.queue` з `attempt+1` (якщо `attempt` ≤ `limits.max_attempts`), інакше `stage.escalation` і активність Тімліду.
-- Створення задач оркестратором ідемпотентне за ключем `(step, scope.id, attempt, scope-ключ злиття)`: перед створенням `odoo_search_read` задач із тим самим ключем у будь-якій стадії, крім `stage.returned`.
+- Створення задач оркестратором ідемпотентне за ключем `(step, scope.id, attempt, scope-ключ злиття)`; для `params.mode: recalc` — `(step, scope.id, mode=recalc, base_sha)` (по одному наряду на крок-власник застарілих артефактів): перед створенням `odoo_search_read` задач із тим самим ключем у будь-якій стадії, крім `stage.returned`.
 
 ## 8. Активності (`mail.activity`)
 Створює оркестратор (не runner). Виняток (q23): `FLOW_STOP` кроку 0 runner — активність AI-інженеру створює runner, за наявності права в технічного користувача (`c00-checklist.md`, п. q23). Оркестратор створює: `odoo_create` `mail.activity` з `res_model="project.task"`, `res_id`, `summary` (≤80 символів), `note` (що трапилось, `from`, `result`), `date_deadline` (дедлайн = сьогодні + `human_sla` у робочих днях; без `human_sla` — наступний робочий день), `user_id` — виконавець ролі за `ODOO_SCHEMA` (немає відповідності ролі — Тімлід). Використовується для: переходу, якого немає в `flow-map.md` (стоп + активність Тімліду), ескалацій, прострочення `human_sla`, нагадувань гейтам.

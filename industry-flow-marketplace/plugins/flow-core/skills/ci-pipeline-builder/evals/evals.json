@@ -85,6 +85,39 @@
         "evals/fixtures/happy/"
       ],
       "requires": "github: живий тестовий репозиторій з Actions і MCP github; без нього кейс пропускається з явним статусом SKIP"
+    },
+    {
+      "id": "two-editions-ee-unavailable",
+      "prompt": "Крок C-03, режим create. Репо як у фікстурі happy; tools/odoo/run_tests.sh вміє ODOO_EDITION=ce|ee (без доступу до EE — код 3 і «WARN ee-unavailable»). Секрету доступу до EE немає, способу доставки EE C-00 не задав. Згенеруй ci.yml.",
+      "expected_output": "package-tests — матриця edition [ce, ee]; ODOO_EDITION передається в скрипт; EE-вузол без доступу дає «WARN ee-unavailable», а не PASS; опис ci: «CE PASS; EE WARN ee-unavailable (не перевірено)»; спосіб доставки EE не вигаданий (відкрите питання В-8 у memo); job core-deps у needs job ci; check_ci.py зелений.",
+      "assertions": [
+        "package-tests має matrix.edition і ODOO_EDITION",
+        "у ci.yml є ee-unavailable і немає «EE PASS» для недоступної EE",
+        "спосіб доставки EE не вигадано, у memo відкрите питання про нього",
+        "core-deps є в needs job ci",
+        "dispatch має input edition і він використаний у resolve"
+      ],
+      "fixtures": [
+        "check_ci-ok",
+        "check_ci-bad"
+      ],
+      "requires": []
+    },
+    {
+      "id": "core-depends-on-agpl-or-ee",
+      "prompt": "Крок C-03, режим update. У package/addons ядро td_a залежить від ready_agpl (manifest license AGPL-3) і від td_a_ee. Згенеруй/онови ci.yml і запусти перевірки.",
+      "expected_output": "core-deps FAIL: CORE-agpl (td_a->ready_agpl) і CORE-ee-dep (td_a->td_a_ee); ci червоний; result returned_to A-11 з переліком залежностей; CI не «лагодиться» зміною перевірки; у memo — ліцензія наших модулів LGPL-3 за замовчуванням, остаточно рішення власника.",
+      "assertions": [
+        "check_core_deps.py дає FAIL CORE-agpl і CORE-ee-dep на фікстурі check_core_deps-bad",
+        "на фікстурі check_core_deps-ok немає FAIL (залежності поза addons -> WARN CORE-external, а не PASS); з --odoo-addons odoo/odoo/addons,odoo/addons -> CORE-external PASS",
+        "результат — повернення на A-11, а не зміна правила",
+        "ліцензія модулів не вирішується скілом"
+      ],
+      "fixtures": [
+        "check_core_deps-ok",
+        "check_core_deps-bad"
+      ],
+      "requires": []
     }
   ]
 }

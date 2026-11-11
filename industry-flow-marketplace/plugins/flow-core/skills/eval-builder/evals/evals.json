@@ -94,6 +94,57 @@
         "Ручних перевірок checks[] замість flow-autocheck не виконано і 'Готово' не заявлено",
         "Diff порожній (evals/ не змінено, INDEX не торкався)"
       ]
+    },
+    {
+      "id": "init-chronology-mebli",
+      "prompt": "Режим init, params.source chronology, галузь mebli. Зауваження людини №11: сторінка для власника віддана як md-файл, а не HTML-сторінка. Еталон: docs/industries/mebli/research/owner-page@<sha> у репо галузі (посилання). Побудуй кейс для concept-presentation за references/gold/mebli.md.",
+      "expected_output": "Кейс mebli-r11-md-not-page: source «chronology mebli №11», input.fixtures — шлях+SHA без копії, expected.checks — рецензент має назвати «md замість сторінки» (чек-лист owner-page.md), must_not — схвалити; кейс червоний на поточній версії.",
+      "assertions": [
+        "id mebli-r11-md-not-page, source у форматі chronology mebli №11",
+        "Фікстура — шлях і SHA, а не копія даних чи бінарників",
+        "Грейдер llm за поведінкою",
+        "Кейс червоний на версії, де людина побачила помилку"
+      ],
+      "step": "A-20c",
+      "source": "chronology mebli №11",
+      "requires": [],
+      "must_not": [
+        "скопіювати меблевий зміст",
+        "кейс без конкретного зауваження"
+      ]
+    },
+    {
+      "id": "init-visual-case",
+      "prompt": "Режим init, chronology mebli №6: відео-матеріал складається зі статичних кадрів без динаміки. Еталон — prototype-real/video/ у репо галузі @<sha> (посилання на кадр). Зроби візуальний кейс для showcase-content.",
+      "expected_output": "Візуальний кейс: фікстура — шлях до кадру + SHA + опис «що видно», expected.checks вимагає відкрити візуальний результат (за video-materials.md), must_not — схвалити за кодом без перегляду.",
+      "assertions": [
+        "Фікстура містить шлях+SHA і опис ≤5 рядків, mp4/png не копіюються",
+        "expected.checks вимагає перегляду візуального результату",
+        "must_not містить «схвалити без перегляду візуального результату»"
+      ],
+      "step": "A-21c",
+      "source": "chronology mebli №6",
+      "requires": [],
+      "must_not": [
+        "вкласти mp4/png у evals/"
+      ]
+    },
+    {
+      "id": "lesson-input-from-retro",
+      "prompt": "C-04, params.lessons [LSN-007]. LSN-007 (скіл flow-research:industry-deep-dive@0.1.0, крок A-03b): профіль конкурента лише з назв, без цін і продукту; repeat_of LSN-002. Створи евал-кейс.",
+      "expected_output": "Кейс source «lesson LSN-007», barrier true (repeat_of), червоний на industry-deep-dive@0.1.0; у INDEX рядок; eval_ref повернуто в урок.",
+      "assertions": [
+        "source у форматі lesson LSN-007",
+        "barrier: true через repeat_of",
+        "Кейс червоний на версії з уроку",
+        "У фікстурі лише коди K-xx, П-xx"
+      ],
+      "step": "A-03b",
+      "source": "lesson LSN-007",
+      "requires": [],
+      "must_not": [
+        "створити кейс без конкретної правки уроку"
+      ]
     }
   ],
   "note": "Вміст фікстур описано в prompt; агент працює з описаним вмістом, окремих файлів не потрібно. Перевірки команд — «у відповіді наведено команду з прапорцями…»."

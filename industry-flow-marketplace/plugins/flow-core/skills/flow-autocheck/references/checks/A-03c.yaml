@@ -1,0 +1,94 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-03c",
+ "inputs_require": [
+  "OWNER-INTAKE.md"
+ ],
+ "checks": [
+  {
+   "id": "intake-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-intake",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md: INT-file, INT-block без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "reuse-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/REUSE.md"
+    ]
+   },
+   "when": "mode:inventory|decide"
+  },
+  {
+   "id": "rejected-register",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REUSE.md --intake docs/industries/<галузь>/OWNER-INTAKE.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Модулі зі словом «ні»/«відхилено» — рядки реєстру (`## Відкинуто` у REUSE.md). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
+     "docs/industries/<галузь>/research/REUSE.md",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   },
+   "when": "mode:decide"
+  },
+  {
+   "id": "reuse-ids",
+   "prim": "manual",
+   "args": {
+    "text": "кожен модуль — рядок REUSE-NN (унікальні); критерії (Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій) заповнені; права на код невідомі -> «ні» до уточнення; години перераховано (К-18)",
+    "who": "runner"
+   },
+   "when": "mode:inventory|decide"
+  },
+  {
+   "id": "gate-human",
+   "prim": "manual",
+   "args": {
+    "text": "рішення «беремо / адаптуємо / ні» ухвалила людина на сесії з власником; AI його не вигадує і не ставить",
+    "who": "Власник продукту"
+   },
+   "when": "mode:decide"
+  },
+  {
+   "id": "license-open",
+   "prim": "manual",
+   "args": {
+    "text": "ліцензія наших модулів — LGPL-3 за замовчуванням; остаточно — рішення власника (відкрите питання, не вирішувати)",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  }
+ ]
+}

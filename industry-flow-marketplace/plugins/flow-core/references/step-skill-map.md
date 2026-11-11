@@ -6,6 +6,9 @@
 | Крок | skill_ref (перший — ведучий) | params.mode / ключі |
 |---|---|---|
 | A-01 | flow-research:industry-scoring | — |
+| A-02b | flow-research:owner-questionnaire | `mode: prepare`\|`validate`\|`amend` (анкета власника, `waiting_human` між `prepare` і `validate`) |
+| A-03b | flow-research:industry-deep-dive | — (K1 усередині: `waiting_human` + `resume`; перерахунок — `params.mode: recalc`) |
+| A-03c | flow-research:reuse-modules | `mode: inventory`\|`session`\|`decide` (`session` — AI готує матеріал і питання -> `waiting_human`; сесія з власником — `human_substep`; потім `decide`) |
 | A-04 | flow-research:past-projects-analyzer | — |
 | A-05 | flow-research:segment-selector | `phase` 1\|2 (режим «еталонні клієнти») |
 | A-07 | flow-package-evolution:product-decision-drafter | `mode: перша` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
@@ -16,9 +19,12 @@
 | A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія` (стенд пакета) |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
-| A-20 | flow-research:concept-mapper | — |
-| A-21 | flow-research:prototype-builder | — |
-| A-22 | flow-package-build:demo-base-builder | режим «емуляція» (`перша`\|`нова-версія`) |
+| A-20 | flow-research:concept-mapper | — (OWNER-BRIEF, BOX, SALES, REJECTED; `params.mode: recalc`) |
+| A-20b | flow-research:completeness-audit | — (`params.mode: recalc` — перерахунок) |
+| A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |
+| A-21 | flow-research:prototype-builder | `params.sample: true` (зразок) \| повний обсяг; `prototype.fidelity: mock` не підтримується (К-23) |
+| A-21c | flow-research:showcase-content | — (виконавець — Контент-менеджер, `executor: any`) |
+| A-22 | flow-package-build:demo-base-builder | база зрізу для гарячого ліда (`перша`\|`нова-версія`) |
 | A-23 / `prep`\|`results` | flow-research:demand-test-runner | `mode: prep`\|`results` |
 | A-23 / `список`\|`адреси` | flow-research:segment-selector | `mode: список`\|`адреси`; список розсилки — окремий наряд, створюється раніше за `prep` (див. `flow-map.md`) |
 | B-01 | flow-research:segment-selector | режим «ліди» |
@@ -37,6 +43,7 @@
 | C-03 | flow-core:ci-pipeline-builder | — |
 | C-04 | flow-core:eval-builder | `weekly`\|`init`\|`regress` |
 | C-07 | flow-core:eval-builder | `incident` |
+| C-08R | flow-core:skill-retro | `mode: daily`\|`event` |
 | D-01 | flow-package-evolution:package-usage-metrics | `collect`\|`report` |
 | D-02 | flow-package-evolution:backlog-triage | `a`\|`b`\|`c`\|`d` |
 | D-03 | flow-package-evolution:odoo-version-migrator | `prepare`\|`verify` |
@@ -52,9 +59,11 @@
 |---|---|---|---|
 | `base` | `flow-core:flow-executor` | немає | усі, не названі нижче |
 | `mail` | `flow-core:flow-executor-mail` | Gmail: читання й `create_draft`; Drive: читання файлу за id з наряду (договір для support-desk) | client-help-bot, support-desk |
-| `research` | `flow-core:flow-executor-research` | odb-catalog, AIKB, Fathom, Drive — лише читання; WebSearch/WebFetch | industry-scoring, segment-selector, past-projects-analyzer, concept-mapper, prototype-builder, questionnaire-builder, package-fit-gap |
+| `research` | `flow-core:flow-executor-research` | odb-catalog, AIKB, Fathom, Drive — лише читання; WebSearch/WebFetch; без власної ERP/Gmail/Unitalk (К-22) | concept-mapper, questionnaire-builder, package-fit-gap |
+| `research-internal` | `flow-core:flow-executor-research-internal` | як `research` + читання внутрішніх даних ToDo за `todo_data` анкети (alias `own-erp`, лише читання; Unitalk/Fathom/Gmail — лише читання); сирі спостереження — лише в `research/sources/` (К-07, К-19) | industry-deep-dive, past-projects-analyzer, reuse-modules, industry-scoring, segment-selector |
+| `content` | `flow-core:flow-executor-content` | лише файли репо галузі й наряд (контент; клас `commercial`, без баз Odoo, без `internal-raw`) | showcase-content |
 | `outreach` | `flow-core:flow-executor-outreach` | odb-catalog, Drive (читання) + Gmail `create_draft` | demand-test-runner |
 | `drive` | `flow-core:flow-executor-drive` | Drive: лише читання файлів з наряду | package-sow-builder, package-usage-metrics, client-data-migrator |
-| `repo` | `flow-core:flow-executor-repo` | GitHub MCP — лише читання (+ `get_tag`, `list_tags`); WebFetch (лише документація Odoo 19) | ci-pipeline-builder, gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator |
+| `repo` | `flow-core:flow-executor-repo` | GitHub MCP — лише читання (+ `get_tag`, `list_tags`); WebFetch (лише документація Odoo 19) | ci-pipeline-builder, gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator, prototype-builder (GitHub-читання модулів REUSE + WebFetch документації Odoo 19; Bash/Odoo/Playwright/ffmpeg виконує runner за «КОМАНДИ:», К-22), skill-retro |
 
 Наряд із `prod-ro-<клієнт>` (лише client-help-bot, q37) має профіль `mail` і не отримує запису в Gmail/Drive/GitHub — таких інструментів у цього агента немає. Дії, яких виконавець не має (`actions_run_trigger`, запис файлу в Drive, `Bash (git)` у скілі), він віддає runner'у рядком «КОМАНДИ:» (`executor-brief.md`). Скіл, чия інструкція потребує конектора поза профілем наряду, зупиняється `escalated` (не шукає обхідних шляхів). Якщо ведучий скіл не в таблиці — `base`; помилку профілю виправляє AI-інженер у цій таблиці.

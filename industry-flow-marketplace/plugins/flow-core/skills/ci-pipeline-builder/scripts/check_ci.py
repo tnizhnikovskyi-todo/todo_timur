@@ -23,6 +23,16 @@ def split_jobs(text):
     return {k: "\n".join(v) for k, v in jobs.items()}
 
 
+def strip_comments(body):
+    """Відкидає повні рядки-коментарі й хвостові ` # ...` (поза лапками — наближено)."""
+    out = []
+    for line in body.split("\n"):
+        if line.lstrip().startswith("#"):
+            continue
+        out.append(re.sub(r"\s+#.*$", "", line))
+    return "\n".join(out)
+
+
 def job_if(body):
     m = re.search(r"^    if:\s*(.+)$", body, re.M)
     return m.group(1) if m else ""
@@ -59,7 +69,7 @@ def main(argv):
     miss_dir = [p for p in ("package/addons", "package/config", "clients/", ".github/workflows/ci.yml") if p not in res_body]
     add("resolve-zones", not miss_dir and "resolve" in jobs, f"resolve не покриває зони: {miss_dir}")
 
-    di = [k for k in ("package_tag", "client", "odoo_version", "sha")
+    di = [k for k in ("package_tag", "client", "odoo_version", "sha", "edition")
           if not re.search(rf"inputs\.{k}\b", text.split("\njobs:", 1)[-1]) or not re.search(rf"^\s+{k}:", head, re.M)]
     add("dispatch-inputs", not di, f"input не оголошено або не використано: {di}")
 
@@ -81,7 +91,7 @@ def main(argv):
     if reg or not ok_tag or "--registry" not in opt:
         add("client-tag", ok_tag, msg)
 
-    tests = {n: b for n, b in jobs.items() if n in TEST_JOBS or "tools/odoo/" in b}
+    tests = {n: b for n, b in jobs.items() if n in TEST_JOBS or ("tools/odoo/" in b and n != "core-deps")}
     ungated = [n for n, b in tests.items() if not re.search(SUPPORTED, job_if(b))]
     add("odoo-version", bool(re.search(r"-odoo", text)) and "odoo_supported" in text and not ungated,
         "немає розв'язання суфікса -odoo<N>/odoo_supported" + (f"; тестові job'и без гейта odoo_supported == 'true': {ungated}" if ungated else ""))
@@ -94,6 +104,47 @@ def main(argv):
                 if dep not in jobs:
                     bad_needs.append(f"{n}->{dep}")
     add("needs-exist", not bad_needs, f"needs на неіснуючі job'и: {bad_needs}")
+
+    pt = jobs.get("package-tests", "")
+    ebad = []
+    if pt:
+        if not re.search(r"matrix:\s*\n\s+edition:", pt):
+            ebad.append("package-tests без matrix.edition (CE і EE)")
+        if "ODOO_EDITION" not in pt:
+            ebad.append("package-tests не передає ODOO_EDITION у скрипт C-00")
+        if "ee-unavailable" not in pt:
+            ebad.append("немає обробки EE без доступу (WARN ee-unavailable)")
+        if re.search(r"ee-unavailable[^\n]*PASS", strip_comments(pt)):
+            ebad.append("ee-unavailable не може бути PASS")
+    if '"ce"' not in jobs.get("resolve", "") or "editions" not in jobs.get("resolve", ""):
+        ebad.append("resolve не віддає editions із ce")
+    ci_code = strip_comments(jobs.get("ci", ""))
+    if pt and not re.search(r"^\s+ee_verdict:", strip_comments(pt.split("steps:", 1)[0]), re.M):
+        ebad.append("package-tests не віддає outputs.ee_verdict (вердикт EE не доходить до ci)")
+    if not re.search(r"needs\.package-tests\.outputs\.ee_verdict|download-artifact", ci_code) or "ee-unavailable" not in ci_code:
+        ebad.append("ci читає вердикт EE лише в коментарі: потрібні needs.package-tests.outputs.ee_verdict (або download-artifact) і виконуваний рядок з ee-unavailable")
+    if pt and not re.search(r"^\s+ce_verdict:", strip_comments(pt.split("steps:", 1)[0]), re.M):
+        ebad.append("package-tests не віддає outputs.ce_verdict (опис статусу ci не знає результат CE)")
+    if not re.search(r"needs\.package-tests\.outputs\.ce_verdict", ci_code) or "не запускалась" not in ci_code or "ran:" not in ci_code:
+        ebad.append("ci формує опис редакцій не з фактів: потрібні ce_verdict, гілки ran:PASS/ran:FAIL/ee-unavailable і «не запускалась» (edition=ce/ee) у виконуваному коді")
+    if re.search(r"EE_DESC=[\"']CE PASS", ci_code):
+        ebad.append("EE_DESC жорстко містить «CE PASS»")
+    add("editions", not ebad, "; ".join(ebad))
+
+    cd = jobs.get("core-deps", "")
+    cbad = []
+    if not cd or "check_core_deps" not in cd:
+        cbad.append("немає job core-deps із check_core_deps.py (AGPL/EE у ядрі)")
+    if "core-deps" not in (re.search(r"^    needs:\s*(.+)$", jobs.get("ci", ""), re.M) or [None, ""])[1]:
+        cbad.append("core-deps відсутній у needs job ci")
+    ci_exec = strip_comments(jobs.get("ci", ""))
+    if "CE_ONLY_DESC" not in ci_exec or "лише CE" not in ci_exec:
+        cbad.append("ci не додає до опису статусу виконуваний рядок 'client-tests/tours: лише CE'")
+    if "CORE_DEPS_NOTE" not in ci_exec or "core_deps_note" not in strip_comments(cd):
+        cbad.append("ci не додає до опису 'core-deps: ... не оцінено' при CORE-external")
+    if jobs.get("tours") and not re.search(r"ODOO_EDITION:\s*\"?ce\"?", strip_comments(jobs.get("tours", ""))):
+        cbad.append("job tours без явного ODOO_EDITION: ce")
+    add("core-deps", not cbad, "; ".join(cbad))
 
     ci_block = jobs.get("ci", "")
     add("ci-contract", bool(ci_block) and "if: always()" in ci_block and "statuses: write" in ci_block

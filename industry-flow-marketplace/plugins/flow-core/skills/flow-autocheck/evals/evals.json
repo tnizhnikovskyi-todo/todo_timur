@@ -77,6 +77,94 @@
         "Заголовки взято з flow-core/references/data-policy-template.md, не з пам'яті",
         "Вердикт FAIL"
       ]
+    },
+    {
+      "id": "check-intake",
+      "prompt": "Запусти scripts/check_intake.py на фікстурах evals/fixtures/check_intake-ok і check_intake-bad (OWNER-INTAKE.md, OWNER-BRIEF.md в тій самій теці; ключ --brief). У -bad поле editions «уточнити», pricing.pilot — плейсхолдер {{…}}, ambition.scope=huge, а в брифі питання «Яку редакцію брати… CE чи EE?» і «яка ціна коробки?».",
+      "expected_output": "-ok: код 0, INT-file/INT-block/INT-dup PASS. -bad: код 1; INT-block FAIL називає editions, pricing.pilot, ambition.scope; INT-dup FAIL називає рядки брифу з питаннями про редакцію і ціну.",
+      "assertions": [
+        "На -ok усі три перевірки PASS і код виходу 0",
+        "На -bad INT-block FAIL і msg містить editions та pricing.pilot",
+        "На -bad INT-dup FAIL з номерами рядків брифу",
+        "З --allow-empty на -bad INT-block PASS (лише наявність ключів)",
+        "Скрипт нічого не пише у файли фікстури"
+      ]
+    },
+    {
+      "id": "check-rejected",
+      "prompt": "Запусти scripts/check_rejected.py REJECTED.md --intake OWNER-INTAKE.md на фікстурах check_rejected-ok і -bad. У -bad: дубль REJ-001, порожній доказ, група G4a з латинською «a», позиція «Облік залишків» зі списку do_not_reject без посилання на K1, підсумкова таблиця не збігається з рядками.",
+      "expected_output": "-ok: усі REJ-* PASS. -bad: REJ-fields FAIL (дубль, порожній доказ, латинська a), REJ-dnr FAIL з «Облік залишків», REJ-count FAIL з розбіжністю.",
+      "assertions": [
+        "На -ok код 0 і чотири PASS",
+        "На -bad REJ-fields msg містить «дубль ID REJ-001» і «латинська»",
+        "На -bad REJ-dnr FAIL називає REJ-004",
+        "На -bad REJ-count FAIL називає G1",
+        "Крок із реєстром порожнім файлом дає REJ-exists FAIL",
+        "Фікстури check_rejected-k1-returned, -k1-ret-noid («повернути, це ядро пакета»), -k1-ret-no («ні, лишити в пакеті»): REJ-returned і REJ-dnr FAIL",
+        "check_rejected-k1-ambig («подумаємо пізніше»): REJ-returned MANUAL, не PASS; check_rejected-k1-confirm («так, відкинути»): PASS",
+        "--k1 на неіснуючий файл: REJ-dnr і REJ-returned FAIL"
+      ]
+    },
+    {
+      "id": "check-facts",
+      "prompt": "Запусти scripts/check_facts.py research/facts.yaml research у теках check_facts-ok і check_facts-bad. У -bad число 1 500 компаній і 60 тис. грн не збігаються з facts (1200 і 50000), маркер payback.breakeven_months не існує у facts.",
+      "expected_output": "-ok: FACT-mismatch PASS (форматування «1 200», «4,5 %», «50 тис.» нормалізується), FACT-orphan не FAIL. -bad: FACT-mismatch FAIL з обома числами; FACT-orphan FAIL з payback.breakeven_months.",
+      "assertions": [
+        "На -ok код 0",
+        "На -bad FACT-mismatch msg містить market.bands.0.companies і pricing.ce_entry",
+        "На -bad FACT-orphan FAIL з payback.breakeven_months",
+        "«50 тис.» у тексті дорівнює 50000 у facts",
+        "Факти без посилань дають лише WARN"
+      ]
+    },
+    {
+      "id": "check-brand",
+      "prompt": "Запусти scripts/check_brand.py . --brand BRAND.md у теках check_brand-ok і check_brand-bad (одна сторінка page.html). У -bad немає #FE5000/#101820, Open Sans і логотипа.",
+      "expected_output": "-ok: BR-colors, BR-font, BR-logo PASS. -bad: усі три FAIL з назвою page.html.",
+      "assertions": [
+        "На -ok код 0",
+        "На -bad BR-colors FAIL і msg містить #FE5000",
+        "На -bad BR-font FAIL і msg містить Open Sans",
+        "На -bad BR-logo FAIL",
+        "Файли .md/.mp4 не перевіряються за кольорами"
+      ]
+    },
+    {
+      "id": "check-privacy",
+      "prompt": "У теках check_privacy-ok і check_privacy-bad запусти scripts/check_privacy.py research --pages research/owner-page --materials prototype-real. У -bad у research/OWNER-BRIEF.md є e-mail, телефон, угода з клієнтом K-07 із сумою, маркер <!-- internal-raw -->, а сторінка власника посилається на research/sources/.",
+      "expected_output": "-ok: PRV-pii і PRV-raw-place PASS (internal-raw лише в research/sources/ і в sources-log.md). -bad: PRV-pii FAIL (email, phone, deal-sum), PRV-raw-place FAIL (бриф і сторінка); значень збігів у виводі немає.",
+      "assertions": [
+        "На -ok код 0",
+        "На -bad PRV-pii FAIL містить email (адреса firma-mebli.com.ua), phone, deal-sum",
+        "На -bad PRV-raw-place FAIL називає owner-page/index.html",
+        "У виводі немає самих значень (адреси, номера, суми)",
+        "На check_privacy-pib (лише ПІБ-подібний рядок) PRV-pii MANUAL, не FAIL",
+        "Рядки `--token: #FE5000` і «token: primary» не дають FAIL"
+      ]
+    },
+    {
+      "id": "check-stale",
+      "prompt": "Виконай evals/fixtures/check_stale-bad/make_repo.sh <тека> (друкує BASE=<sha>), далі scripts/check_stale.py <тека>/docs/industries/test/research/DEPENDS.yaml --base <sha>. Після sha артефактів змінився research/facts.yaml. Те саме на check_stale-ok. Додатково scripts/autocheck.py --selftest (сценарій same-step: залежність змінена тим самим кроком, --base = голова результату -> PASS; sha не предок base -> WARN STALE-order).",
+      "expected_output": "-ok: STALE-list PASS. -bad: STALE-list FAIL зі списком FUNCTIONAL-MAP.md і OWNER-BRIEF.md у порядку перерахунку; артефакти без sha — окремий WARN STALE-sha.",
+      "assertions": [
+        "На -ok код 0",
+        "На -bad STALE-list FAIL і msg містить research/FUNCTIONAL-MAP.md та research/OWNER-BRIEF.md",
+        "Транзитивно залежний артефакт теж у списку",
+        "Репо не змінено (git status порожній)",
+        "Артефакт без sha не вважається застарілим",
+        "Сценарій same-step у selftest: PASS, а не STALE"
+      ]
+    },
+    {
+      "id": "inputs-intake-required",
+      "prompt": "Режим inputs, крок A-03b: наряд із входом briefing.md без OWNER-INTAKE.md (evals/fixtures/inputs-intake/make_repo.sh <тека>; запуск scripts/autocheck.py --mode inputs).",
+      "expected_output": "Вердикт FAIL; рядок input-intake FAIL «Додай вхід OWNER-INTAKE.md у наряд»; briefing.md — PASS.",
+      "assertions": [
+        "Вердикт FAIL",
+        "Є input-intake зі статусом FAIL",
+        "input:briefing.md PASS",
+        "Задачу в чергу не ставлено, репо не змінено"
+      ]
     }
   ]
 }

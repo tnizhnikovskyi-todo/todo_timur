@@ -8,4 +8,4 @@ DB="${1:-}"; MODEL="${2:-}"; FILE="${3:-}"
 guard_db "$DB"
 [[ -n "$MODEL" && -f "$FILE" ]] || { echo "Потрібні <model> і існуючий <file.csv>" >&2; exit 2; }
 echo "FLOW_STOP: import.sh не реалізовано (C-00 обирає канал імпорту; див. README.md). db=$DB model=$MODEL file=$FILE" >&2
-exit 3
+exit 4   # 4 = «не реалізовано»; код 3 зарезервовано за WARN ee-unavailable (check_edition)

@@ -1,0 +1,195 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-21c",
+ "inputs_require": [
+  "OWNER-INTAKE.md"
+ ],
+ "checks": [
+  {
+   "id": "depends-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/DEPENDS.yaml"
+    ]
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "intake-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-intake",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md: INT-file, INT-block без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "materials-files",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/prototype-real/captions.yaml",
+     "docs/industries/<галузь>/prototype-real/ACCEPTED.md"
+    ]
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "script-check-video",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/showcase-content/scripts/check_video.py docs/industries/<галузь>/prototype-real/video --intake docs/industries/<галузь>/OWNER-INTAKE.md: VID-format, VID-freeze, VID-frames без FAIL. Потрібні ffprobe/ffmpeg; немає -> ERROR, не PASS. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/showcase-content/scripts/check_video.py",
+     "docs/industries/<галузь>/prototype-real/video",
+     "--intake",
+     "docs/industries/<галузь>/OWNER-INTAKE.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-brand",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_brand.py docs/industries/<галузь>/prototype-real --brand <корінь плагіна flow-research>/references/brand-todo/BRAND.md: BR-colors, BR-font, BR-logo без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими). Теки shoot/, screens*/, video/rec/, dom/ (DOM-дампи Odoo, знімки, кадри) скрипт пропускає сам; перевіряються SHOW*, one-pager і інші html/css/svg.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_brand.py",
+     "docs/industries/<галузь>/prototype-real",
+     "--brand",
+     "<корінь плагіна flow-research>/references/brand-todo/BRAND.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "brand-video-frames",
+   "prim": "manual",
+   "args": {
+    "text": "бренд у відео скрипт не бачить: на кадрах заставки й титрів є логотип ToDo, кольори й шрифт бренду (кадри з video/frames/)",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-facts",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py docs/industries/<галузь>/prototype-real/facts.json docs/industries/<галузь>/prototype-real/SHOW.md docs/industries/<галузь>/prototype-real/captions.yaml: FACT-mismatch, FACT-orphan без FAIL. Числа позначаються маркером <!--fact:ключ--> (docstring скрипта); FACT-orphan WARN не блокує. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py",
+     "docs/industries/<галузь>/prototype-real/facts.json",
+     "docs/industries/<галузь>/prototype-real/SHOW.md",
+     "docs/industries/<галузь>/prototype-real/captions.yaml"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-facts-markers",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py docs/industries/<галузь>/prototype-real/facts.json docs/industries/<галузь>/prototype-real/SHOW.md docs/industries/<галузь>/prototype-real/captions.yaml --require-markers: FACT-markers, FACT-orphan без FAIL. Кожен файл із числами (грн, %, год…) мусить мати маркери <!--fact:ключ--> / data-fact (checks.md, «Маркери фактів»).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_facts.py",
+     "docs/industries/<галузь>/prototype-real/facts.json",
+     "docs/industries/<галузь>/prototype-real/SHOW.md",
+     "docs/industries/<галузь>/prototype-real/captions.yaml",
+     "--require-markers"
+    ],
+    "who": "runner"
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "script-check-privacy",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_privacy.py docs/industries/<галузь>/research --materials docs/industries/<галузь>/prototype-real --allow <корінь плагіна flow-research>/references/brand-todo/BRAND.md: PRV-pii, PRV-raw-place без FAIL. ПІБ-подібне (MANUAL) — перевірка очима. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими). Сирі цитати без маркера internal-raw скрипт не бачить — рецензент перевіряє очима; коди клієнтів K-xx/П-xx у публічних сторінках і матеріалах дають FAIL PRV-client-code.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_privacy.py",
+     "docs/industries/<галузь>/research",
+     "--materials",
+     "docs/industries/<галузь>/prototype-real",
+     "--allow",
+     "<корінь плагіна flow-research>/references/brand-todo/BRAND.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "accepted-md",
+   "prim": "manual",
+   "args": {
+    "text": "ACCEPTED.md фіксує схвалене (що, версія, файл); зміна стилю не погіршує схвалену динаміку; показ «було / стало» (N-11)",
+    "who": "runner"
+   },
+   "when": "not_sample"
+  },
+  {
+   "id": "gate-materials",
+   "prim": "manual",
+   "args": {
+    "text": "гейт продаючих матеріалів — рішення Власника продукту; виконавець — Контент-менеджер",
+    "who": "Власник продукту"
+   }
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  },
+  {
+   "id": "script-check-stale",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_stale.py docs/industries/<галузь>/research/DEPENDS.yaml --base <git.head>: STALE-list без FAIL. Після перерахунку список має бути порожній. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_stale.py",
+     "docs/industries/<галузь>/research/DEPENDS.yaml",
+     "--base",
+     "<git.head>"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "reviewer-shots",
+   "prim": "manual",
+   "args": {
+    "text": "знімки 390/1280 px і кадри для рецензента збережено в prototype-real/video/frames/ (кадри 0, 1, 3 с, далі кожні 2 с) і prototype-real/screens/ і їхні шляхи передано в брифі рецензента (рецензент лише читає файли й не запускає браузер: немає знімків -> major «runner не підготував», review-checklists)",
+    "who": "runner"
+   }
+  }
+ ]
+}

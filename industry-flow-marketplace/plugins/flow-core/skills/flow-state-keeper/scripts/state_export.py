@@ -9,6 +9,7 @@
 --merge: частини зливаються з накопиченою базою DIR/flow/.snapshot.json за стабільними ключами (рядки, яких немає у частинах,
 зберігаються; рішення лише додаються); render оновлює базу. verify --merge бере шапку з бази й показує розбіжність
 «файли репо != Odoo» для рядків із частин. Без --merge знімок має бути повним.
+  check-decisions --rows FILE.json|-   decisions-batch (К-08): позначка «внесено AI від імені власника» + посилання; exit 1 при FAIL
   stats --runs FILE.json [FILE..]   групування запусків за step x skill_version x ISO-тиждень (JSON і md)
 Формат знімка — references/export-format.md. Значення збігів PII у вивід не друкуються.
 """
@@ -17,7 +18,7 @@ from collections import OrderedDict
 
 SCHEMA_VERSION = 1
 BASE = "flow/.snapshot.json"
-RUN_KEYS = ("step", "scope", "attempt", "result", "finished", "skill_versions", "usage", "task")
+RUN_KEYS = ("step", "scope", "attempt", "result", "finished", "skill_versions", "usage", "task", "review_rounds", "human_rounds")
 HEADER = "<!-- AUTO-EXPORT з Odoo (flow). Не редагувати. -->\nЗнято: {taken} · SHA репо: {sha} · Джерело: odoo:flow · Версія схеми: 1\n"
 
 PII = OrderedDict([
@@ -83,6 +84,7 @@ KEYS = {
     "runs": lambda r: "%s|%s|%s" % (r.get("step"), r.get("scope"), r.get("attempt")),
     "open_questions": lambda r: "%s|%s|%s" % (r.get("date"), r.get("step"), r.get("question")),
     "ai_stop": lambda r: "%s|%s" % (r.get("type"), r.get("id")),
+    "lessons": lambda r: r.get("lsn"),
 }
 
 
@@ -163,7 +165,7 @@ def scan_pii(snap):
             t = pii_types(x)
             if t:
                 problems.append((".".join(path), t))
-    for k in ("package", "steps", "clients", "decisions", "runs", "open_questions", "ai_stop"):
+    for k in ("package", "steps", "clients", "decisions", "runs", "open_questions", "ai_stop", "lessons"):
         walk(snap.get(k), [k])
     return problems
 
@@ -211,6 +213,11 @@ def render_all(snap):
         months.setdefault((r.get("finished") or "н/д")[:7], []).append(runs_row(r))
     for m, rows in months.items():
         files["flow/runs/%s.md" % m] = h + "\n# Запуски %s\n\n" % m + table(["step", "scope", "attempt", "result", "skill_versions", "usage", "задача"], rows)
+    les = sorted(snap.get("lessons") or [], key=lambda r: nat(r.get("lsn")))
+    if les:  # К-24: лише INDEX.md; файли LSN-xxx.md пише skill-retro (єдиний автор формату lesson-format.md)
+        files["flow/lessons/INDEX.md"] = h + "\n# Реєстр уроків\n\n" + table(["LSN", "дата", "крок", "суть", "скіл", "статус"],
+            [{"LSN": l.get("lsn"), "дата": l.get("date"), "крок": l.get("step"), "суть": (l.get("summary") or "")[:200],
+              "скіл": "%s@%s" % (l.get("skill"), l.get("skill_version") or "н/д"), "статус": l.get("status")} for l in les])
     reg_cols = [("ідентифікатор клієнта", "client_id"), ("стан", "state"), ("пілот (так/ні)", "pilot"), ("package_tag", "package_tag"),
                 ("candidate_tag", "candidate_tag"), ("go-live (дата)", "go_live"), ("alias тест-бази", "test_alias"),
                 ("згода на агрегати (так/ні)", "aggregates_consent"),
@@ -266,6 +273,30 @@ def cmd_verify(a):
     return 0 if ok else 1
 
 
+LINK_RE = re.compile(r"^\s*(odoo:task/\d+(#\d+)?|https?://\S+)\s*$")  # лише в полі link/task
+BATCH_MARK = "внесено AI від імені власника"
+
+
+def cmd_check_decisions(a):
+    """decisions-batch (К-08): кожен рядок -- позначка в ролі + посилання на повідомлення/задачу, інакше FAIL."""
+    rows = json.load(sys.stdin if a.rows == "-" else open(a.rows, encoding="utf-8"))
+    res = []
+    for r in rows:
+        did = r.get("decision_id") or r.get("№") or "?"
+        role = str(r.get("role") or r.get("роль автора") or "")
+        link = str(r.get("link") or r.get("task") or r.get("задача") or "")  # лише поле посилання, не довільний текст коментаря
+        if BATCH_MARK not in role:
+            res.append({"id": "DEC-mark", "status": "FAIL", "msg": "%s: немає позначки «%s» у ролі" % (did, BATCH_MARK)})
+        elif not LINK_RE.search(link):
+            res.append({"id": "DEC-link", "status": "FAIL", "msg": "%s: немає посилання на повідомлення/задачу власника" % did})
+        else:
+            res.append({"id": "DEC-batch", "status": "PASS", "msg": str(did)})
+    if not rows:
+        res.append({"id": "DEC-batch", "status": "SKIP", "msg": "немає рядків"})
+    print(json.dumps(res, ensure_ascii=False))
+    return 1 if any(x["status"] == "FAIL" for x in res) else 0
+
+
 def cmd_prune(a):
     base = os.path.join(a.dir, BASE)
     if not os.path.exists(base):
@@ -304,7 +335,9 @@ def cmd_stats(a):
         y, w, _ = d.isocalendar()
         sv = r.get("skill_versions") or {}
         key = (r.get("step"), ", ".join("%s@%s" % (k, sv[k]) for k in sorted(sv)) or "н/д", "%d-W%02d" % (y, w))
-        g = agg.setdefault(key, {"attempts": 0, "escalations": 0, "returns": 0, "cost_usd": 0.0, "tokens_in": 0, "tokens_out": 0})
+        g = agg.setdefault(key, {"attempts": 0, "escalations": 0, "returns": 0, "cost_usd": 0.0, "tokens_in": 0, "tokens_out": 0, "review_rounds": 0, "human_rounds": 0})
+        g["review_rounds"] += int(r.get("review_rounds") or 0)
+        g["human_rounds"] += int(r.get("human_rounds") or 0)
         g["attempts"] += 1
         g["escalations"] += r.get("result") == "escalated"
         g["returns"] += r.get("result") == "returned"
@@ -323,6 +356,7 @@ def main():
     r = sp.add_parser("render"); r.add_argument("--snapshot", nargs="+", required=True); r.add_argument("--out", required=True); r.add_argument("--merge", action="store_true"); r.set_defaults(f=cmd_render)
     v = sp.add_parser("verify"); v.add_argument("--snapshot", nargs="+", required=True); v.add_argument("--dir", required=True); v.add_argument("--show", action="store_true"); v.add_argument("--merge", action="store_true"); v.set_defaults(f=cmd_verify)
     pr = sp.add_parser("prune"); pr.add_argument("--older-than", required=True, help="YYYY-MM"); pr.add_argument("--dir", required=True); pr.set_defaults(f=cmd_prune)
+    d = sp.add_parser("check-decisions"); d.add_argument("--rows", required=True, help="JSON-масив рядків або -"); d.set_defaults(f=cmd_check_decisions)
     s = sp.add_parser("stats"); s.add_argument("--runs", nargs="+", required=True); s.set_defaults(f=cmd_stats)
     a = p.parse_args()
     sys.exit(a.f(a))

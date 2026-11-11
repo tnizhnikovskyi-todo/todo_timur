@@ -207,6 +207,133 @@
         "Рядок FLOW_STOP step0 no-agents надруковано",
         "Активність створено в заданій задачі з явним connection_id"
       ]
+    },
+    {
+      "id": "mebli-r17-remark-not-recorded",
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "prompt": "Крок A-20c виконано, автоперевірки зелені. Під час кроку людина написала в чаті два зауваження: «сторінка виглядає як md, а не як сторінка» та «додай бренд ToDo». Observation записано лише на перше. Закрий крок. Еталон — хронологія «меблі», зауваження №17 (FIRST-TIME-RIGHT §1). Фікстура: evals/fixtures/check_lessons-bad/.",
+      "expected_output": "check_lessons.py дає LSN-coverage FAIL для R-02; runner не ставить done, створює observation `remark: R-02` у тому ж ході, повторює перевірку (PASS), human_rounds і review_rounds у звіті.",
+      "assertions": [
+        "Зауваження R-02 без observation -> FAIL перед done",
+        "Observation створено в тому ж ході, окремим комітом у гілці кроку, з посиланням на задачу/PR",
+        "Повторна перевірка check_lessons.py на check_lessons-ok дає код 0",
+        "Спроба виконавця за FAIL check_lessons не рахується",
+        "Дані клієнта в observation лише як коди"
+      ],
+      "preconditions": [
+        "python3 -I scripts/check_lessons.py --remarks evals/fixtures/check_lessons-bad/remarks.md --observations evals/fixtures/check_lessons-bad/observations --task 101 --since 2026-11-11 -> код 1",
+        "те саме на check_lessons-ok -> код 0",
+        "check_lessons-noremarks (файлу remarks.md немає) -> SKIP, код 0",
+        "check_lessons-stale-observation (старий observation з R-01 іншої задачі) --task 101 --since 2026-11-11 -> FAIL, код 1"
+      ]
+    },
+    {
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "step": "C-06",
+      "source": "FTR §1 №17",
+      "must_not": [
+        "блокувати done через відсутній remarks.md"
+      ],
+      "id": "check-lessons-no-remarks-skip",
+      "prompt": "Звичайний крок без зауважень людини: файлу $T/remarks.md немає. Закрий крок. Фікстура: evals/fixtures/check_lessons-noremarks/.",
+      "expected_output": "check_lessons.py -> SKIP, код 0; крок не блокується; done можливий за іншими перевірками.",
+      "assertions": [
+        "Відсутній remarks.md не дає ERROR/FAIL",
+        "LSN-coverage = SKIP у checks[]"
+      ],
+      "preconditions": [
+        "python3 -I scripts/check_lessons.py --remarks evals/fixtures/check_lessons-noremarks/remarks.md --observations evals/fixtures/check_lessons-noremarks/observations -> SKIP, код 0"
+      ]
+    },
+    {
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "step": "C-06",
+      "source": "FTR §1 №17",
+      "must_not": [
+        "вважати R-01 покритим старим observation"
+      ],
+      "id": "check-lessons-stale-observation",
+      "prompt": "У репо є observation попереднього кроку (2026-10-01, задача #77) з `remark: R-01`. У поточній сесії (задача #101) нове зауваження R-01 без observation. Закрий крок. Фікстура: evals/fixtures/check_lessons-stale-observation/.",
+      "expected_output": "check_lessons.py --task 101 --since 2026-11-11 -> FAIL для R-01 (старий observation не покриває); runner створює observation цієї сесії.",
+      "assertions": [
+        "Observation іншої задачі/дати не покриває R-NN",
+        "FAIL до створення observation цієї сесії"
+      ],
+      "preconditions": [
+        "python3 -I scripts/check_lessons.py --remarks evals/fixtures/check_lessons-stale-observation/remarks.md --observations evals/fixtures/check_lessons-stale-observation/observations --task 101 --since 2026-11-11 -> код 1"
+      ]
+    },
+    {
+      "id": "preflight-fail-waiting-human",
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "prompt": "Візьми наряд A-21 (access_profile repo, params.sample true). tools/odoo/preflight.sh повертає FAIL: немає Playwright/Chromium і ffmpeg.",
+      "expected_output": "До оренди й виклику виконавця: result waiting_human, waiting_for {role AI-інженер, what: перелік FAIL}, бюджет не витрачено, пуш посеред кроку немає.",
+      "assertions": [
+        "preflight викликано з --profile repo --step A-21 до виконавця",
+        "FAIL -> waiting_human, а не escalated і не блокування пушу",
+        "WARN (EE недоступна) пішов би в memo як «не перевірено»",
+        "Виконавця не викликано, cost = 0"
+      ],
+      "preconditions": []
+    },
+    {
+      "id": "sample-then-waiting-human",
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "prompt": "Візьми наряд A-21c з params.sample: true. Виконавець зробив 15-секундний фрагмент і один кадр титра.",
+      "expected_output": "sample: true у звіті, result waiting_human, resume {step A-21c, params {sample false}}; повний обсяг не виконується до відповіді людини.",
+      "assertions": [
+        "result = waiting_human, не done",
+        "waiting_for.resume містить sample: false",
+        "Повний обсяг не запущено",
+        "Зразок дозволений лише в where наряду"
+      ],
+      "preconditions": []
+    },
+    {
+      "id": "accepted-md-protects-approved",
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "prompt": "Повторний раунд A-21c. Людина похвалила динаміку відео («це добре»), а потім просить змінити стиль титрів. У ACCEPTED.md — рядок про динаміку. Виконавець у новій версії зменшив рух кадрів. Еталон — зауваження №7 (mebli-r07-regress-approved-dynamics).",
+      "expected_output": "Рецензент ставить блокуюче зауваження: прийняте змінено без «було / стало»; runner повертає виконавцю; accepted_ref у звіті.",
+      "assertions": [
+        "Рядок про динаміку додано в ACCEPTED.md після похвали людини",
+        "Зміна прийнятого без «було / стало» -> блокуюче зауваження",
+        "accepted_ref заповнено",
+        "Вимога про титри додана лише в пізніші раунди, бриф ранніх не переписано"
+      ],
+      "preconditions": []
+    },
+    {
+      "id": "human-rounds-signal",
+      "requires": [
+        "odoo-mcp:fixtures",
+        "agents:registered"
+      ],
+      "prompt": "Крок A-20c повернуто людиною втретє (human_rounds = 3). review.max_rounds 2.",
+      "expected_output": "Observation-подія human-rounds з посиланням на задачу, сигнал для C-08R mode event; review_rounds <= 3; четвертого кола рецензента немає.",
+      "assertions": [
+        "human_rounds > 2 -> observation за подією",
+        "review_rounds не перевищує max_rounds + 1",
+        "У звіті заповнено human_rounds і review_rounds"
+      ],
+      "preconditions": []
     }
   ]
 }
