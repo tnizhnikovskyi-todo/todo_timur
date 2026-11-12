@@ -96,3 +96,10 @@ WP-10 після 3 раундів: `intake_formats` у `check_video.py` розп
 - minor: Заголовок раздела «Порядок кроків дослідження (0.2.0)» устарел, хотя содержание уже описывает 0.3.0.
 - minor: В ok-фикстуре страницы нет `research/REJECTED.md`, `SALES.md` и `concept/*`, а `check_owner_page.py --research` всё равно даёт PASS. Соответствие `rejected.html` реестру REJECTED скрипт не проверяет; на шаге это ловит то
 - minor: Строка 109: «Тарифи — лише з BOX §1–2: CE-вхід / EE-апгрейд». В 0.3.0 BOX §1 по умолчанию содержит «тарифи: не задано», потому что `tariffs` в анкете необязателен. Ветки для этого случая нет. Цены SOW по-прежнему идут из
+
+# 0.3.1 (A-20b у A-20) — Fable 5.2: minor (опис concept-mapper скорочено до 897 менеджером)
+
+- minor: CM-ai-limit шукає розділ точним ключем: `"Повнота" not in sections(...)`. Для наявних AI-DECISIONS.md зі старим заголовком «## Повнота (A-20b)» WARN «>11 рядків» не зніметься, хоча check_completeness.py шукає розділ нечі
+- minor: Перевірки повноти (script-check-completeness, completeness-headings, checklist-status з expect_rows 14) безумовні, а Крок 10 concept-mapper виконується лише коли результат іде на `done`. При `escalated`/`waiting_human` з
+- minor: Картка фікстури A-20 має `hours: 4`, `costLimit: 12`, а step-cards.md після злиття дає 8 год / $32. Розбіжність була й до правки (5 год / $20), але README фікстур називає картки «переписаними зі step-cards.md».
+- minor: README фікстур називає файл «свіжою копією» flow-core/references/flow-map.md, але він відрізняється у двох рядках: A-20c (немає «(сам оновлює «Повнота»)») і A-21 (`prototype.fidelity` замість `defaults.prototype.fidelity

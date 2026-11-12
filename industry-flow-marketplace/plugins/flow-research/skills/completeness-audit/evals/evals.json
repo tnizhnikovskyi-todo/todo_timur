@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": "mebli-r21-incomplete-concept",
-      "prompt": "Наряд A-20b, галузь mebli. BOX, SALES, REJECTED, AI-DECISIONS (рядки A-03b/A-20), concept/* готові (A-20), але в них немає варіанта сценарію «претензія/повернення», у BOX немає плану міграції даних клієнта. Проведи аудит повноти.",
+      "prompt": "Наряд A-20, галузь mebli; у кінці кроку concept-mapper викликає самоперевірку повноти. BOX, SALES, REJECTED, AI-DECISIONS (рядки A-03b/A-20), concept/* готові, але в них немає варіанта сценарію «претензія/повернення», у BOX немає плану міграції даних клієнта. Проведи аудит повноти.",
       "expected_output": "У research/AI-DECISIONS.md розділ «Повнота» з 14 пунктами (закрито / ризик); desk-прогалина «варіант сценарію» закрита правкою concept/scenarios.md; міграція без вигрузки — рядок AI-NN «ризик, перевірити на пілоті»; підсумок closed/risk збігається з таблицею; check_completeness.py PASS; COMPLETENESS.md не створено.",
       "assertions": [
         "Запущено 3 рецензентів-ролей у окремих контекстах, кожен повернув таблицю з файлом§розділом",
@@ -22,7 +22,7 @@
     },
     {
       "id": "mebli-c01-audit-catches-recommendation-against-intake",
-      "prompt": "Наряд A-20b, mebli. У AI-DECISIONS.md рядок AI-02 «зробити лише EE-версію», а в OWNER-INTAKE.md editions: both. Проведи аудит.",
+      "prompt": "Наряд A-20 (самоперевірка повноти), mebli. У AI-DECISIONS.md рядок AI-02 «зробити лише EE-версію», а в OWNER-INTAKE.md editions: both. Проведи аудит.",
       "expected_output": "Рецензент (аудитор узгодженості) фіксує суперечність; desk-правка: рядок AI-02 переписано як «альтернатива» з причиною, діє анкета (both); рішення власника не ухвалено, вето не вигадано.",
       "assertions": [
         "Суперечність рішення AI з анкетою названо знахідкою з файлом§розділом",
@@ -94,7 +94,7 @@
     },
     {
       "id": "returned-rerun-keeps-ai-ids",
-      "prompt": "Наряд A-20b, повтор: returned_from = A-20c (власник наклав вето на AI-02 і знайшов нову прогалину). У AI-DECISIONS.md на git.base є AI-01…AI-07 (AI-02 — вето, AI-05 — ризик). where охоплює research/*.md і concept/*.",
+      "prompt": "Наряд A-20 recalc (самоперевірка повноти), повтор: returned_from = A-20c (власник наклав вето на AI-02 і знайшов нову прогалину). У AI-DECISIONS.md на git.base є AI-01…AI-07 (AI-02 — вето, AI-05 — ризик). where охоплює research/*.md і concept/*.",
       "expected_output": "AI-NN не перенумеровано; нова прогалина — AI-08 «ризик, перевірити на пілоті»; розділ «Повнота» оновлено; вето-рядок лишається зі статусом; result done.",
       "assertions": [
         "Існуючі AI-01…AI-07 на місці, ID не змінено",
@@ -107,13 +107,13 @@
       }
     },
     {
-      "id": "where-too-narrow-returned",
-      "prompt": "Наряд A-20b: where = лише research/AI-DECISIONS.md (картку не оновлено). Рецензенти знайшли desk-прогалину: у concept/scenarios.md немає варіанта «зсув строку».",
-      "expected_output": "concept/scenarios.md не змінено (поза where); в AI-DECISIONS.md рядок AI-NN «ризик, перевірити на пілоті» з поясненням «поза where»; result returned на A-20 зі списком AI-NN, не done і не тихе порушення where.",
+      "id": "where-too-narrow-risk-rows",
+      "prompt": "Наряд A-20 (самоперевірка повноти): where = лише research/AI-DECISIONS.md (картку не оновлено). Рецензенти знайшли desk-прогалину: у concept/scenarios.md немає варіанта «зсув строку».",
+      "expected_output": "concept/scenarios.md не змінено (поза where); в AI-DECISIONS.md рядок AI-NN «ризик, перевірити на пілоті» з поясненням «поза where»; у memo — список AI-NN і файли, які треба додати в where; статус кроку визначає A-20, під-скіл returned не ставить; тихого порушення where немає.",
       "assertions": [
         "Файли поза where не змінено",
         "Прогалину внесено рядком AI-NN з поясненням «поза where»",
-        "result = returned (повернення на A-20) зі списком AI-NN",
+        "У memo — список AI-NN; під-скіл власного result (returned) не ставить, статус кроку визначає A-20",
         "У memo названо, які файли треба додати в where"
       ],
       "input": {

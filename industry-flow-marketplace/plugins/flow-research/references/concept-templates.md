@@ -1,6 +1,6 @@
 # Шаблони концепції пакета (A-20): `concept/*` і `research/{BOX,SALES,REJECTED,AI-DECISIONS}.md`
 
-Спільні для `concept-mapper` (A-20), `completeness-audit` (A-20b), `concept-presentation` (A-20c), `prototype-builder` (A-21), `demand-test-runner` (A-23) і ТР (A-08).
+Спільні для `concept-mapper` (A-20), `completeness-audit` (під-скіл A-20), `concept-presentation` (A-20c), `prototype-builder` (A-21), `demand-test-runner` (A-23) і ТР (A-08).
 **Еталон колонок і скрипт — `skills/concept-mapper/references/template/` і `check_concept.py`**; при розбіжності діють вони. Копіюються в `docs/industries/<галузь>/concept/` (або `_template/concept/`).
 Каркаси `research/*.md` — `templates/{BOX,SALES,REJECTED,AI-DECISIONS}.tpl.md` (поруч). **Заголовки `##` — контракт скрипта (CM-files, CM-research), не змінювати.**
 

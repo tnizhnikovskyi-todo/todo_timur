@@ -34,7 +34,7 @@
 | `manual` | `text`, `who` | лише рядок для чек-листа |
 
 ## Верхні ключі специфікації та підстановки
-- `inputs_require: [<файл>…]` — режим `inputs`: у `inputs[]` наряду має бути вхід із такою назвою або basename шляху, інакше `FAIL input-intake` (для `OWNER-INTAKE.md`) / `input-require:<файл>`. Так A-03b, A-03c, A-20, A-20b, A-20c, A-21, A-21c не стартують без анкети.
+- `inputs_require: [<файл>…]` — режим `inputs`: у `inputs[]` наряду має бути вхід із такою назвою або basename шляху, інакше `FAIL input-intake` (для `OWNER-INTAKE.md`) / `input-require:<файл>`. Так A-03b, A-03c, A-20, A-20c, A-21, A-21c не стартують без анкети.
 - `<галузь>` у `ref`/`paths` підставляється з `where` або шляхів `inputs` (`docs/industries/<код>/`, `_template` ігнорується); не визначено -> `ERROR` (не PASS).
 
 ## Перевірки за кроками (скорочено; повний перелік — YAML)
@@ -49,7 +49,7 @@
 - **A-02b**: `intake-exists`, INT (`--allow-empty` у `prepare`, повна в `validate`), `owner-filled` (MANUAL).
 - **A-03b**: інтейк, `research-files` (`not_sample`), заголовки FUNCTIONAL-MAP, реєстр «не робимо», `edition-claims`, `facts`, `privacy`, `stale` (`recalc`), `competitors-8-12`, `no-money` (без K1; рядки A-03b в AI-DECISIONS).
 - **A-03c**: інтейк, `reuse-exists`, реєстр, `reuse-ids`, рядки A-03c в AI-DECISIONS, ліцензія LGPL-3 за замовчуванням (вето — A-20c).
-- **A-20 / A-20b / A-20c**: інтейк, заголовки AI-DECISIONS/BOX/SALES, реєстр, `facts`, `privacy`, `no-money` (грошові маркери = FAIL); A-20b — розділ «Повнота» в `AI-DECISIONS.md` (14 пунктів: закрито / ризик, ризик -> рядок AI-NN, 3 ролі, 1 коло); A-20c — `check_owner_page`, бренд, факти, приватність, `no-money`, блок «Що вирішив AI», Playwright 390/1280.
+- **A-20 / A-20c**: інтейк, заголовки AI-DECISIONS/BOX/SALES, реєстр, `facts`, `privacy`, `no-money` (грошові маркери = FAIL); A-20 включає самоперевірку повноти (0.3.1; раніше окремий A-20b): `check_completeness.py`, `completeness-headings`, `checklist-status` — розділ «Повнота» в `AI-DECISIONS.md` (14 пунктів: закрито / ризик, ризик -> рядок AI-NN, 3 ролі, 1 коло); A-20c — `check_owner_page`, бренд, факти, приватність, `no-money`, блок «Що вирішив AI», Playwright 390/1280.
 - **A-21 / A-21c / A-22**: A-21 — `check_ui_text`, факти, приватність, реєстр, `odoo19-lint`, тести, без `x_`, консоль; A-21c — `check_video`, бренд, факти, приватність, `ACCEPTED.md`; A-22 — лише база зрізу, без емуляції (К-11).
 - **C-08R**: `lessons-index`, `check_lessons`, формат LSN, `no-pii`.
 - **A-16** (відкладено): `Сценарій N` ТР ↔ рядки scenarios.md; специфікації немає → `spec-missing`.

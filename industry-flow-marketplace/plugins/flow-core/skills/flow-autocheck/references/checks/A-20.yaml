@@ -246,6 +246,119 @@
     ],
     "who": "runner"
    }
+  },
+  {
+   "id": "ai-decisions-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/AI-DECISIONS.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-completeness",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/completeness-audit/scripts/check_completeness.py docs/industries/<галузь>/research/AI-DECISIONS.md: CA-checklist (1..14), CA-gaps (незакрите -> рядки AI-NN), CA-money, CA-rounds (≤1 коло) без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/completeness-audit/scripts/check_completeness.py",
+     "docs/industries/<галузь>/research/AI-DECISIONS.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "completeness-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/AI-DECISIONS.md",
+    "headings": [
+     "re:повнота"
+    ]
+   }
+  },
+  {
+   "id": "checklist-status",
+   "prim": "table_rules",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/AI-DECISIONS.md",
+    "require": [
+     [
+      "№"
+     ],
+     [
+      "Пункт"
+     ],
+     [
+      "Статус"
+     ],
+     [
+      "Де"
+     ]
+    ],
+    "key": [
+     "№"
+    ],
+    "unique_key": true,
+    "rules": [
+     {
+      "col": [
+       "Статус"
+      ],
+      "kind": "enum",
+      "values": [
+       "закрито",
+       "ризик"
+      ],
+      "msg": "статус має бути закрито|ризик"
+     },
+     {
+      "when": {
+       "col": [
+        "Статус"
+       ],
+       "in": [
+        "ризик"
+       ]
+      },
+      "col": [
+       "Де"
+      ],
+      "kind": "regex",
+      "pattern": "AI-\\d{2}",
+      "msg": "ризик без рядка AI-NN у колонці «Де»"
+     }
+    ],
+    "expect_rows": 14
+   }
+  },
+  {
+   "id": "three-roles",
+   "prim": "manual",
+   "args": {
+    "text": "самоперевірка повноти в кінці A-20 (completeness-audit як під-скіл): перевірено 3 ролями (галузевий експерт; архітектор Odoo 19 CE/EE; продавець ToDo + аудитор узгодженості), 1 коло критика; minor, що впливає на обсяг, відкинуте чи редакції, піднято до major",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-pii-industry",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "docs/industries/"
+    ]
+   }
+  },
+  {
+   "id": "checklist-14",
+   "prim": "manual",
+   "args": {
+    "text": "підсумок closed/risk збігається з рядками «Повнота» й іде в звіт `completeness` (рівно 14 рядків перевіряє checklist-status); кожен desk-пункт реально закрито правкою документів (відкрий 3 посилання)",
+    "who": "runner"
+   }
   }
  ]
 }

@@ -124,7 +124,7 @@
     {
       "id": "a20c-veto-recalc",
       "prompt": "Режим on-complete для гейта A-20c (scope package/mebli-1): власник натиснув «Повернути» з одним рядком вето «AI-03: не згоден — конфігуратор виробу лишаємо в MVP», gate.return_to = A-20. Runner у наряді C-02 `veto-batch` виконав check_stale; у його звіті stale: concept/features.md, research/BOX.md, research/AI-DECISIONS.md, research/owner-page/index.html. Що поставити? Стан у фікстурі.",
-      "expected_output": "Створено 2 наряди params.mode: recalc у порядку DEPENDS.yaml: A-20 (stale = features.md, BOX.md, AI-DECISIONS.md; where = ці файли), далі A-20c (stale = owner-page/index.html), без `human_substep`, без запиту власнику й без A-03c; A-20b після вето не перезапускається (A-20 recalc сам оновлює «Повнота»; власник AI-DECISIONS і REJECTED для recalc — A-20); у звіті рядок flow-map для A-20c «Повернути».",
+      "expected_output": "Створено 2 наряди params.mode: recalc у порядку DEPENDS.yaml: A-20 (stale = features.md, BOX.md, AI-DECISIONS.md; where = ці файли), далі A-20c (stale = owner-page/index.html), без `human_substep`, без запиту власнику й без A-03c; окремого A-20b немає (A-20 recalc сам оновлює «Повнота»; власник AI-DECISIONS і REJECTED для recalc — A-20); у звіті рядок flow-map для A-20c «Повернути».",
       "assertions": [
         "Створено наряд A-20 з params.mode: recalc і params.stale з трьома артефактами (не по наряду на артефакт)",
         "Наряд A-20c recalc створено після A-20 (порядок за DEPENDS.yaml)",

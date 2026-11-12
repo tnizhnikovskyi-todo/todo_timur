@@ -12,7 +12,7 @@
 | Код П-xx | `П-\d{2}` | `sources.md`, `past-projects.md` |
 | ID вимоги | `\b(?:ROLE\|PAIN\|F\|S\|SC)-\d{2,}\b` | концепція |
 | VP | `VP-\d{2,}` | анкета |
-| Рішення AI | `\bAI-\d{2}\b` | `research/AI-DECISIONS.md` (A-03b, A-03c, A-20; розділ «Повнота» — A-20b), сторінка власника, `flow/decisions.md` (вето) |
+| Рішення AI | `\bAI-\d{2}\b` | `research/AI-DECISIONS.md` (A-03b, A-03c, A-20; розділ «Повнота» — самоперевірка в кінці A-20), сторінка власника, `flow/decisions.md` (вето) |
 | Позиція реєстру відкинутого | `\bREJ-\d{3}\b` | `research/REJECTED.md` і розділи `## Не робимо` / `## Відкинуто` (`rejected-register.md`); колонка `група` у старих таблицях ігнорується |
 | Урок | `\bLSN-\d{3}\b` | `flow/lessons/LSN-xxx.md`, `flow/lessons/INDEX.md` (C-08R) |
 | Рядок edition-claims | `\bEC-\d{3}\b` | `research/edition-claims.md` (К-12) |

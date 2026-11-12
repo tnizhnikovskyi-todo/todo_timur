@@ -59,27 +59,13 @@
 - `skillRef`: flow-research:concept-mapper
 - `access_profile`: research
 - `inArtifacts`: OWNER-INTAKE.md; research/{FUNCTIONAL-MAP.md, REJECTED.md, AI-DECISIONS.md, facts.yaml, REUSE.md, edition-claims.md}; flow/decisions.md (вето власника — режим `recalc`); briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
-- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{BOX.md (склад коробок без годин і грошей), SALES.md, facts.yaml (доповнює)}; дописує в `research/REJECTED.md` і `research/AI-DECISIONS.md` (A-03b, A-03c) свої рядки, не перезаписуючи чужі
+- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{BOX.md (склад коробок без годин і грошей), SALES.md, facts.yaml (доповнює)}; розділ «Повнота» в `research/AI-DECISIONS.md` (самоперевірка в кінці кроку: `flow-research:completeness-audit` як під-скіл, 3 ролі, 14 пунктів, 1 коло; кабінетні прогалини закриваються правкою тут, незакрите — рядки AI-NN «ризик, перевірити на пілоті»); дописує в `research/REJECTED.md` і `research/AI-DECISIONS.md` (A-03b, A-03c) свої рядки, не перезаписуючи чужі
 - гейт: ні (єдиний гейт — A-20c)
-- `review.checklists`: [concept.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
+- `review.checklists`: [concept.md, edition-claims.md, completeness.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
-- ліміти: opus/high; 5 год; $20; стартова зрілість: 1
-- примітки: Роль-покупець має екран-дашборд; вето власника з `flow/decisions.md` не відкидається знову; OWNER-BRIEF не пишеться; брак болів не зупиняє крок (слабкий довід = «ризик, перевірити на пілоті»); економіку (окупність, години, ціни коробок) не рахувати
+- ліміти: opus/high; 8 год; $32 (концепція + самоперевірка повноти: 3 рецензенти, критик; до 0.3.1 A-20 5 год/$20 + A-20b 3 год/$12); стартова зрілість: 1
+- примітки: `where` завжди містить `research/AI-DECISIONS.md`; самоперевірку повноти запускає runner (виконавець без Agent/Bash), `check_completeness.py` — рядком «КОМАНДИ»; Роль-покупець має екран-дашборд; вето власника з `flow/decisions.md` не відкидається знову; OWNER-BRIEF не пишеться; брак болів не зупиняє крок (слабкий довід = «ризик, перевірити на пілоті»); економіку (окупність, години, ціни коробок) не рахувати
 - ескалація: рекомендація AI проти анкети -> показати розбіжність, не перемагати анкету (С-01)
-
-### A-20b. Аудит повноти (3 ролі, 14 пунктів)
-- `raciR`: BA (R); Архітектор (C)
-- `executor`: any
-- `skillRef`: flow-research:completeness-audit
-- `access_profile`: base
-- `inArtifacts`: concept/*; research/*.md; OWNER-INTAKE.md
-- `outArtifacts`: research/AI-DECISIONS.md (розділ «Повнота»; незакрите — рядки AI-NN «ризик, перевірити на пілоті»); правки research/*, concept/* (кабінетні прогалини закриваються тут, без зайвого кола A-20 `recalc`)
-- гейт: ні
-- `review.checklists`: [completeness.md]; `review.max_rounds: 2` (+1 контрольний)
-- `params.sample`: false
-- ліміти: opus/high; 3 год; $12; стартова зрілість: 1
-- примітки: Аудит над документами ДО сторінки; 1 коло критика; прогалина — `desk` (закрити зараз) або `ризик` (AI-NN)
-- ескалація: немає (незакрите йде в блок «Що вирішив AI» сторінки A-20c)
 
 ### A-20c. Сторінка для власника (1 Artifact, 3 сторінки) — єдиний гейт концепції
 - `raciR`: Власник продукту (A, гейт); BA (R)
@@ -194,7 +180,7 @@
 - ескалація: зауваження без урока -> `LSN-coverage` FAIL (`check_lessons.py`)
 
 ## Назви чек-листів рецензента (`review-checklists/`)
-Картки посилаються на файли: `research.md`, `edition-claims.md` (A-03b, A-20, A-20c), `concept.md` (A-20), `completeness.md` (A-20b), `owner-page.md` (A-20c), `prototype.md` (A-21), `video-materials.md` (A-21c). Назви — контракт: файли створюються з цими іменами; при зміні назви правляться картки тут. Для кроків із `[]` чек-лист не потрібен.
+Картки посилаються на файли: `research.md`, `edition-claims.md` (A-03b, A-20, A-20c), `concept.md` (A-20), `completeness.md` (A-20, самоперевірка повноти), `owner-page.md` (A-20c), `prototype.md` (A-21), `video-materials.md` (A-21c). Назви — контракт: файли створюються з цими іменами; при зміні назви правляться картки тут. Для кроків із `[]` чек-лист не потрібен.
 
 ## Відкриті питання
 - Немає відкритих питань (відкриті питання пакета — у плані §5).

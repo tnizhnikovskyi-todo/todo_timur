@@ -19,8 +19,7 @@
 | A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія` (стенд пакета) |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
-| A-20 | flow-research:concept-mapper | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
-| A-20b | flow-research:completeness-audit | — (`params.mode: recalc` — перерахунок) |
+| A-20 | flow-research:concept-mapper (+ під-скіл flow-research:completeness-audit у кінці кроку, не окремий крок) | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |
 | A-21 | flow-research:prototype-builder | `params.sample: true` (зразок) \| повний обсяг; `defaults.prototype.fidelity: mock` не підтримується (К-23) |
 | A-21c | flow-research:showcase-content | — (виконавець — Контент-менеджер, `executor: any`) |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Автоперевірки A-20b (CA-*) для research/AI-DECISIONS.md (розділ «Повнота»). stdlib. Вивід: JSON [{id,status,msg}]; код виходу 1, якщо є FAIL.
+"""Автоперевірки самоперевірки повноти в A-20 (CA-*) для research/AI-DECISIONS.md (розділ «Повнота»). stdlib. Вивід: JSON [{id,status,msg}]; код виходу 1, якщо є FAIL.
 Використання: check_completeness.py <research/AI-DECISIONS.md> [--rounds N]
 CA-sections  — є розділи «## Рішення» і «## Повнота …».
 CA-checklist — у «Повнота» рівно 14 пунктів (№ 1..14); статус кожного: закрито | ризик.

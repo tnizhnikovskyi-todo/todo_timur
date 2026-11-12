@@ -230,6 +230,19 @@
       "input": {
         "fixtures": "evals/fixtures/check_concept-ok/"
       }
+    },
+    {
+      "id": "ends-with-completeness-section",
+      "prompt": "Наряд A-20 (main), усі входи є, CM-* зелені. Виконай крок до кінця.",
+      "expected_output": "Після Кроків 1–8 виконано Крок 10: розділ «Повнота» (14 рядків) у research/AI-DECISIONS.md, незакрите — рядки AI-NN «ризик, перевірити на пілоті»; у звіті completeness {closed, risk}; checks містять CA-* і повторний CM-*; команди check_completeness.py віддано рядком «КОМАНДИ», окремого наряду A-20b немає.",
+      "assertions": [
+        "Розділ «Повнота» має 14 рядків і Підсумок",
+        "CA-* є в checks",
+        "completeness: {closed, risk} у звіті",
+        "Крок 10 не виконується при escalated/waiting_human",
+        "Не створено наряд A-20b"
+      ],
+      "input": {}
     }
   ]
 }

@@ -51,7 +51,7 @@ partial: false                  # true — звіт неповний (state-keep
 ```yaml
 rejected_count: <n>             # скільки позицій у реєстрі відкинутого артефакта (rejected-register.md); без реєстру в кроці з переліку — FAIL
 rejected_ref: <шлях>            # <артефакт>-rejected.md або розділ `## Відкинуто`
-completeness: {closed: <n>, risk: <n>}   # A-20b/A-20c: лічильники з розділу «Повнота» AI-DECISIONS.md (пункти 1–14: закрито / ризик)
+completeness: {closed: <n>, risk: <n>}   # A-20 (самоперевірка повноти)/A-20c: лічильники з розділу «Повнота» AI-DECISIONS.md (пункти 1–14: закрито / ризик)
 ai_decisions: <n>                # A-03b/A-03c/A-20: кількість рядків «Рішення» в AI-DECISIONS.md
 vetoed: []                       # A-20 recalc / A-20c: ID рядків AI-NN із вето власника (`flow/decisions.md`)
 review_rounds: <n>              # кругів рецензента (max_rounds 2 + 1 контрольний)

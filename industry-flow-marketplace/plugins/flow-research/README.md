@@ -4,7 +4,7 @@
 
 ## Кроки флоу
 
-A-01, A-02b, A-03b, A-03c, A-04, A-05, A-20, A-20b, A-20c, A-21, A-21c, A-23 (+ список лідів B-01). Порядок кроків — `flow-core/references/flow-map.md`.
+A-01, A-02b, A-03b, A-03c, A-04, A-05, A-20, A-20c, A-21, A-21c, A-23 (+ список лідів B-01). Порядок кроків — `flow-core/references/flow-map.md`.
 
 ## Скіли
 
@@ -15,7 +15,7 @@ A-01, A-02b, A-03b, A-03c, A-04, A-05, A-20, A-20b, A-20c, A-21, A-21c, A-23 (+ 
 - `industry-deep-dive` (A-03b, нова) — глибокий аналіз галузі й конкурентів; без K1 і питань власнику, рішення AI — рядки AI-DECISIONS
 - `reuse-modules` (A-03c, нова) — готові модулі ToDo у збірку: один наряд, `REUSE.md` з розділом `## Інвентар`; без сесії й гейта (рішення AI — рядки AI-DECISIONS)
 - `concept-mapper` — концепція пакета (A-20): функції, екрани, сценарії, BOX, SALES, REJECTED, AI-DECISIONS
-- `completeness-audit` (A-20b, нова) — аудит повноти концепції: 3 ролі, 14 пунктів, розділ «Повнота» в AI-DECISIONS
+- `completeness-audit` (під-скіл A-20, не окремий крок; нова) — самоперевірка повноти концепції: 3 ролі, 14 пунктів, розділ «Повнота» в AI-DECISIONS
 - `concept-presentation` (A-20c, нова) — сторінка для власника (один Artifact, 3 сторінки); єдиний гейт концепції
 - `prototype-builder` — реальний зріз Odoo 19 на модулях `td_*` з живим записом і `facts.json` (А-21; HTML-оболонки `mock` немає)
 - `showcase-content` (A-21c, нова) — продаючі матеріали: відео, SHOW, бренд ToDo

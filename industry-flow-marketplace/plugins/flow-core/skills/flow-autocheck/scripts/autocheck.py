@@ -1064,11 +1064,11 @@ def selftest():
 
 
 def selftest_templates():
-    """Кожен `re:`-заголовок специфікацій A-03b/A-20/A-20b має збігатися з H2 відповідного шаблона flow-research/references/templates/*.tpl.md."""
+    """Кожен `re:`-заголовок специфікацій A-03b/A-20 має збігатися з H2 відповідного шаблона flow-research/references/templates/*.tpl.md."""
     tdir = os.path.join(os.path.dirname(PLUGIN), "flow-research", "references", "templates")
     if not os.path.isdir(tdir):
         return
-    for step in ("A-03b", "A-20", "A-20b"):
+    for step in ("A-03b", "A-20"):
         for c in load_spec(step).get("checks", []):
             if c["prim"] != "headings" or not c["args"].get("headings") or c["args"].get("headings_from"):
                 continue

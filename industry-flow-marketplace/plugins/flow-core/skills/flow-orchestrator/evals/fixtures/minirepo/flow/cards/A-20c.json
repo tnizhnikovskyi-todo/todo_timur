@@ -6,7 +6,7 @@
  "skillRef": "flow-research:concept-presentation",
  "access_profile": "base",
  "raciR": "BA (R); Власник продукту (A, гейт)",
- "preconditions": "A-20b done",
+ "preconditions": "A-20 done",
  "inArtifacts": "research/*; concept/*; research/AI-DECISIONS.md",
  "inputs": "OWNER-INTAKE.md",
  "outputs": "research/owner-page/index.html",

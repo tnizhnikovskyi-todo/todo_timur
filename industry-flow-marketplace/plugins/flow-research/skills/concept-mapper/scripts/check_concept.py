@@ -206,13 +206,13 @@ def main():
         for f in ("REJECTED.md", "AI-DECISIONS.md"):
             if not (rd / f).exists(): bad.append(f"немає {f}")
         add("CM-research", not bad, "; ".join(bad))
-        # CM-ai-limit: ≤15 рядків «Рішення» в AI-DECISIONS; A-20 лишає резерв 3–4 для A-20b (≤11)
+        # CM-ai-limit: ≤15 рядків «Рішення» в AI-DECISIONS; A-20 лишає резерв 3–4 для рядків «ризик» самоперевірки повноти (≤11)
         pa = rd / "AI-DECISIONS.md"
         if pa.exists():
             sec = sections(pa.read_text(encoding="utf-8")).get("Рішення", "")
             n_ai = len(set(re.findall(r"^\|\s*(AI-\d{2})\s*\|", sec, flags=re.M)))
             if n_ai > 15: add("CM-ai-limit", False, f"рядків «Рішення» {n_ai} > 15")
-            elif n_ai > 11: add("CM-ai-limit", True, status="WARN", msg=f"рядків «Рішення» {n_ai} > 11: злити дрібні, лишити резерв 3–4 рядки для A-20b")
+            elif n_ai > 11 and "Повнота" not in sections(pa.read_text(encoding="utf-8")): add("CM-ai-limit", True, status="WARN", msg=f"рядків «Рішення» {n_ai} > 11: злити дрібні, лишити резерв 3–4 рядки для самоперевірки повноти")
             else: add("CM-ai-limit", True)
         # CM-buyer: роль-покупець (позначка [покупець] у колонці «Роль») має екран-дашборд і сценарій
         buyers = [rid for rid, r in role_rows.items() if len(r) > 1 and re.search(r"\[\s*покупець\s*\]", r[1], re.I)]

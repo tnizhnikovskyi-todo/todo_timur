@@ -1,7 +1,7 @@
 ---
 name: concept-presentation
 description: >
-  Запускай на кроці A-20c флоу галузевого пакета, коли A-20 і A-20b завершені: є AI-DECISIONS, FUNCTIONAL-MAP, BOX, SALES,
+  Запускай на кроці A-20c флоу галузевого пакета, коли A-20 (разом із самоперевіркою повноти) завершено: є AI-DECISIONS, FUNCTIONAL-MAP, BOX, SALES,
   REJECTED, competitors-*, facts.yaml і OWNER-INTAKE.md. Збирає для власника продукту один Artifact із 3 сторінок (index,
   competitors, rejected): висновок «що будуємо і для кого» на першому екрані без грошей, біль, сценарій, екрани з основою
   CE/EE, блок «Що вирішив AI і з яким ризиком» (власник відповідає лише за незгоди: кнопка «Скопіювати мої заперечення»),
@@ -37,7 +37,7 @@ description: >
 | Питання | Власник |
 |---|---|
 | `BOX/SALES/REJECTED/AI-DECISIONS` (рядки), `concept/*`, `facts.yaml` | `concept-mapper` (A-20), A-03b/A-03c (свої рядки AI-NN); тут лише читання |
-| Розділ «Повнота» в `AI-DECISIONS.md` | `completeness-audit` (A-20b); окремого блока «Повнота» на сторінці немає (незакрите — рядки «ризик») |
+| Розділ «Повнота» в `AI-DECISIONS.md` | `completeness-audit` (під-скіл A-20); окремого блока «Повнота» на сторінці немає (незакрите — рядки «ризик») |
 | Шаблони сторінок, бренд, контракт сторінки | `flow-research/references/{templates/owner-page,brand-todo,PAGE-CONTRACT.md}` |
 | Рядки `flow/decisions.md` за запереченнями власника | `flow-state-keeper` `veto-batch` (C-02); людина повідомляє заперечення |
 | Гейт («Затвердити / Повернути») | людина: Власник продукту |
@@ -45,7 +45,7 @@ description: >
 
 ## Кроки
 0. **Наряд і вхід.** `step: A-20c`; є SHA для `OWNER-INTAKE.md` (бренд, мова, `editions`, `tariffs` власника, якщо дав), `research/{FUNCTIONAL-MAP,BOX,SALES,REJECTED,AI-DECISIONS}.md`, `facts.yaml`, `competitors-registry.md`.
-   Немає обов'язкового → `returned` на A-20 / `waiting_human`, структуру не вигадувати. Немає розділу «Повнота» в `AI-DECISIONS.md` → `returned` на A-20b.
+   Немає обов'язкового → `returned` на A-20 / `waiting_human`, структуру не вигадувати. Немає розділу «Повнота» в `AI-DECISIONS.md` → `returned` на A-20 (самоперевірка повноти не виконана).
    Необов'язкові входи й поведінка без них: `sources-log.md` — немає: якорі `SRC-NNN` не ставити, лише `файл§розділ`, `memo`; `edition-claims.md` — немає: про редакції «не перевірено»; `REUSE.md` — немає: основу «ToDo-готовий» не показувати; `DEPENDS.yaml` — немає: `returned` на A-20 (його вимагає `A-20c.yaml`, не для зразка); `flow/decisions.md` — потрібен лише на кроці 8; `prototype-real/PLAN.md` — див. крок 3.
 1. **Каркас.** Взяти `templates/owner-page/*.html`; порядок розділів і джерела — `references/page-structure.md`. Логотип — `brand-todo/todo-logo.png` у data:-URI (зменшений).
 2. **Зразок — лише за явного `params.sample: true`** (за замовчуванням `false`: крок пропустити, одразу повний обсяг і гейт). Лише `index.html`: перший екран (висновок без грошей, 1 біль із цитатою, «що вирішив AI»), навігація, каркас розділів із якорями. Перевірити (Крок 6) командою скіла з `--sample` (а не рядком `owner-page-sample` з `A-20c.yaml`, де `--sample` немає і `PUBLISHED.md` не названо: запит власнику картки). У зразку пункти навігації на `competitors.html` і `rejected.html` неактивні: без `href`, з позначкою «у повному обсязі» (сторінок за URL зразка ще немає, битих посилань не робити); `OP-nav` для `--sample` це допускає. Зразок публікується рядком «КОМАНДИ:» (Крок 7), URL записати в `PUBLISHED.md` з `Режим: sample`, потім `waiting_human`: власник бачить зразок до повного обсягу за цим URL. Повний обсяг оновлює той самий URL (`Режим: full`).
