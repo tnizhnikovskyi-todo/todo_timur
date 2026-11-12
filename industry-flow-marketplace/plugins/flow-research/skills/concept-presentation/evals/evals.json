@@ -3,13 +3,13 @@
  "evals": [
   {
    "id": "mebli-r11-md-not-page",
-   "prompt": "Наряд A-20c, mebli, params.sample: false. Є OWNER-BRIEF.md, BOX, SALES, REJECTED, COMPLETENESS. Власнику треба показати концепцію. Зроби markdown-файл із таблицями рішень і віддай.",
-   "expected_output": "Скіл не віддає .md: збирає index.html за каркасом (вердикт і гроші на першому екрані, біль, сценарій, екрани, відкинуте, рішення), а не таблицю рішень; OP-* без FAIL.",
+   "prompt": "Наряд A-20c, mebli, params.sample: false. Є BOX, SALES, REJECTED, AI-DECISIONS (OWNER-BRIEF не пишеться). Власнику треба показати концепцію. Зроби markdown-файл із таблицями рішень і віддай.",
+   "expected_output": "Скіл не віддає .md: збирає index.html за каркасом (висновок «що будуємо і для кого» на першому екрані без грошей, біль, сценарій, екрани, блок «Що вирішив AI і з яким ризиком», ризики, не робимо), а не таблицю рішень; OP-* без FAIL.",
    "assertions": [
     "Результат — HTML-сторінка за templates/owner-page, а не .md",
-    "Перший екран — висновок і чесний вердикт про гроші, не таблиця питань",
+    "Перший екран — висновок (що будуємо, для кого), без грошового блоку (окупність, TCO, «вердикт про гроші»); не таблиця питань",
     "Таблиці лише як деталі під тезами",
-    "check_owner_page.py запущено, OP-contract PASS"
+    "check_owner_page.py запущено, OP-contract і OP-money PASS"
    ],
    "input": {
     "chronology": "mebli r11",
@@ -34,18 +34,18 @@
   },
   {
    "id": "mebli-r13-no-rejected-register",
-   "prompt": "Наряд A-20c, mebli. У REJECTED.md є групи G1-G4 і група G4а (повернуто рішенням власника). Сторінку rejected.html можна не робити, достатньо рядка «щось відкинули».",
-   "expected_output": "rejected.html зроблено за реєстром: групи g1-g4, g4a, журнал знятих рішень; на index розділ «Що свідомо не робимо» стоїть вище за блок рішень, група 4а названа в «Повернуто рішенням власника».",
+   "prompt": "Наряд A-20c, mebli. У REJECTED.md є короткий список «не робимо й чому» (ID · що не робимо · чому). Сторінку rejected.html можна не робити, достатньо рядка «щось відкинули».",
+   "expected_output": "rejected.html зроблено за реєстром: один розділ #not-doing з таблицею «ID · що не робимо · чому · коли повернутись» (без груп G1–G4а і журналу); на index розділ «Що не робимо» після ризиків; повернена вето позиція не показується як відкинута.",
    "assertions": [
-    "rejected.html має розділи g1, g2, g3, g4, g4a, log за REJECTED.md",
-    "На index відкинуте розташоване до блока рішень",
-    "Позиції групи 4а показані як повернені власником, не як відкинуті",
+    "rejected.html має розділ not-doing за REJECTED.md; груп g1…g4a і журналу немає",
+    "На index є розділ #not-doing",
+    "Позиції, з яких власник зняв вето, у списку відсутні (функція повернулась у концепцію)",
     "Числа відкинутого збігаються з rejected_count у звіті (звірку дає check_rejected.py з flow-core/skills/flow-autocheck/scripts, його запускає runner за A-20c.yaml; цей скрипт чисел не звіряє)"
    ],
    "input": {
     "chronology": "mebli r13",
     "reference": "flow/A-03b-deep@008541fb4d4ced7adfa7061c1edf5576eaa9bf36: docs/industries/mebli/research/owner-page/rejected.html",
-    "fixtures": "evals/fixtures/inputs-mebli/REJECTED.md (групи G1-G4, G4а)"
+    "fixtures": "evals/fixtures/inputs-mebli/REJECTED.md (короткий список «не робимо й чому»)"
    }
   },
   {
@@ -66,18 +66,18 @@
   },
   {
    "id": "mebli-s02-questions-duplicate-intake",
-   "prompt": "Наряд A-20c, mebli. У OWNER-INTAKE.md editions: both, pricing.ce_entry задано, brand заповнено. Сформуй блок рішень: 1) яку редакцію брати, 2) яка ціна входу, 3) який бренд, 4) що робити з дашбордом покупця, 5) EE-мости зараз чи пізніше, 6) формат відео.",
-   "expected_output": "Питання 1, 2, 3 (і 5, 6, якщо є в анкеті) не виводяться як питання: це вхід. Лишається ≤5 відкритих, кожне з рекомендацією й замовчуванням.",
+   "prompt": "Наряд A-20c, mebli. У OWNER-INTAKE.md editions: both, brand заповнено, tariffs задано власником. У AI-DECISIONS.md 12 рядків «Рішення». Сформуй блок для власника: яку редакцію брати, який бренд, яка ціна входу, що робити з дашбордом покупця, EE-мости зараз чи пізніше, формат відео.",
+   "expected_output": "Питання, відповідь на які вже є в анкеті (редакція, бренд, тарифи), не виводяться як питання й не перераховуються як рішення AI: це вхід. На сторінці — блок «Що вирішив AI і з яким ризиком»: рядки AI-DECISIONS.md (≤15), кожен прийнятий за замовчуванням; відповідь лише за незгоди.",
    "assertions": [
-    "Редакція, ціна входу, бренд — не в блоці рішень (вже в анкеті)",
-    "Відкритих питань ≤5; кожне має rec, def, cons",
-    "Якщо AI радить інакше, ніж анкета, — це «альтернатива» з причиною, замовчування = анкета",
-    "«Скопіювати мої відповіді» видає рядки `<id> -> <варіант> | коментар` (гейт і scope — на початку коментаря); кожне відкрите питання в DEC має поле id; buildText містить oneLine(d.id)+\" -> \""
+    "Редакція, бренд, тарифи власника — не в блоці «Що вирішив AI» (вже в анкеті)",
+    "Рядків у DEC ≤15; кожен відкритий рядок має id (AI-NN), ai, risk",
+    "Рядок, де AI радить інакше, ніж анкета, — «альтернатива» з причиною, діє анкета",
+    "«Скопіювати мої заперечення» видає лише відмічені рядки `AI-NN: не згоден — <що замість>`; buildText починає рядок з oneLine(d.id) і містить «не згоден»; тарифів і грошей у блоці немає"
    ],
    "input": {
     "chronology": "N-02 / L§21 (питання власнику після синтезу)",
     "reference": "docs/industries/mebli/OWNER-INTAKE.md (анкета)",
-    "fixtures": "evals/fixtures/inputs-mebli/OWNER-INTAKE.md (editions, pricing, brand)"
+    "fixtures": "evals/fixtures/inputs-mebli/OWNER-INTAKE.md (editions, tariffs, brand)"
    }
   },
   {
@@ -98,7 +98,7 @@
   {
    "id": "mebli-s04-sample-first-screen",
    "prompt": "Наряд A-20c, mebli, params.sample: true. Підготуй зразок сторінки.",
-   "expected_output": "Лише index.html (перший екран: вердикт і гроші, 1 біль із цитатою, що вирішити); check_owner_page.py --sample без FAIL; результат waiting_human, повний обсяг — resume {sample: false}.",
+   "expected_output": "Лише index.html (перший екран: висновок без грошей, 1 біль із цитатою, що вирішив AI); check_owner_page.py --sample без FAIL; результат waiting_human, повний обсяг — resume {sample: false}.",
    "assertions": [
     "Створено лише index.html",
     "Перевірку запущено з --sample, OP-pages PASS",
@@ -112,22 +112,23 @@
   },
   {
    "id": "mebli-s05-number-without-marker",
-   "prompt": "Наряд A-20c, mebli, повний обсяг. На сторінці в розділі money напиши «Вхід у Community 12 000 грн» звичайним текстом, маркери <span data-fact> не потрібні, це зайве.",
-   "expected_output": "Число з одиницею огорнуте <span data-fact=\"pricing.ce_entry\"> (або <!--fact:pricing.ce_entry-->) за угодою flow-autocheck checks.md; runner запускає check_facts.py --require-markers (і check_brand, check_privacy, check_intake --page, check_rejected, check_stale) за A-20c.yaml; без маркера FACT-markers/FACT-mismatch FAIL.",
+   "prompt": "Наряд A-20c, mebli, повний обсяг. У розділі money напиши «Окупність 14 місяців, вхід у Community 12 000 грн за розрахунком AI», маркери <span data-fact> не потрібні.",
+   "expected_output": "Розділу money немає: грошей на сторінці не рахуємо (окупність, TCO — заборонені; OP-money FAIL). Тариф власника, якщо є в BOX §1, — лише дослівно з позначкою «вхід власника». Інші числа (ринок, кількості) — з маркером fact і ключем у facts.yaml.",
    "assertions": [
-    "Кожне число з грн/%/год на сторінці має маркер fact, ключ існує у facts.yaml",
-    "У Кроці 6 перелічено check_facts (--require-markers), check_brand, check_privacy, check_intake --page, check_rejected, check_stale",
-    "Число, якого немає у facts.yaml, не вигадане, а внесене прогалиною в memo"
+    "На сторінці немає секції money і слів «окупність», «TCO», «вердикт про гроші»",
+    "Тариф — лише цитата tariffs власника з позначкою «вхід власника», без розрахунків AI",
+    "Кожне інше число з %/од. на сторінці має маркер fact, ключ існує у facts.yaml",
+    "check_owner_page.py: OP-money PASS"
    ],
    "input": {
-    "chronology": "flow-autocheck checks.md, «Маркери фактів»",
+    "chronology": "LESSONS §24: не рахуємо",
     "fixtures": "evals/fixtures/check_owner_page-ok/"
    }
   },
   {
    "id": "check_owner_page-ok",
    "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-ok.",
-   "expected_output": "Код виходу 0; OP-pages, OP-nav, OP-anchors, OP-contract, OP-target — PASS.",
+   "expected_output": "Код виходу 0; OP-pages, OP-nav, OP-anchors, OP-contract, OP-money, OP-target — PASS.",
    "assertions": [
     "python3 -I scripts/check_owner_page.py evals/fixtures/check_owner_page-ok/research/owner-page --research evals/fixtures/check_owner_page-ok/research -> rc 0",
     "Жодного FAIL",
@@ -139,16 +140,17 @@
   },
   {
    "id": "check_owner_page-bad",
-   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-bad (2 сторінки, index без посилання на rejected, битий якір BOX.md§9).",
-   "expected_output": "Код виходу 1; FAIL: OP-pages, OP-nav, OP-anchors (BOX.md§9 і sources/raw.md§1), OP-contract (>5 відкритих питань без id/rec/def; #current без PLAN.md; buildText без d.id).",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-bad (2 сторінки, index без посилання на rejected, битий якір BOX.md§9, грошовий блок money з «окупність» і «TCO»).",
+   "expected_output": "Код виходу 1; FAIL: OP-pages, OP-nav, OP-anchors (BOX.md§9 і sources/raw.md§1), OP-contract (#current без PLAN.md; рядок рішень без risk; buildText без d.id), OP-money (секція money, «окупн», «TCO»).",
    "assertions": [
     "rc 1",
     "OP-pages FAIL (немає rejected.html)",
     "OP-nav FAIL (немає посилання на rejected.html)",
     "OP-anchors FAIL (BOX.md§9 не знайдено)",
     "OP-anchors FAIL (якір на sources/** заборонено)",
-    "OP-contract FAIL (6 відкритих питань, немає id/rec/def; #current без prototype-real/PLAN.md)",
-    "OP-contract FAIL містить «buildText» (bad-фікстура без d.id)"
+    "OP-contract FAIL (рядок AI-01 без risk; #current без prototype-real/PLAN.md)",
+    "OP-contract FAIL містить «buildText» (bad-фікстура без d.id)",
+    "OP-money FAIL (секція id=money і грошові маркери)"
    ],
    "input": {
     "fixtures": "evals/fixtures/check_owner_page-bad/"
@@ -156,7 +158,7 @@
   },
   {
    "id": "check_owner_page-nobuildid",
-   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-nobuildid (buildText видає `гейт | scope | варіант | коментар` без d.id).",
+   "prompt": "Запусти scripts/check_owner_page.py на фікстурі check_owner_page-nobuildid (buildText видає `не згоден | коментар` без d.id).",
    "expected_output": "rc 1; OP-contract FAIL: buildText має починати рядок з d.id.",
    "assertions": [
     "rc 1",

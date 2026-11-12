@@ -80,40 +80,41 @@
     },
     {
       "id": "check-intake",
-      "prompt": "Запусти scripts/check_intake.py на фікстурах evals/fixtures/check_intake-ok і check_intake-bad (OWNER-INTAKE.md, OWNER-BRIEF.md в тій самій теці; ключ --brief). У -bad поле editions «уточнити», pricing.pilot — плейсхолдер {{…}}, ambition.scope=huge, а в брифі питання «Яку редакцію брати… CE чи EE?» і «яка ціна коробки?».",
-      "expected_output": "-ok: код 0, INT-file/INT-block/INT-dup PASS. -bad: код 1; INT-block FAIL називає editions, pricing.pilot, ambition.scope; INT-dup FAIL називає рядки брифу з питаннями про редакцію і ціну.",
+      "prompt": "Запусти scripts/check_intake.py на фікстурах evals/fixtures/check_intake-ok і check_intake-bad (OWNER-INTAKE.md і QUESTIONS.md в тій самій теці; ключ --brief), а також на check_intake-legacy. Анкета 0.3.0: 6 пунктів. У -bad поле editions «уточнити», icp.min_employees — плейсхолдер {{…}}, brand.materials=grey, materials.formats/languages порожні, а в QUESTIONS.md питання про формати матеріалів. У -legacy лишились pricing, ambition.scope/evidence_gate, do_not_reject.",
+      "expected_output": "-ok: код 0, INT-file/INT-block/INT-dup PASS. -bad: код 1; INT-block FAIL називає editions, icp.min_employees, brand.materials, materials.formats; INT-dup FAIL називає рядок QUESTIONS.md про формати. -legacy: INT-legacy WARN (pricing, do_not_reject, ambition.scope), INT-block PASS, код 0.",
       "assertions": [
         "На -ok усі три перевірки PASS і код виходу 0",
-        "На -bad INT-block FAIL і msg містить editions та pricing.pilot",
-        "На -bad INT-dup FAIL з номерами рядків брифу",
+        "На -bad INT-block FAIL і msg містить editions та brand.materials",
+        "На -bad INT-dup FAIL з номером рядка QUESTIONS.md",
+        "На -legacy INT-legacy WARN, не FAIL; код 0",
         "З --allow-empty на -bad INT-block PASS (лише наявність ключів)",
+        "Анкета без editions, icp, todo_data, brand або materials — FAIL; без do_not_do — не FAIL",
         "Скрипт нічого не пише у файли фікстури"
       ]
     },
     {
       "id": "check-rejected",
-      "prompt": "Запусти scripts/check_rejected.py REJECTED.md --intake OWNER-INTAKE.md на фікстурах check_rejected-ok і -bad. У -bad: дубль REJ-001, порожній доказ, група G4a з латинською «a», позиція «Облік залишків» зі списку do_not_reject без посилання на K1, підсумкова таблиця не збігається з рядками.",
-      "expected_output": "-ok: усі REJ-* PASS. -bad: REJ-fields FAIL (дубль, порожній доказ, латинська a), REJ-dnr FAIL з «Облік залишків», REJ-count FAIL з розбіжністю.",
+      "prompt": "Запусти scripts/check_rejected.py REJECTED.md на фікстурах check_rejected-ok, -bad, -nowhy і -legacy. Формат 0.3.0: ID · що не робимо · чому. У -bad: дубль REJ-001, порожнє «чому», ID REJ-3 не за шаблоном. У -nowhy: таблиця з ID і «що не робимо», але без колонки «чому». У -legacy: старий 8-колонковий формат 0.2.0. Окремо запусти на -ok з --intake x --k1 y. Додатково запусти на check_rejected-with-ai-table (реєстр + таблиця рішень AI-NN).",
+      "expected_output": "-ok: REJ-exists, REJ-fields, REJ-count PASS, код 0. -bad: REJ-fields FAIL (дубль ID REJ-001, порожня колонка «чому», ID не за шаблоном). -nowhy: REJ-fields FAIL (немає колонки «чому»). -legacy: усі PASS. З --intake/--k1: WARN REJ-args «застарілий аргумент 0.2.0», код 0.",
       "assertions": [
-        "На -ok код 0 і чотири PASS",
-        "На -bad REJ-fields msg містить «дубль ID REJ-001» і «латинська»",
-        "На -bad REJ-dnr FAIL називає REJ-004",
-        "На -bad REJ-count FAIL називає G1",
-        "Крок із реєстром порожнім файлом дає REJ-exists FAIL",
-        "Фікстури check_rejected-k1-returned, -k1-ret-noid («повернути, це ядро пакета»), -k1-ret-no («ні, лишити в пакеті»): REJ-returned і REJ-dnr FAIL",
-        "check_rejected-k1-ambig («подумаємо пізніше»): REJ-returned MANUAL, не PASS; check_rejected-k1-confirm («так, відкинути»): PASS",
-        "--k1 на неіснуючий файл: REJ-dnr і REJ-returned FAIL"
+        "На -ok код 0 і три PASS",
+        "На -bad REJ-fields msg містить «дубль ID REJ-001»",
+        "На -nowhy REJ-fields FAIL називає колонку «чому»",
+        "На -legacy (8 колонок з групами G1…G4а) код 0",
+        "--intake і --k1 дають WARN REJ-args, не FAIL; REJ-dnr, REJ-returned, REJ-class-rule у виводі немає",
+        "Порожній файл реєстру дає REJ-exists FAIL",
+        "На -with-ai-table код 0: таблиця AI-NN не вважається реєстром"
       ]
     },
     {
       "id": "check-facts",
-      "prompt": "Запусти scripts/check_facts.py research/facts.yaml research у теках check_facts-ok і check_facts-bad. У -bad число 1 500 компаній і 60 тис. грн не збігаються з facts (1200 і 50000), маркер payback.breakeven_months не існує у facts.",
-      "expected_output": "-ok: FACT-mismatch PASS (форматування «1 200», «4,5 %», «50 тис.» нормалізується), FACT-orphan не FAIL. -bad: FACT-mismatch FAIL з обома числами; FACT-orphan FAIL з payback.breakeven_months.",
+      "prompt": "Запусти scripts/check_facts.py research/facts.yaml research concept у теках check_facts-ok і check_facts-bad (concept/features.md несе числа з маркерами). У -bad число 1 500 компаній і 9 млн грн не збігаються з facts (1200 і 5000000), маркер todo.ghost_key не існує у facts.",
+      "expected_output": "-ok: FACT-mismatch PASS (форматування «1 200», «4,5 %», «5 млн» нормалізується), FACT-orphan не FAIL. -bad: FACT-mismatch FAIL з обома числами; FACT-orphan FAIL з todo.ghost_key.",
       "assertions": [
         "На -ok код 0",
-        "На -bad FACT-mismatch msg містить market.bands.0.companies і pricing.ce_entry",
-        "На -bad FACT-orphan FAIL з payback.breakeven_months",
-        "«50 тис.» у тексті дорівнює 50000 у facts",
+        "На -bad FACT-mismatch msg містить market.bands.0.companies і market.bands.0.revenue_uah",
+        "На -bad FACT-orphan FAIL з todo.ghost_key",
+        "«5 млн» у тексті дорівнює 5000000 у facts",
         "Факти без посилань дають лише WARN"
       ]
     },
@@ -131,7 +132,7 @@
     },
     {
       "id": "check-privacy",
-      "prompt": "У теках check_privacy-ok і check_privacy-bad запусти scripts/check_privacy.py research --pages research/owner-page --materials prototype-real. У -bad у research/OWNER-BRIEF.md є e-mail, телефон, угода з клієнтом K-07 із сумою, маркер <!-- internal-raw -->, а сторінка власника посилається на research/sources/.",
+      "prompt": "У теках check_privacy-ok і check_privacy-bad запусти scripts/check_privacy.py research --pages research/owner-page --materials prototype-real. У -bad у research/BOX.md є e-mail, телефон, угода з клієнтом K-07 із сумою, маркер <!-- internal-raw -->, а сторінка власника посилається на research/sources/.",
       "expected_output": "-ok: PRV-pii і PRV-raw-place PASS (internal-raw лише в research/sources/ і в sources-log.md). -bad: PRV-pii FAIL (email, phone, deal-sum), PRV-raw-place FAIL (бриф і сторінка); значень збігів у виводі немає.",
       "assertions": [
         "На -ok код 0",
@@ -145,10 +146,10 @@
     {
       "id": "check-stale",
       "prompt": "Виконай evals/fixtures/check_stale-bad/make_repo.sh <тека> (друкує BASE=<sha>), далі scripts/check_stale.py <тека>/docs/industries/test/research/DEPENDS.yaml --base <sha>. Після sha артефактів змінився research/facts.yaml. Те саме на check_stale-ok. Додатково scripts/autocheck.py --selftest (сценарій same-step: залежність змінена тим самим кроком, --base = голова результату -> PASS; sha не предок base -> WARN STALE-order).",
-      "expected_output": "-ok: STALE-list PASS. -bad: STALE-list FAIL зі списком FUNCTIONAL-MAP.md і OWNER-BRIEF.md у порядку перерахунку; артефакти без sha — окремий WARN STALE-sha.",
+      "expected_output": "-ok: STALE-list PASS. -bad: STALE-list FAIL зі списком FUNCTIONAL-MAP.md і BOX.md у порядку перерахунку; артефакти без sha — окремий WARN STALE-sha.",
       "assertions": [
         "На -ok код 0",
-        "На -bad STALE-list FAIL і msg містить research/FUNCTIONAL-MAP.md та research/OWNER-BRIEF.md",
+        "На -bad STALE-list FAIL і msg містить research/FUNCTIONAL-MAP.md та research/BOX.md",
         "Транзитивно залежний артефакт теж у списку",
         "Репо не змінено (git status порожній)",
         "Артефакт без sha не вважається застарілим",

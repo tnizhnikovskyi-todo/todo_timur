@@ -3,14 +3,16 @@
 Використання: check_owner_page.py <research/owner-page> [--research research] [--sample]
 OP-pages    — рівно index.html, competitors.html, rejected.html (з --sample лише index.html обов'язковий).
 OP-nav      — на кожній сторінці навігація з 3 відносними посиланнями (index/competitors/rejected.html) і рівно одним aria-current="page" на себе.
-OP-anchors  — теза веде на рядок дослідження: <a class="src" data-src="<файл дослідження>§<розділ>|SRC-NNN">; у ключових розділах index (verdict, pain, money,
-              screens, risks) обов'язково; з --research: файл існує, розділ/SRC-NNN знайдено (без --research лише формат).
+OP-anchors  — теза веде на рядок дослідження (секція ai-decisions — обов’язково з якорем AI-DECISIONS.md§Рішення): <a class="src" data-src="<файл дослідження>§<розділ>|SRC-NNN">; у ключових розділах index (summary, pain,
+              screens, ai-decisions, risks) обов'язково; з --research: файл існує, розділ/SRC-NNN знайдено (без --research лише формат).
 OP-contract — PAGE-CONTRACT.md: назва 2-4 слова; без {{плейсхолдерів}}; зовнішнє лише Google Fonts; логотип/картинки data:; токени :root + темна тема;
               без iframe/fetch/alert/print/download; ПДн (email, телефон) відсутні; зовнішні url()/@import у CSS — лише Google Fonts (хост);
               ◎ у блоці тексту (p/li/td/th/h*, без навігації) з «факт/підтверджено/вже є/працює» без «гіпотеза/план» — MANUAL; у колонці/рядку «наш пакет» матриці ● або ◐ — FAIL.
-              Повний обсяг: немає var DEC — FAIL, 0 відкритих питань або запуск без --research — WARN; buildText має починати рядок з d.id і містити « -> ». Також (повний обсяг): ≤5 відкритих питань у DEC, у кожного
-              id/rec/def; #copyBtn; #not-doing раніше за #decisions; rejected.html має g1,g2,g3,g4,g4a,log; #current лише якщо є ../prototype-real/PLAN.md.
-              Якір на research/sources/** — FAIL (OP-anchors). Нечисловий фрагмент якоря шукається лише в заголовках .md / ключах .yaml.
+              Повний обсяг: немає var DEC — FAIL, 0 рядків «open» або запуск без --research — WARN; buildText має починати рядок з d.id і містити «не згоден»; кожен відкритий рядок DEC
+              має id/ai/risk; ≤15 рядків; #copyBtn; є #not-doing; rejected.html має #not-doing; #current лише якщо є ../prototype-real/PLAN.md.
+              Якір на research/sources/** — FAIL (OP-anchors).
+OP-rejected — з --research: набір REJ-NNN у rejected.html = набір у research/REJECTED.md (FAIL).
+OP-money    — FAIL: секція id=money; маркери «окупн», «TCO», «вартість володіння», «business-case/бізнес-кейс», «вердикт про гроші», ROI, «беззбитков», «ставка розробки» у тексті сторінок (ціни конкурентів як факт не чіпаємо). Нечисловий фрагмент якоря шукається лише в заголовках .md / ключах .yaml.
 Числа з маркерами fact і решту сусідніх перевірок A-20c (check_facts, check_brand, check_privacy, check_intake --page, check_rejected, check_stale) цей скрипт не виконує.
 OP-target   — форма під ціль публікації: index без <!doctype>/<html>/<head>/<body>; competitors/rejected з <!doctype>, charset, viewport; розмір ≤ 60 KB (WARN)."""
 import argparse, json, re, sys
@@ -19,9 +21,11 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 PAGES = ["index.html", "competitors.html", "rejected.html"]
-CORE = ["verdict", "pain", "money", "screens", "risks"]
+CORE = ["summary", "pain", "screens", "ai-decisions", "risks"]
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
-REJ_IDS = ["g1", "g2", "g3", "g4", "g4a", "log"]
+REJ_IDS = ["not-doing"]
+MONEY = re.compile(r"окупн|\bTCO\b|вартість\s+володіння|business[- ]case|бізнес-кейс|вердикт\s+про\s+гроші|\bROI\b|беззбитков|ставк\w*\s+розробки|годин.{0,20}(×|x|\*).{0,10}ставк", re.I)
+MONEY_SKIP = re.compile(r"REJ-\d{3}|https?://")  # як в autocheck.py: рядок реєстру відкинутого і цитата з URL не рахуються
 SRC_RE = re.compile(r"^(?:SRC-\d{3,}|[\w./-]+\.(?:md|yaml|yml)§\S.*)$")
 PII = {"email": r"[\w.+-]+@[\w-]+\.[\w.-]+", "phone": r"(?<![\w:])(\+?380\d{9}|0\d{9})(?!\w)"}
 res = []
@@ -151,7 +155,7 @@ def main():
         if n in PAGES:
             pages[n] = load(d, n)
     if not pages:
-        add("OP-nav", "SKIP"); add("OP-anchors", "SKIP"); add("OP-contract", "SKIP"); add("OP-target", "SKIP")
+        add("OP-nav", "SKIP"); add("OP-anchors", "SKIP"); add("OP-contract", "SKIP"); add("OP-money", "SKIP"); add("OP-target", "SKIP")
         print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1)
 
     # OP-nav
@@ -172,6 +176,8 @@ def main():
     bad, warn = [], []
     for n, (raw, p) in pages.items():
         for sec, refs in p.sections.items():
+            if sec == "ai-decisions" and refs and not any(r.strip().startswith("AI-DECISIONS.md§") for r in refs):
+                bad.append(f"{n}#ai-decisions: немає якоря AI-DECISIONS.md§Рішення")
             for r in refs:
                 if not SRC_RE.match(r.strip()):
                     bad.append(f"{n}#{sec}: data-src «{r}» не у форматі файл§розділ або SRC-NNN")
@@ -188,7 +194,7 @@ def main():
             elif not p.sections[s]:
                 bad.append(f"index#{s}: теза без якоря на дослідження (a.src[data-src])")
         for s, refs in p.sections.items():
-            if s not in CORE and s not in ("_", "decisions", "sources", "chain") and not refs:
+            if s not in CORE and s not in ("_", "sources", "chain") and not refs:
                 warn.append(f"index#{s}: без якоря")
     if bad: add("OP-anchors", "FAIL", "; ".join(bad[:8]))
     elif warn: add("OP-anchors", "WARN", "; ".join(warn[:8]))
@@ -258,28 +264,25 @@ def main():
         jsn = re.sub(r"/\*.*?\*/", "", js, flags=re.S)
         m = re.search(r"var\s+DEC\s*=\s*\[(.*)\]\s*;", jsn, re.S)
         opens = re.findall(r"\{[^{}]*\"st\"\s*:\s*\"open\"[^{}]*\}", m.group(1) if m else "")
-        if not m: bad.append("index: у повному обсязі немає масиву var DEC=[…] (блок рішень власника)")
-        elif not opens: warn.append("index: у DEC 0 відкритих питань — підтвердь у memo, що відкритих рішень справді немає")
-        # контракт «Скопіювати мої відповіді»: рядок = «<id> -> варіант | коментар» (приймач decisions-batch)
+        if not m: bad.append("index: у повному обсязі немає масиву var DEC=[…] (блок «Що вирішив AI»)")
+        elif not opens: warn.append("index: у DEC 0 відкритих рядків — підтвердь у memo, що рішень AI справді немає")
+        # контракт «Скопіювати мої заперечення»: рядок = «<AI-NN>: не згоден — що замість» (приймач veto-batch)
         bt = re.search(r"function\s+buildText\b(.*?)\breturn\s+out\b", jsn, re.S)
-        if not bt: bad.append("index: немає функції buildText (текст для «Скопіювати мої відповіді»)")
+        if not bt: bad.append("index: немає функції buildText (текст для «Скопіювати мої заперечення»)")
         else:
             pm = re.search(r"\.push\(\s*\[?\s*(.*)", bt.group(1), re.S)
             if not pm or not re.match(r"(?:oneLine\(\s*)?d\.id\b", pm.group(1)):
-                bad.append("index: buildText має видавати рядок, що починається з d.id (формат «<id> -> варіант | коментар»)")
-            if "->" not in bt.group(1):
-                bad.append("index: buildText: немає роздільника « -> » між id і відповіддю")
-        if len(opens) > 5: bad.append(f"index: відкритих питань {len(opens)} > 5")
+                bad.append("index: buildText має видавати рядок, що починається з d.id (формат «AI-NN: не згоден — що замість»)")
+            if "не згоден" not in bt.group(1):
+                bad.append("index: buildText: немає тексту «не згоден» (формат «AI-NN: не згоден — що замість»)")
+        if len(opens) > 15: bad.append(f"index: рядків рішень AI {len(opens)} > 15")
         for o in opens:
             nn = re.search(r'"n"\s*:\s*(\d+)', o)
             lab = "№" + (nn.group(1) if nn else "?")
-            for fld in ("id", "rec", "def"):
-                if not re.search(rf'"{fld}"\s*:\s*"[^"]+"', o): bad.append(f"index: питання {lab} без поля {fld}")
+            for fld in ("id", "ai", "risk"):
+                if not re.search(rf'"{fld}"\s*:\s*"[^"]+"', o): bad.append(f"index: рядок {lab} без поля {fld}")
         if "copyBtn" not in raw: bad.append("index: немає кнопки #copyBtn")
-        order = list(p.sections)
-        if "not-doing" in order and "decisions" in order and order.index("not-doing") > order.index("decisions"):
-            bad.append("index: #not-doing має стояти раніше за #decisions (відкинуте до рішень)")
-        elif "not-doing" not in order: bad.append("index: немає розділу #not-doing")
+        if "not-doing" not in p.sections: bad.append("index: немає розділу #not-doing")
     if "rejected.html" in pages and not a.sample:
         ids = {x.get("id") for t, x in pages["rejected.html"][1].tags if t == "section"}
         miss = [i for i in REJ_IDS if i not in ids]
@@ -288,6 +291,26 @@ def main():
     elif manual: add("OP-contract", "MANUAL", "; ".join(manual[:3] + warn[:3]))
     elif warn: add("OP-contract", "WARN", "; ".join(warn[:6]))
     else: add("OP-contract", "PASS")
+
+    # OP-rejected: ID рядків REJ-NNN у rejected.html збігаються з research/REJECTED.md
+    if research is not None and "rejected.html" in pages and not a.sample:
+        rj = research / "REJECTED.md"
+        if rj.is_file():
+            md = set(re.findall(r"REJ-\d{3}", rj.read_text(encoding="utf-8")))
+            ht = set(re.findall(r"REJ-\d{3}", pages["rejected.html"][0]))
+            if md != ht:
+                add("OP-rejected", "FAIL", f"rejected.html ≠ REJECTED.md: немає на сторінці {sorted(md-ht)}, зайві {sorted(ht-md)}")
+            else: add("OP-rejected", "PASS")
+        else: add("OP-rejected", "WARN", "немає research/REJECTED.md — відповідність rejected.html не перевірено")
+
+    # OP-money (LESSONS §24): грошей на сторінках немає
+    bad = []
+    for n, (raw, p) in pages.items():
+        if "money" in p.sections: bad.append(f"{n}: секція id=money")
+        hit = sorted({m.group(0).lower() for ln in "".join(p.text).splitlines() if not MONEY_SKIP.search(ln)
+                      for m in MONEY.finditer(" ".join(ln.split()))})
+        if hit: bad.append(f"{n}: грошові маркери {hit}")
+    add("OP-money", "FAIL" if bad else "PASS", "; ".join(bad[:6]))
 
     # OP-target
     bad, warn = [], []

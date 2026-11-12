@@ -94,11 +94,12 @@ footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
 <div class="wrap"><div class="masthead"><span class="eyebrow">Концепція для власника продукту</span><h1>Текст</h1>
 <div class="meta"><span>Текст</span><span class="tag hyp">Текст</span></div>
 <div class="verdict"><p>Текст</p></div></div></div>
-<div class="nav"><div class="nav-inner"><a href="#verdict">Вердикт і гроші</a><a href="#pain">Для кого і який біль</a><a href="#scenario">Наскрізний сценарій</a><a href="#day">День з життя ролей</a><a href="#screens">Екрани MVP</a><a href="#competitors">Конкуренти</a><a href="#not-doing">Що свідомо не робимо</a><a href="#signals">Внутрішні сигнали ToDo</a><a href="#money">Гроші</a><a href="#box">Коробка</a><a href="#sales">Продаж</a><a href="#returned">Повернуто</a><a href="#risks">Головні ризики і що з ними робити</a><a href="#completeness">Повнота концепції</a><a href="#decisions">Рішення власника</a><a href="#chain">Ланцюг</a><a href="#evidence">Докази</a><a href="#limits">Обмеження й план перевірки</a><a href="#sources">Джерела (шляхи в репо)</a></div></div>
+<div class="nav"><div class="nav-inner"><a href="#summary">Висновок</a><a href="#pain">Для кого і який біль</a><a href="#scenario">Наскрізний сценарій</a><a href="#day">День з життя ролей</a><a href="#screens">Екрани MVP</a><a href="#competitors">Конкуренти</a><a href="#signals">Внутрішні сигнали ToDo</a><a href="#box">Коробка</a><a href="#sales">Продаж</a><a href="#ai-decisions">Що вирішив AI</a><a href="#risks">Ризики</a><a href="#not-doing">Що не робимо</a><a href="#chain">Ланцюг</a><a href="#evidence">Докази</a><a href="#limits">Обмеження й план перевірки</a><a href="#sources">Джерела</a></div></div>
 <main>
-<section id="verdict">
+<section id="summary">
+  <p class="small">Ринок: <span data-fact="market.companies">1200 шт</span> компаній.</p>
   <span class="eyebrow">Висновок</span>
-  <h2>Вердикт і гроші</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
+  <h2>Висновок: що будуємо і для кого</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <p class="prose">Текст</p>
 </section>
 <section id="pain">
@@ -128,20 +129,10 @@ footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
   <h2>Конкуренти</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <p class="prose">Текст</p>
 </section>
-<section id="not-doing">
-  <span class="eyebrow">Межі</span>
-  <h2>Що свідомо не робимо</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
-  <p class="prose">Текст</p>
-</section>
 <section id="signals">
   <span class="eyebrow">Сигнали</span>
   <h2>Внутрішні сигнали ToDo (лише знеособлені агрегати)</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <p class="prose">Текст</p>
-</section>
-<section id="money">
-  <span class="eyebrow">Гроші</span>
-  <h2>Гроші: коробка, TCO, окупність</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
-  <p class="prose">Вхід у Community: <span data-fact="pricing.ce_entry">12 000 грн</span> за ліцензію.</p>
 </section>
 <section id="box">
   <span class="eyebrow">Коробка</span>
@@ -153,34 +144,29 @@ footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
   <h2>Продаж: як це продаємо</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <p class="prose">Текст</p>
 </section>
-<section id="returned">
-  <span class="eyebrow">Повернуто</span>
-  <h2>Повернуто рішенням власника</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
-  <p class="prose">Текст</p>
+<section id="ai-decisions">
+  <span class="eyebrow">Рішення AI</span>
+  <h2>Що вирішив AI і з яким ризиком</h2><p class="small"><a class="src" href="#sources" data-src="AI-DECISIONS.md§Рішення">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
+  <div class="verdict"><p>Текст</p></div>
+  <p class="small prose">Відмітьте рядок, з яким не згодні, і напишіть, що замість. Позначки зберігаються лише у вашому браузері як особиста чернетка; вето стає записом у <code>flow/decisions.md</code> лише після копіювання й передачі.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" id="copyBtn" type="button">Скопіювати мої заперечення</button>
+    <button class="btn ghost" id="clearBtn" type="button">Очистити</button>
+  </div>
+  <p id="copyMsg" class="small" role="status" aria-live="polite"></p>
+  <textarea id="copyOut" readonly hidden aria-label="Текст заперечень для копіювання"></textarea>
+  <div id="decList"></div>
+  <noscript><p class="small">Для відмітки незгоди потрібен JavaScript. Список рішень AI: Текст</p></noscript>
 </section>
 <section id="risks">
   <span class="eyebrow">Ризики</span>
   <h2>Головні ризики і що з ними робити</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <div class="scroll" tabindex="0" aria-label="Ризики"><table style="min-width:640px"><thead><tr><th>Ризик</th><th>Вплив</th><th>Що робити</th></tr></thead><tbody><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></tbody></table></div>
 </section>
-<section id="completeness">
-  <span class="eyebrow">Повнота</span>
-  <h2>Повнота концепції</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
+<section id="not-doing">
+  <span class="eyebrow">Межі</span>
+  <h2>Що свідомо не робимо</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
   <p class="prose">Текст</p>
-</section>
-<section id="decisions">
-  <span class="eyebrow">Рішення</span>
-  <h2>Рішення власника</h2><p class="small"><a class="src" href="#sources" data-src="BOX.md§1">BOX</a> <a class="src" href="#sources" data-src="SRC-001">SRC-001</a></p>
-  <div class="verdict"><p>Текст</p></div>
-  <p class="small prose">Позначки зберігаються лише у вашому браузері як особиста чернетка. Ніхто інший їх не бачить; рішенням стає лише запис у <code>flow/decisions.md</code>.</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn" id="copyBtn" type="button">Скопіювати мої відповіді</button>
-    <button class="btn ghost" id="clearBtn" type="button">Очистити</button>
-  </div>
-  <p id="copyMsg" class="small" role="status" aria-live="polite"></p>
-  <textarea id="copyOut" readonly hidden aria-label="Текст відповідей для копіювання"></textarea>
-  <div id="decList"></div>
-  <noscript><p class="small">Для вибору варіантів потрібен JavaScript. Список рішень: Текст</p></noscript>
 </section>
 <section id="chain">
   <span class="eyebrow">Ланцюг</span>
@@ -206,9 +192,9 @@ footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
 <footer class="small">Текст</footer>
 <script>
 (function(){
-  /* Блок рішень: DEC заповнює скіл (concept-presentation). st: "done" | "open". */
-  var DEC=[{"n":1,"id":"G-01","q":"Питання один","st":"open","gate":"A-20c","scope":"mebli","ctx":"Контекст","opts":["Так","Ні"],"rec":"Так, бо причина","def":"Ні","cons":"Наслідок"},{"n":2,"id":"K1-Q2","q":"Питання два","st":"open","gate":"A-20c","scope":"mebli","ctx":"Контекст","opts":["А","Б"],"rec":"А, бо причина","def":"Б","cons":"Наслідок"}];
-  var KEY="Текст-owner-decisions-v1";
+  /* Блок «Що вирішив AI»: DEC заповнює скіл (concept-presentation) рядками AI-DECISIONS.md. st: "open" (прийнято AI, можна вето) | "veto" (вето вже внесено). */
+  var DEC=[{"n":1,"id":"AI-01","q":"Рішення один","st":"open","ai":"Беремо Community","alt":"Enterprise","risk":"Мало доказів","check":"пілот"},{"n":2,"id":"AI-02","q":"Рішення два","st":"open","ai":"Без мобільного застосунку","alt":"З мобільним","risk":"Немає сигналу","check":"A-23"}];
+  var KEY="mebli-ai-veto-v1";
   var state={};
   try{var raw=localStorage.getItem(KEY);if(raw){state=JSON.parse(raw)||{};}}catch(e){state={};}
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
@@ -218,45 +204,43 @@ footer{max-width:var(--wide);margin-inline:auto;padding-block:24px}
     var html="";
     DEC.forEach(function(d){
       var n=d.n;
-      if(d.st==="done"){html+='<div class="dec closed"><span class="num">'+esc(n)+'</span><div class="stack"><div><b>'+esc(d.q)+'</b> <span class="tag ok">вирішено</span></div><p class="small">'+esc(d.dec||"")+'</p>'+(d.hist?'<p class="small"><b>Історія: рекомендація AI до рішення.</b> '+esc(d.hist)+'</p>':'')+'</div></div>';return;}
-      var opts="";
-      (d.opts||[]).forEach(function(o,j){var id="d"+n+"o"+j;opts+='<span><input type="radio" name="d'+n+'" id="'+id+'" value="'+j+'"> <label for="'+id+'">'+esc(o)+'</label></span>';});
-      html+='<div class="dec"><span class="num">'+esc(n)+'</span><div class="stack"><b>'+esc(d.q)+'</b><p class="small">'+esc(d.ctx||"")+'</p>'+(d.rec?'<p class="small"><b>Рекомендація AI (відкрите рішення).</b> '+esc(d.rec)+'</p>':'')+(d.def?'<p class="small"><b>Замовчування, якщо не відповісте.</b> '+esc(d.def)+'</p>':'')+(d.cons?'<p class="small"><b>Наслідок.</b> '+esc(d.cons)+'</p>':'')+'<div class="opts" role="radiogroup">'+opts+'</div><textarea class="note" id="note'+n+'" rows="2" aria-label="Нотатка до рішення '+esc(n)+'"></textarea></div></div>';
+      if(d.st==="veto"){html+='<div class="dec closed"><span class="num">'+esc(d.id)+'</span><div class="stack"><div><b>'+esc(d.q)+'</b> <span class="tag ok">вето внесено</span></div><p class="small">'+esc(d.dec||"")+'</p></div></div>';return;}
+      html+='<div class="dec"><span class="num">'+esc(d.id)+'</span><div class="stack"><b>'+esc(d.q)+'</b><p class="small"><b>Рішення AI.</b> '+esc(d.ai||"")+'</p>'+(d.alt?'<p class="small"><b>Альтернатива.</b> '+esc(d.alt)+'</p>':'')+(d.risk?'<p class="small"><b>Ризик.</b> '+esc(d.risk)+'</p>':'')+(d.check?'<p class="small"><b>Перевірка.</b> '+esc(d.check)+'</p>':'')+'<div class="opts"><span><input type="checkbox" id="v'+n+'"> <label for="v'+n+'">Не згоден</label></span></div><textarea class="note" id="note'+n+'" rows="2" aria-label="Що замість, '+esc(d.id)+'"></textarea></div></div>';
     });
     list.innerHTML=html;
     DEC.forEach(function(d){
-      if(d.st==="done")return;
+      if(d.st==="veto")return;
       var s=state["d"+d.n]||{};
-      if(s.o!==undefined&&s.o!==null){var el=document.getElementById("d"+d.n+"o"+s.o);if(el)el.checked=true;}
+      if(s.v){document.getElementById("v"+d.n).checked=true;}
       if(s.t){document.getElementById("note"+d.n).value=s.t;}
     });
   }
   render();
-  list.addEventListener("change",function(e){var t=e.target;if(t.type==="radio"){var n=t.name.slice(1);state["d"+n]=state["d"+n]||{};state["d"+n].o=+t.value;save();}});
+  list.addEventListener("change",function(e){var t=e.target;if(t.type==="checkbox"){var n=t.id.slice(1);state["d"+n]=state["d"+n]||{};state["d"+n].v=t.checked;save();}});
   list.addEventListener("input",function(e){var t=e.target;if(t.classList.contains("note")){var n=t.id.slice(4);state["d"+n]=state["d"+n]||{};state["d"+n].t=t.value;save();}});
-  /* Формат відповідей — рядки для flow/decisions.md (колонки: flow-core/references/flow-state.md §3). */
+  /* Формат заперечень — «AI-NN: не згоден — <що замість>»; приймач — flow-state-keeper, режим veto-batch (flow-core/references/flow-state.md §3). */
   function oneLine(t){return String(t||"").replace(/[\r\n|]+/g," ").trim();}
   function buildText(){
-    var out=["Рішення власника. Рядки: <ID> -> варіант, обраний власником | коментар (≤200 символів). Це чернетка для flow-state-keeper (режим decisions-batch): дату, роль автора й задачу він дописує сам, з посиланням на це повідомлення."];
+    var out=["Заперечення власника: Меблі, 2026-11-01. Один рядок на заперечення: AI-NN: не згоден — що замість. Рядки, яких тут немає, власник приймає. flow-state-keeper (veto-batch) вносить їх у flow/decisions.md з посиланням на це повідомлення."];
     DEC.forEach(function(d){
-      if(d.st==="done")return;
+      if(d.st==="veto")return;
       var s=state["d"+d.n]||{};
-      var choice=(s.o!==undefined&&s.o!==null)?d.opts[s.o]:"не вирішено";
-      var com=(oneLine(d.gate)+" "+oneLine(d.scope)+": "+oneLine(d.q)+(s.t?"; "+oneLine(s.t):"")).slice(0,200);
-      out.push(oneLine(d.id)+" -> "+oneLine(choice)+" | "+com);
+      if(!s.v)return;
+      out.push(oneLine(d.id)+": не згоден — "+(oneLine(s.t)||"що замість не вказано"));
     });
+    if(out.length===1)out.push("Заперечень немає: усі рішення AI прийнято.");
     return out.join("\n");
   }
   var msg=document.getElementById("copyMsg"),outEl=document.getElementById("copyOut");
   function fallback(text){outEl.hidden=false;outEl.value=text;outEl.focus();outEl.select();msg.textContent="Автоматичне копіювання недоступне. Текст виділено: Ctrl+C або Cmd+C.";}
   document.getElementById("copyBtn").addEventListener("click",function(){
     var text=buildText();
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){outEl.hidden=true;msg.textContent="Скопійовано відкриті рішення.";},function(){fallback(text);});}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){outEl.hidden=true;msg.textContent="Скопійовано заперечення.";},function(){fallback(text);});}
     else{fallback(text);}
   });
   document.getElementById("clearBtn").addEventListener("click",function(){
     state={};save();
-    list.querySelectorAll("input[type=radio]").forEach(function(r){r.checked=false;});
+    list.querySelectorAll("input[type=checkbox]").forEach(function(r){r.checked=false;});
     list.querySelectorAll(".note").forEach(function(r){r.value="";});
     outEl.hidden=true;msg.textContent="Позначки очищено.";
   });

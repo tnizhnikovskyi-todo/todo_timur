@@ -33,7 +33,7 @@ PR у `upgrade/vX.Y-odoo<N>`. Звіт і PR пише runner; скіл пере�
 Наряд D-03 не має рядка в таблиці режимів `naryad-format.md` (В-1).
 
 **Входи (елементи `inputs` наряду):** `package/` на тегу A-18, `package/CHANGELOG.md`, `package/demo/scenarios.md`,
-`docs/industries/<галузь>/business-case.md` (A-07) плюс технічні джерела Odoo N: `odoo-src` (path/образ Odoo N,
+`docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`) і `package/answers.yaml` (редакція, хостинг) плюс технічні джерела Odoo N: `odoo-src` (path/образ Odoo N,
 обов'язково), `odoo-src-19` (checkout 19 для diff, обов'язково), `odoo-src-ee` (Enterprise, необов'язково),
 `odoo-release-notes` (url), `odoo-upgrade-analysis` (OpenUpgrade `upgrade_analysis.txt`, якщо реліз є). Немає
 `odoo-src` або `odoo-src-19` -> `escalated` Тімліду: чого саме. Решта відсутніх — джерела пропускаються з записом у `memo`.
@@ -83,7 +83,7 @@ PR у `upgrade/vX.Y-odoo<N>`. Звіт і PR пише runner; скіл пере�
 - Тег A-18 існує (`get_tag`). `repo.base_branch` відповідає `^upgrade/v\d+\.\d+-odoo\d+$`, N у назві = N з наряду.
   Merge-base: `git merge-base origin/<base_branch> <тег>` == `git rev-list -n1 <тег>`. Гілку створює Тімлід; немає ->
   `escalated`, самому не створювати (В-5).
-- Редакція Odoo (Enterprise/Community) і хостинг — з `business-case.md` (A-07).
+- Редакція Odoo (Enterprise/Community) і хостинг — з `OWNER-INTAKE.md` (`editions`) і `package/answers.yaml`, не з business-case (його більше немає).
 - Нестача чогось -> `escalated` Тімліду (що саме), без змін у репо. `returned_from: A-17` -> прочитати зауваження й
   почати з відповідного кроку. Фази й маршрути — `references/phases.md`.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Фікстура check_stale (bad): після sha факти змінились: застарілі FUNCTIONAL-MAP і (транзитивно) OWNER-BRIEF. Використання: make_repo.sh <тека>; друкує BASE=<sha>.
+# Фікстура check_stale (bad): після sha факти змінились: застарілі FUNCTIONAL-MAP і (транзитивно) BOX. Використання: make_repo.sh <тека>; друкує BASE=<sha>.
 set -e; D=${1:?dest}; mkdir -p "$D/docs/industries/test/research"; cd "$D"
 git init -q -b main; git config user.email t@example.test; git config user.name t
 R=docs/industries/test
@@ -10,9 +10,9 @@ artifacts:
   research/FUNCTIONAL-MAP.md:
     depends_on: [OWNER-INTAKE.md, research/facts.yaml]
     sha: $S
-  research/OWNER-BRIEF.md:
+  research/BOX.md:
     depends_on: [research/FUNCTIONAL-MAP.md, research/facts.yaml]
     sha: $S
 Y
-echo "бриф" > $R/research/OWNER-BRIEF.md; echo "нові факти" > $R/research/facts.yaml; git add -A; git commit -qm "brief+facts"
+echo "BOX" > $R/research/BOX.md; echo "нові факти" > $R/research/facts.yaml; git add -A; git commit -qm "brief+facts"
 echo "BASE=$(git rev-parse HEAD)"

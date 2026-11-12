@@ -6,7 +6,7 @@
 - **Контент-менеджер (маркетинг)** — людина зі своїм Claude, `executor: any`. Кроки: A-21c, A-23 `prep` (тексти), D-05 (кейси), A-18 (матеріали релізу). Працює лише з контентом у репо (клас даних `commercial`), без баз Odoo (читає лише наряд), без `internal-raw`; профіль `content` (`flow-executor-content`).
 - **AI-інженер / агент Ретро** — веде C-04, C-07, C-08R: регрес евалів, розбір помилки AI, зведення уроків `LSN-xxx`; правки скілів — PR, рішення про зрілість кроку — людина.
 
-- **власник** — власник бізнесу ToDo / замовник пакета (людина, не AI): заповнює анкету A-02b, відповідає на K1 (A-03b), приймає зразок і гейт концепції разом із Власником продукту. У ростері Odoo (`ODOO_SCHEMA`) відповідає ролі «Власник продукту» (A); `waiting_for.role` для його підкроків = ця роль, інша — лише за ростером.
+- **власник** — власник бізнесу ToDo / замовник пакета (людина, не AI): заповнює анкету A-02b, приймає зразок і має вето на гейті концепції (A-20c) разом із Власником продукту. У ростері Odoo (`ODOO_SCHEMA`) відповідає ролі «Власник продукту» (A); `waiting_for.role` для його підкроків = ця роль, інша — лише за ростером.
 
 ## Картки
 
@@ -17,82 +17,82 @@
 - `access_profile`: base
 - `inArtifacts`: docs/industries/scoring.md; A-02 рішення (flow/decisions.md)
 - `outArtifacts`: docs/industries/<галузь>/OWNER-INTAKE.md
-- гейт: ні (валідація check_intake.py); заповнення — `waiting_human` ≤20 хв
+- гейт: ні (валідація check_intake.py); заповнення — `waiting_human` ≤5 хв
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
 - ліміти: sonnet/low; 1 год; $3; стартова зрілість: 1
-- примітки: Анкета: 14 блоків, блокуючі `*`; питання власнику — ДО синтезу (К-02, N-02)
+- примітки: Анкета: 6 пунктів (`editions`, `icp`, `todo_data`, `brand`, `materials` — блокуючі `*`; `do_not_do`), решта — `defaults:` (AI-замовчування); режими `prepare → validate`
 - ескалація: власник не відповів за `human_sla` -> активність Тімліду; блокуюче поле порожнє -> `waiting_human`
 
-### A-03b. Глибокий аналіз галузі й конкурентів (K1 усередині)
-- `raciR`: BA (R); власник (K1)
+### A-03b. Глибокий аналіз галузі й конкурентів
+- `raciR`: BA (R)
 - `executor`: any
 - `skillRef`: flow-research:industry-deep-dive
 - `access_profile`: research-internal
 - `inArtifacts`: OWNER-INTAKE.md; briefing.md (A-03); past-projects.md (A-04); sessions (якщо A-05/A-06)
-- `outArtifacts`: research/{FUNCTIONAL-MAP.md, edition-claims.md, competitors-registry.md, competitors/*.md (8–12), K1.md, sources-log.md, facts.yaml, DEPENDS.yaml, REJECTED.md (створює A-03b; рядки G1–G3)}
-- гейт: ні; K1 — `waiting_human` + `resume` (відповіді власника `K1-Q*`); не кнопка
+- `outArtifacts`: research/{FUNCTIONAL-MAP.md, edition-claims.md, competitors-registry.md, competitors/*.md (8–12), sources-log.md, facts.yaml, DEPENDS.yaml, REJECTED.md (короткий формат «не робимо й чому»), AI-DECISIONS.md (створює A-03b; рядки A-03b: підсегмент, кандидати на «не робимо»)}
+- гейт: ні; контрольної точки K1 і питань власнику немає — рішення AI в `AI-DECISIONS.md`
 - `review.checklists`: [research.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
-- `params.sample`: true (профіль одного конкурента + 10 рядків матриці)
+- `params.sample`: false (true лише на явний запит або для першої галузі: профіль одного конкурента + 10 рядків матриці)
 - ліміти: opus/high для синтезу, sonnet для профілів; 6 год; $25; стартова зрілість: 1
-- примітки: Профілі конкурентів 8–12 (К-15); кандидати на відкидання показано в K1 до синтезу (К-02); EE-твердження — лише через `edition-claims.md` (К-12)
+- примітки: Профілі конкурентів 8–12 (К-15); підсегмент і кандидати на «не робимо» вирішує AI (рядки AI-DECISIONS); слабкий довід = «ризик, перевірити на пілоті»; EE-твердження — лише через `edition-claims.md` (К-12)
 - примітки (join): AND-join сесій — у A-03b (читає протоколи A-06)
-- ескалація: немає доступу до EE -> «не перевірено» (WARN), не стоп; брак груп джерел -> ризик у план A-23, не стоп (К-01)
+- ескалація: немає доступу до EE -> «не перевірено» (WARN), не стоп; брак доказів -> «ризик, перевірити на пілоті» (план A-23), не стоп
 
 ### A-03c. Готові модулі ToDo у збірку
-- `raciR`: Архітектор (R); власник (гейт)
-- `executor`: any (inventory/session/decide); сесія з власником — `human_substep` (AI-наряд `session` готує матеріал і питання)
+- `raciR`: Архітектор (R)
+- `executor`: any (один наряд, без режимів)
 - `skillRef`: flow-research:reuse-modules
 - `access_profile`: research-internal
 - `inArtifacts`: OWNER-INTAKE.md (`reuse`); research/FUNCTIONAL-MAP.md
-- `outArtifacts`: research/{reuse-inventory.md (режим `inventory`), reuse-session.md (`session`), REUSE.md (`decide`; REUSE-xx, години перераховано), sources-log.md}
-- гейт: так: гейт «беремо / адаптуємо / ні» після сесії з власником (К-18)
+- `outArtifacts`: research/{REUSE.md (розділ `## Інвентар` + реєстр; REUSE-xx), sources-log.md; дописує рядки A-03c в `research/AI-DECISIONS.md`}
+- гейт: ні; «беремо / адаптуємо / ні» вирішує AI (рядки AI-DECISIONS), вето — на A-20c
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
-- примітки: Критерії: Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій; ліцензія наших модулів — LGPL-3 за замовчуванням, остаточно — рішення власника
+- примітки: Критерії: Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій; ліцензія наших модулів — LGPL-3 за замовчуванням (рядок AI-DECISIONS, вето — на A-20c)
 - ескалація: репо/проєкт недоступні -> `waiting_human`; права на код невідомі -> «ні» до уточнення
 
-### A-20. Концепція + OWNER-BRIEF + BOX + SALES (+ рядки G4/G4а в REJECTED)
+### A-20. Концепція + BOX + SALES + REJECTED + AI-DECISIONS
 - `raciR`: BA (R); Власник продукту (A)
 - `executor`: any
 - `skillRef`: flow-research:concept-mapper
 - `access_profile`: research
-- `inArtifacts`: OWNER-INTAKE.md; research/{FUNCTIONAL-MAP.md, K1.md, REJECTED.md, facts.yaml, REUSE.md, edition-claims.md}; briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
-- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{OWNER-BRIEF.md, BOX.md, SALES.md, facts.yaml (доповнює)}; дописує в існуючий `research/REJECTED.md` (A-03b) лише рядки G4/G4а, не перезаписуючи чужі
-- гейт: ні (гейт перенесено в A-20c, К-04)
+- `inArtifacts`: OWNER-INTAKE.md; research/{FUNCTIONAL-MAP.md, REJECTED.md, AI-DECISIONS.md, facts.yaml, REUSE.md, edition-claims.md}; flow/decisions.md (вето власника — режим `recalc`); briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
+- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{BOX.md (склад коробок без годин і грошей), SALES.md, facts.yaml (доповнює)}; дописує в `research/REJECTED.md` і `research/AI-DECISIONS.md` (A-03b, A-03c) свої рядки, не перезаписуючи чужі
+- гейт: ні (єдиний гейт — A-20c)
 - `review.checklists`: [concept.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
 - ліміти: opus/high; 5 год; $20; стартова зрілість: 1
-- примітки: Роль-покупець має екран-дашборд; позиції з `do_not_reject` не відкидати; OWNER-BRIEF пише A-20 (К-21); брак болів не зупиняє крок (К-01)
+- примітки: Роль-покупець має екран-дашборд; вето власника з `flow/decisions.md` не відкидається знову; OWNER-BRIEF не пишеться; брак болів не зупиняє крок (слабкий довід = «ризик, перевірити на пілоті»); економіку (окупність, години, ціни коробок) не рахувати
 - ескалація: рекомендація AI проти анкети -> показати розбіжність, не перемагати анкету (С-01)
 
-### A-20b. Аудит повноти (5 ролей)
+### A-20b. Аудит повноти (3 ролі, 14 пунктів)
 - `raciR`: BA (R); Архітектор (C)
 - `executor`: any
 - `skillRef`: flow-research:completeness-audit
 - `access_profile`: base
 - `inArtifacts`: concept/*; research/*.md; OWNER-INTAKE.md
-- `outArtifacts`: research/{COMPLETENESS.md (G-xx), OWNER-BRIEF.md, BOX.md, SALES.md, REJECTED.md, facts.yaml}; concept/* (кабінетні прогалини G-xx типу desk закриваються тут, без зайвого кола A-20 `recalc`)
+- `outArtifacts`: research/AI-DECISIONS.md (розділ «Повнота»; незакрите — рядки AI-NN «ризик, перевірити на пілоті»); правки research/*, concept/* (кабінетні прогалини закриваються тут, без зайвого кола A-20 `recalc`)
 - гейт: ні
 - `review.checklists`: [completeness.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
 - ліміти: opus/high; 3 год; $12; стартова зрілість: 1
-- примітки: Аудит над документами ДО сторінки (К-04); кожна прогалина G-xx: «кабінетно / людина / рішення власника»
-- ескалація: прогалина «рішення власника» -> у пакет питань A-20c
+- примітки: Аудит над документами ДО сторінки; 1 коло критика; прогалина — `desk` (закрити зараз) або `ризик` (AI-NN)
+- ескалація: немає (незакрите йде в блок «Що вирішив AI» сторінки A-20c)
 
 ### A-20c. Сторінка для власника (1 Artifact, 3 сторінки) — єдиний гейт концепції
 - `raciR`: Власник продукту (A, гейт); BA (R)
 - `executor`: any
 - `skillRef`: flow-research:concept-presentation
 - `access_profile`: base
-- `inArtifacts`: research/*; concept/*; COMPLETENESS.md
+- `inArtifacts`: research/*; concept/*; research/AI-DECISIONS.md
 - `outArtifacts`: research/owner-page/{index,competitors,rejected}.html; owner-page/PUBLISHED.md; research/owner-page/screens-390/**, research/owner-page/screens-1280/** (знімки 390/1280 px)
-- гейт: так: гейт концепції; Повернути -> A-20 / A-03b / A-03c (`gate.return_to`)
+- гейт: так: єдиний гейт дослідження (вето-цикл); Затвердити = немає заперечень; Повернути (рядки `AI-NN: не згоден — <що замість>`) -> A-20 `recalc` / A-03b / A-03c (`gate.return_to`)
 - `review.checklists`: [owner-page.md, edition-claims.md]; `review.max_rounds: 2` (+1 контрольний)
-- `params.sample`: true (перший екран сторінки)
+- `params.sample`: false (true лише на явний запит або для першої галузі: перший екран сторінки)
 - ліміти: sonnet/high; 3 год; $12; стартова зрілість: 1
-- примітки: Висновок і чесний вердикт про гроші на першому екрані; кожна теза веде на рядок дослідження; питання з рекомендацією й замовчуванням
+- примітки: Висновок без грошового блоку на першому екрані; кожна теза веде на рядок дослідження; блок «Що вирішив AI і з яким ризиком» — відповідь лише за незгоди (кнопка «Скопіювати мої заперечення»)
 - ескалація: контракт сторінки не виконано -> `returned` на себе (до 2 кругів + 1)
 
 ### A-21. Реальний зріз Odoo 19 `td_*` + живий запис + `facts.json`
@@ -106,7 +106,7 @@
 - `review.checklists`: [prototype.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: true спочатку (1 екран + 15 с + 1 кадр титра), далі false
 - ліміти: sonnet/high; 8 год; $40; стартова зрілість: 1
-- примітки: Справжні моделі `td_`, без `x_`/Studio; `prototype.fidelity: mock` -> `waiting_human` (К-23); EE — позначкою (К-06)
+- примітки: Справжні моделі `td_`, без `x_`/Studio; `defaults.prototype.fidelity: mock` -> `waiting_human` (К-23); EE — позначкою (К-06)
 - ескалація: preflight середовища не пройдено -> `waiting_human` до витрат бюджету
 
 ### A-21c. Продаючі матеріали
@@ -142,7 +142,7 @@
 - `executor`: any; central (адреси)
 - `skillRef`: flow-research:demand-test-runner (prep/results); flow-research:segment-selector (список/адреси)
 - `access_profile`: outreach (prep/results); research-internal (список/адреси)
-- `inArtifacts`: OWNER-INTAKE.md; prototype-real/ (ACCEPTED); матеріали A-21c: video/*-16x9.mp4, video/*-9x16.mp4, SHOW.*, captions.yaml; research/OWNER-BRIEF.md, concept/features.md; mailing-list
+- `inArtifacts`: OWNER-INTAKE.md; prototype-real/ (ACCEPTED); матеріали A-21c: video/*-16x9.mp4, video/*-9x16.mp4, SHOW.*, captions.yaml; research/{AI-DECISIONS.md, BOX.md, SALES.md}, concept/features.md; mailing-list
 - `outArtifacts`: demand/{risk-plan.md, emails.md, mailing-plan.md, thresholds.md, landing.md} (`prep`), demand/results.md (`results`; склад — за «Запис» скіла demand-test-runner); mailing-list.csv (+ парний .md)
 - гейт: ні; результати нижче порогів 2–3 тижні -> рішення Власника продукту
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)

@@ -35,104 +35,58 @@
     "paths": [
      "docs/industries/<галузь>/research/REUSE.md"
     ]
-   },
-   "when": "mode:decide"
+   }
   },
   {
-   "id": "reuse-inventory-exists",
-   "prim": "exists",
-   "args": {
-    "paths": [
-     "docs/industries/<галузь>/research/reuse-inventory.md"
-    ]
-   },
-   "when": "mode:inventory"
-  },
-  {
-   "id": "script-check-reuse-inventory",
+   "id": "script-check-reuse",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py docs/industries/<галузь>/research/reuse-inventory.md --mode inventory: RU-inv-file, RU-id без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py docs/industries/<галузь>/research/REUSE.md: RU-* без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
      "<корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py",
-     "docs/industries/<галузь>/research/reuse-inventory.md",
-     "--mode",
-     "inventory"
+     "docs/industries/<галузь>/research/REUSE.md"
     ],
     "who": "runner"
-   },
-   "when": "mode:inventory"
-  },
-  {
-   "id": "reuse-session-exists",
-   "prim": "exists",
-   "args": {
-    "paths": [
-     "docs/industries/<галузь>/research/reuse-session.md"
-    ]
-   },
-   "when": "mode:session"
-  },
-  {
-   "id": "script-check-reuse-decide",
-   "prim": "manual",
-   "args": {
-    "text": "python3 -I <корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py docs/industries/<галузь>/research/REUSE.md --inventory docs/industries/<галузь>/research/reuse-inventory.md: RU-* без FAIL. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
-    "cmd": [
-     "python3",
-     "-I",
-     "<корінь плагіна flow-research>/skills/reuse-modules/scripts/check_reuse.py",
-     "docs/industries/<галузь>/research/REUSE.md",
-     "--inventory",
-     "docs/industries/<галузь>/research/reuse-inventory.md"
-    ],
-    "who": "runner"
-   },
-   "when": "mode:decide"
+   }
   },
   {
    "id": "rejected-register",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REUSE.md --intake docs/industries/<галузь>/OWNER-INTAKE.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Модулі зі словом «ні»/«відхилено» — рядки реєстру (`## Відкинуто` у REUSE.md). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REUSE.md: REJ-exists, REJ-fields, REJ-count без FAIL (формат «не робимо й чому», 0.3.0; --intake/--k1 не передавати). Модулі зі словом «ні»/«відхилено» — рядки реєстру (`## Не робимо` у REUSE.md). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
      "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
-     "docs/industries/<галузь>/research/REUSE.md",
-     "--intake",
-     "docs/industries/<галузь>/OWNER-INTAKE.md"
+     "docs/industries/<галузь>/research/REUSE.md"
     ],
     "who": "runner"
-   },
-   "when": "mode:decide"
+   }
   },
   {
    "id": "reuse-ids",
    "prim": "manual",
    "args": {
-    "text": "inventory: кожен кандидат — рядок REUSE-NN у research/reuse-inventory.md (унікальні; нуль кандидатів — рядок «кандидатів не знайдено (переглянуто N …)»); decide: REUSE-NN у REUSE.md; критерії (Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій) заповнені; права на код невідомі -> «ні» до уточнення; години перераховано (К-18, лише decide)",
+    "text": "розділ `## Інвентар` у research/REUSE.md: кожен кандидат — рядок REUSE-NN (унікальні; нуль кандидатів — рядок «кандидатів не знайдено (переглянуто N …)»); `## Реєстр` — ті самі REUSE-NN; критерії (Odoo 19, CE/EE, права на код, тести, підтримка, відповідність карті функцій) заповнені; права на код невідомі -> «ні» до уточнення; вплив на години не рахується (0.3.0)",
     "who": "runner"
-   },
-   "when": "mode:inventory|decide"
+   }
   },
   {
-   "id": "gate-human",
+   "id": "ai-decisions-a03c",
    "prim": "manual",
    "args": {
-    "text": "рішення «беремо / адаптуємо / ні» ухвалила людина на сесії з власником; AI його не вигадує і не ставить",
-    "who": "Власник продукту"
-   },
-   "when": "mode:decide"
+    "text": "«беремо / адаптуємо / ні» вирішив AI: у research/AI-DECISIONS.md є рядки A-03c (модуль, рішення, ризик, перевірка); сесії й гейта немає, вето власника — лише на A-20c",
+    "who": "runner"
+   }
   },
   {
    "id": "license-open",
    "prim": "manual",
    "args": {
-    "text": "ліцензія наших модулів — LGPL-3 за замовчуванням; остаточно — рішення власника (відкрите питання, не вирішувати)",
-    "who": "Власник продукту"
+    "text": "ліцензія наших модулів — LGPL-3 за замовчуванням: рядок AI-DECISIONS (вето власника — на A-20c; юридичну неоднозначність не вирішувати самому, лише позначити ризиком)",
+    "who": "runner"
    }
   },
   {

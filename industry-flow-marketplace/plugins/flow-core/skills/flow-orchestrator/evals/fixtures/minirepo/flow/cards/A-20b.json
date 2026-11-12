@@ -1,7 +1,7 @@
 {
  "id": "A-20b",
  "code": "A-20b",
- "title": "Аудит повноти",
+ "title": "Аудит повноти (3 ролі, 14 пунктів)",
  "executor": "any",
  "skillRef": "flow-research:completeness-audit",
  "access_profile": "base",
@@ -9,8 +9,8 @@
  "preconditions": "A-20 done",
  "inArtifacts": "concept/*; research/*.md; OWNER-INTAKE.md",
  "inputs": "OWNER-INTAKE.md",
- "outputs": "research/COMPLETENESS.md",
- "where": "research/COMPLETENESS.md",
+ "outputs": "research/AI-DECISIONS.md (розділ «Повнота»)",
+ "where": "research/AI-DECISIONS.md",
  "gate": "ні",
  "params": {
   "sample": false

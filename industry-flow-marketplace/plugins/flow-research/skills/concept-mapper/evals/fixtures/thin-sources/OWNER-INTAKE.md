@@ -1,18 +1,21 @@
-# OWNER-INTAKE (фікстура евалу: мінімальна анкета)
-
 ```yaml
 editions: both
 demo_edition: ce
-ambition:
-  scope: full
-  evidence_gate: risk
-pricing:
-  ce_entry: 12000
-icp: "Керівник меблевого виробництва, 20-100 працівників"
-do_not_reject:
-  items: [Облік залишків]
-  n: 1
-licenses: lgpl-3-default
-legal_ambiguous: []
-todo_data: none
+ee_bridges: now
+icp:
+  min_employees: 10
+  legal_forms: [ТОВ]
+  light_tariff_fop: false
+todo_data:
+  allowed_sources: [internal-aggregated]
+  mode: read
+  internal_raw_storage: repo-sources
+  push_deidentified: false
+brand:
+  materials: todo
+  demo_client: "вигаданий клієнт"
+materials:
+  formats: [one_pager]
+  languages: [uk]
+do_not_do: [Повний бухоблік]
 ```

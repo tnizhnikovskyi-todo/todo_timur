@@ -30,6 +30,7 @@
 | `signature_by_ai` | `file`, `heading` | блок змінено комітом, автор якого збігається з `--agent-pattern` → `FAIL`; патерну немає → `MANUAL` |
 | `evals_schema` | — | кожен `evals/**/evals.json` на head: JSON, `skill`, `cases[]` з унікальним kebab `id`, `source`, `status`, `prompt`, `expected.checks`, `expected.must_not` |
 | `pii_strict` | `paths` | PII-патерни (FAIL-типи) у доданих рядках diff за `paths`, FAIL незалежно від `client_data` |
+| `no_money` | `paths` (файли/теки), `exclude` (підрядки шляхів), `patterns` (за замовчуванням — маркери LESSONS §24: окупн, TCO, вартість володіння, business-case, вердикт про гроші, ROI, беззбитков, ставка розробки, години×ставка, секція money) | FAIL із `файл:рядок` (0.3.0: економіку пакета не рахуємо; ціни конкурентів як факт — через `exclude`) |
 | `manual` | `text`, `who` | лише рядок для чек-листа |
 
 ## Верхні ключі специфікації та підстановки
@@ -45,10 +46,10 @@
   **7 дозволених файлів зафіксовано в специфікації** (не береться з тексту `done`): `package/demo/README.md`, `package/demo/scenarios.md`, `package/ACCEPTANCE.md`, `package/CHANGELOG.md`, `package/templates/migration-plan.md`, `package/templates/training.md`, `package/templates/CHANGELOG.md`.
   Заборонені (приклади): `package/addons/`, `package/config/`, `package/master-data/`, `package/templates/answers.yaml`, `package/questionnaire.md`, `package/SPEC.md`. Розбіжність зі змістом `done` наряду — `WARN diff-allowed-7-spec-vs-naryad`.
 - **C-05** (режим `form`): `headings` — 9 заголовків із `flow-core/references/data-policy-template.md`, `signature-by-ai`.
-- **A-02b**: `intake-exists`, INT (`--allow-empty` у `prepare`, повна в `validate|amend`), `owner-filled` (MANUAL).
-- **A-03b**: інтейк, `research-files` (`not_sample`), заголовки K1/REJECTED/FUNCTIONAL-MAP, реєстр, `edition-claims`, `facts`, `privacy`, `stale` (`recalc`), `competitors-8-12`.
-- **A-03c**: інтейк, `reuse-exists`, реєстр (`decide`), `reuse-ids`, гейт людини, ліцензія — відкрите питання.
-- **A-20 / A-20b / A-20c**: інтейк із `--brief` (INT-dup), заголовки OWNER-BRIEF/BOX/SALES, реєстр, `facts`, `privacy`; A-20b — `COMPLETENESS.md` (статуси й відповідальні, G-xx, 22 пункти, немає P1 desk «відкрито»); A-20c — `check_owner_page`, бренд, факти, приватність, Playwright 390/1280.
+- **A-02b**: `intake-exists`, INT (`--allow-empty` у `prepare`, повна в `validate`), `owner-filled` (MANUAL).
+- **A-03b**: інтейк, `research-files` (`not_sample`), заголовки FUNCTIONAL-MAP, реєстр «не робимо», `edition-claims`, `facts`, `privacy`, `stale` (`recalc`), `competitors-8-12`, `no-money` (без K1; рядки A-03b в AI-DECISIONS).
+- **A-03c**: інтейк, `reuse-exists`, реєстр, `reuse-ids`, рядки A-03c в AI-DECISIONS, ліцензія LGPL-3 за замовчуванням (вето — A-20c).
+- **A-20 / A-20b / A-20c**: інтейк, заголовки AI-DECISIONS/BOX/SALES, реєстр, `facts`, `privacy`, `no-money` (грошові маркери = FAIL); A-20b — розділ «Повнота» в `AI-DECISIONS.md` (14 пунктів: закрито / ризик, ризик -> рядок AI-NN, 3 ролі, 1 коло); A-20c — `check_owner_page`, бренд, факти, приватність, `no-money`, блок «Що вирішив AI», Playwright 390/1280.
 - **A-21 / A-21c / A-22**: A-21 — `check_ui_text`, факти, приватність, реєстр, `odoo19-lint`, тести, без `x_`, консоль; A-21c — `check_video`, бренд, факти, приватність, `ACCEPTED.md`; A-22 — лише база зрізу, без емуляції (К-11).
 - **C-08R**: `lessons-index`, `check_lessons`, формат LSN, `no-pii`.
 - **A-16** (відкладено): `Сценарій N` ТР ↔ рядки scenarios.md; специфікації немає → `spec-missing`.
@@ -57,8 +58,8 @@
 Запускає runner за `args.cmd` специфікації кроку (див. «`args.cmd`» нижче); `autocheck.py --selftest` проганяє їх на `evals/fixtures/<скрипт>-ok|-bad/`.
 | Скрипт | CLI | ID |
 |---|---|---|
-| `check_intake.py` | `<OWNER-INTAKE.md> [--brief …] [--page …] [--allow-empty]` | INT-file, INT-block, INT-dup |
-| `check_rejected.py` | `<реєстр|артефакт> [--intake …] [--k1 …]` (з `--k1` позицію з `do_not_reject` підтверджує лише непорожня відповідь власника на K1-Qn) | REJ-exists, REJ-fields, REJ-dnr, REJ-class-rule (MANUAL), REJ-count |
+| `check_intake.py` | `<OWNER-INTAKE.md> [--brief …] [--page …] [--allow-empty]` (анкета 6 пунктів; блокуючі editions, icp, todo_data, brand, materials) | INT-file, INT-block, INT-dup, INT-legacy (WARN про ключі 0.2.0) |
+| `check_rejected.py` | `<реєстр|артефакт>` (`--intake`/`--k1` застарілі: приймаються й ігноруються з WARN REJ-args) | REJ-exists, REJ-fields (ID, що, чому), REJ-count |
 | `check_facts.py` | `<facts.yaml|json> <файли/теки…> [--require-markers]` (маркер `<!--fact:ключ-->`, `data-fact="ключ"`) | FACT-mismatch, FACT-orphan, FACT-markers, FACT-unmarked |
 | `check_brand.py` | `<файли/теки…> --brand BRAND.md [--exclude <тека>]` (shoot/, screens*/, video/rec/, dom/ пропускаються) | BR-colors, BR-font, BR-logo |
 | `check_privacy.py` | `<research> [--pages …] [--materials …] [--allow BRAND.md]` (контакти бренду; DOM-дампи пропускаються) | PRV-pii, PRV-raw-place, PRV-client-code (FAIL у сторінках і матеріалах), PRV-phone-bare (WARN) |
@@ -75,7 +76,7 @@
 Заповнювачі в `cmd` і `text`: `<галузь>` — код галузі з `where` наряду; `<git.base>` — `git.base` наряду; `<git.head>` — голова гілки кроку після коміту результату (для `check_stale.py --base`; НЕ `<git.base>`); `<корінь плагіна flow-core>` / `<корінь плагіна flow-research>` — каталог плагіна з пакета (у тестовому репо — `industry-flow-marketplace/plugins/<плагін>`); `<к>` — ключ наряду. Підставляє runner (flow-step-runner, Крок 9 (ж)) перед запуском; шляхи в `cmd` — від кореня репо; `cmd` виконується як масив без оболонки.
 
 ## Маркери фактів (угода для `check_facts.py`)
-Число, що походить із `facts.yaml`/`facts.json`, у тексті артефакта (OWNER-BRIEF, BOX, SALES, сторінки власника, SHOW, captions) позначають `<!--fact:ключ-->` одразу після числа (md/csv), `<span data-fact="ключ">…</span>` (html) або `# fact:ключ` (yaml). Немає маркерів, а числа з грн/%/год є, — `FAIL` (число не звірено); з `--require-markers` (кроки зі спеціфікацією `script-check-facts-markers`, `not_sample`) — кожен файл із такими числами мусить мати маркер. Маркери в шаблони й PAGE-CONTRACT вносять власники цих файлів (ЗАПИТ до WP-04/06/07/08/10).
+Число, що походить із `facts.yaml`/`facts.json`, у тексті артефакта (BOX, SALES, `concept/features.md`, сторінки власника, SHOW, captions) позначають `<!--fact:ключ-->` одразу після числа (md/csv), `<span data-fact="ключ">…</span>` (html) або `# fact:ключ` (yaml). Немає маркерів, а числа з грн/%/год є, — `FAIL` (число не звірено); з `--require-markers` (кроки зі спеціфікацією `script-check-facts-markers`, `not_sample`) — кожен файл із такими числами мусить мати маркер. Маркери в шаблони й PAGE-CONTRACT вносять власники цих файлів (ЗАПИТ до WP-04/06/07/08/10).
 
 ## Обмеження скриптів приватності
 `check_privacy.py` не бачить сирих цитат без маркера `internal-raw` у research-документах: це перевіряє рецензент очима. Коди клієнтів K-xx/П-xx у сторінках і матеріалах дають FAIL PRV-client-code (у research/*.md вони дозволені).

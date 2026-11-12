@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Автоперевірка анкети власника (INT-*). stdlib. Вивід: JSON [{id,status,msg}]; код виходу 1, якщо є FAIL.
-Використання: check_intake.py <OWNER-INTAKE.md> [--brief OWNER-BRIEF.md] [--page owner-page/index.html]
+Використання: check_intake.py <OWNER-INTAKE.md> [--brief <файл з питаннями власнику>] [--page owner-page/index.html]
+Анкета 0.3.0 — 6 пунктів (editions*, icp*, todo_data*, brand*, materials*, do_not_do) + блок `defaults:` (AI-замовчування, не блокує) + необов'язкове `tariffs`.
 INT-file  — файл є, непорожній, містить YAML-блок (```yaml ...```).
 INT-block — усі блокуючі ключі (позначені * у плані; список нижче) заповнені: не null, не «уточнити», не плейсхолдер {{…}}.
 --allow-empty: INT-block лише за наявністю ключів (крок prepare, поля ще порожні).
-INT-dup   — питання в --brief/--page (рядки з «?») не перепитують те, що вже визначає анкета (редакції, амбіція, ICP, тарифи, дані ToDo...).
+INT-dup   — питання в --brief/--page (рядки з «?») не перепитують те, що вже визначає анкета (редакції, ICP, дані ToDo, бренд, формати).
+INT-legacy — WARN «вилучено в 0.3.0», якщо в анкеті лишились pricing.*, do_not_reject.*, ambition.scope/evidence_gate, rounds.human_target (не вимагаються й не блокують).
 Блокуючі поля й переліки значень читаються з шаблона анкети flow-research/skills/owner-questionnaire/references/owner-intake-template.md
 (або --template <файл>). Розмітка в YAML-блоці шаблона: `*` після ключа (`editions*:`) або в коментарі рядка (`# * ce|ee|both`) — блокуючий;
 позначка `*` на ключі верхнього рівня без `*` на підключах робить блокуючими всі підключі; перелік значень — у коментарі як `a|b|c`.
@@ -15,29 +17,25 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 _s = importlib.util.spec_from_file_location("_miniyaml", os.path.join(HERE, "_miniyaml.py"))
 Y = importlib.util.module_from_spec(_s); _s.loader.exec_module(Y)
 
-# блокуючі ключі: ключ верхнього рівня -> перелік підключів (порожній = значення самого ключа)
+# блокуючі ключі (0.3.0, анкета 6 пунктів): ключ верхнього рівня -> перелік підключів (порожній = значення самого ключа).
+# Шостий пункт `do_not_do` (список «що точно не робимо») може бути порожнім і не блокує.
 BLOCKING = {
-    "editions": [], "ee_bridges": [], "demo_edition": [],
-    "market": ["country", "language", "localization", "accounting_system", "accounting_mode"],
-    "icp": ["min_employees", "revenue_min", "legal_forms", "light_tariff_fop"],
-    "ambition": ["scope", "evidence_gate", "company_marking", "trials", "sessions_a05_a06"],
-    "pricing": ["ce_entry", "ee_upgrade", "box_fixed_price", "pilot"],
+    "editions": [],
+    "icp": ["min_employees", "legal_forms", "light_tariff_fop"],
     "todo_data": ["allowed_sources", "mode", "internal_raw_storage", "push_deidentified"],
-    "do_not_reject": ["items", "class_rule", "n"],
+    "brand": ["materials"],
+    "materials": ["formats", "languages"],
 }
-ENUMS = {"editions": {"ce", "ee", "both"}, "ee_bridges": {"now", "later"}, "demo_edition": {"ce", "ee"},
-         "ambition.scope": {"full", "mvp"}, "ambition.evidence_gate": {"risk", "block"}}
+ENUMS = {"editions": {"ce", "ee", "both"}, "brand.materials": {"todo", "white_label"}}
+# ключі й підключі, вилучені в 0.3.0 (LESSONS §24): наявність = WARN, не FAIL
+REMOVED = ["pricing", "do_not_reject", "ambition.scope", "ambition.evidence_gate", "rounds.human_target"]
 # теми питань, які анкета вже закриває: ключ анкети -> regex питання (рядок із «?»)
 DUP = {
     "editions": r"(?i)(\bCE\b.*\b(чи|or)\b.*\bEE\b|яку\s+редакці|які\s+редакці|редакці\w*\s+(CE|EE|Odoo))",
-    "demo_edition": r"(?i)(редакці\w*.*(демо|зріз|прототип)|(демо|зріз|прототип).*редакці)",
-    "ee_bridges": r"(?i)(EE-?міст|мост\w*\s+EE|коли\s+будувати\s+EE)",
-    "ambition": r"(?i)(повн\w+\s+обсяг\w*\s+чи\s+MVP|чи\s+потрібн\w+\s+сесі|поріг\s+доказ|MVP\s+чи\s+повн)",
     "icp": r"(?i)(мінімальн\w+\s+(кількість\s+)?(працівник|штат)|для\s+яких\s+компаній|ICP|ФОП\b.*(легк|тариф))",
-    "pricing": r"(?i)(ціна\s+коробк|скільки\s+коштува\w+\s+(пакет|коробк)|тариф\w*\s+(CE|EE)|ціна\s+апгрейд|вартість\s+пілот)",
     "todo_data": r"(?i)(чи\s+можна\s+(брати|використ\w+)\s+дані\s+ToDo|дозвіл\w*\s+на\s+(внутріш|дані)|дані\s+ToDo.*(дозвол|можна))",
-    "market": r"(?i)(яка\s+локалізац|яка\s+облікова\s+систем|мова\s+інтерфейс|в\s+якій\s+країн)",
-    "do_not_reject": r"(?i)(що\s+не\s+відкидати|які\s+позиції\s+не\s+відкидати)",
+    "brand": r"(?i)(white[- ]?label|під\s+яким\s+брендом|бренд\w*\s+(матеріал|ToDo))",
+    "materials": r"(?i)(які\s+формат\w*\s+(матеріал|відео)|reels|вертикальн\w+\s+відео)",
 }
 TEMPLATE = os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "flow-research", "skills", "owner-questionnaire", "references", "owner-intake-template.md"))
 res = []
@@ -89,7 +87,7 @@ def unfilled(v):
         return True
     if isinstance(v, str):
         s = v.strip().lower()
-        return s in ("", "уточнити", "?", "tbd", "todo", "null") or s.startswith("{{")
+        return s in ("", "уточнити", "?", "tbd", "null") or v.strip() == "TODO" or s.startswith("{{")
     if isinstance(v, (list, dict)):
         return len(v) == 0
     return False
@@ -119,7 +117,7 @@ def main():
     if not text.strip():
         add("INT-file", "FAIL", f"Немає або порожній {a.intake}: запусти A-02b (owner-questionnaire prepare)")
     elif blk is None:
-        add("INT-file", "FAIL", "У анкеті немає YAML-блоку ```yaml``` з полями (editions, market, icp, ambition, pricing, todo_data, do_not_reject)")
+        add("INT-file", "FAIL", "У анкеті немає YAML-блоку ```yaml``` з полями (editions, icp, todo_data, brand, materials, do_not_do)")
     else:
         add("INT-file", "PASS")
     if blk is None:
@@ -132,6 +130,8 @@ def main():
         add("INT-dup", "SKIP", "анкету не розібрано"); print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1)
     data = strip_stars(data)
     tpl = read_template(a.template or TEMPLATE)
+    if tpl and any(k in tpl[0] for k in ("pricing", "do_not_reject", "ambition", "market")):
+        tpl = None  # шаблон 0.2.0 (ще не оновлено): блокуючі ключі брати із зашитого переліку 0.3.0
     if tpl:
         BL, EN = tpl
     else:
@@ -157,6 +157,16 @@ def main():
             cur = cur.get(p) if isinstance(cur, dict) else None
         if cur is not None and not unfilled(cur) and str(cur).lower() not in allowed:
             bad.append(f"{k}={cur} (дозволено: {'|'.join(sorted(allowed))})")
+    legacy = []
+    for r in REMOVED:
+        for root, pref in ((data, ""), (data.get("defaults") if isinstance(data.get("defaults"), dict) else {}, "defaults.")):
+            cur = root
+            for p_ in r.split("."):
+                cur = cur.get(p_) if isinstance(cur, dict) else None
+            if cur is not None:
+                legacy.append(pref + r)
+    if legacy:
+        add("INT-legacy", "WARN", "вилучено в 0.3.0 (не вимагається, ігнорується): " + ", ".join(legacy))
     add("INT-block", not bad and "PASS" or "FAIL", "" if not bad else "Заповни блокуючі поля анкети (запитай власника в A-02b): " + ", ".join(bad))
     # INT-dup
     dups = []

@@ -12,5 +12,4 @@
 | FG-scope | `git -c core.quotePath=false diff --name-only <git.base>..HEAD -- .`; `git -c core.quotePath=false status --porcelain --untracked-files=all` (без quotePath=false кириличні шляхи sales/ виходять в octal-лапках; перейменування `R a -> b` — обидва шляхи) — лише 3 файли `clients/<к>/` і 2 файли `sales/` |
 | FG-ignore | `git check-ignore -q clients/<к>/_input/x` (код 0) і `test ! -d clients/<к>/_input` перед здачею |
 | FG-d02 | колонка «Рішення D-02…» порожня для нових рядків; для старих збігається з `git show <git.base>:clients/<к>/fit-gap.md` |
-| FG-threshold | `--business-case <шлях>`: скрипт звіряє SHA і число; вручну — цитата порогу й `SHA` з `git log -1 --format=%H -- <business-case>`; частки перерахувати з таблиці «Вимоги» (рядки і макс-години) |
 | FG-coverage, FG-agreement | вручну за SKILL.md і `agreement-check.md` |

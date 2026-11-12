@@ -15,7 +15,7 @@
    "id": "script-check-intake-structure",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md --allow-empty: INT-file, INT-block (лише наявність ключів) без FAIL. У prepare поля порожні за задумом: заповненість не перевіряється. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_intake.py docs/industries/<галузь>/OWNER-INTAKE.md --allow-empty: INT-file, INT-block, INT-legacy (WARN про вилучені ключі 0.2.0) (лише наявність ключів) без FAIL. У prepare поля порожні за задумом: заповненість не перевіряється. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
@@ -40,7 +40,7 @@
     ],
     "who": "runner"
    },
-   "when": "mode:validate|amend"
+   "when": "mode:validate"
   },
   {
    "id": "no-pii-industry",
@@ -55,7 +55,7 @@
    "id": "owner-filled",
    "prim": "manual",
    "args": {
-    "text": "блокуючі поля (*) заповнив власник сам (≤20 хв), AI їх не вигадував і не підставляв замовчувань мовчки; питання власнику — ДО синтезу (К-02)",
+    "text": "блокуючі поля (*, 5 пунктів) заповнив власник сам (≤5 хв, 6 пунктів); AI їх не вигадував; решта — `defaults:` (AI-замовчування), суттєві замовчування — рядки AI-DECISIONS пізніше",
     "who": "Власник продукту"
    }
   }

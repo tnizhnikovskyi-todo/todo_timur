@@ -5,13 +5,13 @@
  "executor": "any",
  "skillRef": "flow-research:reuse-modules",
  "access_profile": "research-internal",
- "raciR": "Архітектор (R); власник (гейт)",
- "preconditions": "A-03b done, K1 закрито (відповіді власника на K1-Q* є)",
+ "raciR": "Архітектор (R)",
+ "preconditions": "A-03b done",
  "inArtifacts": "OWNER-INTAKE.md; research/FUNCTIONAL-MAP.md",
  "inputs": "OWNER-INTAKE.md",
- "outputs": "research/REUSE.md",
+ "outputs": "research/REUSE.md; research/AI-DECISIONS.md (рядки A-03c)",
  "where": "research/REUSE.md",
- "gate": "так: «беремо / адаптуємо / ні»",
+ "gate": "ні; рішення AI в AI-DECISIONS",
  "params": {
   "sample": false
  },

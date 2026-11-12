@@ -25,7 +25,7 @@ data_rule: "<посилання на розділ DATA_POLICY>"
 preconditions_confirmed: {crm_deal_stage: discovery_signed|sow_signed, by: <роль>, at: <дата>}   # q10: ознака стадії угоди в CRM; `discovery_signed` — угода дискавері підписана (наряд B-02), `sow_signed` — SOW підписано (B-04/B-06/B-11 і суміжні); назва стадії CRM, що відповідає значенню, — C-00; вписує C-01 з дзеркального поля
 review:                          # лише кроки з рецензентом (К-/N-03): чек-листи й ліміти кругів
   checklists: [<файл з <FC>/references/review-checklists/>]
-  max_rounds: 2                  # = rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3); human_rounds > 2 -> сигнал C-08R
+  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}
@@ -50,8 +50,8 @@ params:                          # блок режимів кроку; став�
   pilot: true|false              # крок для пілотного клієнта
   addendum_source: <шлях|код>    # B-03 mode: addendum
   group: <ключ>                  # злиття паралельних нарядів
-  resume: {…}                    # перезапуск після waiting_human (K1 в A-03b, зразок кроків із `params.sample: true` за карткою (A-03b, A-20c, A-21, A-21c); A-03b: `{sample: false}` або `{k1_answers: <посилання>}`; A-03c: `session` -> `decide`, анкета A-02b: що саме прийшло від людини + посилання на повідомлення)
-  sample: true|false             # зразок (N-18) перед повним обсягом; кроки зі зразком і його обсяг — з картки (`step-cards.md`: A-03b, A-20c, A-21, A-21c); зразок -> waiting_human, повний обсяг — resume з `sample: false`
+  resume: {…}                    # перезапуск після waiting_human (зразок кроків із `params.sample: true` (за замовчуванням A-21, A-21c; A-03b і A-20c — лише на явний запит): `{sample: false}`; анкета A-02b: що саме прийшло від людини + посилання на повідомлення)
+  sample: true|false             # зразок (N-18) перед повним обсягом; зразок за замовчуванням лише A-21, A-21c (A-03b, A-20c — `false`, `true` лише на явний запит або для першої галузі); обсяг — з картки (`step-cards.md`); зразок -> waiting_human, повний обсяг — resume з `sample: false`
   lessons: [LSN-NNN, …]          # C-04 (eval-builder): уроки з `eval_статус: запропоновано`, з яких робити евал-кейси; без ключа eval-builder weekly підбирає їх сам
   stale: [<шлях>, …]             # mode: recalc: застарілі артефакти цього кроку-власника (збігаються з `where`)
   reconcile: true|false          # B-11 фаза 1: звірка (у B-06 режим звірки — `mode: reconcile`)
@@ -73,14 +73,14 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 | A-09 | `first`, `review` (через `phase: review`) | `review` — оркестратор після `resume` | `first` |
 | A-12 | `build`, `fix`, `new-version`, `validate` | `fix` — повернення з A-14; `new-version` — від D-04/D-05 | `build` |
 | A-15, A-22 | `перша`, `нова-версія` | `нова-версія` — змінені AC і `git.prev_tag` | `перша` |
-| A-02b | `prepare`, `validate`, `amend` | `prepare` -> (власник заповнює: `waiting_human`+`resume`) -> `validate`; `amend` — зміна рішення власника після старту | `prepare` |
-| A-03b | `main`, `recalc`; `params.sample: true\|false` | K1 — `waiting_human` + `resume` (відповіді власника `K1-Q*`); зразок (профіль одного конкурента + 10 рядків матриці) -> `waiting_human` -> повний обсяг; `recalc` — за `params.stale` | `main`, `sample: true` |
-| A-03c | `inventory`, `session`, `decide` | `inventory` (done) -> `session` (AI готує матеріал і питання для сесії з власником -> `waiting_human`; сама сесія — `human_substep`) -> resume `decide` (гейт «беремо / адаптуємо / ні») | `inventory` |
-| A-20, A-20b, A-20c | `main`, `recalc`; A-20c ще `params.sample: true\|false` | `recalc` — за `params.stale` (N-07); A-20c: зразок (перший екран сторінки) -> `waiting_human` -> повний обсяг | `main` (A-20c: `sample: true`) |
-| A-21 | `main`, `recalc`; `params.sample: true\|false` | зразок (`sample: true`) -> `waiting_human` -> повний обсяг; `prototype.fidelity: mock` -> `waiting_human` (К-23) | `main`, `sample: true` |
-| A-21c | `main`, `recalc`; `params.sample: true\|false` | зразок (15 с + 1 кадр титра) -> `waiting_human` -> повний обсяг; перемонтаж без перезйомки й без доступу до Odoo | `main`, `sample: true` |
+| A-02b | `prepare`, `validate` | `prepare` -> (власник заповнює 6 пунктів ≤5 хв: `waiting_human`+`resume`) -> `validate`; правка анкети після старту = новий `validate` (режиму `amend` немає) | `prepare` |
+| A-03b | `—`, `recalc`; `params.sample: false` (за замовчуванням; `true` лише на явний запит) | K1 і питань власнику немає (рішення AI -> AI-DECISIONS); повний обсяг без зупинки (зразок — лише за явного `sample: true`: профіль одного конкурента + 10 рядків матриці -> `waiting_human`); `recalc` — за `params.stale` | `—` (`sample: false`) |
+| A-03c | `—` | один наряд: `## Інвентар` і рішення AI «беремо / адаптуємо / ні» в `REUSE.md` (рядки AI-DECISIONS; без сесії й гейта) | `—` |
+| A-20, A-20b, A-20c | `main`, `recalc`; A-20c ще `params.sample: false\|true` (`true` лише на явний запит) | `recalc` — за `params.stale` (N-07); A-20c: одразу повний обсяг і гейт (зразок першого екрана — лише за явного `sample: true`) | `main` (`sample: false`) |
+| A-21 | `main`, `recalc`; `params.sample: true\|false` | зразок (`sample: true`) -> `waiting_human` -> повний обсяг; `defaults.prototype.fidelity: mock` -> `waiting_human` (К-23) | `—` (`sample: false`) |
+| A-21c | `main`, `recalc`; `params.sample: true\|false` | зразок (15 с + 1 кадр титра) -> `waiting_human` -> повний обсяг; перемонтаж без перезйомки й без доступу до Odoo | `—` (`sample: false`) |
 | C-08R | `daily`, `event` | `daily` — за розкладом; `event` — «Повернути», `escalated`, червоний CI, `human_rounds > 2` | `daily` |
-| A-23 | `список`, `адреси`, `prep`, `results` | `список` -> `prep` (другий наряд); `адреси` — коли `список` у `waiting_human` (потрібні адреси), executor: central; `results` — після збору сигналів | `список` |
+| A-23 | `список`, `адреси`, `prep`, `results` | `список` -> `prep` (другий наряд); `адреси` — коли `список` у `waiting_human` (потрібні адреси), executor: central; `results` — після збору сигналів | `список` Для `prep` `inputs` містить `research/AI-DECISIONS.md` з SHA (рядки з A-23 у «Перевірка» -> `risk-plan.md`). |
 | B-08a | `звірка`, `збіжність` | `збіжність` — другий наряд після APPROVE-звірки (`config-drift.md` на вході) | `звірка` |
 | B-06 | `mode`: `main\|reconcile\|return` | `reconcile` — звірка після міграції; `return` — з `returned_from` | `main` |
 | C-04 | `weekly`, `init`, `regress` | `weekly` — за розкладом; `init`, `regress` ставить лише AI-інженер (нова модель/версія плагіна) | `weekly` |
@@ -94,7 +94,7 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 | D-02 | `mode`: `a\|b\|c\|d`; `phase`: `draft\|post-sign`; `trigger_ref`, `markers` | `a` — після D-01/B-01(б) за розкладом; решта — за подією | `a` |
 | B-11 | `phase: 0\|1`, `pilot`, `reconcile` | `reconcile` — звірка після B-06 фази 1 | `phase: 0` |
 
-**Решта кроків** (A-01, A-04, A-05/B-01 segment-selector: `mode`, `phase`, `size`, `seed`, `regions`, `extra_kved`; A-07/D-04/D-05 product-decision-drafter; A-13, A-20/A-21, A-23 demand-test-runner: `mode`, `round`, `final`, `start_sha`; B-02; B-04/B-13/B-08a runbook-executor): режими й ключі `params` описані в `SKILL.md` відповідного скіла, оркестратор бере їх із картки кроку; відсутній ключ -> значення за замовчуванням зі скіла.
+**Решта кроків** (A-01, A-04, A-05/B-01 segment-selector: `mode`, `phase`, `size`, `seed`, `regions`, `extra_kved`; D-04/D-05 product-decision-drafter; A-13, A-20/A-21, A-23 demand-test-runner: `mode`, `round`, `final`, `start_sha`; B-02; B-04/B-13/B-08a runbook-executor): режими й ключі `params` описані в `SKILL.md` відповідного скіла, оркестратор бере їх із картки кроку; відсутній ключ -> значення за замовчуванням зі скіла.
 
 Правила виведення, коли ключа немає (скіл не зупиняється й не питає):
 - `flow_version` відсутній -> 2; `mode` A-14 відсутній -> `перевірка`; у версії 1 підкрок Тімліда — задача `human_substep` (`flow-step-run.md` §3), знайдена за `parent_id` = id наряду й стадією `stage.done`.

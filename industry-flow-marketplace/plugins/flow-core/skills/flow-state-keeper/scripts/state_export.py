@@ -9,7 +9,7 @@
 --merge: частини зливаються з накопиченою базою DIR/flow/.snapshot.json за стабільними ключами (рядки, яких немає у частинах,
 зберігаються; рішення лише додаються); render оновлює базу. verify --merge бере шапку з бази й показує розбіжність
 «файли репо != Odoo» для рядків із частин. Без --merge знімок має бути повним.
-  check-decisions --rows FILE.json|-   decisions-batch (К-08): позначка «внесено AI від імені власника» + посилання; exit 1 при FAIL
+  check-decisions --rows FILE.json|-   veto-batch (К-08): позначка «внесено AI від імені власника» + посилання; exit 1 при FAIL
   stats --runs FILE.json [FILE..]   групування запусків за step x skill_version x ISO-тиждень (JSON і md)
 Формат знімка — references/export-format.md. Значення збігів PII у вивід не друкуються.
 """
@@ -274,7 +274,7 @@ BATCH_MARK = "внесено AI від імені власника"
 
 
 def cmd_check_decisions(a):
-    """decisions-batch (К-08): кожен рядок -- позначка в ролі + посилання на повідомлення/задачу, інакше FAIL."""
+    """veto-batch (К-08): кожен рядок -- позначка в ролі + посилання на повідомлення/задачу, інакше FAIL."""
     rows = json.load(sys.stdin if a.rows == "-" else open(a.rows, encoding="utf-8"))
     res = []
     for r in rows:

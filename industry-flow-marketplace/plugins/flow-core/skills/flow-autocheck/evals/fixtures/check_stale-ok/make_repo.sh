@@ -10,9 +10,9 @@ artifacts:
   research/FUNCTIONAL-MAP.md:
     depends_on: [OWNER-INTAKE.md, research/facts.yaml]
     sha: $S
-  research/OWNER-BRIEF.md:
+  research/BOX.md:
     depends_on: [research/FUNCTIONAL-MAP.md, research/facts.yaml]
     sha: $S
 Y
-echo "бриф" > $R/research/OWNER-BRIEF.md; git add -A; git commit -qm brief
+echo "BOX" > $R/research/BOX.md; git add -A; git commit -qm box
 echo "BASE=$(git rev-parse HEAD)"

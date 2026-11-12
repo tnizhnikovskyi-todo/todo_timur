@@ -513,6 +513,37 @@ def p_grep_clients(ctx, c):
             ",".join(sorted(set(hits)))[:200])
 
 
+MONEY_PATTERNS = [r"окупн", r"\bTCO\b", r"вартість\s+володіння", r"business[- ]case|бізнес-кейс", r"вердикт\s+про\s+гроші", r"\bROI\b",
+                  r"беззбитков", r"ставк\w*\s+розробки", r"годин.{0,20}(×|x|\*).{0,10}ставк", r"""(?:id|data-section)=["']money["']"""]
+
+
+def p_no_money(ctx, c):
+    """0.3.0 (LESSONS §24): економіку пакета не рахуємо. FAIL на грошові маркери (LESSONS §24) у файлах/теках `paths`;
+    `exclude` — підрядки шляхів, що пропускаються (ціни конкурентів як факт з URL); `patterns` — власний перелік."""
+    a = c["args"]
+    ind = industry_of(ctx)
+    paths = [p.replace("<галузь>", ind) if (ind and "<галузь>" in p) else p for p in a["paths"]]
+    if any("<галузь>" in p for p in paths):
+        return ctx.add(c["id"], "ERROR", "Не визначено галузь для шляху з <галузь>: додай docs/industries/<код>/ у where наряду", "")
+    rx = [re.compile(x, re.I) for x in a.get("patterns", MONEY_PATTERNS)]
+    excl = a.get("exclude", [])
+    hits, files = [], []
+    for p in paths:
+        rc, out = git(ctx, "ls-tree", "-r", "--name-only", ctx.head, "--", p)
+        files += [f for f in out.split("\n") if f]
+    for f in sorted(set(files)):
+        if any(e in f for e in excl) or not re.search(r"\.(md|html|yaml|yml|csv|txt)$", f):
+            continue
+        for n, line in enumerate((read_rev(ctx, ctx.head, f) or "").splitlines(), 1):
+            if re.search(r"REJ-\d{3}|https?://", line):
+                continue  # рядок реєстру відкинутого і цитата конкурента з URL — не економіка пакета
+            if any(r.search(line) for r in rx):
+                hits.append(f"{f}:{n}")
+    ctx.add(c["id"], "FAIL" if hits else "PASS",
+            ("Прибери економіку пакета (окупність, TCO, ROI, ставки, секція money; 0.3.0 не рахуємо; ці слова не вживати навіть у запереченні): " + ", ".join(hits[:10])) if hits else "",
+            ",".join(hits)[:200], c.get("route_on_fail") if hits else None)
+
+
 def p_section_contains(ctx, c):
     s = c["args"]
     text, lab = resolve(ctx, s["ref"])
@@ -980,19 +1011,22 @@ def finish(ctx, a, step):
 
 BRAND_MD = "BRAND.md"
 SELF_SCRIPTS = [  # (скрипт, аргументи для -ok, аргументи для -bad); @FX@ = тека фікстури; cwd = тека фікстури
-    ("check_intake.py", ["OWNER-INTAKE.md", "--brief", "OWNER-BRIEF.md"], ["OWNER-INTAKE.md", "--brief", "OWNER-BRIEF.md"]),
-    ("check_rejected.py", ["REJECTED.md", "--intake", "OWNER-INTAKE.md"], ["REJECTED.md", "--intake", "OWNER-INTAKE.md"]),
-    ("check_facts.py", ["research/facts.yaml", "research"], ["research/facts.yaml", "research"]),
+    ("check_intake.py", ["OWNER-INTAKE.md", "--brief", "QUESTIONS.md"], ["OWNER-INTAKE.md", "--brief", "QUESTIONS.md"]),
+    ("check_rejected.py", ["REJECTED.md"], ["REJECTED.md"]),
+    ("check_facts.py", ["research/facts.yaml", "research", "concept"], ["research/facts.yaml", "research", "concept"]),
     ("check_brand.py", [".", "--brand", BRAND_MD], [".", "--brand", BRAND_MD]),
     ("check_privacy.py", ["research", "--pages", "research/owner-page", "--materials", "prototype-real"],
      ["research", "--pages", "research/owner-page", "--materials", "prototype-real"]),
 ]
 
 EXTRA_CASES = [  # (скрипт, фікстура, аргументи, очікуваний код)
-    ("check_rejected.py", "check_rejected-k1-unanswered", ["REJECTED.md", "--intake", "OWNER-INTAKE.md", "--k1", "K1.md"], 1),
+    ("check_rejected.py", "check_rejected-nowhy", ["REJECTED.md"], 1),
+    ("check_rejected.py", "check_rejected-legacy", ["REJECTED.md"], 0),
+    ("check_rejected.py", "check_rejected-with-ai-table", ["REJECTED.md"], 0),
+    ("check_rejected.py", "check_rejected-ok", ["REJECTED.md", "--intake", "OWNER-INTAKE.md", "--k1", "K1.md"], 0),  # застарілі аргументи: WARN, не FAIL
+    ("check_intake.py", "check_intake-legacy", ["OWNER-INTAKE.md"], 0),
     ("check_intake.py", "check_intake-star-keys", ["OWNER-INTAKE.md"], 0),
     ("check_intake.py", "check_intake-star-keys", ["OWNER-INTAKE.md", "--page", "research/owner-page/index.html"], 1),
-    ("check_rejected.py", "check_rejected-k1-returned", ["REJECTED.md", "--intake", "OWNER-INTAKE.md", "--k1", "K1.md"], 1),
     ("check_facts.py", "check_facts-nomarkers", ["facts.yaml", "A.md"], 1),
 ]
 
@@ -1062,10 +1096,10 @@ def selftest_stale():
     r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_stale.py"), dep, "--base", c2], capture_output=True, text=True)
     assert r.returncode == 1 and "decisions.md" in r.stdout, f"check_stale: очікувано STALE за /flow/decisions.md: {r.stdout[-200:]}"
     # check_stale-same-step: залежність створено тим самим кроком (sha = коміт результату) -> PASS
-    for f, t in (("research/K1.md", "k"), ("research/FM.md", "fm")):
+    for f, t in (("research/X1.md", "k"), ("research/FM.md", "fm")):
         open(os.path.join(d, f), "w").write(t)
-    run("add", "."); run("commit", "-qm", "step: K1+FM"); c3 = run("rev-parse", "HEAD")
-    open(dep, "w").write(f"artifacts:\n  research/FM.md:\n    depends_on: [research/K1.md, /flow/decisions.md]\n    sha: {c3}\n")
+    run("add", "."); run("commit", "-qm", "step: X1+FM"); c3 = run("rev-parse", "HEAD")
+    open(dep, "w").write(f"artifacts:\n  research/FM.md:\n    depends_on: [research/X1.md, /flow/decisions.md]\n    sha: {c3}\n")
     run("add", "."); run("commit", "-qm", "depends sha"); c4 = run("rev-parse", "HEAD")
     r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_stale.py"), dep, "--base", c4], capture_output=True, text=True)
     assert r.returncode == 0, f"check_stale-same-step: очікувано PASS: {r.stdout[-200:]}"

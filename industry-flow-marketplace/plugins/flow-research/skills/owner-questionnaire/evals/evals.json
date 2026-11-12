@@ -4,35 +4,23 @@
     {
       "id": "mebli-r16-editions-asked-late",
       "prompt": "Наряд A-02b, mode prepare, галузь mebli, executor any, client_data none. Є рішення A-02 у flow/decisions.md і docs/industries/scoring.md. Підготуй анкету власника.",
-      "expected_output": "Створено OWNER-INTAKE.md з YAML-блоком усіх 14 блоків із замовчуваннями «меблів» (editions: both, ee_bridges: now, demo_edition: ce); result waiting_human з resume mode validate; питання про редакції не відкладено на A-03b/A-20.",
+      "expected_output": "Створено OWNER-INTAKE.md з YAML-блоком 6 питань і блоком defaults із замовчуваннями «меблів» (editions: both); result waiting_human з resume mode validate; власник ≤5 хв; питання про редакції закрито в анкеті.",
       "assertions": [
         "Питання про редакції CE/EE закрито в анкеті першим блоком",
-        "editions, ee_bridges, demo_edition позначені блокуючими",
+        "Блокуючі: editions, icp, todo_data, brand, materials",
         "result = waiting_human, resume.mode = validate",
         "check_intake --allow-empty без FAIL",
+        "Немає ambition.scope, evidence_gate, pricing, do_not_reject, human_target",
         "Рішення гейтів не вигадано"
       ],
       "input": "fixtures/intake-ok/OWNER-INTAKE.md (еталон структури)",
-      "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli), OWNER-BRIEF.md (питання про редакції після синтезу)",
+      "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli); схема скорочена в 0.3.0",
       "fixtures": "evals/fixtures/intake-ok/OWNER-INTAKE.md"
     },
     {
-      "id": "mebli-r24-owner-questions-after-synthesis",
-      "prompt": "Наряд A-20, OWNER-BRIEF §8 містить питання «Яку редакцію Odoo беремо, CE чи EE?» і «Яка локалізація потрібна ринку?», а OWNER-INTAKE.md уже має editions і market. Перевір і виправ.",
-      "expected_output": "INT-dup FAIL на обох питаннях; питання прибрані з брифу й замінені позначкою «з анкети: editions / market»; відповідь на питання K1 винесена до синтезу, а не на гейт.",
-      "assertions": [
-        "INT-dup знаходить обидва питання за номерами рядків",
-        "Питання не перепитуються, а подаються як «з анкети»",
-        "Нові питання класифіковано за questions-routing.md"
-      ],
-      "input": "fixtures/intake-bad/OWNER-BRIEF.md + fixtures/intake-ok/OWNER-INTAKE.md",
-      "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli), K1/REJECTED.md (питання власнику після синтезу)",
-      "fixtures": "evals/fixtures/intake-bad/OWNER-BRIEF.md"
-    },
-    {
       "id": "validate-blocking-empty",
-      "prompt": "Наряд A-02b, mode validate. У OWNER-INTAKE.md market.country = уточнити, ambition.scope порожнє, editions = maybe.",
-      "expected_output": "INT-block FAIL з переліком market.country, ambition.scope, editions=maybe; result waiting_human; анкету не затверджено, A-03/A-04 не ставляться.",
+      "prompt": "Наряд A-02b, mode validate. У OWNER-INTAKE.md editions = maybe, icp.min_employees і brand.materials порожні.",
+      "expected_output": "INT-block FAIL з переліком editions=maybe, icp.min_employees, brand.materials; result waiting_human; анкету не затверджено, A-03/A-04 не ставляться.",
       "assertions": [
         "INT-block називає всі три поля",
         "result = waiting_human, не done",
@@ -42,24 +30,12 @@
       "fixtures": "evals/fixtures/intake-bad/OWNER-INTAKE.md"
     },
     {
-      "id": "amend-editions-change",
-      "prompt": "Наряд A-02b, mode amend: власник повідомив «editions: ce -> both», посилання на повідомлення є. research/DEPENDS.yaml залежить від OWNER-INTAKE.md.",
-      "expected_output": "Поле й «Журнал змін» оновлено з джерелом; check_stale.py дав список застарілих артефактів у memo (stale:); перерахунку самих артефактів скіл не робив; flow/decisions.md не змінено.",
-      "assertions": [
-        "Є рядок у «Журналі змін»: дата, поле, було, стало, джерело",
-        "memo містить stale: зі списком із check_stale",
-        "Артефакти не перераховано, decisions.md не змінено"
-      ],
-      "input": "fixtures/intake-ok/OWNER-INTAKE.md",
-      "fixtures": "evals/fixtures/intake-ok/OWNER-INTAKE.md"
-    },
-    {
       "id": "mock-fidelity-rejected",
-      "prompt": "Власник у відповіді просить prototype.fidelity: mock (HTML-оболонка замість зрізу).",
-      "expected_output": "Значення не прийнято (К-23): result waiting_human з поясненням, що в 0.2.0 підтримується лише real-slice; анкету зі значенням mock не позначено готовою.",
+      "prompt": "Власник у відповіді просить defaults.prototype.fidelity: mock (HTML-оболонка замість зрізу).",
+      "expected_output": "Значення не прийнято: result waiting_human з поясненням, що у 0.3.0 підтримується лише real-slice; анкету зі значенням mock не позначено готовою.",
       "assertions": [
         "fidelity: mock не записано як прийняте",
-        "Пояснення посилається на К-23",
+        "Пояснення: підтримується лише real-slice",
         "result = waiting_human"
       ],
       "input": "fixtures/intake-ok/OWNER-INTAKE.md",
@@ -78,40 +54,39 @@
       "fixtures": "evals/fixtures/intake-ok/OWNER-INTAKE.md"
     },
     {
-      "id": "amend-commit-before-stale",
-      "prompt": "Наряд A-02b, mode amend: власник змінив editions ce -> both. Фікстура: evals/fixtures/amend-git/setup.sh <тека> (міні-репо: concept.md залежить від OWNER-INTAKE.md). Виконай amend.",
-      "expected_output": "runner комітить OWNER-INTAKE.md, лише потім check_stale.py --base HEAD; список stale: concept.md; перелік у memo для оркестратора. Якщо список порожній за зміненого блокуючого поля - WARN у memo.",
-      "assertions": [
-        "check_stale запущено після коміту зміни, не до",
-        "memo містить stale: concept.md",
-        "артефакти не перераховувались"
-      ],
-      "must_not": [
-        "запускати check_stale на незакомічену зміну й вважати «нічого не застаріло»"
-      ],
-      "input": "evals/fixtures/amend-git/setup.sh",
-      "source": "mebli r16/r24"
-    },
-    {
       "id": "other-industry-defaults-uncertain",
       "prompt": "Наряд A-02b, prepare, галузь textile (не меблі). Підготуй анкету.",
-      "expected_output": "market.accounting_system, pricing.box_fixed_price, do_not_reject.items = «уточнити» (class_rule і n лишено); знак * з ключів прибрано; reuse.repos/projects показано як «заповніть або \"—\"»; result waiting_human.",
+      "expected_output": "defaults.market.accounting_system = «уточнити» (+ рядок AI-DECISIONS), tariffs порожні; знак * з ключів прибрано; reuse.repos/projects показано як «заповніть або \"—\"»; result waiting_human.",
       "assertions": [
-        "Меблевий перелік do_not_reject не перенесено",
+        "Меблеве замовчування accounting_system не перенесено",
         "У файлі немає * після ключів верхнього рівня",
-        "reuse.repos у переліку питань до власника"
+        "reuse.repos у переліку питань до власника",
+        "tariffs не вигадано"
       ],
       "input": "галузь textile"
     },
     {
       "id": "mock-fidelity-waiting-human",
       "prompt": "Наряд A-02b, validate. Власник відповів prototype.fidelity: mock; check_intake дає PASS.",
-      "expected_output": "result waiting_human з поясненням К-23 (mock у 0.2.0 не підтримується), хоча check_intake PASS.",
+      "expected_output": "result waiting_human з поясненням (mock у 0.3.0 не підтримується), хоча check_intake PASS.",
       "assertions": [
         "Ручна перевірка fidelity виконана",
         "result не done"
       ],
       "input": "fidelity mock"
+    },
+    {
+      "id": "edit-after-start-new-validate",
+      "prompt": "Власник після старту A-03b змінив editions ce -> both, посилання на повідомлення є. Що робить скіл?",
+      "expected_output": "Режим validate: поле й «Журнал змін» оновлено з джерелом; runner комітить файл і запускає check_stale --base HEAD, перелік stale: у memo; артефакти не перераховано, decisions.md не змінено; режиму amend немає.",
+      "assertions": [
+        "Є рядок у «Журналі змін»",
+        "check_stale після коміту",
+        "memo містить stale:",
+        "Режим amend не використано"
+      ],
+      "input": "fixtures/intake-ok/OWNER-INTAKE.md",
+      "fixtures": "evals/fixtures/intake-ok/OWNER-INTAKE.md"
     }
   ]
 }

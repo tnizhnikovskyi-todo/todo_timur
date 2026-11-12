@@ -1,34 +1,34 @@
 {
  "event": "stale-reported-by-runner",
  "depends": {
-  "research/OWNER-BRIEF.md": [
+  "research/BOX.md": [
    "concept/features.md"
   ],
   "research/owner-page/index.html": [
-   "research/OWNER-BRIEF.md",
+   "research/BOX.md",
    "concept/features.md"
   ]
  },
  "new_base_sha": "0000000000000000000000000000000000000001",
  "source_task": {
   "step": "C-02",
-  "mode": "decisions-batch",
+  "mode": "veto-batch",
   "report": {
    "result": "done",
    "stale": [
     "concept/features.md",
-    "research/OWNER-BRIEF.md",
+    "research/BOX.md",
     "research/owner-page/index.html"
    ]
   }
  },
  "owner_steps": {
   "concept/features.md": "A-20",
-  "research/OWNER-BRIEF.md": "A-20",
+  "research/BOX.md": "A-20",
   "research/owner-page/index.html": "A-20c"
  },
  "preconditions_confirmed": [
-  "A-03c decide затверджено",
+  "A-03c done",
   "A-20, A-20b done",
   "A-20c зразок прийнято"
  ]

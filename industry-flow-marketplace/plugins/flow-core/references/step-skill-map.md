@@ -6,12 +6,12 @@
 | Крок | skill_ref (перший — ведучий) | params.mode / ключі |
 |---|---|---|
 | A-01 | flow-research:industry-scoring | — |
-| A-02b | flow-research:owner-questionnaire | `mode: prepare`\|`validate`\|`amend` (анкета власника, `waiting_human` між `prepare` і `validate`) |
-| A-03b | flow-research:industry-deep-dive | — (K1 усередині: `waiting_human` + `resume`; перерахунок — `params.mode: recalc`) |
-| A-03c | flow-research:reuse-modules | `mode: inventory`\|`session`\|`decide` (`session` — AI готує матеріал і питання -> `waiting_human`; сесія з власником — `human_substep`; потім `decide`) |
+| A-02b | flow-research:owner-questionnaire | `mode: prepare`\|`validate` (анкета власника 6 пунктів, `waiting_human` між `prepare` і `validate`; правка анкети = новий `validate`) |
+| A-03b | flow-research:industry-deep-dive | — (без K1; рішення AI -> рядки AI-DECISIONS) | `recalc` (`params.mode`) |
+| A-03c | flow-research:reuse-modules | один наряд без режимів (`## Інвентар` у `REUSE.md`; без сесії й гейта; рішення AI — рядки AI-DECISIONS) |
 | A-04 | flow-research:past-projects-analyzer | — |
 | A-05 | flow-research:segment-selector | `phase` 1\|2 (режим «еталонні клієнти») |
-| A-07 | flow-package-evolution:product-decision-drafter | `mode: перша` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
+| A-07 | — (людська задача, без `skill_ref`) | Кнопка-вето за розділом «Рекомендація AI для A-07» у `demand/results.md` (його пише A-23 results) |
 | A-09 | flow-package-build:questionnaire-builder | `first`\|`review` |
 | A-12 | flow-package-build:config-as-code | `build`\|`fix`\|`new-version`\|`validate` |
 | A-13 | flow-package-build:master-data-template-builder | — |
@@ -19,10 +19,10 @@
 | A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія` (стенд пакета) |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
-| A-20 | flow-research:concept-mapper | — (OWNER-BRIEF, BOX, SALES, REJECTED; `params.mode: recalc`) |
+| A-20 | flow-research:concept-mapper | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20b | flow-research:completeness-audit | — (`params.mode: recalc` — перерахунок) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |
-| A-21 | flow-research:prototype-builder | `params.sample: true` (зразок) \| повний обсяг; `prototype.fidelity: mock` не підтримується (К-23) |
+| A-21 | flow-research:prototype-builder | `params.sample: true` (зразок) \| повний обсяг; `defaults.prototype.fidelity: mock` не підтримується (К-23) |
 | A-21c | flow-research:showcase-content | — (виконавець — Контент-менеджер, `executor: any`) |
 | A-22 | flow-package-build:demo-base-builder | база зрізу для гарячого ліда (`перша`\|`нова-версія`) |
 | A-23 / `prep`\|`results` | flow-research:demand-test-runner | `mode: prep`\|`results` |

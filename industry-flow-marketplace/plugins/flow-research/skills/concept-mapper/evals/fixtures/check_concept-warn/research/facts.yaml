@@ -1,5 +1,4 @@
 meta:
   industry: "mebli"
-pricing:
-  currency: "UAH"
+owner_tariffs:
   ce_entry: 12000

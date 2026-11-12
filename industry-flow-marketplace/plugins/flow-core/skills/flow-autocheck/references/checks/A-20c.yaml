@@ -96,6 +96,24 @@
    }
   },
   {
+   "id": "no-money",
+   "prim": "no_money",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/owner-page/"
+    ],
+    "exclude": ["competitors.html"]
+   }
+  },
+  {
+   "id": "ai-decisions-block",
+   "prim": "manual",
+   "args": {
+    "text": "сторінка містить блок «Що вирішив AI і з яким ризиком» з усіма рядками research/AI-DECISIONS.md (без перефразувань суті), кнопку «Скопіювати мої заперечення» (лише відмічені рядки), без секції `money` і без питань власнику поза цим блоком",
+    "who": "runner"
+   }
+  },
+  {
    "id": "script-check-facts",
    "prim": "manual",
    "args": {
@@ -149,16 +167,12 @@
    "id": "rejected-register",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REJECTED.md --intake docs/industries/<галузь>/OWNER-INTAKE.md --k1 docs/industries/<галузь>/research/K1.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Крок із переліку відбору без реєстру відкинутого (або з «нічого не відкинуто» без рядка) — FAIL (flow-core/references/rejected-register.md). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/research/REJECTED.md: REJ-exists, REJ-fields, REJ-count без FAIL (формат «не робимо й чому», 0.3.0; --intake/--k1 не передавати). Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
      "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
-     "docs/industries/<галузь>/research/REJECTED.md",
-     "--intake",
-     "docs/industries/<галузь>/OWNER-INTAKE.md",
-     "--k1",
-     "docs/industries/<галузь>/research/K1.md"
+     "docs/industries/<галузь>/research/REJECTED.md"
     ],
     "who": "runner"
    }
@@ -167,7 +181,7 @@
    "id": "playwright-widths",
    "prim": "manual",
    "args": {
-    "text": "Playwright на 390 і 1280 px: document.documentElement.scrollWidth <= clientWidth на кожній із 3 сторінок; перший екран — висновок і чесний вердикт про гроші",
+    "text": "Playwright на 390 і 1280 px: document.documentElement.scrollWidth <= clientWidth на кожній із 3 сторінок; перший екран — висновок без грошового блоку; є блок «Що вирішив AI і з яким ризиком»",
     "who": "runner"
    },
    "when": "not_sample"
@@ -176,7 +190,7 @@
    "id": "gate-concept",
    "prim": "manual",
    "args": {
-    "text": "єдиний гейт концепції: рішення власника («Затвердити / Повернути», gate.return_to ∈ {A-20, A-03b, A-03c}) — людина; рядки в decisions.md — лише «внесено AI від імені власника» з посиланням на повідомлення (К-08)",
+    "text": "єдиний гейт дослідження, вето-цикл: «Затвердити» (немає заперечень) або «Повернути» з рядками `AI-NN: не згоден — <що замість>` (gate.return_to ∈ {A-20, A-03b, A-03c}) — рішення людини; `flow-state-keeper` `veto-batch` пише в decisions.md лише рядки вето «внесено AI від імені власника» з посиланням на повідомлення (К-08) і рядок гейта; далі A-20 `recalc` -> A-20b -> A-20c (лише змінене)",
     "who": "Власник продукту"
    }
   },

@@ -111,7 +111,7 @@ def signature(sec):
 
 def rejected_check(a, req, sec=None):
     """BT-rejected: реєстр відкинутого — розділ `## Відкинуто` у самому беклозі (узгоджено з D-02.yaml); кожне «відхилити» має
-    рядок `REJ-NNN` з посиланням на REQ; формат і do_not_reject перевіряє flow-core check_rejected.py над беклогом (--intake)."""
+    рядок `REJ-NNN` з посиланням на REQ; формат (короткий: ID, що, чому) перевіряє flow-core check_rejected.py над беклогом; `--intake` приймається й ігнорується (0.3.0)."""
     import subprocess
     rej = [r.get("ID запиту", "") for r in req if "відхил" in (col(r, "Рішення") + col(r, "Рекомендація")).lower()]
     if not rej:
@@ -122,8 +122,6 @@ def rejected_check(a, req, sec=None):
     if not os.path.exists(scr):
         return {"id": "BT-rejected", "status": "SKIP", "msg": "check_rejected.py не знайдено (--check-rejected); формат реєстру не перевірено"}
     cmd = [sys.executable, "-I", scr, a.backlog]
-    if getattr(a, "intake", None):
-        cmd += ["--intake", a.intake]
     p = subprocess.run(cmd, capture_output=True, text=True)
     try:
         bad = [f"{c['id']}: {c.get('msg', '')}" for c in json.loads(p.stdout) if c["status"] == "FAIL"]

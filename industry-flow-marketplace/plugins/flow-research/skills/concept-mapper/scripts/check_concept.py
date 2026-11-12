@@ -3,14 +3,15 @@
 Запускати з кореня клону; <concept_dir> — відносний шлях. --base = git.base наряду (без нього CM-ids/CM-scope = SKIP).
 CM-pii: ПІБ (три слова з великої) дає MANUAL, а не FAIL (pii-patterns.md): людина перевіряє збіг; решта шаблонів — FAIL.
 Використання: check_concept.py <concept_dir> --input briefing.md=<шлях> [--input ...] [--base <SHA>]
-              [--research <research_dir> --intake OWNER-INTAKE.md [--k1 K1.md] [--facts facts.yaml]]
+              [--research <research_dir> --intake OWNER-INTAKE.md [--facts facts.yaml]]  (--k1 приймається й ігнорується: K1 скасовано в 0.3.0)
 --research і --intake ОБОВ'ЯЗКОВІ для A-20: без них CM-args = FAIL (щоб runner не пропустив нові перевірки мовчки).
 Старий режим «лише concept/» — явний прапорець --concept-only (нові CM-* тоді SKIP; для A-20 не використовувати).
 Шлях до скриптів flow-autocheck (плагін flow-core): --autocheck-dir <шлях до .../flow-core/skills/flow-autocheck/scripts> або змінна оточення FLOW_AUTOCHECK_DIR
 (у кеші встановлених плагінів сусідній плагін може лежати деінде; за замовчуванням — відносно цього файла).
-Із --research додатково: CM-research (розділи OWNER-BRIEF §1-10, BOX §1-13, SALES §1-7, REJECTED), CM-buyer (роль-покупець має екран-дашборд і сценарій),
+Із --research додатково: CM-research (розділи BOX §1-13, SALES §1-7, файли REJECTED.md і AI-DECISIONS.md; OWNER-BRIEF не пишеться), CM-buyer (роль-покупець має екран-дашборд і сценарій),
 CM-roles-scenarios (кожна роль має SC, кожна F — крок SC, роль SC = роль екрана), CM-base-edition (основа екрана: Стд CE|Стд EE|td_|ToDo-готовий|Інтегр),
-CM-dnr (check_rejected.py: позиції do_not_reject без K1 у відкинутому), CM-facts (check_facts.py: числа = facts.yaml). Без --research (лише з --concept-only) вони SKIP.
+CM-money (LESSONS §24: у concept/* і research/{BOX,SALES,REJECTED,AI-DECISIONS}.md немає окупності, TCO, вартості володіння, business-case, «вердикту про гроші», ROI,
+беззбитковості, ставки розробки, годин × ставка; секції money), CM-facts (check_facts.py: числа = facts.yaml). Без --research (лише з --concept-only) вони SKIP.
 Ключ --input = ім'я файлу з колонки «Джерело» (наприклад past-projects.md); значення = шлях до файлу на SHA наряду."""
 import argparse, json, os, re, subprocess, sys
 from pathlib import Path
@@ -47,7 +48,9 @@ def rows(sec):
     return [r for r in out[1:]] if out else []  # без заголовка таблиці
 
 BASES = ["Стд CE", "Стд EE", "td_", "ToDo-готовий", "Інтегр"]
-RESEARCH_NUMBERED = {"OWNER-BRIEF.md": 10, "BOX.md": 13, "SALES.md": 7}
+RESEARCH_NUMBERED = {"BOX.md": 13, "SALES.md": 7}
+MONEY = re.compile(r"окупн|\bTCO\b|вартість\s+володіння|business[- ]case|бізнес-кейс|вердикт\s+про\s+гроші|\bROI\b|беззбитков|ставк\w*\s+розробки|годин.{0,20}(×|x|\*).{0,10}ставк", re.I)
+MONEY_SKIP = re.compile(r"REJ-\d{3}|https?://")  # як в autocheck.py: рядок реєстру відкинутого і цитата з URL не рахуються
 HERE = os.path.dirname(os.path.abspath(__file__))
 AUTOCHECK = os.environ.get("FLOW_AUTOCHECK_DIR") or os.path.normpath(os.path.join(HERE, "..", "..", "..", "..", "flow-core", "skills", "flow-autocheck", "scripts"))
 
@@ -83,7 +86,7 @@ def git(*a):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("dir"); ap.add_argument("--input", action="append", default=[])
-    ap.add_argument("--base"); ap.add_argument("--research"); ap.add_argument("--intake"); ap.add_argument("--k1"); ap.add_argument("--facts")
+    ap.add_argument("--base"); ap.add_argument("--research"); ap.add_argument("--intake"); ap.add_argument("--k1", help="ігнорується (K1 скасовано в 0.3.0)"); ap.add_argument("--facts")
     ap.add_argument("--concept-only", action="store_true"); ap.add_argument("--autocheck-dir")
     a = ap.parse_args()
     global AUTOCHECK
@@ -96,7 +99,7 @@ def main():
         txt[f] = p.read_text(encoding="utf-8"); secs[f] = sections(txt[f])
         missing += [f"{f}§{h}" for h in hs if h not in secs[f]]
     if not a.concept_only and not (a.research and a.intake):
-        add("CM-args", False, "немає --research і/або --intake: для A-20 вони обов'язкові (CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-dnr/CM-facts без них не виконуються); явний старий режим — --concept-only")
+        add("CM-args", False, "немає --research і/або --intake: для A-20 вони обов'язкові (CM-research/CM-buyer/CM-roles-scenarios/CM-base-edition/CM-money/CM-facts без них не виконуються); явний старий режим — --concept-only")
     add("CM-files", not missing, "немає: " + ", ".join(missing))
     if missing:
         print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1)
@@ -160,12 +163,17 @@ def main():
             old = {f: (git("show", f"{a.base}:{rel}/{f}") if git("ls-tree", a.base, f"{rel}/{f}").strip() else "") for f in HEAD}
             gone = sorted({i for t in old.values() for i in ID.findall(t)} - {i for t in txt.values() for i in ID.findall(t)})
             add("CM-ids", not gone, "зникли ID: " + ", ".join(gone))
-            if a.research:  # REJ-xxx з REJECTED.md на base не мають зникнути (A-20 лише дописує G4/G4а, чужі рядки A-03b не перезаписує)
+            if a.research:  # REJ-xxx з REJECTED.md на base не мають зникнути (A-20 лише дописує, чужі рядки A-03b не перезаписує)
                 rr = Path(a.research).resolve().relative_to(top).as_posix() + "/REJECTED.md"
                 oldr = git("show", f"{a.base}:{rr}") if git("ls-tree", a.base, rr).strip() else ""
                 newr = Path(a.research, "REJECTED.md").read_text(encoding="utf-8") if Path(a.research, "REJECTED.md").exists() else ""
                 gone_r = sorted(set(re.findall(r"REJ-\d+", oldr)) - set(re.findall(r"REJ-\d+", newr)))
-                add("CM-rej-ids", not gone_r, "зникли REJ-ID з base (REJECTED.md не перезаписують): " + ", ".join(gone_r))
+                # виняток — вето власника: рядок AI-NN зі статусом «вето …» в AI-DECISIONS.md посилається на REJ-NNN
+                aid = Path(a.research, "AI-DECISIONS.md")
+                vetoed = {m for l in (aid.read_text(encoding="utf-8").splitlines() if aid.exists() else [])
+                          if re.match(r"^\|\s*AI-\d+", l) and re.search(r"вето", l, re.I) for m in re.findall(r"REJ-\d+", l)}
+                gone_r = [i for i in gone_r if i not in vetoed]
+                add("CM-rej-ids", not gone_r, "зникли REJ-ID з base без вето (REJECTED.md не перезаписують; видалити можна лише позицію з рядком AI-NN «вето … REJ-NNN»): " + ", ".join(gone_r))
         except (GitError, ValueError, OSError) as e:
             add("CM-ids", False, f"не вдалось прочитати base {a.base}: {e}")
     # CM-pii
@@ -183,7 +191,7 @@ def main():
     ci_r, ci_t, ci_b = col(screen_head, "Ролі"), col(screen_head, "Тип"), col(screen_head, "Основа")
     role_rows = {r[0]: r for r in rows(feat["Ролі"])}
     if not a.research:
-        for i in ("CM-research", "CM-buyer", "CM-roles-scenarios", "CM-base-edition", "CM-dnr", "CM-facts"):
+        for i in ("CM-research", "CM-buyer", "CM-roles-scenarios", "CM-base-edition", "CM-money", "CM-facts"):
             res.append({"id": i, "status": "SKIP", "msg": "--concept-only: без --research"})
     else:
         rd = Path(a.research)
@@ -195,8 +203,17 @@ def main():
             have = {int(x) for x in re.findall(r"^##\s+(\d+)", p.read_text(encoding="utf-8"), flags=re.M)}
             miss = sorted(set(range(1, n + 1)) - have)
             if miss: bad.append(f"{f}: немає розділів {miss}")
-        if not (rd / "REJECTED.md").exists(): bad.append("немає REJECTED.md")
+        for f in ("REJECTED.md", "AI-DECISIONS.md"):
+            if not (rd / f).exists(): bad.append(f"немає {f}")
         add("CM-research", not bad, "; ".join(bad))
+        # CM-ai-limit: ≤15 рядків «Рішення» в AI-DECISIONS; A-20 лишає резерв 3–4 для A-20b (≤11)
+        pa = rd / "AI-DECISIONS.md"
+        if pa.exists():
+            sec = sections(pa.read_text(encoding="utf-8")).get("Рішення", "")
+            n_ai = len(set(re.findall(r"^\|\s*(AI-\d{2})\s*\|", sec, flags=re.M)))
+            if n_ai > 15: add("CM-ai-limit", False, f"рядків «Рішення» {n_ai} > 15")
+            elif n_ai > 11: add("CM-ai-limit", True, status="WARN", msg=f"рядків «Рішення» {n_ai} > 11: злити дрібні, лишити резерв 3–4 рядки для A-20b")
+            else: add("CM-ai-limit", True)
         # CM-buyer: роль-покупець (позначка [покупець] у колонці «Роль») має екран-дашборд і сценарій
         buyers = [rid for rid, r in role_rows.items() if len(r) > 1 and re.search(r"\[\s*покупець\s*\]", r[1], re.I)]
         why = []
@@ -231,33 +248,50 @@ def main():
                 if not v.strip() or not all(x.strip() in BASES for x in re.split(r"[,;/+]", v) if x.strip()):
                     why.append(f"{r[0]}: основа «{v}» не з {BASES} (OCA — лише ідея, пишемо в td_)")
         add("CM-base-edition", not why, "; ".join(why[:8]))
-        # CM-dnr
-        if not a.intake:
-            add("CM-dnr", False, "не передано --intake (OWNER-INTAKE.md)")
-        elif not os.path.isfile(a.intake) or (a.k1 and not os.path.isfile(a.k1)):
-            add("CM-dnr", False, "немає файла " + ", ".join(x for x in (a.intake, a.k1) if x and not os.path.isfile(x)))
-        else:
-            args = [str(rd / "REJECTED.md"), "--intake", a.intake] + (["--k1", a.k1] if a.k1 else [])
-            out, why = run_aux("check_rejected.py", *args)
-            if out is None: add("CM-dnr", False, why)
-            else:
-                bad = [f"{x['id']}: {x['msg']}" for x in out if x["status"] == "FAIL"]
-                man = [f"{x['id']}: {x['msg']}" for x in out if x["status"] == "MANUAL"]
-                if bad: add("CM-dnr", False, "; ".join(bad)[:600])
-                elif man: add("CM-dnr", False, "; ".join(man)[:300], status="MANUAL")
-                else:
-                    dnr = [x for x in out if x["id"] == "REJ-dnr"]
-                    if dnr and dnr[0]["status"] in ("SKIP", "WARN"):
-                        add("CM-dnr", False, "REJ-dnr " + dnr[0]["status"] + ": " + dnr[0].get("msg", "") + " (розібрати в memo)", status="WARN")
-                    else: add("CM-dnr", True)
+        # CM-money (LESSONS §24): грошей у документах концепції немає
+        why = []
+        files = [x for x in sorted(d.glob("*.md"))] + [rd / f for f in ("BOX.md", "SALES.md", "REJECTED.md", "AI-DECISIONS.md")]
+        for fp in files:
+            if not fp.exists(): continue
+            tx = fp.read_text(encoding="utf-8")
+            hit = sorted({m.group(0).lower() for ln in tx.splitlines() if not MONEY_SKIP.search(ln) for m in MONEY.finditer(ln)})
+            if hit: why.append(f"{fp.name}: {hit}")
+            if re.search(r"^#{1,6}\s+.*\bmoney\b", tx, re.M | re.I): why.append(f"{fp.name}: секція money")
+        # BOX §1 і SALES: ціни/години коробок AI не рахує (LESSONS §24 п.1); сума лише з маркером тарифу власника
+        for fn in ("BOX.md", "SALES.md"):
+            fp = rd / fn
+            if not fp.exists(): continue
+            tx = fp.read_text(encoding="utf-8")
+            if fn == "BOX.md":
+                m1 = re.search(r"^## 1\.[^\n]*\n(.*?)(?=^## |\Z)", tx, re.M | re.S)
+                tx = m1.group(1) if m1 else ""
+            for l in tx.splitlines():
+                if re.search(PII["sum"], l, re.I) and "fact:owner_tariffs." not in l and re.search(r"коробк|box|пакет", l, re.I):
+                    why.append(f"{fn}: ціна коробки без маркера fact:owner_tariffs.* («{l.strip()[:60]}»)")  # інші суми без маркера — FACT-unmarked (WARN)
+                if re.search(r"\d\s*(год\b|год\.|годин)", l, re.I):
+                    why.append(f"{fn}: години («{l.strip()[:60]}»)")
+        add("CM-money", not why, "; ".join(why[:6]))
+        # CM-dnd (§2.1 п.6): кожен пункт do_not_do анкети є в REJECTED.md з причиною «рішення власника» і не є активною функцією
+        why = []
+        itx = Path(a.intake).read_text(encoding="utf-8") if a.intake and Path(a.intake).exists() else ""
+        mm = re.search(r"^do_not_do:\s*\[(.*?)\]", itx, re.M) or re.search(r"^do_not_do:\s*\n((?:\s*-.*\n?)+)", itx, re.M)
+        items = [x.strip(" \"'-") for x in re.split(r"[,\n]", mm.group(1)) if x.strip(" \"'-")] if mm else []
+        rj = (rd / "REJECTED.md").read_text(encoding="utf-8") if (rd / "REJECTED.md").exists() else ""
+        for it in items:
+            rws = [l for l in rj.splitlines() if l.startswith("|") and it.lower() in l.lower()]
+            if not rws: why.append(f"«{it}» немає в REJECTED.md")
+            elif not any("рішення власника" in l.lower() for l in rws): why.append(f"«{it}»: у REJECTED.md немає причини «рішення власника»")
+            if any(it.lower() in " ".join(r[:3]).lower() and not (len(r) > 6 and re.match(r"(знято|вето)", r[6].strip().lower())) for r in funcs):
+                why.append(f"«{it}» стоїть активною функцією в features.md")
+        add("CM-dnd", not why, "; ".join(why[:6]))
         # CM-facts
         fy = a.facts or str(rd / "facts.yaml")
         if not os.path.exists(fy):
             add("CM-facts", False, f"немає {fy} (єдине джерело чисел)")
         else:
-            targets = [str(rd / f) for f in ("OWNER-BRIEF.md", "BOX.md", "SALES.md") if (rd / f).exists()]
+            targets = [str(rd / f) for f in ("BOX.md", "SALES.md") if (rd / f).exists()]
             if not targets:
-                add("CM-facts", False, "немає research/{OWNER-BRIEF,BOX,SALES}.md для перевірки чисел")
+                add("CM-facts", False, "немає research/{BOX,SALES}.md для перевірки чисел")
             else:
                 out, why = run_aux("check_facts.py", fy, *targets, "--require-markers")  # число без маркера — FAIL/WARN
                 out2, why2 = run_aux("check_facts.py", fy, str(d))  # concept/*: годин і цін немає; маркери не вимагаємо
@@ -279,7 +313,7 @@ def main():
             extra = []
             if a.research:
                 rr = Path(a.research).resolve().relative_to(Path(git("rev-parse", "--show-toplevel").strip())).as_posix()
-                extra = [f"{rr}/{f}" for f in ("OWNER-BRIEF.md", "BOX.md", "SALES.md", "REJECTED.md", "facts.yaml")]
+                extra = [f"{rr}/{f}" for f in ("BOX.md", "SALES.md", "REJECTED.md", "AI-DECISIONS.md", "facts.yaml")]
             bad = [x for x in ch if not x.startswith(own) and not x.startswith(tpl) and x not in extra]
             add("CM-scope", not bad, "зачеплено: " + ", ".join(bad))
         except (GitError, ValueError) as e:

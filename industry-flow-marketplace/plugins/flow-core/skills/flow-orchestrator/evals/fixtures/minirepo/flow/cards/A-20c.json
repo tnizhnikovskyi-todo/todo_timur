@@ -7,13 +7,13 @@
  "access_profile": "base",
  "raciR": "BA (R); Власник продукту (A, гейт)",
  "preconditions": "A-20b done",
- "inArtifacts": "research/*; concept/*; COMPLETENESS.md",
+ "inArtifacts": "research/*; concept/*; research/AI-DECISIONS.md",
  "inputs": "OWNER-INTAKE.md",
  "outputs": "research/owner-page/index.html",
  "where": "research/owner-page/index.html",
- "gate": "так: гейт концепції; Повернути -> A-20 / A-03b / A-03c",
+ "gate": "так: єдиний гейт дослідження (вето-цикл); Повернути -> A-20 / A-03b / A-03c",
  "params": {
-  "sample": true
+  "sample": false
  },
  "review": {
   "checklists": [

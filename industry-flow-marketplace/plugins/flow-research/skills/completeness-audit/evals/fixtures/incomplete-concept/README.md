@@ -1,4 +1,5 @@
 # incomplete-concept (фікстура r21)
 
-Мінімальна неповна концепція: у OWNER-BRIEF немає варіанта сценарію «претензія/повернення», у BOX немає плану міграції даних клієнта,
-у facts.yaml немає `payback.*`. COMPLETENESS.md немає — його має створити аудит. Каркас узято з concept-mapper/check_concept-ok.
+Мінімальна неповна концепція: у concept/scenarios.md немає варіанта сценарію «претензія/повернення», у BOX немає плану міграції даних клієнта.
+Розділу «Повнота» в research/AI-DECISIONS.md ще немає: його має створити аудит A-20b (OWNER-BRIEF і COMPLETENESS.md не існують у 0.3.0).
+Каркас узято з concept-mapper/check_concept-ok.

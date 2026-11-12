@@ -78,22 +78,41 @@
    "when": "mode:prep|results",
    "prim": "manual",
    "args": {
-    "text": "пороги не змінені після старту; сигнали Р3–Р5 пораховані окремо від кліків; карта інтересу прив'язана до F-xx A-20",
-    "who": "Власник продукту"
+    "text": "пороги ставить AI, власник міг заперечити до старту розсилки (окремого затвердження немає); пороги не змінені після старту; сигнали Р3–Р5 пораховані окремо від кліків; карта інтересу прив'язана до F-xx A-20",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "recommendation-heading",
+   "when": "mode:results",
+   "prim": "headings",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/demand/results.md",
+    "headings": [
+     "re:рекомендація ai для a-07"
+    ]
+   }
+  },
+  {
+   "id": "no-money",
+   "when": "mode:results",
+   "prim": "no_money",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/demand/results.md"
+    ]
    }
   },
   {
    "id": "rejected-register",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/demand/thresholds.md --intake docs/industries/<галузь>/OWNER-INTAKE.md: REJ-exists, REJ-fields, REJ-dnr, REJ-count без FAIL. Відкинуті варіанти цінності/сегменти — розділ «## Відкинуто» в demand/thresholds.md. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
+    "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/demand/thresholds.md: REJ-exists, REJ-fields, REJ-count без FAIL. Відкинуті варіанти цінності/сегменти — розділ «## Не робимо» (або «## Відкинуто») в demand/thresholds.md. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
      "python3",
      "-I",
      "<корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py",
-     "docs/industries/<галузь>/demand/thresholds.md",
-     "--intake",
-     "docs/industries/<галузь>/OWNER-INTAKE.md"
+     "docs/industries/<галузь>/demand/thresholds.md"
     ],
     "who": "runner"
    },

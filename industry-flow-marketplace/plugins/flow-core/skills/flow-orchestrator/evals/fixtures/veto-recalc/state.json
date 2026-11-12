@@ -1,0 +1,43 @@
+{
+ "tasks": [
+  {
+   "id": 940,
+   "step": "A-20c",
+   "scope": "package/mebli-1",
+   "stage": "Готово",
+   "report": {
+    "result": "done"
+   },
+   "gate": {
+    "button": "Повернути",
+    "return_to": "A-20",
+    "vetoes": ["AI-03: не згоден — конфігуратор виробу лишаємо в MVP"]
+   }
+  }
+ ],
+ "source_task": {
+  "step": "C-02",
+  "mode": "veto-batch",
+  "report": {
+   "result": "done",
+   "stale": [
+    "concept/features.md",
+    "research/BOX.md",
+    "research/AI-DECISIONS.md",
+    "research/owner-page/index.html"
+   ]
+  }
+ },
+ "owner_steps": {
+  "concept/features.md": "A-20",
+  "research/BOX.md": "A-20",
+  "research/AI-DECISIONS.md": "A-20",
+  "research/owner-page/index.html": "A-20c"
+ },
+ "new_base_sha": "0000000000000000000000000000000000000002",
+ "preconditions_confirmed": [
+  "A-03b done",
+  "A-03c done",
+  "A-20, A-20b done"
+ ]
+}

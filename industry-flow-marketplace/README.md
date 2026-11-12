@@ -1,6 +1,6 @@
 # industry-flow
 
-Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md` (історична, до 2026-11-10; чинні — `_work/DECISIONS_2026-11-10.md` і `plugins/flow-core/references/`). Версія 0.2.1 (урок §23: зворотна перевірка стандарту в A-21, `check_data_model.py`; 0.2.0 — 36 скілів у 5 плагінах (7 нових: `owner-questionnaire`, `industry-deep-dive`, `reuse-modules`, `completeness-audit`, `concept-presentation`, `showcase-content`, `skill-retro`)). Основа змін — уроки реального зрізу «меблі» (`_work/LESSONS-A21-real.md`, план — `_work/IMPLEMENTATION-PLAN.md`).
+Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md` (історична, до 2026-11-10; чинні — `_work/DECISIONS_2026-11-10.md` і `plugins/flow-core/references/`). Версія 0.3.0 (урок §24: економіку пакета не рахуємо взагалі — без business-case, окупності, TCO, годин і цін по коробках; рішення AI за замовчуванням, власник — вето на єдиному гейті концепції A-20c; K1 і правило доказів скасовано, анкета A-02b — 6 пунктів, реєстр відкинутого — короткий; fit-gap/SOW клієнта й оцінки збірки не змінено). 0.2.1 (урок §23: зворотна перевірка стандарту в A-21, `check_data_model.py`; 0.2.0 — 36 скілів у 5 плагінах (7 нових: `owner-questionnaire`, `industry-deep-dive`, `reuse-modules`, `completeness-audit`, `concept-presentation`, `showcase-content`, `skill-retro`)). Основа змін — уроки реального зрізу «меблі» (`_work/LESSONS-A21-real.md`, план — `_work/IMPLEMENTATION-PLAN.md`).
 
 ## Плагіни
 
@@ -10,15 +10,15 @@
 | `flow-research` | Дослідження до рішення «будуємо пакет?»; скіли: `owner-questionnaire`, `industry-deep-dive`, `reuse-modules`, `concept-mapper`, `completeness-audit`, `concept-presentation`, `prototype-builder` (реальний зріз Odoo 19 `td_*`), `showcase-content`, `demand-test-runner`, `industry-scoring`, `past-projects-analyzer`, `segment-selector`. | A-01, A-02b, A-03b, A-03c, A-04, A-05, A-20, A-20b, A-20c, A-21, A-21c, A-23 (+ список лідів B-01). |
 | `flow-package-build` | Збірка тиражованого пакета | A-09, A-12, A-13, A-14, A-15 (+A-22), A-18; скіли: `config-as-code`, `demo-base-builder`, `gates-aggregator`, `master-data-template-builder`, `package-release-builder`, `questionnaire-builder`. |
 | `flow-client-delivery` | Впровадження пакета в клієнта | B-02, B-03, B-04, B-06, B-07 (бот), B-09/B-10, B-11 (+B-13); скіли: `client-data-migrator`, `client-help-bot` (B-07; читає прод клієнта лише через підключення `prod-ro-<клієнт>`, лише читання — рішення q37), `package-fit-gap`, `package-sow-builder`, `package-upgrade-runner`, `runbook-executor`, `support-desk`. |
-| `flow-package-evolution` | Розвиток пакета | D-01, D-02, D-03; чернетки рішень A-07, A-17, D-04, D-05; скіли: `backlog-triage`, `odoo-version-migrator`, `package-usage-metrics`, `product-decision-drafter`. |
+| `flow-package-evolution` | Розвиток пакета | D-01, D-02, D-03; чернетки рішень A-17, D-04, D-05 (A-07 — кнопка-вето без чернетки); скіли: `backlog-triage`, `odoo-version-migrator`, `package-usage-metrics`, `product-decision-drafter`. |
 
 `flow-core` потрібен усім: у ньому цикл AI-кроку і спільні конвенції (`plugins/flow-core/references/`).
 
-## Порядок кроків дослідження (0.2.0)
+## Порядок кроків дослідження (0.3.0)
 
-`A-01 → A-02 (гейт) → A-02b (анкета власника) → A-03 ∥ A-04 → [шлюз сесій → A-05 → A-06] → A-03b (K1) → A-03c (гейт) → A-20 → A-20b → A-20c (єдиний гейт концепції) → A-21 (зразок → повний обсяг → гейт) → A-21c (гейт) → A-23 → A-07`; наскрізний C-08R. Джерело — `plugins/flow-core/references/flow-map.md`.
+`A-01 → A-02 (гейт) → A-02b (анкета власника) → A-03 ∥ A-04 → [шлюз сесій → A-05 → A-06] → A-03b → A-03c → A-20 → A-20b → A-20c (єдиний гейт концепції) → A-21 (зразок → повний обсяг → гейт) → A-21c (гейт) → A-23 → A-07`; наскрізний C-08R. Джерело — `plugins/flow-core/references/flow-map.md`.
 
-**Рішення людини в новому порядку:** гейт A-02 (галузь); заповнення анкети A-02b (≤20 хв); відповіді на K1 в A-03b (не кнопка); сесія з власником і гейт A-03c («беремо / адаптуємо / ні»); гейт концепції A-20c; зразок і гейт A-21; гейт A-21c; A-07. Роль **контент-менеджера** — виконавець A-21c (`executor: any`, профіль `content`). Рядки в `flow/decisions.md` від імені власника вносить AI лише за його повідомленням, з позначкою й посиланням (`flow-state-keeper`, режим `decisions-batch`).
+**Рішення людини в новому порядку:** гейт A-02 (галузь); заповнення анкети A-02b (6 пунктів, ≤5 хв); гейт концепції A-20c (список «що вирішив AI і з яким ризиком», вето лише за незгоди); зразок і гейт A-21; гейт A-21c; A-07. Роль **контент-менеджера** — виконавець A-21c (`executor: any`, профіль `content`). Рядки в `flow/decisions.md` від імені власника вносить AI лише за його повідомленням, з позначкою й посиланням (`flow-state-keeper`, режим `decisions-batch`).
 
 **Редакції:** ядро — Odoo 19 CE; Enterprise — окремі мости `td_*_ee`; CI й перевірки на CE і EE (`ODOO_EDITION=ce|ee`). Без доступу до EE EE-перевірки — WARN/«не перевірено».
 
@@ -92,4 +92,4 @@ Yaml-специфікації автоперевірки (`flow-autocheck/refere
 - Доступ до EE (ліцензія/база) для CI й перевірки тверджень; без нього EE-вердикти «не перевірено», EE-job — WARN.
 - Дозвіл середовища на push `research/sources/` (`internal-raw`) — хто й де фіксує (C-00).
 - Хто публікує Artifact (A-20c) у бойовому флоу: runner від технічного користувача чи людина; де зберігається URL поза репо.
-- Рішення плану К-20…К-25 (місце шаблону анкети, автор OWNER-BRIEF, профілі `research-internal`/`content`, без `fidelity: mock`, реєстр уроків `flow/lessons/`, версії 0.2.0) — підтвердити або змінити.
+- Рішення плану К-20…К-25 (місце шаблону анкети, профілі `research-internal`/`content`, без `fidelity: mock`, реєстр уроків `flow/lessons/`, версії 0.2.0) — підтвердити або змінити.

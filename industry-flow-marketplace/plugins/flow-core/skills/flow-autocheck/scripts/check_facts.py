@@ -2,10 +2,10 @@
 """Автоперевірка чисел проти єдиного джерела (FACT-*). stdlib. Вивід: JSON [{id,status,msg}]; код виходу 1, якщо є FAIL.
 Використання: check_facts.py <facts.yaml|facts.json> <файли або теки…>
 Число в тексті, що походить із фактів, позначають одним із способів (інакше воно не перевіряється):
-  md/txt/csv:  12 000 грн <!--fact:pricing.ce_entry-->        (число — останнє перед маркером у рядку; «тис.», «млн», «%» враховуються)
-  html:        <span data-fact="pricing.ce_entry">12 000 грн</span>
-  yaml/json:   рядок із ключом і коментарем  # fact:pricing.ce_entry
-Угода про маркери (обов'язкова для файлів, що несуть числа з facts: OWNER-BRIEF, BOX, SALES, owner-page, SHOW, captions): див. references/checks.md, «Маркери фактів».
+  md/txt/csv:  12 000 грн <!--fact:market.companies-->        (число — останнє перед маркером у рядку; «тис.», «млн», «%» враховуються)
+  html:        <span data-fact="market.companies">12 000 грн</span>
+  yaml/json:   рядок із ключом і коментарем  # fact:market.companies
+Угода про маркери (обов'язкова для файлів, що несуть числа з facts: BOX, SALES, concept/features.md, owner-page, SHOW, captions): див. references/checks.md, «Маркери фактів».
 --require-markers: рядки з грошовими сумами (грн, $, €) без маркера — WARN FACT-unmarked із файл:рядок (понад 5 — FAIL); кожен перевірений файл із числами з одиницями (грн, %, год, $, €, млн, тис., шт) мусить мати ≥1 маркер, інакше FACT-markers FAIL.
 Без прапорця: FAIL, коли у всіх файлах разом 0 маркерів, а числа з одиницями є (числа не звірено); 0 маркерів і чисел немає — WARN.
 Шлях — точковий ключ у facts (market.bands.0.companies; для facts.json — так само).

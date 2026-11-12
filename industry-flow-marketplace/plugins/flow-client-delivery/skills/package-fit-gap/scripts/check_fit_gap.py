@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Автоперевірка B-02 (package-fit-gap). Запуск: python3 -I check_fit_gap.py --client <к> --tag package/vX.Y
-[--base <sha>] [--repo .] [--forbidden <файл>] [--business-case <шлях>]. Лише stdlib. Вихід: JSON [{id,status,msg}], код 1 при FAIL.
+[--base <sha>] [--repo .] [--forbidden <файл>] [--business-case <шлях>, ігнорується] [--intake <шлях>, ігнорується]. Лише stdlib. Вихід: JSON [{id,status,msg}], код 1 при FAIL.
 Значення збігів PII у вихід не пишуться (тип:файл:рядок). Перевірки, які неможливо автоматизувати, = MANUAL."""
 import argparse, json, re, subprocess, sys
 
@@ -50,10 +50,10 @@ def main():
     ap.add_argument("--client", required=True)
     ap.add_argument("--tag", required=True)
     ap.add_argument("--base", required=True, help="git.base з наряду (SHA)")
-    ap.add_argument("--business-case", help="шлях до business-case.md (від кореня репо) для FG-threshold")
+    ap.add_argument("--business-case", help="застарілий аргумент 0.2.0: приймається й ігнорується (порогу відповідності пакету немає)")
     ap.add_argument("--repo", default=".")
     ap.add_argument("--check-rejected", help="шлях до flow-core/skills/flow-autocheck/scripts/check_rejected.py (типово — сусідній плагін)")
-    ap.add_argument("--intake", help="шлях до OWNER-INTAKE.md (do_not_reject) для REJ-dnr у FG-rejected")
+    ap.add_argument("--intake", help="застарілий аргумент 0.2.0: приймається й ігнорується")
     ap.add_argument("--forbidden", help="файл зі забороненими рядками (назва юрособи, ЄДРПОУ), по одному в рядку")
     a = ap.parse_args()
     res = []
@@ -196,26 +196,6 @@ def main():
         if yv and len(r2) < len(yv):
             msg.append(f"«уточнити» з коментарем «дефект»: {len(yv)}, рядків у «Запити в D-02»: {len(r2)}")
     add("FG-d02", "FAIL" if msg else "MANUAL", "; ".join(msg) if msg else "зіставлення «уточнити» без коментаря «дефект» з FG-D02 — вручну")
-    # FG-threshold
-    cnt = {c: sum(1 for r in reqs if r[ic].lower() == c) for c in CLASSES} if ic is not None else {}
-    sec_m = section(fg, "Відповідність пакету") or ""
-    sm = re.search(r"(?i)SHA[:\s]*([0-9a-f]{7,40})", sec_m)
-    if not sm:
-        add("FG-threshold", "FAIL", "немає SHA business-case")
-    elif not a.business_case:
-        add("FG-threshold", "MANUAL", f"SHA є; --business-case не задано; перерахунок: {cnt}")
-    else:
-        rcb, sha = sh(["git", "log", "-1", "--format=%H", "--", a.business_case], a.repo)
-        sha = sha.strip()
-        bc = ""
-        try: bc = open(f"{a.repo}/{a.business_case}", encoding="utf-8").read()
-        except OSError: pass
-        thr = re.findall(r"\d+(?:[.,]\d+)?\s*%", section(bc, "Поріг відповідності пакету") or "")
-        errs = []
-        if not sha or not sha.startswith(sm.group(1).lower()): errs.append("SHA не збігається з git log business-case")
-        if not thr: errs.append("у business-case немає числа порогу")
-        elif not any(t.replace(" ", "") in sec_m.replace(" ", "") for t in thr): errs.append("число порогу з business-case не знайдено в розділі")
-        add("FG-threshold", "FAIL" if errs else "MANUAL", "; ".join(errs) if errs else f"SHA і поріг збігаються; частки з таблиці ({cnt}) — звірити вручну")
     # FG-pii
     forb = []
     if a.forbidden:
@@ -247,7 +227,7 @@ def main():
         if not os.path.exists(scr):
             add("FG-rejected", "FAIL" if bad else "SKIP", "; ".join(bad) or "check_rejected.py не знайдено (--check-rejected)")
         else:
-            cmd = [sys.executable, "-I", scr, f"{a.repo}/{base}/fit-gap.md"] + (["--intake", a.intake] if a.intake else [])
+            cmd = [sys.executable, "-I", scr, f"{a.repo}/{base}/fit-gap.md"]
             pr = subprocess.run(cmd, capture_output=True, text=True)
             try:
                 bad += [f"{c['id']}: {c.get('msg', '')}" for c in json.loads(pr.stdout) if c["status"] == "FAIL"]

@@ -5,7 +5,7 @@
   utm FILE...        кожне посилання на лендинг (`https://{landing_url}/...`) має utm_campaign, utm_content; з #F-xx -- ще utm_term
   honesty FILE...    фрази з references/forbidden-claims.md (рядки з запереченням пропускаються); потрібні «Прототип» і «пілот з»
   complexity --complexity complexity.md --landing landing.md   F-xx «код/складно» -> «у плані пілоту»
-  risks --features features.md --plan risk-plan.md   кожна F-xx зі статусом owner-decision / «ризик:» має рядок плану перевірки (N-12) з експериментом, порогом і «якщо не підтвердиться»
+  risks --features features.md --plan risk-plan.md [--decisions AI-DECISIONS.md]   кожна AI-NN зі статусом «прийнято» і «A-23» у колонці «Перевірка» має рядок плану (колонка «F-xx / AI-NN»); кожна F-xx зі статусом «вето власника» / «ризик:» має рядок плану перевірки (N-12) з експериментом, порогом і «якщо не підтвердиться»
   exp --plan risk-plan.md --landing landing.md        експерименти плану (fake-door / pack / price) мають блок у лендингу; тест ціни — лише з позначкою «гіпотеза, не пропозиція»
   materials --proto prototype-real [--intake OWNER-INTAKE.md] [--landing landing.md] [--plan mailing-plan.md] [--emails emails.md]   без --landing/--plan/--emails: лише «видано A-21c» (передперевірка); з ними — ще й використані (SHOW у emails.md або mailing-plan.md)
   raw FILE...        посилання на research/sources/ (internal-raw) у файлах скіла заборонені
@@ -144,7 +144,7 @@ def table(path, header_key):
 def risks(a):
     feats = open(a.features, encoding="utf-8").read().splitlines(); need = {}
     for ln in feats:
-        if ln.lstrip().startswith("|") and re.search(r"owner-decision|ризик:", ln):
+        if ln.lstrip().startswith("|") and re.search(r"вето власника|ризик:", ln):
             m = FX.search(ln)
             if m: need[m.group(0)] = 1
     cols, rows = table(a.plan, "Експеримент"); rc = 0
@@ -162,7 +162,20 @@ def risks(a):
             if not r[i] or r[i] in ("—", "-", "TODO", "?"): print(f"risks:row-{n}-no-{name}"); rc = 1
     for x in sorted(need):
         if x not in covered: print(f"risks:{x}-not-in-plan"); rc = 1
-    if not need: print("risks-info: у features.md немає позицій owner-decision / «ризик:» — перевір SALES §4/§7 вручну")
+    if getattr(a, "decisions", None):
+        dcols, drows = table(a.decisions, "Рішення AI")
+        iS = next((i for i, c in enumerate(dcols) if "Статус" in c), None)
+        iV = next((i for i, c in enumerate(dcols) if "Перевірка" in c), None)
+        iI = next((i for i, c in enumerate(dcols) if c.strip() == "ID"), 0)
+        if iS is None or iV is None: print("risks:decisions-header (потрібні колонки ID, Перевірка, Статус)"); rc = 1
+        else:
+            plan_ai = set()
+            for r in rows:
+                if len(r) > iF: plan_ai |= set(re.findall(r"\bAI-\d{2}\b", r[iF]))
+            for r in drows:
+                if len(r) <= max(iS, iV, iI) or not re.fullmatch(r"AI-\d{2}", r[iI]): continue
+                if "прийнято" in r[iS].lower() and "A-23" in r[iV] and r[iI] not in plan_ai: print(f"risks:{r[iI]}-not-in-plan"); rc = 1
+    if not need: print("risks-info: у features.md немає позицій «вето власника» / «ризик:» — перевір SALES §4/§7 вручну")
     return rc
 
 def exp(a):
@@ -226,12 +239,15 @@ def rejected(a):
     t = open(a.results, encoding="utf-8").read(); m = re.search(r"(?ms)^##\s+Відкинуто\s*$(.*?)(?=^##\s|\Z)", t)
     if not m: print("rejected:no-section"); return 1
     rows = [cells(ln) for ln in m.group(1).splitlines() if ln.lstrip().startswith("|")]
-    rows = [r for r in rows if not all(set(x) <= set("-: ") for x in r)][1:]; rc = 0
+    rows = [r for r in rows if not all(set(x) <= set("-: ") for x in r)]
+    hdr = [c.lower() for c in rows[0]] if rows else []; rows = rows[1:]; rc = 0
+    # короткий формат 0.3.0: ID · що не робимо · чому [· коли повернутись]; старі 8-колонкові таблиці проходять (колонки за назвами)
+    iw = next((i for i, h in enumerate(hdr) if re.search(r"що|назва", h)), 1)
+    iy = next((i for i, h in enumerate(hdr) if re.search(r"чому|причина", h)), 2)
     for n, r in enumerate(rows, 1):
-        if len(r) < 8: print(f"rejected:row-{n}-cols"); rc = 1; continue
+        if len(r) < 3: print(f"rejected:row-{n}-cols"); rc = 1; continue
         if not re.fullmatch(r"REJ-\d{3}", r[0]): print(f"rejected:row-{n}-id"); rc = 1
-        if r[2] not in ("G1", "G2", "G3", "G4", "G4\u0430"): print(f"rejected:row-{n}-group"); rc = 1
-        if not r[4]: print(f"rejected:row-{n}-proof"); rc = 1
+        if len(r) <= iy or not r[iy].strip(" —-"): print(f"rejected:row-{n}-why"); rc = 1
     if a.plan:
         ids = sorted({x for ln in open(a.plan, encoding="utf-8") if ln.lstrip().startswith("|") for x in FX.findall(cells(ln)[0] if cells(ln) else "")})
         sec = re.search(r"(?ms)^##\s+Перевірка ризиків\s*$(.*?)(?=^##\s|\Z)", t)
@@ -244,9 +260,9 @@ def rejected(a):
                 cs = cells(ln); verdict = cs[-1] if cs else ""; fact = cs[-2] if len(cs) >= 3 else ""
                 if not re.search(r"підтверджено|підтвердилось", verdict, re.I): print(f"rejected:risk-{x}-no-verdict"); rc = 1; continue
                 if not fact.strip(" —-"): print(f"rejected:risk-{x}-no-fact"); rc = 1; continue
-                if re.search(r"не підтверджено|не підтвердилось", ln, re.I) and not any(x in r[1] or x in " ".join(r) for r in rows): print(f"rejected:risk-{x}-unconfirmed-not-in-rejected"); rc = 1
+                if re.search(r"не підтверджено|не підтвердилось", ln, re.I) and not any(x in " ".join(r) for r in rows): print(f"rejected:risk-{x}-unconfirmed-not-in-rejected"); rc = 1
     for v in [x.strip() for x in (a.fail_variants or "").split(",") if x.strip()]:
-        if not any(re.search(rf"варіант\s+{re.escape(v)}\b", r[1]) for r in rows if len(r) > 1): print(f"rejected:variant-{v}-missing"); rc = 1
+        if not any(re.search(rf"варіант\s+{re.escape(v)}\b", r[iw]) for r in rows if len(r) > iw): print(f"rejected:variant-{v}-missing"); rc = 1
     return rc
 
 def experiments(a):
@@ -271,7 +287,7 @@ def experiments(a):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cmd"); ap.add_argument("files", nargs="*")
-    for k in ("signals", "calls", "list", "features", "start", "end", "complexity", "landing", "plan", "emails", "proto", "intake", "results", "fail-variants"): ap.add_argument("--" + k)
+    for k in ("signals", "calls", "list", "features", "start", "end", "complexity", "landing", "plan", "emails", "proto", "intake", "results", "fail-variants", "decisions"): ap.add_argument("--" + k)
     ap.add_argument("--hot", type=int, default=3); ap.add_argument("--json", action="store_true"); a = ap.parse_args(); rc = 0
     if a.json and a.cmd != "aggregate" and a.cmd != "experiments":
         import io, contextlib

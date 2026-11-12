@@ -2,7 +2,7 @@
 """Автоперевірки clients/<к>/sow.md (B-03). Вихід: JSON [{id, status, msg}]. Лише stdlib.
 Без потрібного аргумента перевірка -> SKIP (не PASS). Значень ПДн у msg немає.
 Використання: check_sow.py <sow.md> --mode main|addendum --tag <тег> [--fit-gap f] [--answers f] [--data-policy f]
-  [--business-case f] [--reference-clients f] [--base <sha>] [--source tr|scope|answers|changelog] [--tr f]
+  [--business-case f (необов'язковий з 0.3.0)] [--sales SALES.md (умови пілоту з §5, якщо business-case немає)] [--reference-clients f] [--base <sha>] [--source tr|scope|answers|changelog] [--tr f]
   [--first-run|--rerun] [--repo dir]"""
 import argparse, json, re, subprocess
 from pathlib import Path
@@ -113,7 +113,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("sow"); ap.add_argument("--mode", required=True, choices=["main", "addendum"])
     ap.add_argument("--tag"); ap.add_argument("--fit-gap"); ap.add_argument("--answers"); ap.add_argument("--data-policy")
-    ap.add_argument("--business-case"); ap.add_argument("--reference-clients"); ap.add_argument("--base")
+    ap.add_argument("--business-case"); ap.add_argument("--sales"); ap.add_argument("--reference-clients"); ap.add_argument("--base")
     ap.add_argument("--source"); ap.add_argument("--tr"); ap.add_argument("--repo")
     ap.add_argument("--first-run", action="store_true"); ap.add_argument("--rerun", action="store_true")
     a = ap.parse_args()
@@ -276,18 +276,21 @@ def main():
             "умови оновлення відсутні — відкрите питання (Керівник напряму/Юрист)" if (not upd or "відкрите питання" in upd.lower()) else "")
     else:
         add("SOW-update", "SKIP", "режим addendum")
-    bc, rc = read(a.business_case), read(a.reference_clients)
-    if main and bc is not None and rc is not None:
+    bc, rc, sl = read(a.business_case), read(a.reference_clients), read(a.sales)
+    if main and (bc is not None or sl is not None) and rc is not None:
         cid = (re.match(r"#\s*SOW:\s*(\S+)", sow) or [None, ""])[1]
         pilot = bool(cid) and re.search(re.escape(cid) + r"(?![\w-])", rc) is not None
-        sec = norm(top_sections(bc).get("Умови участі еталонних клієнтів у пілоті", ""))
+        if bc is not None:
+            sec = norm(top_sections(bc).get("Умови участі еталонних клієнтів у пілоті", ""))
+        else:  # 0.3.0: business-case немає — умови пілоту з SALES §5
+            sec = norm(next((v for k, v in top_sections(sl).items() if re.match(r"5\.?\s", k)), ""))
         have = norm(S.get("Умови пілота", "")) if "Умови пілота" in S else None
         if pilot:
-            add("SOW-pilot", "PASS" if have and sec and have == sec else "FAIL", "" if have and sec and have == sec else "умови пілота не дорівнюють business-case")
+            add("SOW-pilot", "PASS" if have and sec and have == sec else "FAIL", "" if have and sec and have == sec else "умови пілота не дорівнюють business-case / SALES §5")
         else:
             add("SOW-pilot", "FAIL" if have else "PASS", "розділ «Умови пілота» не має бути" if have else "")
     else:
-        add("SOW-pilot", "SKIP", "немає business-case/reference-clients чи режим addendum")
+        add("SOW-pilot", "SKIP", "немає business-case чи SALES/reference-clients або режим addendum")
 
     # SOW-sign
     sign = [l for k in ("Підписи",) for l in S.get(k, "").splitlines() if re.search(r"(Керівник напряму|Клієнт):", l)]

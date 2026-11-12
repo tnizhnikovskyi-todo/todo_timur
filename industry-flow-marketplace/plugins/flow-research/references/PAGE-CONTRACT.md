@@ -21,5 +21,5 @@
 - Логотип — `data:`-URI у кожній сторінці. Зовнішніх картинок і `img/` немає (картинки з екранів — лише якщо їх дав крок A-21; для A-20c — без них).
 - Кожна сторінка ≤ 60 KB шаблону (після наповнення — ліміт публікації 16 MB, але сторінка має відкриватись без затримки).
 - Копія всіх трьох файлів — у репо: `docs/industries/<галузь>/research/owner-page/`. Після публікації скіл пише `research/owner-page/PUBLISHED.md`: URL Artifact, дата, SHA комітів, список сторінок.
-- Рішення власника зі сторінки — тільки через «Скопіювати мої відповіді» → людина/AI вносить рядки в `flow/decisions.md` (колонки — `flow-core/references/flow-state.md` §3; для AI — режим `decisions-batch` із посиланням на повідомлення власника).
-- Перевірка: `check_owner_page.py` (OP-pages, OP-nav, OP-anchors, OP-contract, OP-target) + Playwright на 390 і 1280 px: `document.documentElement.scrollWidth <= clientWidth`.
+- Сторінка без грошового блоку (окупність, TCO, «вердикт про гроші» — заборонені; `check_owner_page.py` OP-money). Вето власника — лише через «Скопіювати мої заперечення» (готові рядки `AI-NN: не згоден — <що замість>` лише для відмічених рядків блоку «Що вирішив AI і з яким ризиком») → людина/AI вносить їх у `flow/decisions.md` (колонки — `flow-core/references/flow-state.md` §3; для AI — режим `veto-batch` із посиланням на повідомлення власника).
+- Перевірка: `check_owner_page.py` (OP-pages, OP-nav, OP-anchors, OP-contract, OP-money, OP-target) + Playwright на 390 і 1280 px: `document.documentElement.scrollWidth <= clientWidth`.

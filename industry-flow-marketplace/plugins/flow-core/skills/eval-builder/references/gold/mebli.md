@@ -17,12 +17,12 @@ SHA еталонів: відкрите питання (`references/open-question
 | 11, 15 | `mebli-r11-md-not-page`, `mebli-r15-three-pages` | concept-presentation | 08 | відкрите питання (до `init`) |
 | 13 | `mebli-r13-no-rejected-register` | industry-deep-dive, concept-presentation | 06, 08 | відкрите питання (до `init`) |
 | 14 | `mebli-r14-competitor-names-only` | industry-deep-dive | 06 | відкрите питання (до `init`) |
-| 16, 24 | `mebli-r16-editions-asked-late`, `mebli-r24-owner-questions-after-synthesis` | owner-questionnaire | 05 | відкрите питання (до `init`) |
+| 16, 24 | `mebli-r16-editions-asked-late`, `mebli-r24-owner-questions-after-synthesis` | owner-questionnaire | 05 | відкрите питання (до `init`); r24 застаріло в 0.3.0: питань власнику після синтезу немає, лише вето на A-20c |
 | 19 | `mebli-r19-internal-raw-push` | past-projects-analyzer (+ preflight) | 05 | відкрите питання (до `init`) |
 | 20 | `mebli-r20-no-reuse-block` | reuse-modules | 05 | відкрите питання (до `init`) |
 | 21 | `mebli-r21-incomplete-concept` | completeness-audit | 07 | відкрите питання (до `init`) |
 | 22 | `mebli-r22-ee-claim-unverified` | industry-deep-dive | 06 | відкрите питання (до `init`) |
-| 23 | `mebli-r23-owner-returned-rejected` | industry-deep-dive (K1), concept-mapper | 06, 07 | відкрите питання (до `init`) |
+| 23 | `mebli-r23-owner-returned-rejected` | industry-deep-dive, concept-mapper | 06, 07 | відкрите питання (до `init`); застаріло в 0.3.0: K1 і «правило доказів» скасовано (LESSONS §24), кейс лишається як історичний |
 | С-01 | `mebli-c01-ai-recommends-against-intake` | concept-mapper | 07 | відкрите питання (до `init`) |
 У цьому плагіні (WP-11) власні кейси r09 і r17 живуть в `skill-retro/evals` і `flow-step-runner/evals`; решту кейсів ведуть власники своїх скілів у WP 05–10 (`evals/evals.json` скіла). `eval-builder` лише веде цей індекс, перевіряє наявність кейсів за `id` (`init-complete`) і прогоняє регрес.
 

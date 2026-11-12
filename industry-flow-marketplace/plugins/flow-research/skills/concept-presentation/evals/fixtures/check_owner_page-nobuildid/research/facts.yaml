@@ -1,5 +1,6 @@
 # facts.yaml (фікстура): єдине джерело чисел
 meta:
   industry: "mebli"
-pricing:
-  ce_entry: 12000
+market:
+  snapshot_date: "2026-08-01"
+  companies: 1200
