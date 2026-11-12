@@ -19,7 +19,7 @@
    "id": "human-scenarios",
    "prim": "manual",
    "args": {
-    "text": "сценарій зйомки = SALES §6, дані калібровані, дашборд із drill-down (Власник продукту); моделі td_*, без x_/Studio, редакція = demo_edition (Архітектор)",
+    "text": "сценарій зйомки = SALES §6, дані калібровані, дашборд із drill-down (Власник продукту); моделі td_*, без x_/Studio, редакція = demo_edition; модель даних без паралельного обліку стандартних даних: нові _name та поля _inherit проти стандарту, на зразку перед waiting_human (Архітектор)",
     "who": "Власник продукту; Архітектор"
    }
   },
@@ -44,6 +44,22 @@
      "docs/industries/<галузь>/prototype-real/shoot/dom",
      "--lang",
      "uk"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "script-check-data-model",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/prototype-builder/scripts/check_data_model.py package/addons --plan docs/industries/<галузь>/prototype-real/PLAN.md: DM-table без FAIL (кожна td_-модель і нове поле в _inherit є в таблиці «Модель даних» PLAN.md зі «Стандартний аналог»/«Чому не стандарт»); DM-dup WARN (td_-модель партнер/товар + дата + документ продажу/виробництва/складу, або ручне поле без compute/related на sale.order*/mrp.production/mrp.workorder/mrp.bom/stock.picking/stock.move) → письмове рішення Архітектора у checks[]/memo (стандартний об'єкт-джерело або обґрунтування); без рішення — FAIL (урок §23: паралельний облік замість стандарту). Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[].",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/prototype-builder/scripts/check_data_model.py",
+     "package/addons",
+     "--plan",
+     "docs/industries/<галузь>/prototype-real/PLAN.md"
     ],
     "who": "runner"
    }

@@ -2,7 +2,7 @@
   "name": "flow-core",
   "description": "Ядро флоу: цикл AI-кроку (черга Odoo, наряд, звіт, PR), оркестратор, стан і журнал, автоперевірка артефактів, CI та евали. Містить спільні конвенції пакета.",
   "icon": "./.claude-plugin/icon.png",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "tnizhnikovskyi-todo"
   },

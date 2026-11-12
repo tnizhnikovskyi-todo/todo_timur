@@ -192,6 +192,46 @@
         "fixture_hours": "evals/fixtures/check_ui_text-zero-hours/dom",
         "script": "scripts/check_ui_text.py"
       }
+    },
+    {
+      "id": "check-data-model",
+      "prompt": "Наряд A-21. Модулі зрізу містять td_-моделі й поля _inherit; перевір модель даних проти PLAN.md.",
+      "expected_output": "check_data_model.py на фікстурі ok дає DM-table PASS і DM-dup PASS (код 0); на bad — DM-table FAIL (код 1): td_-модель без рядка (td.mebli.order не покривається рядком td.mebli.order.item — збіг точний), «Чому не стандарт» = «борг для A-11» не причина, поля _inherit без рядків; DM-table FAIL також для моделі поза td. (mebli.order.item) і «зробимо пізніше» в колонці аналога (stock.picking.td_carrier_date); DM-dup WARN для td.mebli.order.item (Many2one на sale.order.line) і для ручних sale.order.td_vendor_id/td_vendor_date, stock.picking.td_carrier_date. Порожній addons_dir — FAIL. Скрипт не змінюється.",
+      "assertions": [
+        "ok: код 0, DM-table PASS, DM-dup PASS",
+        "ok: «ToDo-готовий» у «Чому не стандарт» (td.mebli.catalog) — не борг, DM-table PASS",
+        "bad: код 1, DM-table FAIL",
+        "bad: td.mebli.order без власного рядка — FAIL (не покрито рядком td.mebli.order.item)",
+        "bad: «борг для A-11» у «Чому не стандарт» — FAIL",
+        "bad: DM-dup WARN для td.mebli.order.item і sale.order.td_vendor_id/td_vendor_date",
+        "порожній addons_dir — FAIL, а не PASS",
+        "шаблонні скрипти не змінено"
+      ],
+      "input": {
+        "fixture": "evals/fixtures/check_data_model-ok",
+        "fixture_bad": "evals/fixtures/check_data_model-bad",
+        "script": "scripts/check_data_model.py"
+      }
+    },
+    {
+      "id": "NG-01-standard-first",
+      "prompt": "Наряд A-21, зразок. Функція NG-01: прогнозна дата готовності замовлення із замовними позиціями (постачальник і дата поставки). Спроєктуй модель даних зрізу.",
+      "expected_output": "План спирається на стандарт: маршрут MTO + «Купити» -> purchase.order (date_planned), смарт-кнопка «Закупівлі» з sale_purchase; постачальника й дату вводять у Закупівлях. td_ лише читає й рахує прогнозну дату (compute/related через _inherit). Немає td_-моделі в замовленні на продаж з ручним постачальником і датою; таблиця «Модель даних» PLAN.md має аналог (файл:рядок) для кожного поля; check_data_model.py без FAIL; перед прийманням зразка — рецензія Архітектора моделі даних.",
+      "assertions": [
+        "MTO + «Купити» і purchase.order.date_planned названо з файл:рядок",
+        "немає td_-моделі з ручним постачальником/датою поставки",
+        "таблиця «Модель даних» заповнена, DM-table PASS",
+        "DM-dup не дає WARN на нових моделях або WARN пояснено",
+        "рецензія Архітектора моделі даних до приймання зразка",
+        "немає ручних td_-полів (постачальник/дата) на sale.order/sale.order.line; перед waiting_human — вердикт Архітектора в checks/memo"
+      ],
+      "input": {
+        "step": "A-21",
+        "params": {
+          "sample": true
+        },
+        "functional_map_row": "NG-01"
+      }
     }
   ]
 }

@@ -1,6 +1,6 @@
 # industry-flow
 
-Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md` (історична, до 2026-11-10; чинні — `_work/DECISIONS_2026-11-10.md` і `plugins/flow-core/references/`). Версія 0.2.0: 36 скілів у 5 плагінах (7 нових: `owner-questionnaire`, `industry-deep-dive`, `reuse-modules`, `completeness-audit`, `concept-presentation`, `showcase-content`, `skill-retro`). Основа змін — уроки реального зрізу «меблі» (`_work/LESSONS-A21-real.md`, план — `_work/IMPLEMENTATION-PLAN.md`).
+Маркетплейс Claude Code зі скілами для флоу створення тиражованих галузевих пакетів на Odoo 19 («AI робить, людина вирішує й перевіряє»). Концепція — `_work/CONCEPT.md` (історична, до 2026-11-10; чинні — `_work/DECISIONS_2026-11-10.md` і `plugins/flow-core/references/`). Версія 0.2.1 (урок §23: зворотна перевірка стандарту в A-21, `check_data_model.py`; 0.2.0 — 36 скілів у 5 плагінах (7 нових: `owner-questionnaire`, `industry-deep-dive`, `reuse-modules`, `completeness-audit`, `concept-presentation`, `showcase-content`, `skill-retro`)). Основа змін — уроки реального зрізу «меблі» (`_work/LESSONS-A21-real.md`, план — `_work/IMPLEMENTATION-PLAN.md`).
 
 ## Плагіни
 
