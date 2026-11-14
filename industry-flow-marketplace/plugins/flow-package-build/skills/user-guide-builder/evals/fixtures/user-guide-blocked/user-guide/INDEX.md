@@ -8,3 +8,10 @@ SHA стенда: a1b2c3d4e5f60718293a4b5c6d7e8f9012345678
 | SC-01 | komirnyk.md |
 | SC-02 | master.md |
 | SC-03 | admin.md |
+
+## Ролі
+| Роль | Файл |
+|---|---|
+| Комірник | komirnyk.md |
+| Майстер | master.md |
+| Адміністратор | admin.md |

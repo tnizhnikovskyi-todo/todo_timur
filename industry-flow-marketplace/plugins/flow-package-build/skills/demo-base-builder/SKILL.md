@@ -56,7 +56,7 @@ description: >
 3. `list_odoo_connections` → звірка з `odoo_connections`; клас бази `demo`; інакше відмова (див. вище).
 4. A-15: `SHA_STAND` = `git rev-parse HEAD` (= `git.head` наряду) — фіксується один раз і не змінюється. Перевірити правило SHA:
    `SHA_STAND` == SHA з `package/CHECKS.md` (мітка — `id-patterns.md`) або нащадок (`merge-base --is-ancestor`), а
-   `git diff --stat <SHA CHECKS.md>..HEAD` лише `package/CHECKS.md`, `package/demo/`. Підсумок `CHECKS.md` ∉ {`APPROVE`, `APPROVE (CE); EE не перевірено`} → стоп; у другому випадку стенд `ee` не піднімати й не видавати за перевірений (README: «не перевірено»). Редакції — `editions` з `docs/industries/<галузь>/OWNER-INTAKE.md` (SHA у `Входи` наряду). Порушення правила SHA (зайві файли в diff) → `result: stopped`, перелік зайвих файлів у `memo`.
+   `git diff --stat <SHA CHECKS.md>..HEAD` лише `package/CHECKS.md`, `package/demo/**`, `package/ACCEPTANCE.md`, `package/docs/user-guide/**`, AI-DECISIONS, `flow/**`, `tests/**`, `observations/` (як `diff-checks-acc` A-17); модулі/конфіг/майстер-дані без змін. Підсумок `CHECKS.md` ∉ {`APPROVE`, `APPROVE (CE); EE не перевірено`} → стоп; у другому випадку стенд `ee` не піднімати й не видавати за перевірений (README: «не перевірено»). Редакції — `editions` з `docs/industries/<галузь>/OWNER-INTAKE.md` (SHA у `Входи` наряду). Порушення правила SHA (зайві файли в diff) → `result: stopped`, перелік зайвих файлів у `memo`.
    Шаблон README: немає `package/templates/demo-README.md` → скопіювати `${CLAUDE_PLUGIN_ROOT}/references/demo-readme-template.md` (корінь встановленого плагіна; поруч зі скілом — `../../references/`).
 
 ## Режим A-15 «стенд пакета» (кроки 1–12)
@@ -104,7 +104,7 @@ description: >
 | `answers-schema`, `profiles-coverage` | кожна VP-xx має ключ і допустиме значення; кожне значення покрите; кожен профіль встановився | — |
 | `reset` | після зміни запису `reset.sh` повертає початковий стан. Немає `snapshot.sh`/`restore.sh` у `tools/odoo/` — `reset.sh` = повний `up.sh`, перевірка тією ж дією, у `memo` питання Тімліду; власних pg_dump не писати | контракт скидання описано, підкрок Тімліда в `memo` |
 | `ED-edition` | кожна редакція з `editions` має `up.sh`/`reset.sh` з параметром `edition`, ключ `edition` в `answers.yaml`, рядок у README «Редакції стенда» (SHA, статус); `ee` без EE = `не перевірено` (WARN, не PASS); ядро `td_*` без EE-залежностей | `demo_edition` бази зрізу = редакція з анкети |
-| `sha-rule` | SHA README = SHA CHECKS.md або нащадок; diff лише `package/CHECKS.md`, `package/demo/` | — |
+| `sha-rule` | SHA README = SHA CHECKS.md або нащадок; diff лише з переліку `diff-checks-acc` A-17 (CHECKS.md, `package/demo/**`, ACCEPTANCE.md, user-guide, AI-DECISIONS, `flow/**`, `tests/**`, `observations/`) | — |
 | `synthetic-data` | `references/demo-data-rules.md` § grep: e-mail лише `example.com`, телефони лише в колонках phone/mobile поза дозволеним діапазоном, збігів з реальними назвами немає | те саме |
 | `no-x` | — | немає `x_`-моделей/полів, Studio, `ir.actions.server` `state='code'`, `base.automation` поза модулями пакета |
 | `facts-match` | — | цифри бази = `prototype-real/facts.json` (`check_facts.py`) |

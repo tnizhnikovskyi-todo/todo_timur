@@ -6,7 +6,7 @@
 //   "roles": [ { "role": "<роль>", "login": "<демо-логін ролі>", "shots": [
 //     { "sc": "SC-01", "step": 2, "url": "/odoo/...", "actions": [ {"click": "<css>"}, {"fill": ["<css>", "<текст>"]}, {"wait": 500} ], "clip": "<css, необов'язково>" } ] } ] }
 // Адреси й селектори беруться з турів A-16 і SPEC; полів і меню Odoo 19 тут не вгадувати (перевірити на стенді). Пароль лише з env, у план не писати.
-// Вихід: <out>/<роль>/SC-NN-<крок>.png і рядки <out>/SHOOT-LOG.md (файл | SHA | дата | демо-користувач | стенд). Код 0 — усе знято, 1 — помилка.
+// Вихід: <out>/<роль>/SC-NN-<крок>.png і рядки <out>/SHOOT-LOG.md (файл | SHA | дата | демо-роль | стенд). Код 0 — усе знято, 1 — помилка.
 import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
@@ -34,6 +34,7 @@ for (const r of plan.roles) {
     await page.waitForLoadState('networkidle');
   } catch (e) { console.error('LOGIN-FAIL ' + r.role + ': ' + e.message.split('\n')[0]); failed++; await ctx.close(); continue; }
   for (const s of r.shots) {
+    plan.out = plan.out || 'package/docs/user-guide/img';
     const dir = path.join(plan.out, r.role); fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, `${s.sc}-${s.step}.png`);
     try {
@@ -47,14 +48,15 @@ for (const r of plan.roles) {
       }
       if (s.clip) await page.locator(s.clip).first().screenshot({ path: file });
       else await page.screenshot({ path: file });
-      rows.push(`| ${file.replace(/\\/g, '/')} | ${plan.sha} | ${new Date().toISOString().slice(0, 10)} | ${r.login} | ${plan.base} |`);
+      rows.push(`| ${file.replace(/\\/g, '/')} | ${plan.sha} | ${new Date().toISOString().slice(0, 10)} | ${r.role} | ${plan.base} |`);
       console.log('OK ' + file);
     } catch (e) { console.error('SHOT-FAIL ' + file + ': ' + e.message.split('\n')[0]); failed++; }
   }
   await ctx.close();
 }
 await browser.close();
+plan.out = plan.out || 'package/docs/user-guide/img';
 const log = path.join(plan.out, 'SHOOT-LOG.md');
-if (!fs.existsSync(log)) fs.writeFileSync(log, '# Журнал зйомки\n\n| Файл | SHA | Дата | Демо-користувач | Стенд |\n|---|---|---|---|---|\n');
+if (!fs.existsSync(log)) fs.writeFileSync(log, '# Журнал зйомки\n\n| Файл | SHA | Дата | Демо-роль | Стенд |\n|---|---|---|---|---|\n');
 fs.appendFileSync(log, rows.join('\n') + (rows.length ? '\n' : ''));
 process.exit(failed ? 1 : 0);

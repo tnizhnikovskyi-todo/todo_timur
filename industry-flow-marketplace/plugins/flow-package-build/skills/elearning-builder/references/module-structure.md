@@ -15,7 +15,7 @@ td_<галузь>_elearning/
 ```
 
 Правила:
-- Ім'я модуля — `td_<код галузі>_elearning` (код з пакета, напр. `td_mebli_elearning`); версія `19.0.X.Y` — за `package-release-builder/references/versioning.md` (R-03).
+- Ім'я модуля — `td_<код галузі>_elearning` (код з пакета, напр. `td_mebli_elearning`); версія модуля = `19.0.<X.Y інших td_* пакета>.0` (їхні маніфести однакові; не 1.0 за замовчуванням), далі за `package-release-builder/references/versioning.md` (R-03).
 - Маніфест: `license` як у решти `td_*` пакета (A-11), `depends` мінімальний; `data` — у порядку params -> курси.
 - Усі `id` записів — локальні (`course_<роль>`, `lesson_<роль>_<n>`, `test_<роль>`, `q_<роль>_<n>`, `a_<роль>_<n>_<m>`); посилання `ref` — на ці id.
 - Параметра `mode` у модулі немає: `elearning.mode: "off"` = модуль не збирається (крок A-17b не запускається).

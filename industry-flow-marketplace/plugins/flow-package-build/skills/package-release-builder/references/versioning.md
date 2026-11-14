@@ -31,10 +31,15 @@
 9. `package/addons/td_<галузь>_elearning/**` (A-17b; лише цей модуль у `package/addons/`; version = X.Y)
 10. `package/support/**` (A-17c; внутрішній, клієнту не передається)
 11. `package/templates/answers.yaml` — лише додавання блоку `elearning:` (`mode: "on"|"off"`, `pass_score`) кроком A-17b; перелік у «Зміни анкети» (R-08). Будь-яка інша зміна файлу — порушення R-02
-`package/docs/user-guide/` (A-16b) іде ДО A-17, тому в SHA ревізії вже є; зміна там після ACCEPTANCE — порушення R-02 (повтор A-16b -> A-17).
+12. `package/docs/user-guide/**` (A-16b: SHA ревізії = SHA_STAND з README стенда, а файли гайдів комітяться після нього, тож вони завжди в дозволеному списку; свіжість інструкцій перевіряє R-18, не R-02)
+13. `package/config/manifest.yaml` і `package/config/CONFIG.md` — лише рядки `website_slides` і `td_<галузь>_elearning` (A-17b, Крок 6)
+14. `docs/industries/<галузь>/research/AI-DECISIONS.md` (рядки AI-NN кроків A-16b/A-17b)
+15. `package/demo/defects.md`, `package/CHECKS.md`, `flow/**`, `tests/**` (журнал дефектів, зведення гейтів, рішення і звіти флоу)
+
+Єдиний список для R-02 і `diff-allowed-7` в `flow-autocheck/references/checks/A-18.yaml`; змінюється разом.
 
 `package/demo/release-defects.md` (дефект пакета) у R-02 не враховується: при `returned` PR не мерджиться. Файли 5-7 з'являються в гілці як нащадки ревізії стенда; вони не є порушенням. Будь-який інший файл
-(`package/addons/` крім td_<галузь>_elearning, `config/`, `master-data/`, `templates/answers.yaml` крім блоку `elearning:`, `questionnaire.md`, `SPEC.md`) — порушення R-02,
+(`package/addons/` крім td_<галузь>_elearning, `config/` крім рядків п. 13, `master-data/`, `templates/answers.yaml` крім блоку `elearning:`, `questionnaire.md`, `SPEC.md`) — порушення R-02,
 дефект пакета: «виправити на місці» заборонено.
 
 ## Ланцюг SHA (R-16)

@@ -1,6 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-18",
+ "extra_allowed": ["package/demo/release-defects.md", "tests/reports/"],
  "checks": [
   {
    "id": "tag-descendant",
@@ -21,7 +22,6 @@
    "args": {
     "from": "extract:head:package/ACCEPTANCE.md",
     "to": "head",
-    "compare_done": true,
     "allow": [
      "package/demo/README.md",
      "package/demo/scenarios.md",
@@ -37,7 +37,13 @@
      "package/config/manifest.yaml",
      "package/config/CONFIG.md",
      "package/support/**",
-     "docs/industries/*/research/AI-DECISIONS.md"
+     "docs/industries/*/research/AI-DECISIONS.md",
+     "package/demo/defects.md",
+     "package/CHECKS.md",
+     "package/metrics/key-models.yaml",
+     "package/demo/release-defects.md",
+     "flow/**",
+     "tests/**"
     ]
    }
   },
@@ -65,7 +71,7 @@
       "name": "CHANGELOG",
       "kind": "regex",
       "ref": "head:package/CHANGELOG.md",
-      "pattern": "(?im)^#+\\s*v?(\\d+\\.\\d+)\\b",
+      "pattern": "(?im)^#+\\s*(?:Версія\\s+)?(?:package/)?v?(\\d+\\.\\d+)\\b",
       "pick": "max"
      },
      {

@@ -1,6 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-17c",
+ "extra_allowed": ["tests/reports/"],
  "checks": [
   {
    "id": "support-exists",
@@ -20,6 +21,7 @@
     "to": "head",
     "allow": [
      "package/support/",
+     "tests/reports/",
      "observations/"
     ]
    }
@@ -42,7 +44,7 @@
    "id": "script-check-kb",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons: KB-module (кожен модуль td_* має сторінку), KB-ids (унікальні KB-NNN), KB-route (кожен сценарій діагностики має маршрут B-13/A-19/D-02), KB-privacy (без даних клієнтів). При elearning on (params.elearning; ключа немає = on) додати `--expect-module td_<галузь>_elearning` (модуль ще не злито з паралельним A-17b; без прапорця KB-module дасть FAIL «сторінка без модуля»); при off — без нього; R-19 на A-18 — без прапорця. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons: KB-module (кожен модуль td_* має сторінку), KB-ids (унікальні KB-NNN), KB-route (кожен сценарій діагностики має маршрут B-13/A-19/D-02), KB-support (§27: розділ про `td_support`; WARN, поки `td_support` немає в `package/addons`), KB-privacy (без даних клієнтів). При elearning on (params.elearning; ключа немає = on) додати `--expect-module td_<галузь>_elearning` (модуль ще не злито з паралельним A-17b; без прапорця KB-module дасть FAIL «сторінка без модуля»); при off — без нього; R-19 на A-18 — без прапорця. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
     "cmd": [
      "python3",
      "-I",

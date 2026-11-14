@@ -177,7 +177,7 @@
 - `skillRef`: flow-package-evolution:product-decision-drafter (AI-частина)
 - `inArtifacts`: package/{ACCEPTANCE.md, CHECKS.md, demo/, docs/user-guide/INDEX.md}
 - гейт: так: Затвердити -> A-17b ∥ A-17c; Повернути -> A-08 / A-14 (з повтором A-15 -> A-16 -> A-16b -> A-17) / D-03
-- **рядок картки й чек-листа: «власник тестує стенд за інструкціями A-16b»** — власник проходить сценарії своєї ролі за `package/docs/user-guide/<роль>.md`, фіксує зауваження в `package/demo/defects.md`, у `ACCEPTANCE.md` — «власник тестував: дата, SHA». Стенд — як є (адреса й спосіб — за відкритим рішенням про сервер, `_work/DEMO-SERVER.md`); окремого наряду немає
+- **рядок картки й чек-листа: «власник тестує стенд за інструкціями A-16b»** — власник проходить сценарії своєї ролі за `package/docs/user-guide/<роль>.md`, фіксує зауваження в `package/demo/defects.md`, у `ACCEPTANCE.md` — «власник тестував: дата, SHA». Стенд локальний (`package/demo/up.sh`); рішення про сервер відкрите; окремого наряду немає
 - примітки: сам стенд у карту не входить (відкрите рішення), лише точка «власник тестує»
 
 ### A-17b. Електронне навчання
@@ -202,7 +202,7 @@
 - перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
 - примітки: читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
-- ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора
+- ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27 (`td_home_menu`, `td_support`): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README
 
 ### A-18. Реліз (змінена картка 0.4.0)
 - `inArtifacts` додатково: package/docs/user-guide, package/addons/td_<галузь>_elearning, package/support

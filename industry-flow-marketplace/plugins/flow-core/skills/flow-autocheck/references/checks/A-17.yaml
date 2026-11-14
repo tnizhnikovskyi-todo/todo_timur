@@ -1,6 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-17",
+ "extra_allowed": ["tests/reports/"],
  "checks": [
   {
    "id": "user-guide-exists",
@@ -39,8 +40,13 @@
     "to": "extract:head:package/ACCEPTANCE.md",
     "allow": [
      "package/CHECKS.md",
+     "package/ACCEPTANCE.md",
      "package/demo/**",
      "package/docs/user-guide/**",
+     "package/demo/defects.md",
+     "docs/industries/*/research/AI-DECISIONS.md",
+     "flow/**",
+     "tests/**",
      "observations/"
     ]
    }
@@ -189,7 +195,7 @@
    "id": "owner-tests-stand",
    "prim": "manual",
    "args": {
-    "text": "Власник тестує стенд за інструкціями A-16b (INDEX.md): проходить сценарії своєї ролі, дефекти й зауваження фіксує в package/demo/defects.md; стенд — як є до рішення про сервер (DEMO-SERVER.md); запис «власник тестував: дата, SHA» у ACCEPTANCE.md",
+    "text": "Власник тестує стенд за інструкціями A-16b (INDEX.md): проходить сценарії своєї ролі, дефекти й зауваження фіксує в package/demo/defects.md; стенд локальний (`package/demo/up.sh`); рішення про сервер відкрите; запис «власник тестував: дата, SHA» у ACCEPTANCE.md",
     "who": "Власник продукту"
    }
   }

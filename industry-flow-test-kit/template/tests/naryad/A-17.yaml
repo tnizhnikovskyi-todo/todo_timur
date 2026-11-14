@@ -1,0 +1,29 @@
+# ТЕСТОВИЙ наряд A-17 (0.4.0): AI-частина product-decision-drafter: чернетка рішення прийняття (людську частину — власник — вносить AI рядком у flow/decisions.md за його повідомленням у чаті, E6)
+step: A-17
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["flow-package-evolution:product-decision-drafter@0.4.0"]
+model: sonnet
+effort: medium
+params: {mode: перша}
+inputs:
+  - {name: ACCEPTANCE.md, from: A-16b, path: package/ACCEPTANCE.md, sha: HEAD}
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+  - {name: README.md, from: A-15, path: package/demo/README.md, sha: HEAD}
+  - {name: scenarios.md, from: A-16, path: package/demo/scenarios.md, sha: HEAD}
+  - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
+  - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
+where: package/ACCEPTANCE.md
+template: "немає — форма за SKILL.md"
+done: "чернетка ACCEPTANCE.md із SHA стенда, чек-листом приймання і рядком «власник тестує стенд за інструкціями A-16b»; автоперевірка checks/A-17.yaml без FAIL"
+check: {mode: both, how: "flow-autocheck: checks/A-17.yaml + скрипти скіла", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-17-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

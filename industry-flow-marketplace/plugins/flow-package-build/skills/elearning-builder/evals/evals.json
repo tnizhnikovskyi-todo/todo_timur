@@ -58,7 +58,7 @@
     {
       "id": "elearning-off-and-params",
       "prompt": "Наряд A-17b. package/templates/answers.yaml: elearning.mode: \"off\", elearning.pass_score: 90. Що робити?",
-      "expected_output": "При off крок A-17b не запускається і модуль не збирається (dispatch-rules §4б); якщо наряд запущено вручну — модуль не збирати, waiting_human; рядок в AI-DECISIONS/memo. Для режиму on з pass_score 90 — параметр 90 у data/params.xml і check_elearning --answers дає EL-pass = PASS.",
+      "expected_output": "При off крок A-17b не запускається і модуль не збирається (dispatch-rules §4в); якщо наряд запущено вручну — модуль не збирати, waiting_human; рядок в AI-DECISIONS/memo. Для режиму on з pass_score 90 — параметр 90 у data/params.xml і check_elearning --answers дає EL-pass = PASS.",
       "assertions": [
         "При elearning.mode \"off\" модуль не збирається, файли модуля не створюються; результат waiting_human/пропуск, а не done з модулем",
         "Параметра mode в модулі немає; ключі elearning.* живуть у package/templates/answers.yaml і додаються цим кроком (запис у «Зміни анкети» R-08)",

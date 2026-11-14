@@ -1,0 +1,25 @@
+# ТЕСТОВИЙ наряд A-18 (збірка, 0.4.0): реліз пакета (phase: release, потім tag); AND-join A-17b і A-17c.
+step: A-18
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["flow-package-build:package-release-builder@0.4.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: ACCEPTANCE.md, from: A-17, path: package/ACCEPTANCE.md, sha: HEAD}
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+params: {mode: перша, phase: release, version: "<X.Y з ACCEPTANCE>"}
+where: package/CHANGELOG.md, package/templates/, package/metrics/key-models.yaml
+template: "industry-flow-marketplace/plugins/flow-package-build/skills/package-release-builder/references/changelog-template.md"
+done: "CHANGELOG, шаблони; R-01...R-20 без FAIL (R-20 — WARN, якщо §27 не злито й немає рядка AI-NN) (R-02 за versioning.md пп. 9-15)"
+check: {mode: both, how: "flow-autocheck: checks/A-18.yaml + скрипти скіла", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-18-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

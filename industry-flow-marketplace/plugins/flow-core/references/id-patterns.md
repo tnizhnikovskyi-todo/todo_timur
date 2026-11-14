@@ -4,7 +4,7 @@
 
 | Що | Regex (Python, `re`) | Де шукається |
 |---|---|---|
-| Мітка SHA | `(?i)\b(SHA\|commit)\b[:\s]*([0-9a-f]{7,40})` | `ACCEPTANCE.md`, `CHECKS.md`, README стенда (A-15), `scenarios.md` |
+| Мітка SHA | `(?i)\b(SHA\|commit)(?:\s+(?:стенда\|модулів\|пакета))?\b[:\s]*([0-9a-f]{7,40})` | `ACCEPTANCE.md`, `CHECKS.md`, README стенда (A-15), `scenarios.md` |
 | Тег версії | `^package/v\d+\.\d+(-odoo\d+)?$` | `git tag --list 'package/v*'` (суфікс `-odoo<N>` лише для тега переходу на нову мажорну Odoo, рішення q19; звичайний випуск -- без суфікса) |
 | Патч-тег | `^package/v\d+\.\d+\.\d+$` | hotfix A-19/A-18 |
 | Гілка переходу (q19) | `^upgrade/v\d+\.\d+-odoo\d+$` | `git branch -r --list 'origin/upgrade/*'` (гілка переходу `upgrade/vX.Y-odoo<N>`, рішення q19; тег переходу -- `package/vX.Y-odoo<N>`) |

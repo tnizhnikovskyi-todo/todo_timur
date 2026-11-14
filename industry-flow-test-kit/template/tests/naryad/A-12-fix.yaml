@@ -1,0 +1,25 @@
+# ТЕСТОВИЙ наряд A-12 (0.4.0): повернення з A-14 (режим fix): «Модулі до установки» з урахуванням модулів §27 (td_home_menu, td_support)
+step: A-12
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["flow-package-build:config-as-code@0.4.0"]
+model: sonnet
+effort: medium
+params: {mode: fix}
+inputs:
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+  - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: HEAD}
+where: package/config/
+template: "немає — форма за SKILL.md"
+done: "package/config/ оновлено: «Модулі до установки» містить td_home_menu і td_support у порядку залежностей; install-log.md"
+check: {mode: both, how: "flow-autocheck: checks/A-12.yaml + скрипти скіла", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-12-fix-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

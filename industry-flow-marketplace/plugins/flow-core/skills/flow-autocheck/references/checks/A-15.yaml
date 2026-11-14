@@ -1,6 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-15",
+ "extra_allowed": ["tests/reports/"],
  "checks": [
   {
    "id": "demo-readme",
@@ -20,6 +21,7 @@
     "allow": [
      "package/demo/",
      "package/templates/demo-README.md",
+     "docs/industries/*/research/AI-DECISIONS.md",
      "observations/"
     ]
    }
@@ -56,7 +58,7 @@
    "id": "sha-rule",
    "prim": "manual",
    "args": {
-    "text": "SHA у README = SHA package/CHECKS.md або його нащадок; diff лише package/CHECKS.md і package/demo/",
+    "text": "SHA у README = SHA package/CHECKS.md або його нащадок; diff CHECKS..HEAD лише в package/CHECKS.md, package/demo/**, package/ACCEPTANCE.md, package/docs/user-guide/**, AI-DECISIONS, flow/**, tests/**, observations/ (як diff-checks-acc A-17); модулі, конфіг і майстер-дані не змінені",
     "who": "runner"
    }
   },

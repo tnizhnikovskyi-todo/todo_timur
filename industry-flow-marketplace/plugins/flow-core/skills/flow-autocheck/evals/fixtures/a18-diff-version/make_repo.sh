@@ -5,7 +5,7 @@ git init -q -b main; git config user.email t@example.test; git config user.name 
 mkdir -p package/addons/td_x package/demo package/templates
 echo "{'name':'x','version':'19.0.1.1'}" > package/addons/td_x/__manifest__.py
 echo "v1" > package/demo/README.md; echo v1 > package/templates/answers.yaml
-printf '# Журнал\n## 1.2\n## Зміни анкети\n## Несумісні зміни\n## Міграція з попереднього тегу\n' > package/CHANGELOG.md
+printf '# Журнал\n## Версія package/v1.2\n## Зміни анкети\n## Несумісні зміни\n## Міграція з попереднього тегу\n' > package/CHANGELOG.md
 echo x > package/templates/migration-plan.md; echo x > package/templates/training.md
 git add -A; git commit -qm accepted; ACC=$(git rev-parse HEAD)
 printf '# Приймання\nВерсія 1.2\nSHA: %s\n' "$ACC" > package/ACCEPTANCE.md

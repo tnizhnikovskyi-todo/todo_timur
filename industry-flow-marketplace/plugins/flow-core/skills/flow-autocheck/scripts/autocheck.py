@@ -23,7 +23,7 @@ SHA_RE = re.compile(r"(?i)\b(SHA|commit)(?:\s+(?:стенда|модулів|п�
 TAG_RE = re.compile(r"^package/v\d+\.\d+(-odoo\d+)?$")  # id-patterns.md, q19
 ORDER = ["FAIL", "ERROR", "WARN", "MANUAL", "SKIP", "PASS"]
 PII = [  # pii-patterns.md; (тип, regex, статус при client_data != none)
-    ("email", re.compile(r"[\w.+-]+@(?!example\.)[\w-]+\.[\w.-]+", re.I), "FAIL"),
+    ("email", re.compile(r"[\w.+-]+@(?!example\.)(?![\w.-]*\.(?:example|test|invalid)\b)[\w-]+\.[\w.-]+", re.I), "FAIL"),
     ("iban", re.compile(r"\bUA\d{2}[\s\d]{20,}", re.I), "FAIL"),
     ("edrpou", re.compile(r"ЄДРПОУ\D{0,5}\d{8}\b", re.I), "FAIL"),
     ("phone", re.compile(r"(?<![\w:])(\+?380[\s()-]?\d{2}[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?!\w)"), "FAIL"),
@@ -398,10 +398,13 @@ def xy(v):
     return f"{p[2]}.{p[3]}" if len(p) >= 4 else (f"{p[0]}.{p[1]}" if len(p) >= 2 else str(v))
 
 
+SHARED_VENDORED = {"td_home_menu", "td_support"}  # спільні вендорені модулі §27: власна версія, не X.Y пакета
+
+
 def manifest_versions(ctx):
     vals = {}
     for d in lsdir(ctx, ctx.head, "package/addons"):
-        if not d.startswith("td_"):
+        if not d.startswith("td_") or d in SHARED_VENDORED:
             continue
         t = read_rev(ctx, ctx.head, f"package/addons/{d}/__manifest__.py")
         if t is None:
@@ -816,7 +819,8 @@ PRIMS = {k[2:]: v for k, v in globals().items() if k.startswith("p_")}
 
 # ---------- загальні перевірки C-06 ----------
 def where_paths(ctx):
-    return [w.strip() for w in re.split(r"\s+\+\s+|,\s*", str(ctx.n.get("where", ""))) if w.strip()]
+    raw = re.sub(r"\s+\([^)]*\)", "", str(ctx.n.get("where", "")))
+    return [w.strip() for w in re.split(r"\s+\+\s+|,\s*", raw) if w.strip()]
 
 
 def changed_files(ctx):
@@ -1152,6 +1156,9 @@ def selftest():
     assert norm_box("а") == "a" and norm_box("12") == "12"
     assert SHA_RE.search("SHA стенда: abc1234").group(2) == "abc1234"
     assert SHA_RE.search("SHA модулів: abc1234").group(2) == "abc1234"
+    em = PII[0][1]  # зарезервовані TLD — не PII; реальна пошта — PII
+    assert not em.search("komirnyk@demo-fabryka.example") and not em.search("a@b.test") and not em.search("a@example.com")
+    assert em.search("ivan@firma.com.ua")
     fx = os.path.join(SKILL, "evals", "fixtures")
     for case, want in (("a10-coverage", 1), ("spec-missing", 2)):
         mk = os.path.join(fx, case, "make_repo.sh")

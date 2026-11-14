@@ -1,0 +1,23 @@
+# ТЕСТОВИЙ наряд A-16 (0.4.0): тури сценаріїв (скіл організації за карткою A-16; у пакеті скіла немає — виконує сесія за package/demo/scenarios.md, заголовок SHA = SHA стенда)
+step: A-16
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: []
+model: sonnet
+effort: medium
+inputs:
+  - {name: README.md, from: A-15, path: package/demo/README.md, sha: HEAD}
+where: package/demo/scenarios.md, package/demo/defects.md
+template: "немає — форма за SKILL.md"
+done: "scenarios.md із заголовком SHA стенда, сценарії пройдені; дефекти — у defects.md з поверненням на A-14"
+check: {mode: both, how: "ручна звірка за карткою A-16", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-16-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

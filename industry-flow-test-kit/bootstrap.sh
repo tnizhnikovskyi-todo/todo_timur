@@ -5,6 +5,8 @@
 #         (2) кладе кожен скіл пакета в <ціль>/.claude/skills/<скіл>/ (копія, не symlink);
 #         (3) кладе агентів flow-core/agents/*.md у <ціль>/.claude/agents/;
 #         (4) копіює template/ у корінь цілі (наявні файли не перезаписує без --force).
+# Наявний CLAUDE.md без --force не оновлюється (напр. у «меблях»); оновити його — `bootstrap.sh <ціль> --force`
+#         (CLAUDE.md генерується з пакетного шаблону, не з template/; кроки/наряди цілі не чіпає); --force перезаписує шаблони (CLAUDE.md, TEST-START, наряди), але НЕ чіпає flow/decisions.md, flow/params*, docs/**, package/DATA_POLICY.md.
 # Ідемпотентний: повторний запуск оновлює копію пакета, скіли й агентів; шаблони не чіпає без --force.
 set -euo pipefail
 
@@ -36,7 +38,7 @@ case "$TARGET/" in "$SRC_PKG"/*) echo "Ціль усередині пакета"
 DEST_PKG="$TARGET/industry-flow-marketplace"
 rm -rf "$DEST_PKG"
 mkdir -p "$DEST_PKG"
-tar -C "$SRC_PKG" --exclude=./_work --exclude=./.git -cf - . | tar -C "$DEST_PKG" -xf -
+tar -C "$SRC_PKG" --exclude=./_work --exclude=./.git --exclude=__pycache__ -cf - . | tar -C "$DEST_PKG" -xf -
 
 # 2. Скіли: кожен plugins/*/skills/<скіл>/ -> .claude/skills/<скіл>/ (копія)
 mkdir -p "$TARGET/.claude/skills" "$TARGET/.claude/agents"
@@ -46,6 +48,7 @@ for sk in "$SRC_PKG"/plugins/*/skills/*/; do
   name="$(basename "$sk")"
   rm -rf "$TARGET/.claude/skills/$name"
   cp -R "${sk%/}" "$TARGET/.claude/skills/$name"
+  find "$TARGET/.claude/skills/$name" -name __pycache__ -type d -prune -exec rm -rf {} +
   n_skills=$((n_skills + 1))
 done
 
@@ -64,12 +67,26 @@ while IFS= read -r -d '' f; do
   dst="$TARGET/$rel"
   mkdir -p "$(dirname "$dst")"
   if [ -e "$dst" ]; then
+    case "$rel" in
+      flow/decisions.md|flow/params*|docs/*|package/DATA_POLICY.md) n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; continue ;;
+    esac
     if [ "$FORCE" = 1 ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
     else n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; fi
   else
     cp "$f" "$dst"; n_new=$((n_new + 1))
   fi
 done < <(find "$TEMPLATE" -type f -print0 | sort -z)
+
+# 4b. CLAUDE.md генерується з пакетного шаблону (єдине джерело: flow-core/references/templates/test-CLAUDE.md)
+CTPL="$SRC_PKG/plugins/flow-core/references/templates/test-CLAUDE.md"
+if [ -f "$CTPL" ]; then
+  if [ ! -e "$TARGET/CLAUDE.md" ] || [ "$FORCE" = 1 ]; then
+    sed -e '/^> Шаблон лежить у пакеті/d' -e 's/<галузь>/mebli/g' -e 's/<код>/mebli/g' "$CTPL" > "$TARGET/CLAUDE.md"
+    echo "  CLAUDE.md: згенеровано з пакетного шаблону"
+  else
+    echo "  CLAUDE.md: наявний, не чіпав (--force або cp вручну)"
+  fi
+fi
 
 # .gitignore: _input/ лишається поза git (sources-format.md); дописати, якщо рядка немає
 GI="$TARGET/.gitignore"

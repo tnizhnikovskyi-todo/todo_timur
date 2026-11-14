@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-r"""Автоперевірки A-16b без бази: UG-files, UG-cover, UG-img, UG-sha, UG-lang, UG-card (+ UG-admin).
+r"""Автоперевірки A-16b без бази: UG-files, UG-cover, UG-img, UG-sha, UG-lang, UG-card, UG-roles (+ UG-admin).
 Агент перевіряє сам (скрипт не робить): UG-fresh (знімки зроблено на стенді з цим SHA), UG-ui (підписи кроків = підписи в UI),
 UG-pii (на знімках немає чужих даних), lint.
 Запуск: python3 -I check_guides.py --dir package/docs/user-guide --spec package/SPEC.md [--spec package/demo/scenarios.md]
@@ -46,6 +46,13 @@ def main():
     global SC
     SC = re.compile(r"\b(?:" + a.id_pattern + r")\b")
     allow = DEFAULT_ALLOW | {w.strip() for w in a.allow.split(",") if w.strip()}
+    try:  # «Дозволені латинські назви: BAS, CAD» з INDEX.md
+        for ln in open(os.path.join(a.dir, "INDEX.md"), encoding="utf-8"):
+            m_ = re.match(r"\s*Дозволені латинські назви:\s*(.+)", ln)
+            if m_:
+                allow = set(allow) | {w.strip() for w in re.split(r"[,;]", m_.group(1)) if w.strip()}
+    except OSError:
+        pass
     res = []
 
     def add(i, status, msg=""):
@@ -168,6 +175,26 @@ def main():
         if len(lines) > CARD_MAX_LINES:
             big.append(f"cards/{n}: {len(lines)} рядків > {CARD_MAX_LINES}")
     add("UG-card", "FAIL" if big else "PASS", "; ".join(big))
+
+    # UG-roles: таблиця «## Ролі» з файлами <роль>.md (її читає check_elearning.py EL-courses)
+    rl, inside = [], False
+    for ln in index.splitlines():
+        if re.match(r"^##\s", ln):
+            inside = bool(re.match(r"^##\s*Ролі", ln))
+            continue
+        if inside and ln.strip().startswith("|"):
+            for cell in ln.strip().strip("|").split("|"):
+                m_ = re.fullmatch(r"\s*([\w-]+)\.md\s*", cell)
+                if m_ and not cell.strip().startswith("cards/"):
+                    rl.append(m_.group(1))
+                    break
+    bad_r = [r for r in rl if r + ".md" not in role_files]
+    miss_r = [r for r in roles + (["admin"] if "admin.md" in role_files else []) if r not in rl]  # admin.md теж має рядок у «Ролі» (index-template.md; elearning-builder Крок 2 рахує курси за таблицею)
+    if not rl:
+        add("UG-roles", "FAIL", "в INDEX.md немає таблиці «## Ролі» з файлами <роль>.md")
+    else:
+        m2 = (["файли ролей не існують: " + ", ".join(bad_r)] if bad_r else []) + (["ролі без рядка в таблиці: " + ", ".join(miss_r)] if miss_r else [])
+        add("UG-roles", "FAIL" if m2 else "PASS", "; ".join(m2))
 
     # UG-admin
     ap_ = os.path.join(root, "admin.md")

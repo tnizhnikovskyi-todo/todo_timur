@@ -1,0 +1,25 @@
+# ТЕСТОВИЙ наряд A-16b (збірка, 0.4.0): інструкції користувача зі знімками (Playwright/Chromium за замовчуванням). Перед кроком: A-15 refresh, якщо мітка SHA у demo/README.md і scenarios.md застаріла.
+step: A-16b
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["flow-package-build:user-guide-builder@0.4.0"]
+model: sonnet
+effort: medium
+inputs:
+  - {name: README.md, from: A-15, path: package/demo/README.md, sha: HEAD}
+  - {name: scenarios.md, from: A-16, path: package/demo/scenarios.md, sha: HEAD}
+  - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
+where: package/docs/user-guide/
+template: "за SKILL.md скіла"
+done: "посібники ролей і адміністратора, картки, INDEX із покриттям і SHA; check_guides.py без FAIL (package/demo/defects.md і AI-DECISIONS — через extra_allowed)"
+check: {mode: both, how: "flow-autocheck: checks/A-16b.yaml + скрипти скіла", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-16b-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

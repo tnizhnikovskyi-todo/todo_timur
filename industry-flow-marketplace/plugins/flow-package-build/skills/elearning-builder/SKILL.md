@@ -21,7 +21,7 @@ description: >
 публікуватися на сайті — внутрішні інструкції не повинні бути видимі анонімам (EL-access).
 
 ## Наряд і звіт
-Вхід — наряд (`flow-core/references/naryad-format.md`), читає `flow-core:flow-step-runner`; профіль доступу `repo` + тестова база
+Вхід — наряд (`flow-core/references/naryad-format.md`), читає `flow-core:flow-step-runner`; профіль доступу `repo` (тестова база для `run_tests.sh` — локальна, як у картці A-17b)
 (alias з `odoo_connections`, **кожен виклик з явним `connection_id`**; `flow`, прод, демо, база клієнта — не для запису). Виконавець AI,
 рецензія — Власник продукту / Контент-менеджер (як у A-17b.yaml). Результат — файли за `where` (`package/addons/td_<галузь>_elearning/`); звіт і PR пише runner,
 скіл повертає дані для `checks`, `data_sources`, `memo`. Ліміти — з картки кроку.
@@ -102,7 +102,7 @@ A-12 уже закрито, тому модуль у перелік устано
 
 ## Автоперевірка
 `python3 -I scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml [--schema schema.json]`
-(stdlib; JSON `[{id,status,msg}]`; код 1 = є FAIL).
+(stdlib; JSON `[{id,status,msg}]`; код 1 = є FAIL). Латинські назви галузі (BAS, CAD, DXF) — рядок `Дозволені латинські назви:` в INDEX.md (читається автоматично) або `--allow BAS,CAD`; `<code>` і уроки з `source: admin.md` EL-lang не перевіряє.
 
 | ID | Перевірка | FAIL, коли |
 |---|---|---|
@@ -135,7 +135,7 @@ A-12 уже закрито, тому модуль у перелік устано
 - [ ] `pass_score` з `answers.yaml`/80 і реальний механізм порога (EL-score); `elearning.mode: "on"`; є `tests/`; `boost:odoo19-lint`, CI C-03, security-review без блокерів
 - [ ] Курси не публічні (EL-access, файл:рядок 19.0); уроки мають текст і зображення (EL-content)
 - [ ] Гейт недоступний у сесії (CI C-03, security-review, lint) -> рішення AI з ризиком у AI-DECISIONS + рядок MANUAL для людини, не замінник
-- [ ] Немає даних клієнтів; змінено лише модуль, `elearning.*` у answers.yaml і AI-DECISIONS; бінарників баз немає
+- [ ] Немає даних клієнтів; змінено лише модуль, `elearning.*` у answers.yaml, рядки елемента навчання в `package/config/{manifest.yaml,CONFIG.md}` і AI-DECISIONS; бінарників баз немає
 
 ## Наступний крок
 «Електронне навчання A-17b готове» -> A-18 (AND-join з A-17c; `package-release-builder` включає модуль у реліз). Дефект у user-guide -> A-16b;

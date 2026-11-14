@@ -136,6 +136,14 @@ def main():
     ael = answers_elearning(a.answers)
     pass_score = a.pass_score if a.pass_score is not None else (ael[1] if ael and ael[1] else 80)
     allow = {w.lower() for w in DEFAULT_ALLOW | {x.strip() for x in a.allow.split(",") if x.strip()}}
+    try:  # «Дозволені латинські назви: A, B» з INDEX.md (як у check_guides.py)
+        for ln in open(os.path.join(a.guide, "INDEX.md"), encoding="utf-8"):
+            m_ = re.match(r"\s*Дозволені латинські назви:\s*(.+)", ln)
+            if m_:
+                allow |= {w.strip().lower() for w in re.split(r"[,;]", m_.group(1)) if w.strip()}
+    except OSError:
+        pass
+    lesson_src = {}
     res = []
 
     def add(i, status, msg=""):
@@ -221,6 +229,8 @@ def main():
             m = SOURCE.search(cm)
             if m:
                 src = m.groups()
+        if src:
+            lesson_src[l["id"]] = src[0]
         if not src:
             msg.append(f"{l['id']}: немає «source: <файл>.md#SC-NN»")
             continue
@@ -261,7 +271,11 @@ def main():
             v = r["fields"].get(fn)
             if not v or fn in r["refs"]:
                 continue
-            txt = re.sub(r"<[^>]+>", " ", v)
+            if r["id"] in lesson_src and lesson_src[r["id"]] == "admin.md":
+                continue  # admin.md — з іменами параметрів і модулів, як UG-lang
+            txt = re.sub(r"<code\b[^>]*>.*?</code>", " ", v, flags=re.S)
+            txt = re.sub(r"`[^`]*`", " ", txt)
+            txt = re.sub(r"<[^>]+>", " ", txt)
             words = [w for w in LATIN.findall(txt) if w.lower() not in allow]
             if words:
                 hits.append(f"{r['id']}.{fn}: {', '.join(sorted(set(words))[:3])}")
