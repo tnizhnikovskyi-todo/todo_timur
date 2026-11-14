@@ -1,5 +1,9 @@
 # Відкрите після workflow 0.4.0 (перед фіксом)
 
+## Статус (перевірка 2026-11-14, після фіксу)
+Усі пункти нижче закрито. Уже були виправлені: SHA_RE/sha_eq/index-headings; `<галузь>` у git_diff_allowed; diff-allowed A-18; `--stand-sha` (псевдонім `--modules-sha`); skip_market_check (A-07.yaml, flow-map, A-21d); slice-coverage (A-21d у flow-map/step-skill-map/step-cards/checks); CS-plan-modules (лише модулі); product-decision-drafter (A-17b ∥ A-17c, INDEX); E6 (test-kit CLAUDE.md, flow-state-keeper); Playwright за замовчуванням; `--answers` у A-17b; назви `elearning.mode` у лапках і «Дані на екранах ролей»; кирилична «А» в rec_ok.
+Закрито цим фіксом: мітки `Показників дашборда`/`Коробка входу`/`Коробка показу` пишуть concept-mapper і prototype-builder (шаблони screens.md, BOX.tpl.md, slice-plan-template.md); перелік установки `website_slides` + `td_<галузь>_elearning` (elearning-builder Крок 6, config-as-code Крок 4, A-17b/A-18 allow, картка A-17b); §27 у reuse-modules (RU-core), concept-mapper/BOX (CM-box-core), config-as-code, support-desk, support-kb-builder (KB-support); евали.
+
 - WP-A blocker: Перевірки `demo-sha` (sha_eq) і `index-headings` ("re:sha") падають на еталонному результаті скіла. INDEX.md за user-guide-builder має рядок «SHA стенда: <sha>» (фікстура user-guide-ok), а SHA_RE auto
 - WP-A blocker: `scope-elearning` завжди FAIL, коли крок робить обов'язковий запис «не перевірено» в AI-DECISIONS: `git_diff_allowed` не підставляє `<галузь>` в `allow` (autocheck.py:376-386, glob_match порівнює букв
 - WP-A blocker: A-17b після приймання змінює `package/templates/answers.yaml` (ключі elearning.*) і `docs/industries/<галузь>/research/AI-DECISIONS.md`, а `diff-allowed-7` A-18 (ACCEPTANCE SHA..head) цих шляхів не до
