@@ -34,7 +34,7 @@
 12. `package/docs/user-guide/**` (A-16b: SHA ревізії = SHA_STAND з README стенда, а файли гайдів комітяться після нього, тож вони завжди в дозволеному списку; свіжість інструкцій перевіряє R-18, не R-02)
 13. `package/config/manifest.yaml` і `package/config/CONFIG.md` — лише рядки `website_slides` і `td_<галузь>_elearning` (A-17b, Крок 6)
 14. `docs/industries/<галузь>/research/AI-DECISIONS.md` (рядки AI-NN кроків A-16b/A-17b)
-15. `package/demo/.gitignore` і видалення бінарників баз (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) з `package/` (A-15 refresh, R-22)
+15. `package/demo/.gitignore`, `package/demo/docker/README.md` (лише заміна кроку Restore на підйом через `up.sh`) і видалення бінарників баз (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) з `package/` (A-15 refresh, R-22)
 16. Службові шляхи тестового репо (`.claude/`, `industry-flow-marketplace/`, `CLAUDE.md`, `TEST-START.md`, `START-HERE.md`; `bootstrap --upgrade`) не є вмістом пакета, у R-02 не враховуються
 17. `package/demo/defects.md`, `package/CHECKS.md`, `flow/**`, `tests/**` (журнал дефектів, зведення гейтів, рішення і звіти флоу)
 

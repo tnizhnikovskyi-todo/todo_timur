@@ -9,7 +9,7 @@ effort: medium
 inputs:
   - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
   - {name: addons, from: A-11, path: package/addons, sha: HEAD}
-params: {elearning: on}
+params: {elearning: "on"}
 where: package/support/
 template: "за SKILL.md скіла"
 done: "AI-INSTRUCTIONS, kb/KB-NNN, INDEX; check_kb.py без FAIL"

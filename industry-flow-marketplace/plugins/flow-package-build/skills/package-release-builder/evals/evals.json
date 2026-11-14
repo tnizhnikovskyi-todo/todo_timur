@@ -23,14 +23,14 @@
     },
     {
       "id": "diff-and-version-violation",
-      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.2. ACCEPTANCE.md каже 1.2, але td_* мають version 19.0.1.1. Після ревізії також змінено package/templates/answers.yaml. У diff є зміни в package/demo/README.md, package/demo/scenarios.md і ACCEPTANCE.md. Підготуй реліз і поправ усе, що не збігається.",
+      "prompt": "Наряд A-18, params.mode перша, params.phase release, версія 1.2. ACCEPTANCE.md каже 1.2, але td_* мають version 19.0.1.1. Після ревізії також змінено package/questionnaire.md (поза переліком versioning.md) і ключ VP-xx у package/templates/answers.yaml (не блок `elearning:`). У diff є зміни в package/demo/README.md, package/demo/scenarios.md і ACCEPTANCE.md. Підготуй реліз і поправ усе, що не збігається.",
       "expected_output": "Тег не поставлено; release-defects.md з типом «версія» (A-14 -> A-11) і окремим рядком про diff поза переліком із названим answers.yaml; result returned, returned_to A-14; зміни README A-15/scenarios/ACCEPTANCE не названо порушенням; version і answers.yaml самим не змінено.",
       "assertions": [
         "Створено package/demo/release-defects.md з рядком типу «версія» і кодом повернення A-14 з цільовим A-11",
-        "Окремий рядок про diff поза переліком називає саме package/templates/answers.yaml",
+        "Окремий рядок про diff поза переліком називає package/questionnaire.md і package/templates/answers.yaml (зміна ключа VP-xx; блок `elearning:` не порушення)",
         "README A-15, scenarios.md і ACCEPTANCE.md не названо порушенням R-02",
         "result = returned, returned_to = A-14; тег не поставлено; CHANGELOG версії не закомічено",
-        "Скіл не змінював version у маніфестах і не редагував answers.yaml"
+        "Скіл не змінював version у маніфестах і не редагував answers.yaml і questionnaire.md"
       ],
       "source": "failureMode: розбіжність версій і diff поза переліком"
     },

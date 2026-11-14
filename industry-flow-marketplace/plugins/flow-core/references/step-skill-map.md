@@ -11,17 +11,17 @@
 | A-03c | flow-research:reuse-modules | один наряд без режимів (`## Інвентар` у `REUSE.md`; без сесії й гейта; рішення AI — рядки AI-DECISIONS) |
 | A-04 | flow-research:past-projects-analyzer | — |
 | A-05 | flow-research:segment-selector | `phase` 1\|2 (режим «еталонні клієнти») |
-| A-07 | — (людська задача, без `skill_ref`) | Кнопка-вето за розділом «Рекомендація AI для A-07» у `demand/results.md` (його пише A-23 results) |
+| A-07 | — (людська задача, без `skill_ref`) | Кнопка-вето за розділом «Рекомендація AI для A-07» у `demand/results.md` (його пише A-23 results) або за рядком AI-DECISIONS при `skip_market_check` |
 | A-08 | — (скіл організації, зовнішній; `skillRef` з картки) | `mode: from-slice`\|`перша`\|`нова-версія`; `from-slice` (E2) — короткий `package/SPEC.md` з `concept` + `complexity` + `PLAN` зрізу A-21, без повного ТР (за замовчуванням, коли є зріз); `перша` — повний ТР лише без зрізу |
 | A-09 | flow-package-build:questionnaire-builder | `first`\|`review` |
 | A-12 | flow-package-build:config-as-code | `build`\|`fix`\|`new-version`\|`validate` |
 | A-13 | flow-package-build:master-data-template-builder | — |
 | A-14 | flow-package-build:gates-aggregator | `перевірка`\|`повернення`\|`нова-версія`\|`hotfix` |
-| A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія` (стенд пакета) |
+| A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія`\|`refresh` (стенд пакета) |
 | A-16b | flow-package-build:user-guide-builder | — (посібники ролей і адміністратора, картки, INDEX; профіль `repo`; рецензія `user-guide.md`) |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | A-17b | flow-package-build:elearning-builder | — (модуль `td_<галузь>_elearning`; після A-17, паралельно з A-17c) |
-| A-17c | flow-package-build:support-kb-builder | — (`package/support/`, лише ToDo; паралельно з A-17b) |
+| A-17c | flow-package-build:support-kb-builder | `params.elearning: on\|off` (`package/support/`, лише ToDo; паралельно з A-17b) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
 | A-20 | flow-research:concept-mapper (+ під-скіл flow-research:completeness-audit у кінці кроку, не окремий крок) | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |

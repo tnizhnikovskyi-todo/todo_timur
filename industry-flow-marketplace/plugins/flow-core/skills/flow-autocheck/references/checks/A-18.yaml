@@ -25,6 +25,7 @@
     "allow": [
      "package/demo/README.md",
      "package/demo/.gitignore",
+     "package/demo/docker/README.md",
      "package/demo/scenarios.md",
      "package/ACCEPTANCE.md",
      "package/CHANGELOG.md",

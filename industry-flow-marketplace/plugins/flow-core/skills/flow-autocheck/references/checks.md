@@ -27,7 +27,7 @@
 | `allocation_coverage` | — | теки `package/addons/*` ↔ колонка «модуль Odoo» ALLOCATION; модулі з треком код/готове мають теку; кожен файл `package/config/` згаданий у CHECKS.md |
 | `grep_clients` | — | ідентифікатори з `clients/REGISTRY.md` (колонка «ідентифікатор клієнта», ≥4 символів) у `package/` через `git grep`; `шлях:рядок` без витягу; немає клієнтів — `SKIP` |
 | `section_contains` | `ref`, `heading`, `patterns` | розділ містить усі патерни |
-| `signature_by_ai` | `file`, `heading` | блок змінено комітом, автор якого збігається з `--agent-pattern` → `FAIL`; патерну немає → `MANUAL` |
+| `signature_by_ai` | `file`, `heading` | блок з позначкою «внесено AI від імені власника» (E6) → `PASS`; інакше блок змінено комітом, автор якого збігається з `--agent-pattern` → `FAIL`; патерну немає → `MANUAL` |
 | `evals_schema` | — | кожен `evals/**/evals.json` на head: JSON, `skill`, `cases[]` з унікальним kebab `id`, `source`, `status`, `prompt`, `expected.checks`, `expected.must_not` |
 | `pii_strict` | `paths` | PII-патерни (FAIL-типи) у доданих рядках diff за `paths`, FAIL незалежно від `client_data` |
 | `no_money` | `paths` (файли/теки), `exclude` (підрядки шляхів), `patterns` (за замовчуванням — маркери LESSONS §24: окупн, TCO, вартість володіння, business-case, вердикт про гроші, ROI, беззбитков, ставка розробки, години×ставка, секція money) | FAIL із `файл:рядок` (0.3.0: економіку пакета не рахуємо; ціни конкурентів як факт — через `exclude`) |

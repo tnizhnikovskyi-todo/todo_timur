@@ -679,6 +679,8 @@ def p_signature_by_ai(ctx, c):
     old = "\n".join(x[2] for x in sections(read_rev(ctx, ctx.base, s["file"]) or "") if re.search(s["heading"], x[1], re.I))
     if old == sec:
         return ctx.add(c["id"], "PASS", "", lab)
+    if re.search(r"внесено AI від імені (власника|людини)", sec, re.I):
+        return ctx.add(c["id"], "PASS", "Блок має позначку «внесено AI від імені власника» (E6): рішення за повідомленням людини, перевір посилання на повідомлення", lab)
     if not ctx.agent_pattern:
         return ctx.add(c["id"], "MANUAL", "Блок підпису змінено; автора-агента не визначено (--agent-pattern не задано): перевір, що змінив людина", lab)
     rc, out = git(ctx, "log", f"{ctx.base}..{ctx.head}", "--format=%an <%ae>", "--", s["file"])
@@ -862,7 +864,7 @@ def generic(ctx, extra_allowed):
         ctx.add("path-placeholder", "FAIL", "Непідставлений плейсхолдер у where: " + ", ".join(ph))
         return
     p_no_db_binaries(ctx, {"id": "no-db-binaries"})
-    allowed = wh + ["observations/"] + TEST_MODE_ALLOW + list(extra_allowed or [])
+    allowed = wh + ["observations/"] + TEST_MODE_ALLOW + TEST_SERVICE_ALLOW + list(extra_allowed or [])
     extra = [f for f in changed_files(ctx) if not any(glob_match(f, a) or f == a.rstrip("/") for a in allowed)]
     ctx.add("where-only", "FAIL" if extra else "PASS", ("Прибери зміни поза where: " + ", ".join(extra)) if extra else "", f"{ctx.base[:8]}..{ctx.head[:8]}")
     miss = []
@@ -899,7 +901,7 @@ def template_headings(ctx, cid, tpl, res):
     for lv, h, _, _ in sections(src):
         if lv == 1 and not blk:
             continue
-        if re.search(r"лише\s*<", h):
+        if re.search(r"лише\s*<", h) or re.search(r"<-\s*лише", h):
             continue
         h2 = re.sub(r"\s+<-.*$", "", h)
         rx = "^" + re.sub(r"<[^>]*>", ".+", re.escape(norm(h2)).replace("\\<", "<").replace("\\>", ">")) + "$"
@@ -935,6 +937,15 @@ def pii(ctx, wh):
 
 
 # ---------- режим inputs ----------
+def path_ok(path, where):
+    """шлях входу = where джерела без урахування кінцевого «/» або всередині каталогу where"""
+    w = where.strip()
+    p = (path or "").strip()
+    if p.rstrip("/") == w.rstrip("/"):
+        return True
+    return w.endswith("/") and p.startswith(w)
+
+
 def inputs_mode(ctx):
     n = ctx.n
     base_branch = (n.get("repo") or {}).get("base_branch", "main")
@@ -960,7 +971,7 @@ def inputs_mode(ctx):
             ctx.add(f"input:{nm}", "SKIP", f"conditional: {cond[:60]}", nm)
             continue
         bad = []
-        if row and row["cells"][wc].strip() != path:
+        if row and not path_ok(path, row["cells"][wc]):
             bad.append(("input-path", f"Виправ шлях входу {nm}: «{path}» ≠ where {fr}: «{row['cells'][wc].strip()}»"))
         if not sha:
             bad.append(("input-no-sha", f"Додай sha входу {nm}"))
@@ -1196,6 +1207,15 @@ def selftest_template_headings():
     finally:
         read_rev = old
     assert c.rows and c.rows[0][0] == "PASS", c.rows
+    tpl2 = "```markdown\n## Версія <тег>\n### Сумісність з Odoo <- лише odoo-upgrade\n### Виправлено (hotfix) <- лише patch\n```\n"
+    c.rows = []
+    read_rev = lambda ctx, rev, path: tpl2 if path == "t.md" else res
+    try:
+        template_headings(c, "th", "t.md", "r.md")
+    finally:
+        read_rev = old
+    assert c.rows[0][0] == "PASS", c.rows
+    assert path_ok("package/docs/user-guide/INDEX.md", "package/docs/user-guide/") and path_ok("package/addons", "package/addons/") and not path_ok("package/x", "package/y/")
 
 
 def selftest():

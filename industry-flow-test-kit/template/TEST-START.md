@@ -31,6 +31,8 @@
 ## (д) Порядок кроків і готові промпти
 Правила тесту — у `CLAUDE.md` (ТЕСТОВИЙ РЕЖИМ). Один крок = одна гілка `flow/<крок>-test` і один PR; перед наступним кроком **заміржи PR попереднього** (або працюй на одній гілці — тоді в `inputs` SHA = HEAD цієї гілки). Після кожного кроку читай `tests/reports/<ім’я наряду>[-<спроба>].md` (A-23-spisok.md, A-23.md, A-04-1.md, A-04-2.md) (`result`, `checks`, `memo` — спершу «Невпевнений:»).
 
+**Який наряд брати:** у репо з історією (напр. «меблі») після `bootstrap --upgrade` чинний наряд — з найбільшим номером спроби `<крок>-N.yaml` (напр. `A-15-6.yaml`, `A-17-3.yaml`; список друкує bootstrap); `<крок>.yaml` без номера — старий наряд 0.3.x, його не брати. Нижче `A-15.yaml`/`A-17.yaml` читати як «наряд найбільшої спроби».
+
 **Крок 0 перед A-16b (репо з уже зібраним стендом, напр. «меблі»):** спершу порівняй код із SHA гейтів з `package/CHECKS.md`: `git diff --quiet <SHA CHECKS.md>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'`. Код 0 (гейти чинні; застаріла мітка стенда / стенд не піднятий) -> окремий наряд `A-15.yaml` (refresh) і гілка, далі A-16b. Код 1 (модулі/конфіг/дані змінено після гейтів) -> за потреби `A-12-fix.yaml` -> `A-14.yaml` -> `A-15.yaml` -> `A-16.yaml` -> A-16b. Refresh не робити в гілці A-16b. Якщо складових §27 (`td_home_menu`, `td_support`) у `package/addons` ще немає — A-16b знімає без них і пише рядок AI-NN «§27 не злито; після злиття — контур A-12 fix -> A-14 -> A-15 -> A-16 -> A-16b refresh» (власник — вето); питання власнику не потрібне. **Оновлення наявного репо з історією нарядів («меблі») до 0.4.0** (робить власник набору, не сесія): стартувати з гілки, де лежить історія (для «меблів» — `flow/A-12-2-test`, а не `main`/`repo.base_branch`), і запустити `bootstrap.sh <репо> --upgrade`: CLAUDE.md і TEST-START.md перегенеруються (у т. ч. рядки `flow/decisions.md` вносить AI за E6, недоступний скіл організації — не зупинка, а рядок у `observations/`), відсутні наряди (A-15, A-17b…) додадуться, а наряд зі застарілим `skill_ref` (напр. A-17 з 0.3.1) отримає нову спробу `<крок>-<N+1>.yaml` (`attempt: N+1`, гілка `flow/<крок>-<N+1>-test`; N — найбільша спроба серед нарядів і звітів), старі наряди й звіти не чіпаються. Звіт нової спроби — `tests/reports/<крок>-<N+1>.md`. Без прапорців `bootstrap.sh` наявні файли не змінює; `--force` перезаписує шаблони з `attempt: 1` — лише для нового репо.
 
 | # | Крок | Промпт | Перед запуском | Перевір після («Готово, коли» скіла) |
@@ -50,7 +52,7 @@
 | 13 | A-16b | `Виконай крок A-16b за нарядом tests/naryad/A-16b.yaml скілом user-guide-builder у тестовому режимі CLAUDE.md` | Крок 0 вище виконано; стенд піднятий | `package/docs/user-guide/`: INDEX (покриття, ролі, SHA), admin.md, `<роль>.md`, cards; `check_guides.py` без FAIL (UG-roles теж) |
 | 14 | A-17 | `Виконай крок A-17 за нарядом tests/naryad/A-17.yaml скілом product-decision-drafter у тестовому режимі CLAUDE.md` | A-16b змержено | чернетка `package/ACCEPTANCE.md`; рішення власника — його повідомленням у чаті, рядок у `flow/decisions.md` вносить AI (E6) |
 | 15 | A-17b ∥ A-17c | `Виконай крок A-17b за нарядом tests/naryad/A-17b.yaml …` і `… A-17c за нарядом tests/naryad/A-17c.yaml …` | A-17 затверджено; дві гілки від одного SHA | `td_mebli_elearning`, `check_elearning.py` без FAIL; `package/support/`, `check_kb.py` без FAIL |
-| 16 | A-18 | `Виконай крок A-18 за нарядом tests/naryad/A-18.yaml скілом package-release-builder у тестовому режимі CLAUDE.md` | A-17b і A-17c змержено (AND-join) | `package/CHANGELOG.md`, `package/templates/`, `package/metrics/key-models.yaml`; R-01…R-19 без FAIL |
+| 16 | A-18 | `Виконай крок A-18 за нарядом tests/naryad/A-18.yaml скілом package-release-builder у тестовому режимі CLAUDE.md` | A-17b і A-17c змержено (AND-join) | `package/CHANGELOG.md`, `package/templates/`, `package/metrics/key-models.yaml`; R-01…R-22 без FAIL |
 
 Мінімум для швидкого проходу: кроки 1, 3, 4, 6, 8 (briefing -> past-projects -> concept -> prototype); крок 4 — із заповненим `sources.md`, бо A-20 потребує `past-projects.md`. Кроки 4, 5, 10, 12 — для перевірки сусідніх форматів і відомих відкритих питань.
 
@@ -60,9 +62,9 @@
 
 ## (е) Чого цей етап НЕ перевіряє
 - Чергу Odoo, `message_post`, стадії задач, оренду, дзеркальні поля, автоекспорт `flow/state.md` — наряд читається з файлу.
-- Повний runner (`flow-step-runner`, C-06): аудит зрілості, драбину моделей, ескалації, лічильники спроб; `flow-orchestrator`, `flow-state-keeper`, `flow-autocheck`, `gates-aggregator` — не запускаються.
-- Кнопки «Затвердити/Повернути» й права на них: рішення імітує людина рядком у `flow/decisions.md`.
-- Кроки A-06 (сесії з еталонними клієнтами), A-22, A-23 `адреси` і `results` (розсилки немає), A-07 і далі (A-08…A-19), пули B, C, D; скіли `flow-package-build`, `flow-package-evolution`, `flow-client-delivery` (копіюються, але не тестуються).
+- Повний runner (`flow-step-runner`, C-06): аудит зрілості, драбину моделей, ескалації, лічильники спроб; `flow-orchestrator` не запускається. `flow-autocheck` запускається (скрипти `check_*` і `autocheck.py` за карткою кроку); `flow-state-keeper` у тесті — лише внесення рядка рішення за повідомленням власника (E6).
+- Кнопки «Затвердити/Повернути» й права на них: людина каже рішення в чаті, рядок у `flow/decisions.md` (і поля `Рішення:`/підпису в `package/ACCEPTANCE.md`) вносить AI від імені власника з позначкою (E6).
+- Кроки A-06 (сесії з еталонними клієнтами), A-22, A-23 `адреси` і `results` (розсилки немає), A-07…A-14 і A-19 (збірка модулів), пули B, C, D; `flow-client-delivery` (копіюється, не тестується). `flow-package-build`/`flow-package-evolution` тестуються лише в межах кроків A-15…A-18 (refresh, A-16b, A-17, A-17b, A-17c, A-18) за таблицею (д).
 - Дані клієнтів і Fathom; прод Odoo; реальну розсилку.
 - Те, що плагіни в хмарі не встановлюються через `settings.json`: у тесті скіли — копії; перевірка встановлення плагінів (`claude plugin validate`, `skill_ref` з реальними версіями) — окремий етап.
 
