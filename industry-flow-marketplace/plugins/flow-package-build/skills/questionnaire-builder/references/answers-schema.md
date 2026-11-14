@@ -57,6 +57,9 @@ contract_mode:
   deprecated: false
 ```
 
+## 2б. Службові верхні блоки (не VP)
+Файл може містити верхні блоки не VP-xx зі значеннями, а не зі схемою параметра (напр. `elearning: {mode, pass_score}` від `elearning-builder`, A-17b). Це службові блоки: `parse_schema` autocheck їх пропускає, у `vp-changes` і `rerun-stable` вони не беруть участі, анкетою не питаються.
+
 ## 3. `answers.example.yaml`
 ```yaml
 VP-01: make_to_order

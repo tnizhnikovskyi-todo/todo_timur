@@ -8,7 +8,6 @@ model: sonnet
 effort: medium
 params: {mode: перша}
 inputs:
-  - {name: ACCEPTANCE.md, from: A-16b, path: package/ACCEPTANCE.md, sha: HEAD}
   - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
   - {name: README.md, from: A-15, path: package/demo/README.md, sha: HEAD}
   - {name: scenarios.md, from: A-16, path: package/demo/scenarios.md, sha: HEAD}

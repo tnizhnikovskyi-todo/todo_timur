@@ -5,9 +5,14 @@
 #         (2) кладе кожен скіл пакета в <ціль>/.claude/skills/<скіл>/ (копія, не symlink);
 #         (3) кладе агентів flow-core/agents/*.md у <ціль>/.claude/agents/;
 #         (4) копіює template/ у корінь цілі (наявні файли не перезаписує без --force).
-# Наявний CLAUDE.md без --force не оновлюється (напр. у «меблях»); оновити його — `bootstrap.sh <ціль> --force`
-#         (CLAUDE.md генерується з пакетного шаблону, не з template/; кроки/наряди цілі не чіпає); --force перезаписує шаблони (CLAUDE.md, TEST-START, наряди), але НЕ чіпає flow/decisions.md, flow/params*, docs/**, package/DATA_POLICY.md.
-# Ідемпотентний: повторний запуск оновлює копію пакета, скіли й агентів; шаблони не чіпає без --force.
+# Режими для наявного репо (з історією нарядів і звітів, напр. «меблі»; стартувати з гілки, де ця історія, напр. flow/A-12-2-test, а не з main):
+#   (без прапорців) наявні шаблони, CLAUDE.md і наряди не чіпає; нові файли додає.
+#   --upgrade  оновлення до нової версії пакета: завжди перегенерує CLAUDE.md і TEST-START.md; наряд, якого немає, копіює;
+#              якщо <крок>.yaml (чи <крок>-N.yaml) уже є і його skill_ref застарів — кладе <крок>-<N+1>.yaml з attempt: N+1
+#              (N — найбільший номер спроби серед нарядів і звітів), старі наряди й звіти не чіпає; чинний (той самий skill_ref) пропускає.
+#   --force    перезаписує шаблони (CLAUDE.md, TEST-START, наряди) як є, з attempt: 1 — лише для нового репо; для наявного репо з історією — --upgrade.
+#   В обох режимах flow/decisions.md, flow/params*, docs/**, package/DATA_POLICY.md не чіпаються.
+# Ідемпотентний: повторний запуск оновлює копію пакета, скіли й агентів; шаблони не чіпає без --force/--upgrade.
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,17 +20,20 @@ SRC_PKG="${FLOW_PKG_SRC:-$KIT_DIR/../industry-flow-marketplace}"
 TEMPLATE="$KIT_DIR/template"
 
 FORCE=0
+UPGRADE=0
 TARGET=""
 for a in "$@"; do
   case "$a" in
     --force) FORCE=1 ;;
-    -h|--help) sed -n 2,9p "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --upgrade) UPGRADE=1 ;;
+    -h|--help) sed -n 2,14p "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "Невідомий прапорець: $a" >&2; exit 2 ;;
     *) if [ -z "$TARGET" ]; then TARGET="$a"; else echo "Забагато аргументів" >&2; exit 2; fi ;;
   esac
 done
 
-[ -n "$TARGET" ] || { echo "Використання: bootstrap.sh <тека-цільового-репо> [--force]" >&2; exit 2; }
+[ "$FORCE$UPGRADE" != "11" ] || { echo "--force і --upgrade разом не можна" >&2; exit 2; }
+[ -n "$TARGET" ] || { echo "Використання: bootstrap.sh <тека-цільового-репо> [--force|--upgrade]" >&2; exit 2; }
 [ -d "$SRC_PKG/plugins" ] || { echo "Немає пакета: $SRC_PKG (очікую plugins/)" >&2; exit 1; }
 [ -d "$TEMPLATE" ] || { echo "Немає шаблонів: $TEMPLATE" >&2; exit 1; }
 mkdir -p "$TARGET"
@@ -70,21 +78,61 @@ while IFS= read -r -d '' f; do
     case "$rel" in
       flow/decisions.md|flow/params*|docs/*|package/DATA_POLICY.md) n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; continue ;;
     esac
-    if [ "$FORCE" = 1 ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
+    if [ "$UPGRADE" = 1 ] && [ "$rel" = "flow/ARTIFACTS.md" ] && ! grep -q "умова" "$dst"; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
+    elif [ "$UPGRADE" = 1 ] && [ "$rel" = "TEST-START.md" ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
+    elif [ "$FORCE" = 1 ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
     else n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; fi
   else
     cp "$f" "$dst"; n_new=$((n_new + 1))
   fi
 done < <(find "$TEMPLATE" -type f -print0 | sort -z)
 
+# 4a. --upgrade: наряди, що вже є (<крок>.yaml / <крок>-N.yaml) і мають застарілий skill_ref -> <крок>-<N+1>.yaml
+n_att=0; att_list=""
+if [ "$UPGRADE" = 1 ]; then
+  for f in "$TEMPLATE"/tests/naryad/*.yaml; do
+    [ -f "$f" ] || continue
+    stem="$(basename "$f" .yaml)"
+    tdir="$TARGET/tests/naryad"
+    [ -e "$tdir/$stem.yaml" ] || continue            # відсутній — уже скопійований кроком 4
+    want="$(grep -m1 '^skill_ref:' "$f" || true)"
+    cur=0
+    for e in "$tdir/$stem.yaml" "$tdir/$stem"-[0-9]*.yaml; do
+      [ -f "$e" ] || continue
+      if [ -n "$want" ] && grep -qxF "$want" "$e"; then cur=1; fi
+    done
+    [ "$cur" = 0 ] || continue                         # чинний наряд цієї версії вже є
+    mx=1
+    for e in "$tdir/$stem"-[0-9]*.yaml; do
+      [ -f "$e" ] || continue
+      k="$(basename "$e" .yaml)"; k="${k##*-}"; case "$k" in *[!0-9]*) continue ;; esac
+      [ "$k" -le "$mx" ] || mx="$k"
+    done
+    for e in "$TARGET"/tests/reports/"$stem"-[0-9]*.md; do
+      [ -f "$e" ] || continue
+      k="$(basename "$e" .md)"; k="${k##*-}"; case "$k" in *[!0-9]*) continue ;; esac
+      [ "$k" -le "$mx" ] || mx="$k"
+    done
+    for e in "$tdir/$stem.yaml" "$tdir/$stem"-[0-9]*.yaml; do
+      [ -f "$e" ] || continue
+      k="$(grep -m1 '^attempt:' "$e" | sed 's/[^0-9]//g')"
+      case "$k" in ''|*[!0-9]*) continue ;; esac
+      [ "$k" -le "$mx" ] || mx="$k"
+    done
+    nx=$((mx + 1))
+    sed -e "s/^attempt: .*/attempt: $nx/" -e "s#^\(repo: .*branch: flow/\)$stem-test#\1$stem-$nx-test#" "$f" > "$tdir/$stem-$nx.yaml"
+    n_att=$((n_att + 1)); att_list="$att_list $stem-$nx.yaml"
+  done
+fi
+
 # 4b. CLAUDE.md генерується з пакетного шаблону (єдине джерело: flow-core/references/templates/test-CLAUDE.md)
 CTPL="$SRC_PKG/plugins/flow-core/references/templates/test-CLAUDE.md"
 if [ -f "$CTPL" ]; then
-  if [ ! -e "$TARGET/CLAUDE.md" ] || [ "$FORCE" = 1 ]; then
+  if [ ! -e "$TARGET/CLAUDE.md" ] || [ "$FORCE" = 1 ] || [ "$UPGRADE" = 1 ]; then
     sed -e '/^> Шаблон лежить у пакеті/d' -e 's/<галузь>/mebli/g' -e 's/<код>/mebli/g' "$CTPL" > "$TARGET/CLAUDE.md"
     echo "  CLAUDE.md: згенеровано з пакетного шаблону"
   else
-    echo "  CLAUDE.md: наявний, не чіпав (--force або cp вручну)"
+    echo "  CLAUDE.md: наявний, не чіпав (--upgrade або --force)"
   fi
 fi
 
@@ -97,6 +145,7 @@ echo "bootstrap: готово -> $TARGET"
 echo "  пакет:   $DEST_PKG (без _work/)"
 echo "  скілів:  $n_skills у .claude/skills/"
 echo "  агентів: $n_agents у .claude/agents/"
+echo "  нові спроби нарядів (--upgrade): $n_att$att_list"
 echo "  шаблони: нових $n_new, пропущено наявних $n_skip, перезаписано $n_over"
 if [ -n "$skipped_list" ]; then echo "  пропущені (наявні; --force перезапише):$skipped_list"; fi
 echo "Далі: прочитай TEST-START.md; закоміть результат (git add -A && git commit)."

@@ -49,14 +49,14 @@ description: >
 Примітка (0.4.0): після перепідйому стенда на новому SHA (повернення з A-14) `A-16b` (інструкції користувача) іде в режимі `refresh` — перезнімає зачеплені сценарії й оновлює SHA в `INDEX.md` і `SHOOT-LOG.md`; ланцюг A-15 -> A-16 -> A-16b -> A-17.
 1. Режим — за `step` наряду: `A-15` → стенд, `A-22` → база зрізу. A-15: **старт 1** (за замовчуванням), **старт 2**
    (`returned_from: A-16`; сценарії з маршрутом A-15 у `package/demo/scenarios.md`), **нова версія** (`params.mode: нова-версія`
-   або в наряді змінені AC і `git.prev_tag`). Ключа `params.mode` для A-15/A-22 у таблиці `naryad-format.md` немає —
+   або в наряді змінені AC і `git.prev_tag`), **refresh** (`params.mode: refresh`; див. кроки нижче). Ключа `params.mode` для A-15/A-22 у таблиці `naryad-format.md` немає —
    не питати, виводити за `step`/`returned_from` (`references/open-questions.md`, В-8).
 2. На вході `план_демо-збірки_*` без наряду A-15/A-22 — стоп: «режим "демо під ліда" не реалізовано; для пакета — A-15,
    для гарячого ліда — A-22».
 3. `list_odoo_connections` → звірка з `odoo_connections`; клас бази `demo`; інакше відмова (див. вище).
 4. A-15: `SHA_STAND` = `git rev-parse HEAD` (= `git.head` наряду) — фіксується один раз і не змінюється. Перевірити правило SHA:
    `SHA_STAND` == SHA з `package/CHECKS.md` (мітка — `id-patterns.md`) або нащадок (`merge-base --is-ancestor`), а
-   `git diff --stat <SHA CHECKS.md>..HEAD` лише `package/CHECKS.md`, `package/demo/**`, `package/ACCEPTANCE.md`, `package/docs/user-guide/**`, AI-DECISIONS, `flow/**`, `tests/**`, `observations/` (як `diff-checks-acc` A-17); модулі/конфіг/майстер-дані без змін. Підсумок `CHECKS.md` ∉ {`APPROVE`, `APPROVE (CE); EE не перевірено`} → стоп; у другому випадку стенд `ee` не піднімати й не видавати за перевірений (README: «не перевірено»). Редакції — `editions` з `docs/industries/<галузь>/OWNER-INTAKE.md` (SHA у `Входи` наряду). Порушення правила SHA (зайві файли в diff) → `result: stopped`, перелік зайвих файлів у `memo`.
+   `git diff --stat <SHA CHECKS.md>..HEAD` лише `package/CHECKS.md`, `package/demo/**`, `package/ACCEPTANCE.md`, `package/docs/user-guide/**`, AI-DECISIONS, `flow/**`, `tests/**`, `observations/` (як `diff-checks-acc` A-17); модулі/конфіг/майстер-дані без змін (правило по суті: не змінено `package/addons`, `package/config`, `package/master-data`; службові шляхи тестового репо `.claude/`, `industry-flow-marketplace/`, `CLAUDE.md`, `TEST-START.md`, `START-HERE.md` і видалення бінарників баз у перелік не входять). Підсумок `CHECKS.md` ∉ {`APPROVE`, `APPROVE (CE); EE не перевірено`} → стоп; у другому випадку стенд `ee` не піднімати й не видавати за перевірений (README: «не перевірено»). Редакції — `editions` з `docs/industries/<галузь>/OWNER-INTAKE.md` (SHA у `Входи` наряду). Порушення правила SHA (зайві файли в diff) → `result: stopped`, перелік зайвих файлів у `memo`.
    Шаблон README: немає `package/templates/demo-README.md` → скопіювати `${CLAUDE_PLUGIN_ROOT}/references/demo-readme-template.md` (корінь встановленого плагіна; поруч зі скілом — `../../references/`).
 
 ## Режим A-15 «стенд пакета» (кроки 1–12)
@@ -77,6 +77,10 @@ description: >
     немає — скрипти все одно параметризовані, у README «Відкрите питання: режим обирає Тімлід», першим рядком у `memo`.
 11. **Старт 2:** лише сценарії з маршрутом A-15: причина → правка `package/demo/` → перезбирання/скидання → новий `SHA_STAND`
     (правило з кроку 0) → розділ README «Виправлення стенда/демо-даних» (сценарій, причина, що змінено, новий SHA). Дефект пакета → A-14.
+13. **Refresh** (A-15 refresh; умова: `git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'` = код 0, тобто гейти чинні, застаріла лише мітка SHA або стенд не піднятий):
+    підняти стенд `up.sh`, зафіксувати `SHA_STAND` (правило кроку 0); оновити мітку SHA у `package/demo/README.md` (і SHA по редакціях) та рядок `SHA: <SHA_STAND>` у заголовку `package/demo/scenarios.md`
+    з приміткою «тури не перезапускались, код = SHA гейтів»; дописати рядок AI-NN в AI-DECISIONS. Єдиний виняток — бінарники баз і дампи (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) у `package/` (R-22): прибрати їх із дерева (`git rm`), додати шаблони в `package/demo/.gitignore` (локальний стенд піднімається через `up.sh`), рядок AI-NN в AI-DECISIONS (власник — вето). У README дозволено дописати відсутні обов'язкові заголовки шаблону (порожній розділ «Виправлення стенда/демо-даних: немає»). Інші файли `package/demo/**` (`up.sh`, `docker/**`, `answers.yaml`, `profiles/`) не змінювати:
+    потрібна правка скриптів чи даних — це не refresh, а контур A-14 (`result: returned`/`escalated` до A-14). Дозволені файли — `versioning.md` п. 5, 6, 14. Тури й сценарії A-16 не перезапускати. `up.sh` падає — `waiting_human`.
 12. **Нова версія:** перебудова на новій ревізії; демо-дані й профілі змінюються лише для змінених AC/VP-xx; README фіксує, що A-18
     піднімає базу попереднього тегу через `git checkout <тег> -- package/demo/`.
 
@@ -104,7 +108,7 @@ description: >
 | `answers-schema`, `profiles-coverage` | кожна VP-xx має ключ і допустиме значення; кожне значення покрите; кожен профіль встановився | — |
 | `reset` | після зміни запису `reset.sh` повертає початковий стан. Немає `snapshot.sh`/`restore.sh` у `tools/odoo/` — `reset.sh` = повний `up.sh`, перевірка тією ж дією, у `memo` питання Тімліду; власних pg_dump не писати | контракт скидання описано, підкрок Тімліда в `memo` |
 | `ED-edition` | кожна редакція з `editions` має `up.sh`/`reset.sh` з параметром `edition`, ключ `edition` в `answers.yaml`, рядок у README «Редакції стенда» (SHA, статус); `ee` без EE = `не перевірено` (WARN, не PASS); ядро `td_*` без EE-залежностей | `demo_edition` бази зрізу = редакція з анкети |
-| `sha-rule` | SHA README = SHA CHECKS.md або нащадок; diff лише з переліку `diff-checks-acc` A-17 (CHECKS.md, `package/demo/**`, ACCEPTANCE.md, user-guide, AI-DECISIONS, `flow/**`, `tests/**`, `observations/`) | — |
+| `sha-rule` | SHA README = SHA CHECKS.md або нащадок; diff лише з переліку `diff-checks-acc` A-17 (службові шляхи тестового репо не рахуються; CHECKS.md, `package/demo/**`, ACCEPTANCE.md, user-guide, AI-DECISIONS, `flow/**`, `tests/**`, `observations/`) | — |
 | `synthetic-data` | `references/demo-data-rules.md` § grep: e-mail лише `example.com`, телефони лише в колонках phone/mobile поза дозволеним діапазоном, збігів з реальними назвами немає | те саме |
 | `no-x` | — | немає `x_`-моделей/полів, Studio, `ir.actions.server` `state='code'`, `base.automation` поза модулями пакета |
 | `facts-match` | — | цифри бази = `prototype-real/facts.json` (`check_facts.py`) |

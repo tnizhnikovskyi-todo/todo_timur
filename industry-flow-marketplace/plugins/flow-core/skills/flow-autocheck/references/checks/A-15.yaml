@@ -46,6 +46,14 @@
    }
   },
   {
+   "id": "no-db-binaries-tree",
+   "prim": "no_db_binaries",
+   "route_on_fail": "A-15 (прибрати бази з package/, .gitignore)",
+   "args": {
+    "tree": "package/"
+   }
+  },
+  {
    "id": "no-pii-demo",
    "prim": "pii_strict",
    "args": {
@@ -58,7 +66,7 @@
    "id": "sha-rule",
    "prim": "manual",
    "args": {
-    "text": "SHA у README = SHA package/CHECKS.md або його нащадок; diff CHECKS..HEAD лише в package/CHECKS.md, package/demo/**, package/ACCEPTANCE.md, package/docs/user-guide/**, AI-DECISIONS, flow/**, tests/**, observations/ (як diff-checks-acc A-17); модулі, конфіг і майстер-дані не змінені",
+    "text": "SHA у README = SHA package/CHECKS.md або його нащадок; суть: не змінено package/addons, package/config, package/master-data; службові шляхи тестового репо (.claude/, industry-flow-marketplace/, CLAUDE.md, TEST-START.md, START-HERE.md) не рахуються; diff CHECKS..HEAD лише в package/CHECKS.md, package/demo/**, package/ACCEPTANCE.md, package/docs/user-guide/**, AI-DECISIONS, flow/**, tests/**, observations/ (як diff-checks-acc A-17); модулі, конфіг і майстер-дані не змінені",
     "who": "runner"
    }
   },

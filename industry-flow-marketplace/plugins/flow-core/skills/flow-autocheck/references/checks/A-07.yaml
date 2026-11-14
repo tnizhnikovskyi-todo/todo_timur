@@ -57,6 +57,7 @@
   {
    "id": "rejected-register",
    "prim": "manual",
+   "when": "in:A-23",
    "args": {
     "text": "python3 -I <корінь плагіна flow-core>/skills/flow-autocheck/scripts/check_rejected.py docs/industries/<галузь>/demand/results.md: REJ-exists, REJ-fields, REJ-count без FAIL. Відкинуті варіанти — розділ «## Не робимо» (або «## Відкинуто») у demand/results.md. Скрипт autocheck.py його не запускає: має виконати runner (виконує runner за flow-step-runner, Крок 9 (ж); не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку, MANUAL і SKIP лишаються такими).",
     "cmd": [
@@ -71,6 +72,7 @@
   {
    "id": "recommendation-basis",
    "prim": "manual",
+   "when": "in:A-23",
    "args": {
     "text": "«Рекомендація AI для A-07» (будуємо / ні / змінити концепцію) спирається на сигнали й пороги A-23 (thresholds.md), без business-case, окупності й грошового розрахунку (0.3.0; business-case.md не пишеться)",
     "who": "runner"

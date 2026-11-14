@@ -170,7 +170,7 @@ def parse_schema(text):
         if m and cur is not None:
             cur[m.group(1)] = scalar(m.group(2))
         elif not re.match(r"^\s", l):
-            raise ValueError(f"невідомий рядок схеми: {l[:40]}")
+            cur = None  # службовий верхній блок не VP-xx (edition:, elearning: …): пропускаємо разом з відступом
     return res
 
 
@@ -189,6 +189,12 @@ def scalar(v):
 
 def deprecated(d):
     return bool(d.get("deprecated")) and d.get("deprecated") not in ("false", False)
+
+
+# Тестовий режим (test-CLAUDE.md): файли, які сесія змінює поза where кроку; у бойовому репо їх немає
+TEST_MODE_ALLOW = ["tests/reports/", "tests/naryad/", "tests/open-questions.md", "flow/decisions.md"]
+# Службові шляхи тестового репо (bootstrap --upgrade, правила сесії): не є вмістом пакета; лише для diff за SHA (не для where-only)
+TEST_SERVICE_ALLOW = [".claude/", "industry-flow-marketplace/", "CLAUDE.md", "TEST-START.md", "START-HERE.md"]
 
 
 def glob_match(p, pat):
@@ -381,8 +387,12 @@ def p_git_diff_allowed(ctx, c):
         return
     rc, out = git(ctx, "diff", "--name-only", a, b)
     files = [x for x in out.split("\n") if x]
+    # видалення бінарників баз (R-22) — не зайвий файл
+    rcd, outd = git(ctx, "diff", "--name-only", "--diff-filter=D", a, b)
+    gone = {x for x in outd.split("\n") if x and DB_BIN_TREE_RE.search(x)} if rcd == 0 else set()
+    files = [f for f in files if f not in gone]
     ind = industry_of(ctx)
-    allow = [p.replace("<галузь>", ind) if ind else p.replace("<галузь>", "*") for p in s["allow"]]
+    allow = [p.replace("<галузь>", ind) if ind else p.replace("<галузь>", "*") for p in s["allow"]] + TEST_MODE_ALLOW + TEST_SERVICE_ALLOW
     extra = [f for f in files if not any(glob_match(f, p) for p in allow)]
     ctx.add(c["id"], "FAIL" if extra else "PASS", ("Зайві файли поза дозволеним переліком: " + ", ".join(extra)) if extra else "",
             f"{a[:12]}..{b[:12]}", c.get("route_on_fail") if extra else None)
@@ -469,8 +479,14 @@ def p_exists(ctx, c):
     ctx.add(c["id"], "FAIL" if miss else "PASS", ("Створи непорожні файли: " + ", ".join(miss)) if miss else "", ",".join(miss)[:200])
 
 
+def addon_dirs(ctx):
+    """Модулі package/addons: лише каталоги (файли на кшталт AC-COVERAGE.md пропускаємо)."""
+    rc, out = git(ctx, "ls-tree", "-d", "--name-only", ctx.head, "package/addons/")
+    return [x.rsplit("/", 1)[-1] for x in out.split("\n") if x] if rc == 0 else []
+
+
 def p_vendored_license(ctx, c):
-    bad = [d for d in lsdir(ctx, ctx.head, "package/addons") if not re.match(r"^td_", d)
+    bad = [d for d in addon_dirs(ctx) if not re.match(r"^td_", d)
            and not any(re.match(r"(?i)^(LICENSE|COPYING)", f) for f in lsdir(ctx, ctx.head, f"package/addons/{d}"))]
     ctx.add(c["id"], "FAIL" if bad else "PASS", ("Додай файл ліцензії у вендорені модулі: " + ", ".join(bad)) if bad else "", "package/addons")
 
@@ -479,7 +495,7 @@ def p_addons_in_text(ctx, c):
     text, lab = resolve(ctx, c["args"]["ref"])
     if text is None:
         return ctx.add(c["id"], "ERROR", f"Немає файлу {lab}", lab)
-    miss = [d for d in lsdir(ctx, ctx.head, "package/addons") if d not in text]
+    miss = [d for d in addon_dirs(ctx) if d not in text]
     ctx.add(c["id"], "FAIL" if miss else "PASS", ("Додай у склад " + lab + " модулі з версією/джерелом: " + ", ".join(miss)) if miss else "", lab)
 
 
@@ -715,6 +731,7 @@ def p_manual(ctx, c):
 
 # ---------- примітиви узгодженості зрізу й PR (E3, E7; 0.4.0) ----------
 DB_BIN_RE = re.compile(r"(?i)\.(zip|dump|sql|sql\.gz|backup)$")
+DB_BIN_TREE_RE = re.compile(r"(?i)\.(zip|dump|sql\.gz|backup)$")
 TD_TOKEN = r"td[_.][a-z0-9_.]*[a-z0-9]"
 
 
@@ -728,6 +745,13 @@ def code_names(ctx, addons):
 
 def p_no_db_binaries(ctx, c):
     """E7: у diff PR немає бінарників баз (*.zip, *.dump, *.sql, *.sql.gz, *.backup)."""
+    tree = (c.get("args") or {}).get("tree")
+    if tree:  # весь каталог на head (не лише diff): бінарники баз у дереві пакета
+        rc, out = git(ctx, "ls-tree", "-r", "--name-only", ctx.head, "--", tree)
+        bad = [f for f in out.split("\n") if f and DB_BIN_TREE_RE.search(f)]
+        return ctx.add(c.get("id", "no-db-binaries-tree"), "FAIL" if bad else "PASS",
+                       ("Прибери з дерева пакета бази й дампи (стенд віддається з сервера; .gitignore): " + ", ".join(bad[:8])) if bad else "",
+                       ",".join(bad)[:200], c.get("route_on_fail") if bad else None)
     rc, out = git(ctx, "diff", "--name-only", "--diff-filter=ACMR", ctx.base, ctx.head)
     bad = [f for f in out.split("\n") if f and DB_BIN_RE.search(f)]
     ctx.add(c.get("id", "no-db-binaries"), "FAIL" if bad else "PASS",
@@ -838,7 +862,7 @@ def generic(ctx, extra_allowed):
         ctx.add("path-placeholder", "FAIL", "Непідставлений плейсхолдер у where: " + ", ".join(ph))
         return
     p_no_db_binaries(ctx, {"id": "no-db-binaries"})
-    allowed = wh + ["observations/"] + list(extra_allowed or [])
+    allowed = wh + ["observations/"] + TEST_MODE_ALLOW + list(extra_allowed or [])
     extra = [f for f in changed_files(ctx) if not any(glob_match(f, a) or f == a.rstrip("/") for a in allowed)]
     ctx.add("where-only", "FAIL" if extra else "PASS", ("Прибери зміни поза where: " + ", ".join(extra)) if extra else "", f"{ctx.base[:8]}..{ctx.head[:8]}")
     miss = []
@@ -869,9 +893,16 @@ def template_headings(ctx, cid, tpl, res):
     if t is None or r is None:
         return ctx.add(cid, "ERROR", f"template-missing: немає {tpl if t is None else res} на SHA", tpl)
     have = [norm(h) for _, h, _, _ in sections(r)]
+    blk = re.search(r"```markdown\n(.*?)\n```", t, re.S)
+    src = blk.group(1) if blk else t  # заголовки лише з блоку-шаблону; інакше H1 самого файлу пропускаємо
     miss = []
-    for _, h, _, _ in sections(t):
-        rx = "^" + re.sub(r"\\<[^>]*\\>", ".+", re.escape(norm(h))) + "$"
+    for lv, h, _, _ in sections(src):
+        if lv == 1 and not blk:
+            continue
+        if re.search(r"лише\s*<", h):
+            continue
+        h2 = re.sub(r"\s+<-.*$", "", h)
+        rx = "^" + re.sub(r"<[^>]*>", ".+", re.escape(norm(h2)).replace("\\<", "<").replace("\\>", ">")) + "$"
         if not any(re.search(rx, x) for x in have):
             miss.append(h)
     ctx.add(cid, "FAIL" if miss else "PASS", ("Додай заголовки шаблону в " + res + ": " + "; ".join(miss)) if miss else "", res)
@@ -1145,11 +1176,35 @@ EXTRA_CASES = [  # (скрипт, фікстура, аргументи, очік
 ]
 
 
+def selftest_template_headings():
+    """регрес: плейсхолдери <…>, H1 шаблону, хвости «<- …», «лише <режим>» не дають хибного FAIL"""
+    tpl = "# Шаблон розділу версії package/CHANGELOG.md\n\n```markdown\n## Версія <тег>\n### Передача клієнту <- release і odoo-upgrade\n### Виправлено (hotfix) <- лише patch\n### Сумісність з Odoo лише <odoo-upgrade>\n```\n"
+    res = "# CHANGELOG\n\n## Версія 1.2.0\n### Передача клієнту\n### Виправлено (hotfix)\n"
+
+    class C:
+        rows = []
+        base = head = "x"
+
+        def add(self, i, st, msg="", ev="", route=None):
+            self.rows.append((st, msg))
+    c = C()
+    global read_rev
+    old = read_rev
+    read_rev = lambda ctx, rev, path: tpl if path == "t.md" else res
+    try:
+        template_headings(c, "th", "t.md", "r.md")
+    finally:
+        read_rev = old
+    assert c.rows and c.rows[0][0] == "PASS", c.rows
+
+
 def selftest():
     assert glob_match("package/addons/td_x/a.py", "package/addons/**") and not glob_match("package/SPEC.md", "package/demo/**")
     assert xy("19.0.1.2") == "1.2"
     sch = parse_schema("# schema: 1\nVP-01:\n  param: A\n  type: enum\n  allowed: [a, b]\n  default: a\n  deprecated: false\nVP-02:\n  deprecated: \"з версії 1.1\"\n")
     assert sch["VP-01"]["allowed"] == ["a", "b"] and not deprecated(sch["VP-01"]) and deprecated(sch["VP-02"])
+    assert "VP-01" in parse_schema("edition:\n  a: b\ncontract_mode: x\nVP-01:\n  param: A\nelearning:\n  mode: m\n") and len(parse_schema("edition:\n  a: b\nVP-01:\n  param: A\n")) == 1
+    selftest_template_headings()
     t = tables("| AC | трек |\n|---|---|\n| AC-01 | конфіг |\n")[0]
     assert t["rows"][0]["cells"] == ["AC-01", "конфіг"] and colidx(t["hdr"], ["ac"]) == 0
     assert SHA_RE.search("SHA: abc1234").group(2) == "abc1234"
@@ -1181,6 +1236,7 @@ def selftest():
     selftest_templates_pkg()
     selftest_stale()
     selftest_e3()
+    selftest_service_paths()
     cdir = os.path.join(SKILL, "references", "checks")
     for f in sorted(os.listdir(cdir)):
         for c in load_spec(f[:-5])["checks"]:
@@ -1247,6 +1303,30 @@ def selftest_stale():
     run("add", "."); run("commit", "-qm", "depends sha"); c4 = run("rev-parse", "HEAD")
     r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_stale.py"), dep, "--base", c4], capture_output=True, text=True)
     assert r.returncode == 0, f"check_stale-same-step: очікувано PASS: {r.stdout[-200:]}"
+
+
+def selftest_service_paths():
+    """0.4.0: службові шляхи тестового репо і видалення бінарників не дають хибного FAIL у git_diff_allowed; файл у package/addons — не модуль."""
+    import types
+    d = tempfile.mkdtemp()
+    run = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, text=True, check=True).stdout.strip()
+    run("init", "-q", "-b", "main"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+    w = lambda f, t: (os.makedirs(os.path.dirname(os.path.join(d, f)), exist_ok=True), open(os.path.join(d, f), "w").write(t))
+    w("package/addons/td_x/__manifest__.py", "{}"); w("package/addons/AC-COVERAGE.md", "x"); w("package/demo/docker/b.zip", "bin")
+    run("add", "."); run("commit", "-qm", "c0"); a = run("rev-parse", "HEAD")
+    w(".claude/skills/s/SKILL.md", "n"); w("CLAUDE.md", "n"); w("TEST-START.md", "n"); w("industry-flow-marketplace/p.txt", "n")
+    w("package/demo/.gitignore", "*.zip\n"); run("rm", "-q", "package/demo/docker/b.zip")
+    run("add", "-A"); run("commit", "-qm", "c1"); b = run("rev-parse", "HEAD")
+    ctx = Ctx(types.SimpleNamespace(repo=d, mode="result", base=a, head=b, agent_pattern=None), {})
+    ctx.rows = []
+    p_git_diff_allowed(ctx, {"id": "t", "args": {"from": "base", "to": "head", "allow": ["package/demo/.gitignore"]}})
+    assert ctx.rows[0]["status"] == "PASS", ctx.rows[0]
+    w("package/addons/td_x/m.py", "x"); run("add", "-A"); run("commit", "-qm", "c2")
+    ctx.head = run("rev-parse", "HEAD"); ctx.rows = []
+    p_git_diff_allowed(ctx, {"id": "t", "args": {"from": "base", "to": "head", "allow": []}})
+    assert ctx.rows[0]["status"] == "FAIL" and "td_x/m.py" in ctx.rows[0]["msg"], ctx.rows[0]
+    ctx.rows = []; p_vendored_license(ctx, {"id": "t"})
+    assert ctx.rows[0]["status"] == "PASS" and "AC-COVERAGE" not in ctx.rows[0]["msg"], ctx.rows[0]
 
 
 def selftest_e3():

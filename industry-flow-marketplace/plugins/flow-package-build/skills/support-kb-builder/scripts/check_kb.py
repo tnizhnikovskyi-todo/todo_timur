@@ -89,7 +89,7 @@ def main():
     add("KB-kinds", "FAIL" if msg else "PASS", "; ".join(msg))
 
     # KB-module
-    mods = sorted(d for d in os.listdir(a.addons) if d.startswith("td_") and os.path.isfile(os.path.join(a.addons, d, "__manifest__.py"))) if os.path.isdir(a.addons) else []
+    mods = sorted(d for d in os.listdir(a.addons) if d.startswith("td_") and not re.fullmatch(r"td_\w+_demo", d) and os.path.isfile(os.path.join(a.addons, d, "__manifest__.py"))) if os.path.isdir(a.addons) else []
     covered = set()
     for t in texts.values():
         m = re.search(r"^module:\s*(td_\w+)\s*$", t, re.M)
@@ -97,7 +97,7 @@ def main():
             covered.add(m.group(1))
     expected = [m for m in a.expect_module if m not in mods]
     nomod = [m for m in mods + expected if m not in covered]
-    ghost = sorted(covered - set(mods) - set(expected))
+    ghost = sorted(m for m in covered - set(mods) - set(expected) if not re.fullmatch(r"td_\w+_demo", m))
     msg = []
     if not mods:
         msg.append(f"у {a.addons} немає модулів td_*")

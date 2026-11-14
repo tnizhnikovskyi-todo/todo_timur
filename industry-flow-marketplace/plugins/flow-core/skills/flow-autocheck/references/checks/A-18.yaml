@@ -24,6 +24,7 @@
     "to": "head",
     "allow": [
      "package/demo/README.md",
+     "package/demo/.gitignore",
      "package/demo/scenarios.md",
      "package/ACCEPTANCE.md",
      "package/CHANGELOG.md",
@@ -165,6 +166,12 @@
      "regex": "VP-\\d{2,3}"
     }
    }
+  },
+  {
+   "id": "no-db-binaries-tree",
+   "prim": "no_db_binaries",
+   "route_on_fail": "A-15",
+   "args": {"tree": "package/"}
   },
   {
    "id": "odoo19-lint",

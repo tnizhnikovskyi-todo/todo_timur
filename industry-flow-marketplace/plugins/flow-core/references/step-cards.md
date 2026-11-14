@@ -164,13 +164,13 @@
 - `executor`: any; `skillRef`: flow-package-build:user-guide-builder
 - `access_profile`: repo
 - `inArtifacts`: package/SPEC.md (сценарії за ролями, AC); package/demo/ (стенд, ролі, скрипти, README із SHA); тури A-16 (`package/demo/scenarios.md`); `package/templates/answers.yaml` і профілі
-- `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — таблиця покриття «сценарій SPEC -> розділ» і SHA стенда
+- `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — таблиця покриття «сценарій SPEC -> розділ» і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
 - гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
 - `review.checklists`: [user-guide.md]; `review.max_rounds: 2` (+1 контрольний)
 - перевірки: `check_guides.py` (UG-cover, UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - примітки: скриншоти зі стенда на поточному SHA; текст кроків українською без англійських підписів
-- ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); стенд недоступний -> A-15
+- ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); стенд недоступний -> A-15; стенд застарів (SHA гейтів змінився лише міткою) -> A-15 refresh окремим нарядом (AI сам, без людини)
 
 ### A-17. Приймання пакета (змінена картка 0.4.0)
 - `raciR`: Власник продукту (R, A); AI — чернетка `product-decision-drafter`
@@ -184,7 +184,7 @@
 - `raciR`: AI (R); Контент-менеджер / Власник продукту (рецензія, A)
 - `executor`: any; `skillRef`: flow-package-build:elearning-builder; `access_profile`: repo
 - `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: "on"|"off"`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
-- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає)
+- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає); рядки AI-NN в `AI-DECISIONS.md` (сертифікація, рішення AI)
 - гейт: ні; AND-split з A-17c, AND-join в A-18
 - перелік установки: при `elearning.mode: "on"` крок сам дописує `website_slides` і `td_<галузь>_elearning` у `package/config/{manifest.yaml,CONFIG.md}` (обидва профілі)
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)

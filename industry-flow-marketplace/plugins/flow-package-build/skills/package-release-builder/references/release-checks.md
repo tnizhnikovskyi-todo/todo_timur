@@ -1,4 +1,4 @@
-# Команди перевірок R-01...R-16
+# Команди перевірок R-01...R-22
 
 Підстановки: `SHA` — ревізія (patch: SHA APPROVE), `VER` — `vX.Y[...]`, `TAG` = `package/$VER`, `SCRATCH` — каталог scratchpad, `PREV` — попередній тег.
 Вивід обмежувати (`| head -30`).
@@ -21,10 +21,11 @@
 | R-12 | `grep -c` обов'язкових розділів `migration-plan.md`, `training.md` (див. шаблони) |
 | R-13 | `git diff -U0 $PREV..HEAD -- package/addons/td_*/models` і `ls package/addons/td_*/migrations/<серія>.X.Y/` (`<серія>` = `19.0`, odoo-upgrade `<N>.0`) |
 | R-14 | regex нижче по CHANGELOG, шаблонах, release-defects.md; у майстер-даних/демо — лише повідомлення про факт, без копіювання |
-| R-15 | `boost:odoo19-lint` по `package/addons/td_*/` |
+| R-21 | `boost:odoo19-lint` по `package/addons/td_*/` |
 | R-18 | `test -f package/docs/user-guide/INDEX.md`; `S=$(<SHA_STAND з package/demo/README.md>)`; `git diff --quiet $S..HEAD -- package/addons ':(exclude)package/addons/td_*_elearning'` (код 0); `python3 -I <flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --spec <шлях із рядка «Джерело сценаріїв:» INDEX> --stand-sha $S`; якщо є модуль: `python3 -I <flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml`; `grep -h "'version'" package/addons/td_*_elearning/__manifest__.py` = X.Y |
 | R-19 | `grep -n -E 'support/' package/CHANGELOG.md` — лише в рядку виключення; `git grep -n 'package/support' -- package/templates package/docs` — порожньо; `python3 -I <flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons` |
 | R-20 | `for m in td_support td_home_menu; do test -d package/addons/$m || echo MISSING $m; grep -q $m package/config/manifest.yaml || echo NOT-IN-MANIFEST $m; done`; за MISSING/NOT-IN-MANIFEST — `grep -nE 'AI-[0-9]+.*(§27\|td_support\|td_home_menu)' docs/industries/*/research/AI-DECISIONS.md` (рядок про свідомий випуск без них); обидва порожні — WARN |
+| R-22 | `git ls-tree -r --name-only HEAD -- package/ \| grep -iE '\.(zip\|dump\|sql\.gz\|backup)$'` (порожньо = PASS) |
 | R-16 | `grep -n <SHA> package/ACCEPTANCE.md package/demo/scenarios.md package/demo/README.md` |
 
 ## R-08: схема VP (без сторонніх бібліотек)
