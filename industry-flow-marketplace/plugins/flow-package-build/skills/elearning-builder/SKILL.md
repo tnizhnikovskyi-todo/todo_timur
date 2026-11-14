@@ -89,9 +89,16 @@ elearning:
 `run_tests.sh <db> /td_<галузь>_elearning:<TestClass>` (скрипти C-00); немає бази/скрипта -> `EL-install` = SKIPPED = не готово.
 Перед «готово» — `boost:odoo19-lint` по модулю.
 
+## Крок 6. Перелік установки (при `elearning.mode: "on"`)
+A-12 уже закрито, тому модуль у перелік установки вносить сам A-17b (рішення AI, власник — вето): у `package/config/manifest.yaml` в обох
+профілях `edition_profiles.ce` і `.ee` (`ee` ⊇ `ce`) — після останнього `td_*` додати `{name: website_slides, origin: std-ce, source: standard, ac: []}`
+(перед модулем) і `{name: td_<галузь>_elearning, origin: td, source: code, ac: []}`; той самий рядок — у розділ «Модулі до установки» `package/config/CONFIG.md`.
+`website_slides_survey` — лише якщо підтверджений Крок 1 і є в `depends`. При `elearning.mode: "off"` рядків не додавати (і прибрати, якщо були).
+`config-as-code` у режимах `fix`/`new-version` ці два рядки зберігає й додає сам, якщо `mode: "on"` і модуль є в `package/addons/`.
+
 ## Запис
 Лише `package/addons/td_<галузь>_elearning/` (`__manifest__.py`, `data/*.xml`, `static/`, `tests/`, `README.md`), ключі `elearning.*` у
-`package/templates/answers.yaml` (Крок 4) і рядки `research/AI-DECISIONS.md` (рішення AI з ризиками). Не змінювати інші модулі, `package/docs/user-guide/`.
+`package/templates/answers.yaml` (Крок 4), рядки елемента навчання в `package/config/{manifest.yaml,CONFIG.md}` (Крок 6; інше в `package/config/` не чіпати) і рядки `research/AI-DECISIONS.md` (рішення AI з ризиками). Не змінювати інші модулі, `package/docs/user-guide/`, дані `package/config/data/` і `vp-map.yaml`.
 
 ## Автоперевірка
 `python3 -I scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml [--schema schema.json]`

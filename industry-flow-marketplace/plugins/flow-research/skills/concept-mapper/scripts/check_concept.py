@@ -8,7 +8,7 @@ CM-pii: ПІБ (три слова з великої) дає MANUAL, а не FAIL
 Старий режим «лише concept/» — явний прапорець --concept-only (нові CM-* тоді SKIP; для A-20 не використовувати).
 Шлях до скриптів flow-autocheck (плагін flow-core): --autocheck-dir <шлях до .../flow-core/skills/flow-autocheck/scripts> або змінна оточення FLOW_AUTOCHECK_DIR
 (у кеші встановлених плагінів сусідній плагін може лежати деінде; за замовчуванням — відносно цього файла).
-Із --research додатково: CM-research (розділи BOX §1-13, SALES §1-7, файли REJECTED.md і AI-DECISIONS.md; OWNER-BRIEF не пишеться), CM-buyer (роль-покупець має екран-дашборд і сценарій),
+Із --research додатково: CM-box-core (§27: BOX.md називає td_home_menu і td_support), CM-research (розділи BOX §1-13, SALES §1-7, файли REJECTED.md і AI-DECISIONS.md; OWNER-BRIEF не пишеться), CM-buyer (роль-покупець має екран-дашборд і сценарій),
 CM-roles-scenarios (кожна роль має SC, кожна F — крок SC, роль SC = роль екрана), CM-base-edition (основа екрана: Стд CE|Стд EE|td_|ToDo-готовий|Інтегр), CM-entity-matrix (матриця «сутність × роль × екран» у screens.md: кожна сутність видна на екрані кожної ролі, що з нею працює),
 CM-money (LESSONS §24: у concept/* і research/{BOX,SALES,REJECTED,AI-DECISIONS}.md немає окупності, TCO, вартості володіння, business-case, «вердикту про гроші», ROI,
 беззбитковості, ставки розробки, годин × ставка; секції money), CM-facts (check_facts.py: числа = facts.yaml). Без --research (лише з --concept-only) вони SKIP.
@@ -206,6 +206,12 @@ def main():
         for f in ("REJECTED.md", "AI-DECISIONS.md"):
             if not (rd / f).exists(): bad.append(f"немає {f}")
         add("CM-research", not bad, "; ".join(bad))
+        # CM-box-core (§27): td_home_menu (лише CE) і td_support (CE і EE) названі в BOX.md (у складі кожної коробки)
+        bx = rd / "BOX.md"
+        if bx.exists():
+            btxt = bx.read_text(encoding="utf-8")
+            miss = [m for m in ("td_home_menu", "td_support") if m not in btxt]
+            add("CM-box-core", not miss, ("BOX.md не називає обов'язкові складові (§27, у кожній коробці): " + ", ".join(miss)) if miss else "")
         # CM-ai-limit: ≤15 рядків «Рішення» в AI-DECISIONS; A-20 лишає резерв 3–4 для рядків «ризик» самоперевірки повноти (≤11)
         pa = rd / "AI-DECISIONS.md"
         if pa.exists():

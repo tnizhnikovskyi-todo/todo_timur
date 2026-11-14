@@ -186,6 +186,7 @@
 - `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: "on"|"off"`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
 - `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає)
 - гейт: ні; AND-split з A-17c, AND-join в A-18
+- перелік установки: при `elearning.mode: "on"` крок сам дописує `website_slides` і `td_<галузь>_elearning` у `package/config/{manifest.yaml,CONFIG.md}` (обидва профілі)
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - перевірки: `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang, EL-score, EL-access, EL-content, EL-pass, EL-mode), тести на чистій CE (курсів = ролей, >=5 питань у курсі), lint, CI C-03, security-review (недоступний гейт = рішення AI + MANUAL), `A-17b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1

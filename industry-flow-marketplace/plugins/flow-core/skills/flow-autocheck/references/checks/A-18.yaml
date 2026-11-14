@@ -34,6 +34,8 @@
      "package/docs/user-guide/**",
      "package/addons/td_*_elearning/**",
      "package/templates/answers.yaml",
+     "package/config/manifest.yaml",
+     "package/config/CONFIG.md",
      "package/support/**",
      "docs/industries/*/research/AI-DECISIONS.md"
     ]

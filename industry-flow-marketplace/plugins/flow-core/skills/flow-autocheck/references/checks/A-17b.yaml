@@ -21,6 +21,8 @@
     "allow": [
      "package/addons/td_*_elearning/**",
      "package/templates/answers.yaml",
+     "package/config/manifest.yaml",
+     "package/config/CONFIG.md",
      "docs/industries/<галузь>/research/AI-DECISIONS.md",
      "observations/"
     ]

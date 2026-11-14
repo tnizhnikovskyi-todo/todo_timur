@@ -7,6 +7,8 @@ RU-id       — ID REUSE-NN унікальні, двозначні (id-patterns.
 RU-verdict  — Рішення ∈ беремо|адаптуємо|ні; Основа `ToDo-готовий` для беремо/адаптуємо.
 RU-license  — права невідомо/AGPL -> лише «ні» (К-09, картка A-03c).
 Порожній результат: в `## Інвентар` — рядок «кандидатів не знайдено (переглянуто N …)», у REUSE.md `## Реєстр` — «готових модулів немає» (+ «нічого не відкинуто»); без маркера — FAIL.
+RU-core     — (§27) `td_home_menu` (лише CE) і `td_support` (CE і EE) є в `## Інвентар` і в `## Реєстр` з рішенням беремо/адаптуємо, основа ToDo-готовий;
+              «ні» — лише з явним вето власника у «Відкинуто» («вето»/«рішення власника»). «кандидатів не знайдено» стосується лише зовнішніх: ці два рядки обов'язкові завжди.
 RU-rejected — кожен REUSE із «ні» згаданий у розділі «Відкинуто» (або там рядок «нічого не відкинуто» за відсутності «ні»)."""
 import argparse, json, re, sys
 res = []
@@ -36,7 +38,7 @@ def main():
     miss = [n for n, s in (("Реєстр", reg), ("Відкинуто", rej)) if s is None]
     add("RU-file", "FAIL" if (not t or miss) else "PASS", "немає файла/розділів: " + ", ".join(miss or ["файл"]) if (not t or miss) else "")
     if reg is None:
-        for i in ("RU-id", "RU-verdict", "RU-license", "RU-rejected"): add(i, "SKIP", "немає розділу «Реєстр»")
+        for i in ("RU-id", "RU-verdict", "RU-license", "RU-rejected", "RU-core"): add(i, "SKIP", "немає розділу «Реєстр»")
         print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1)
     rr = rows(reg); hdr = [c.lower() for c in rr[0]] if rr else []
     body = rr[1:]
@@ -78,5 +80,17 @@ def main():
     elif nos and lost: add("RU-rejected", "FAIL", "«ні» без запису у «Відкинуто»: " + ", ".join(lost))
     elif not nos and not re.search(r"нічого не відкинуто|REJ-\d{3}", rj): add("RU-rejected", "FAIL", "у «Відкинуто» немає ні реєстру, ні рядка «нічого не відкинуто»")
     else: add("RU-rejected", "PASS")
+    core_bad = []
+    for mod in ("td_home_menu", "td_support"):
+        inv_row = next((r for r in rows(inv_s) if any(mod in c for c in r)), None)
+        reg_row = next((r for r in body if any(mod in c for c in r)), None)
+        if not inv_row: core_bad.append(mod + ": немає в `## Інвентар` (§27: завжди «ToDo-готовий»)"); continue
+        v = (reg_row[cv].lower() if reg_row and cv is not None and cv < len(reg_row) else "")
+        b = (reg_row[cb] if reg_row and cb is not None and cb < len(reg_row) else "")
+        veto = bool(re.search(mod + r"[^\n]*(вето|рішення власника)", rj, re.I))
+        if not reg_row: core_bad.append(mod + ": немає в `## Реєстр`")
+        elif v not in ("беремо", "адаптуємо") and not veto: core_bad.append(mod + ": рішення «" + v + "» без вето власника (за замовчуванням «беремо»)")
+        elif v in ("беремо", "адаптуємо") and b != "ToDo-готовий": core_bad.append(mod + ": основа не ToDo-готовий")
+    add("RU-core", "FAIL" if core_bad else "PASS", "; ".join(core_bad))
     print(json.dumps(res, ensure_ascii=False, indent=1)); sys.exit(1 if any(r["status"] == "FAIL" for r in res) else 0)
 if __name__ == "__main__": main()
