@@ -1,0 +1,85 @@
+{
+  "skill_name": "user-guide-builder",
+  "evals": [
+    {
+      "id": "happy-guides",
+      "prompt": "Наряд A-16b, меблеве виробництво, режим перший запуск. A-16 done; стенд A-15 піднято на SHA a1b2c3d4e5f6…, ролі: Комірник, Майстер цеху, Адміністратор. SPEC має сценарії SC-01 (Комірник), SC-02 (Майстер), SC-03 (Адміністратор). Збери package/docs/user-guide/. Вхідні файли — у `files` кейсу.",
+      "expected_output": "INDEX.md із SHA стенда й таблицею покриття SC-01..03; komirnyk.md, master.md, admin.md; cards/komirnyk.md, cards/master.md; знімки img/<роль>/SC-NN-N.png, на кожен є посилання; check_guides.py без FAIL.",
+      "assertions": [
+        "Кожен SC-NN зі SPEC має розділ ## SC-NN і рядок у таблиці покриття INDEX",
+        "Підписи кнопок у кроках українські, без латиниці поза `код`",
+        "admin.md містить розділи Перший запуск, Параметри, Профілі, Редакції",
+        "Рядок «SHA стенда:» у INDEX збігається з SHA модулів; знімки мають запис у SHOOT-LOG",
+        "Скрипт на fixtures/user-guide-ok дає UG-cover, UG-img, UG-sha, UG-lang = PASS",
+        "Змінено лише package/docs/user-guide/; модулів не правлено"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-ok/SPEC.md",
+        "evals/fixtures/user-guide-ok/user-guide/"
+      ]
+    },
+    {
+      "id": "bad-cover-img-sha-lang",
+      "prompt": "Перевір готові інструкції A-16b скриптом: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-bad/user-guide --spec evals/fixtures/user-guide-bad/SPEC.md --modules-sha a1b2c3d4e5f6. Поясни кожен FAIL і що робити.",
+      "expected_output": "UG-cover FAIL (SC-02 без розділу й рядка INDEX), UG-img FAIL (битий img/master/SC-02-2.png і сирота orphan.png), UG-sha FAIL (INDEX ffff… != a1b2…), UG-lang FAIL («Save» у komirnyk.md). Агент виправляє, а не здає.",
+      "assertions": [
+        "UG-cover = FAIL з SC-02",
+        "UG-img = FAIL: і відсутній файл, і сирота",
+        "UG-sha = FAIL: SHA INDEX не збігається з SHA модулів",
+        "UG-lang = FAIL із «Save»",
+        "Код повернення скрипта 1",
+        "Агент не заявляє done при FAIL; для UG-sha виправляє рядок після перезйомки на правильному SHA, а не підміняє рядок"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-bad/SPEC.md",
+        "evals/fixtures/user-guide-bad/user-guide/"
+      ]
+    },
+    {
+      "id": "ui-defect-to-a14",
+      "prompt": "Наряд A-16b. Під час зйомки сценарію SC-02 Майстра кнопка «Виконати» у стенді відсутня на формі робочого завдання (SPEC вимагає її), інші сценарії працюють. Що робити?",
+      "expected_output": "SC-02 у посібнику має Статус: заблоковано дефектом D-NN; рядок у package/demo/defects.md з маршрутом A-14; знімків не вигадано; модуль не правлено; INDEX перелічує відкритий дефект.",
+      "assertions": [
+        "Рядок дефекту в package/demo/defects.md з маршрутом A-14",
+        "Розділ SC-02 існує зі статусом «заблоковано дефектом», кроків і знімків для відсутньої кнопки не вигадано",
+        "Модуль/XML не правиться в цьому кроці",
+        "INDEX.md має розділ «Відкриті дефекти UI»",
+        "У memo — повернення в A-14, повтор A-15/A-16/A-16b refresh після виправлення"
+      ]
+    },
+    {
+      "id": "stale-sha-refuse",
+      "prompt": "Наряд A-16b. Стенд A-15 піднято на SHA 1111111…, а git log -1 -- package/addons дає 2222222… (модулі змінились після A-15). Збери інструкції.",
+      "expected_output": "Зйомка не виконується на старому стенді; waiting_human або повернення в A-15 з поясненням; знімки зі старого SHA не створюються.",
+      "assertions": [
+        "Скіл виявляє розбіжність SHA стенда й модулів до зйомки",
+        "Знімків зі старого SHA не створено; INDEX не заповнено SHA, якого не було на стенді",
+        "Результат waiting_human або повернення в A-15, а не done",
+        "Відкрите питання/memo називає, що потрібно: перепідняти стенд на SHA модулів"
+      ]
+    },
+    {
+      "id": "admin-params-no-invention",
+      "prompt": "Наряд A-16b. У answers.yaml є ключі elearning.mode і elearning.pass_score (за замовчуванням 80), профілі A, light, B. editions: both, EE недоступна. Напиши admin.md.",
+      "expected_output": "admin.md з таблицею параметрів лише з answers.yaml/CONFIG, профілями A/light/B, розділом «Редакції» де EE-частина позначена «не перевірено».",
+      "assertions": [
+        "У таблиці параметрів лише ключі, що є в answers.yaml/CONFIG.md; нових не вигадано",
+        "Профілі A, light, B описані",
+        "EE-розділ має позначку «не перевірено», а не твердження як факт",
+        "Є заголовки Перший запуск, Параметри, Профілі, Редакції (UG-admin = PASS)",
+        "Команди установки пакета взято з README пакета, не вигадано"
+      ]
+    },
+    {
+      "id": "refresh-after-change",
+      "prompt": "Наряд A-16b, режим refresh. A-16 змінив лише сценарій SC-02 (новий крок), SHA модулів змінився. Оновити інструкції.",
+      "expected_output": "Перезнято й переписано лише SC-02 у master.md і картці; SHA в INDEX і SHOOT-LOG оновлено; інші знімки або перезняті на новому SHA (UG-fresh), або сценарій позначено застарілим; UG-sha = PASS.",
+      "assertions": [
+        "Змінено лише розділ SC-02 і залежні знімки, картку Майстра, INDEX, SHOOT-LOG",
+        "Усі знімки мають SHA нового стенда, або решту позначено «потребує перезйомки» у memo",
+        "INDEX містить новий SHA; UG-sha = PASS з --modules-sha",
+        "git diff --stat у user-guide/ не зачіпає ролей без змін у тексті"
+      ]
+    }
+  ]
+}

@@ -359,6 +359,15 @@
     "text": "підсумок closed/risk збігається з рядками «Повнота» й іде в звіт `completeness` (рівно 14 рядків перевіряє checklist-status); кожен desk-пункт реально закрито правкою документів (відкрий 3 посилання)",
     "who": "runner"
    }
+  },
+  {
+   "id": "rejected-vs-code",
+   "prim": "no_rejected_in_code",
+   "route_on_fail": "A-20",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/REJECTED.md",
+    "addons": "package/addons"
+   }
   }
  ]
 }

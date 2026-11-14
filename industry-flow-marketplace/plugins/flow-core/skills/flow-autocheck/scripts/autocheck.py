@@ -774,7 +774,7 @@ def p_plan_modules_exist(ctx, c):
 def p_value_eq(ctx, c):
     """E3: значення з кількох документів збігаються (кількість показників дашборда, коробка показу = коробка входу).
     sources: [{name, ref, regex (група 1), pick: first|last|max, optional}]."""
-    vals, bad = {}, []
+    vals, bad, warn = {}, [], []
     for src in c["args"]["sources"]:
         text, lab = resolve(ctx, src["ref"])
         if text is None:
@@ -784,13 +784,19 @@ def p_value_eq(ctx, c):
         found = re.findall(src["regex"], text)
         found = [f if isinstance(f, str) else f[0] for f in found]
         if not found:
-            bad.append(f"{src.get('name', src['ref'])}: значення не знайдено за {src['regex']}")
+            miss = f"{src.get('name', src['ref'])}: значення не знайдено за {src['regex']}"
+            if c["args"].get("on_missing") == "WARN":
+                warn.append(miss + " (додай мітку; без неї звірку виконати вручну)")
+            else:
+                bad.append(miss)
             continue
         pick = src.get("pick", "first")
         v = max(found, key=lambda x: int(x) if x.isdigit() else x) if pick == "max" else (found[-1] if pick == "last" else found[0])
         vals[src.get("name", src["ref"])] = v.strip().lower()
     if len(set(vals.values())) > 1:
         bad.append("розбіжність: " + "; ".join(f"{k}={v}" for k, v in vals.items()))
+    if warn and not bad:
+        return ctx.add(c["id"], "WARN", c["args"].get("msg", "Узгодь значення") + ": " + "; ".join(warn), "; ".join(f"{k}={v}" for k, v in vals.items())[:200])
     ctx.add(c["id"], "FAIL" if bad else "PASS", (c["args"].get("msg", "Узгодь значення") + ": " + "; ".join(bad)) if bad else "",
             "; ".join(f"{k}={v}" for k, v in vals.items())[:200], c.get("route_on_fail") if bad else None)
 
@@ -1151,6 +1157,10 @@ def selftest():
     selftest_templates()
     selftest_stale()
     selftest_e3()
+    cdir = os.path.join(SKILL, "references", "checks")
+    for f in sorted(os.listdir(cdir)):
+        for c in load_spec(f[:-5])["checks"]:
+            assert c["prim"] in PRIMS, f"{f}: невідомий примітив {c['prim']}"
     print("selftest OK")
     return 0
 
@@ -1209,9 +1219,9 @@ def selftest_e3():
     w("README.md", "x"); run("add", "."); run("commit", "-qm", "c0"); base = run("rev-parse", "HEAD")
     w("package/addons/td_mebli_core/models/a.py", "class A:\n    _name = 'td.mebli.part'\n")
     w(ind + "research/REJECTED.md", "| ID | що не робимо | чому |\n|---|---|---|\n| REJ-001 | оптимізатор `td_mebli_optimizer` | рішення |\n| REJ-002 | модель `td.mebli.part` | тест |\n")
-    w(ind + "prototype-real/PLAN.md", "## 3. Модулі\n`td_mebli_core`, `td_mebli_ghost`, клас `td_card`\n- Поза зрізом: `td_mebli_later`\n\nКоробка: A, 11 показників\n")
-    w(ind + "research/BOX.md", "Коробка: B, 12 показників\n")
-    w("db.dump", "bin"); w("x/backup.sql.gz", "bin")
+    w(ind + "prototype-real/PLAN.md", "## 3. Модулі\n`td_mebli_core`, `td_mebli_ghost`, клас `td_card`\n- Поза зрізом: `td_mebli_later`\n\nЗріз показує коробку A у прозі, а в таблиці B.\nКоробка показу: **A**\nПоказників дашборда: 11\n")
+    w(ind + "research/BOX.md", "Коробка B — вхід, а потім коробки й показники у прозі.\nКоробка входу: B\nПоказників дашборда: 12\n")
+    w("db.dump", "bin"); w("backup.sql.gz", "bin")
     run("add", "."); run("commit", "-qm", "c1"); head = run("rev-parse", "HEAD")
     a = types.SimpleNamespace(repo=d, mode="result", base=base, head=head, agent_pattern=None)
     ctx = Ctx(a, {"where": ind})
@@ -1220,13 +1230,13 @@ def selftest_e3():
     st, m = one(p_no_db_binaries, {}); assert st == "FAIL" and "db.dump" in m and "backup.sql.gz" in m, (st, m)
     st, m = one(p_no_rejected_in_code, {"ref": f"head:{ind}research/REJECTED.md"}); assert st == "FAIL" and "REJ-002" in m and "REJ-001" not in m, (st, m)
     st, m = one(p_plan_modules_exist, {"ref": f"head:{ind}prototype-real/PLAN.md"}); assert st == "FAIL" and "td_mebli_ghost" in m and "td_mebli_later" not in m and "td_card" not in m, (st, m)
-    st, m = one(p_value_eq, {"sources": [{"name": "показники концепція", "ref": f"head:{ind}research/BOX.md", "regex": r"(\d+)\s+показник"},
-                                          {"name": "показники зріз", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(\d+)\s+показник"}]}); assert st == "FAIL" and "11" in m and "12" in m, (st, m)
-    st, m = one(p_value_eq, {"sources": [{"name": "коробка вхід", "ref": f"head:{ind}research/BOX.md", "regex": r"Коробка:\s*([A-Z])"},
-                                          {"name": "коробка показу", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}]}); assert st == "FAIL", (st, m)
+    st, m = one(p_value_eq, {"sources": [{"name": "показники концепція", "ref": f"head:{ind}research/BOX.md", "regex": r"(?m)^Показників дашборда:\s*(\d+)"},
+                                          {"name": "показники зріз", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(?m)^Показників дашборда:\s*(\d+)"}]}); assert st == "FAIL" and "11" in m and "12" in m, (st, m)
+    st, m = one(p_value_eq, {"sources": [{"name": "коробка вхід", "ref": f"head:{ind}research/BOX.md", "regex": r"(?m)^Коробка входу:\s*([A-CА-В])\b"},
+                                          {"name": "коробка показу", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(?m)^Коробка показу:\s*[\s*`]*([A-CА-В])\b"}]}); assert st == "FAIL" and "a" in m.lower() and "b" in m.lower(), (st, m)
+    st, m = one(p_value_eq, {"on_missing": "WARN", "sources": [{"ref": f"head:{ind}research/BOX.md", "regex": r"(?m)^Нема мітки:\s*(\d+)"}]}); assert st == "WARN", (st, m)
     # позитив: те саме значення
-    st, m = one(p_value_eq, {"sources": [{"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}, {"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}]}); assert st == "PASS", (st, m)
-    st, m = one(p_no_db_binaries, {}) if False else ("PASS", "")
+    st, m = one(p_value_eq, {"sources": [{"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(?m)^Коробка показу:\s*[\s*`]*([A-CА-В])\b"}, {"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(?m)^Коробка показу:\s*[\s*`]*([A-CА-В])\b"}]}); assert st == "PASS", (st, m)
 
 
 if __name__ == "__main__":

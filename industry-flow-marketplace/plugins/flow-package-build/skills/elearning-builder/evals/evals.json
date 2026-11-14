@@ -1,0 +1,86 @@
+{
+  "skill_name": "elearning-builder",
+  "evals": [
+    {
+      "id": "happy-courses",
+      "prompt": "Наряд A-17b, меблі (td_mebli_elearning). A-17 затверджено. У user-guide ролі: komirnyk, master, admin (SC-01..03). answers.yaml: elearning.mode=on, elearning.pass_score не задано. Збери модуль. Вхідні файли — у `files`.",
+      "expected_output": "Модуль із 3 курсами (по одному на роль), уроки з source: на розділи SC-NN, тест ≥5 питань на курс з однією правильною відповіддю, pass_score=80, mode=on, depends website_slides, tests/; перевірка Кроку 1 із файл:рядок або «не перевірено».",
+      "assertions": [
+        "Курсів 3 = ролей user-guide; кожен курс має маркер role:",
+        "Кожен урок має source: <роль>.md#SC-NN на існуючий розділ",
+        "У кожному курсі ≥5 питань; у кожного питання рівно одна правильна відповідь",
+        "Параметр pass_score = 80 (за замовчуванням, бо answers.yaml не задає)",
+        "depends містить website_slides; сертифікацію не додано без підтвердження website_slides_survey",
+        "Скрипт на fixtures/elearning-ok: EL-courses, EL-quiz, EL-source, EL-lang, EL-pass, EL-deps, EL-tests = PASS",
+        "Імена моделей/полів website_slides подано як «перевірити у вихідниках 19.0, файл:рядок», не як факт"
+      ],
+      "files": [
+        "evals/fixtures/elearning-ok/user-guide/",
+        "evals/fixtures/elearning-ok/addons/"
+      ]
+    },
+    {
+      "id": "bad-module-fails",
+      "prompt": "Перевір модуль скриптом: python3 -I scripts/check_elearning.py --module evals/fixtures/elearning-bad/addons/td_mebli_elearning --guide evals/fixtures/elearning-bad/user-guide. Що не так і що виправити?",
+      "expected_output": "EL-quiz FAIL (два правильних, курс з 3 питаннями), EL-source FAIL (SC-99 не існує), EL-lang FAIL (англійська назва курсу), EL-pass FAIL (70 != 80), EL-deps FAIL (немає website_slides). Код 1.",
+      "assertions": [
+        "EL-quiz = FAIL: питання з двома правильними й курс із 3 питаннями",
+        "EL-source = FAIL: розділу SC-99 немає в komirnyk.md",
+        "EL-lang = FAIL: «Course: Master»",
+        "EL-pass = FAIL: pass_score=70 не збігається з 80",
+        "EL-deps = FAIL: немає website_slides",
+        "Агент виправляє джерело (XML), а не послаблює скрипт; done не заявляє"
+      ],
+      "files": [
+        "evals/fixtures/elearning-bad/user-guide/",
+        "evals/fixtures/elearning-bad/addons/"
+      ]
+    },
+    {
+      "id": "certification-unverified",
+      "prompt": "Наряд A-17b. Власник просить «видавати сертифікат після тесту». Вихідники Odoo 19.0 недоступні в сесії (немає мережі до GitHub). Що робити?",
+      "expected_output": "Сертифікація не робиться; у research/AI-DECISIONS.md рядок «перевірити у вихідниках 19.0: website_slides_survey / сертифікація» з ризиком; решта модуля збирається; EL-cert = «не перевірено»; поля website_slides не подано як факт.",
+      "assertions": [
+        "Сертифікацію (survey-записи, залежність website_slides_survey) не додано",
+        "AI-DECISIONS отримує рядок з ризиком і формулюванням «перевірити у вихідниках 19.0»",
+        "Рішення не очікує людину: решта кроку виконується (AI за замовчуванням, власник — вето)",
+        "Імена моделей/полів помічено як чернетку без підтвердження; EL-schema = MANUAL/не перевірено",
+        "У memo — що перевірити, коли будуть вихідники"
+      ]
+    },
+    {
+      "id": "elearning-off-and-params",
+      "prompt": "Наряд A-17b. answers.yaml: elearning.mode=off, elearning.pass_score=90. Що має бути в модулі?",
+      "expected_output": "Параметри mode=off і pass_score=90 у data/params.xml; курси все одно є в модулі; механізм приховування — за вихідниками 19.0 або «не перевірено»; ключ elearning у questionnaire.md не правиться тут.",
+      "assertions": [
+        "ir.config_parameter *.pass_score = 90, *.mode = off; EL-pass і EL-mode = PASS з --pass-score 90",
+        "Файли A-09 (questionnaire.md, answers.yaml) не змінено; у memo повідомлення для questionnaire-builder",
+        "Механізм off не вигадано: підтверджено файл:рядок або «не перевірено»",
+        "Курси й тести лишаються в модулі (їх вимикає параметр, а не видалення)"
+      ]
+    },
+    {
+      "id": "guide-changed-sync",
+      "prompt": "Наряд A-17b повтор. Після A-16b refresh розділ SC-02 у master.md перейменовано на SC-04, додано роль 'director' (director.md). Оновити модуль.",
+      "expected_output": "Додано курс director (role: director) з уроками й тестом ≥5; source: master.md#SC-04 замість SC-02; EL-courses і EL-source PASS; інші курси не змінено.",
+      "assertions": [
+        "Курсів стало на один більше; EL-courses = PASS",
+        "source: у уроці Майстра вказує на SC-04",
+        "Тексти уроків збігаються з оновленими розділами (не переписано вручну)",
+        "git diff --stat: змінено лише data/ та tests/ (кількість курсів) модуля",
+        "Тест модуля оновлено на нову кількість ролей"
+      ]
+    },
+    {
+      "id": "install-skipped-not-ready",
+      "prompt": "Наряд A-17b. Усі EL-* скрипта PASS, але чистої бази CE для установки немає й run_tests.sh не існує. Чи можна заявити done?",
+      "expected_output": "Ні: EL-install = SKIPPED = не готово; result waiting_human або escalated з поясненням (C-00 скрипти/база); done не заявляється.",
+      "assertions": [
+        "Скіл не заявляє done без установки на чистій CE",
+        "EL-install позначено SKIPPED/не виконано, а не PASS",
+        "Передкрок C-00 (tools/odoo) згадано як блокер, який AI знімає сам, якщо може; інакше waiting_human із конкретною вимогою",
+        "Модуль у гілці все одно залишається (робота не втрачається)"
+      ]
+    }
+  ]
+}

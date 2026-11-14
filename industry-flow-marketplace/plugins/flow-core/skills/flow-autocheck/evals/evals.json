@@ -166,6 +166,35 @@
         "input:briefing.md PASS",
         "Задачу в чергу не ставлено, репо не змінено"
       ]
+    },
+    {
+      "id": "a21-consistency-e3",
+      "prompt": "autocheck result для A-21: REJECTED містить REJ-002 із td_mebli_optimizer, а в package/addons є така тека; PLAN.md каже 11 показників, concept/screens.md — 12; коробка у BOX — A, у PLAN — B.",
+      "expected_output": "FAIL rejected-vs-code, FAIL kpi-count, FAIL box-eq, plan-modules-exist за наявності зайвого модуля; вердикт FAIL з route_on_fail A-21.",
+      "assertions": [
+        "rejected-vs-code = FAIL з REJ-ID",
+        "kpi-count = FAIL з обома числами",
+        "box-eq = FAIL",
+        "Вердикт FAIL"
+      ]
+    },
+    {
+      "id": "no-db-binaries",
+      "prompt": "autocheck result для будь-якого кроку: diff base..head додає package/demo/backup.dump і db.zip.",
+      "expected_output": "Загальна перевірка no-db-binaries = FAIL з переліком файлів.",
+      "assertions": [
+        "no-db-binaries = FAIL",
+        "Файли названо без вмісту"
+      ]
+    },
+    {
+      "id": "a16b-spec",
+      "prompt": "autocheck result для A-16b: package/docs/user-guide/INDEX.md і admin.md існують, UG-sha у звіті check_guides.py = FAIL.",
+      "expected_output": "index-exists PASS; script-check-guides — рядок manual (runner), FAIL скрипта = FAIL кроку; вердикт FAIL.",
+      "assertions": [
+        "Використано специфікацію A-16b.yaml, а не spec-missing",
+        "FAIL скрипта check_guides.py стає FAIL кроку"
+      ]
     }
   ]
 }

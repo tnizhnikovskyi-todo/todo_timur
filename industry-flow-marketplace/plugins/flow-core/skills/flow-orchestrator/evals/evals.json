@@ -156,6 +156,57 @@
       "requires": [
         "odoo-mcp:test"
       ]
+    },
+    {
+      "id": "a17-and-split",
+      "prompt": "Режим on-complete для гейта A-17 (scope package/demo-1): рішення «Затвердити» зафіксовано за odoo-bridge §5, у `ACCEPTANCE.md` є запис «власник тестував». Поставити наступні кроки.",
+      "expected_output": "Створено два наряди: A-17b (flow-package-build:elearning-builder) і A-17c (flow-package-build:support-kb-builder), обидва access_profile: repo; A-18 не створено; у звіті номери рядків flow-map і рядок «етап 5 з 6».",
+      "assertions": [
+        "Створено рівно два наряди A-17b і A-17c (AND-split)",
+        "A-18 не створено до done обох",
+        "skill_ref першим елементом має elearning-builder для A-17b і support-kb-builder для A-17c",
+        "У звіті є рядок позиції «етап N з 6: зроблено / далі / до гейта»",
+        "Кожен перехід має номер рядка flow-map"
+      ],
+      "requires": [],
+      "fixtures": "evals/fixtures/minirepo/"
+    },
+    {
+      "id": "a18-and-join",
+      "prompt": "Режим on-complete для A-17b (scope package/demo-1): result done. A-17c ще в стадії Виконується.",
+      "expected_output": "A-18 не створено (AND-join чекає A-17c); дія skipped/held без активності людям.",
+      "assertions": [
+        "A-18 не створено, поки A-17c не done",
+        "Вигаданих кодів кроків немає",
+        "Активностей людям не створено"
+      ],
+      "requires": [],
+      "fixtures": "evals/fixtures/minirepo/"
+    },
+    {
+      "id": "skip-market-check",
+      "prompt": "Гейт A-21 (scope package/demo-1) закрито «Затвердити»; у flow/decisions.md рядок власника: skip_market_check (без тесту попиту). Поставити наступні кроки.",
+      "expected_output": "Створено A-07 за маршрутом skip_market_check; A-21c, A-23, A-22 не створено; у звіті ризик «без підтвердженого попиту» і позначка пропуску етапу 2.",
+      "assertions": [
+        "A-07 створено за рядком skip_market_check",
+        "A-21c, A-23 і A-22 не створено",
+        "Без запису рішення власника маршрут не застосовується",
+        "Позиція у флоу: етап 2 «пропущено (рішення власника)»"
+      ],
+      "requires": [],
+      "fixtures": "evals/fixtures/minirepo/"
+    },
+    {
+      "id": "c00-autostep",
+      "prompt": "Режим on-complete для A-07 (scope package/demo-1): «будуємо» затверджено; у репо немає tools/odoo/. Автономний режим, власник сказав «вирішуй сам».",
+      "expected_output": "Наряд C-00 поставлено автоматично перед A-08 (from-slice, бо є зріз A-21); людині питання «чи робити скрипти» немає.",
+      "assertions": [
+        "C-00 поставлено без запиту до людини",
+        "A-08 має params.mode: from-slice",
+        "Активності людині про скрипти C-00 немає"
+      ],
+      "requires": [],
+      "fixtures": "evals/fixtures/minirepo/"
     }
   ]
 }

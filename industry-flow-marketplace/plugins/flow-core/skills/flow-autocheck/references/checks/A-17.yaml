@@ -3,13 +3,23 @@
  "step": "A-17",
  "checks": [
   {
+   "id": "user-guide-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/docs/user-guide/INDEX.md"
+    ]
+   }
+  },
+  {
    "id": "sha-eq",
    "prim": "sha_eq",
    "args": {
     "refs": [
      "head:package/ACCEPTANCE.md",
      "head:package/demo/scenarios.md",
-     "head:package/demo/README.md"
+     "head:package/demo/README.md",
+     "head:package/docs/user-guide/INDEX.md"
     ]
    }
   },
@@ -30,6 +40,7 @@
     "allow": [
      "package/CHECKS.md",
      "package/demo/**",
+     "package/docs/user-guide/**",
      "observations/"
     ]
    }
@@ -172,6 +183,14 @@
    "args": {
     "text": "Вибіркова перевірка стенда; підпис «прийнято»",
     "who": "Власник продукту (рішення №36)"
+   }
+  },
+  {
+   "id": "owner-tests-stand",
+   "prim": "manual",
+   "args": {
+    "text": "Власник тестує стенд за інструкціями A-16b (INDEX.md): проходить сценарії своєї ролі, дефекти й зауваження фіксує в package/demo/defects.md; стенд — як є до рішення про сервер (DEMO-SERVER.md); запис «власник тестував: дата, SHA» у ACCEPTANCE.md",
+    "who": "Власник продукту"
    }
   }
  ]

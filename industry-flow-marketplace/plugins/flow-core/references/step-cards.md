@@ -1,9 +1,9 @@
-# Картки кроків: чернетки нових і змінених кроків (A-02b … C-08R)
+# Картки кроків: чернетки нових і змінених кроків (A-02b … C-08R, 0.4.0: A-16b, A-17b, A-17c)
 
 Чернетки для оновлення карток у Odoo після позначки C-00 «картки оновлено» (`c00-checklist.md`); джерело правди для порядку — `flow-map.md`, для `skill_ref`/`access_profile` — `step-skill-map.md`. Поля: `raciR` (виконавець), `executor`, `skillRef`, `access_profile`, `inArtifacts`, `outArtifacts`, гейт, `review.checklists` (`review-checklists/`), `params.sample` (N-18), ліміти (модель/ефорт; години; $) — стартові оцінки до першого прогону, стартова зрілість — 1 для всіх, ескалація. Шляхи — відносно `docs/industries/<галузь>/`, якщо не вказано інше.
 
 ## Ролі
-- **Контент-менеджер (маркетинг)** — людина зі своїм Claude, `executor: any`. Кроки: A-21c, A-23 `prep` (тексти), D-05 (кейси), A-18 (матеріали релізу). Працює лише з контентом у репо (клас даних `commercial`), без баз Odoo (читає лише наряд), без `internal-raw`; профіль `content` (`flow-executor-content`).
+- **Контент-менеджер (маркетинг)** — людина зі своїм Claude, `executor: any`. Кроки: A-21c, A-23 `prep` (тексти), D-05 (кейси), A-18 (матеріали релізу); рецензент A-16b (чек-лист `user-guide.md`). Працює лише з контентом у репо (клас даних `commercial`), без баз Odoo (читає лише наряд), без `internal-raw`; профіль `content` (`flow-executor-content`).
 - **AI-інженер / агент Ретро** — веде C-04, C-07, C-08R: регрес евалів, розбір помилки AI, зведення уроків `LSN-xxx`; правки скілів — PR, рішення про зрілість кроку — людина.
 
 - **власник** — власник бізнесу ToDo / замовник пакета (людина, не AI): заповнює анкету A-02b, приймає зразок і має вето на гейті концепції (A-20c) разом із Власником продукту. У ростері Odoo (`ODOO_SCHEMA`) відповідає ролі «Власник продукту» (A); `waiting_for.role` для його підкроків = ця роль, інша — лише за ростером.
@@ -137,6 +137,63 @@
 - примітки: Нічого не надсилає й не публікує; ризики з A-20 (брак болів/тріалів) — у план перевірки (К-01)
 - ескалація: сигнали нижче порогів -> ескалація без автопереходу
 
+### A-08. SPEC пакета (режим `from-slice`, E2)
+- `raciR`: BA / Архітектор (R); Власник продукту (A, гейт)
+- `executor`: any; `skillRef`: скіл організації (зовнішній, `odoo19-mvp-build:spec-writer` / `odoo19-tr-authoring:*`; `skill_ref` з картки)
+- `inArtifacts`: режим `from-slice` — `prototype-real/{PLAN.md, complexity.md, facts.json}`, `research/{BOX,SALES,REJECTED,AI-DECISIONS}.md`, `concept/*`; режим `перша` (лише без зрізу) — повний ТР
+- `outArtifacts`: `package/SPEC.md` (при `from-slice` — короткий SPEC: concept + complexity + PLAN зрізу, без повного ТР; сценарії за ролями, AC-NN)
+- гейт: так: Затвердити; Повернути -> A-08
+- `params.mode`: `from-slice` (за замовчуванням, коли є зріз A-21) | `перша` | `нова-версія`
+- примітки: скіли A-08 зовнішні — режим задається лише ключем наряду й переліком входів; повторювати детальну роботу зрізу повним ТР не можна (E2: «ми вже це проходили»)
+- ескалація: у PLAN/complexity немає даних для AC -> `escalated` до BA з переліком прогалин
+
+### A-16b. Інструкції користувача
+- `raciR`: AI (R, виконавець); Контент-менеджер / власник (рецензія, A)
+- `executor`: any; `skillRef`: flow-package-build:user-guide-builder
+- `access_profile`: repo
+- `inArtifacts`: package/SPEC.md (сценарії за ролями, AC); package/demo/ (стенд, ролі, скрипти, README із SHA); тури A-16 (`package/demo/scenarios.md`); `package/templates/answers.yaml` і профілі
+- `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — таблиця покриття «сценарій SPEC -> розділ» і SHA стенда
+- гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
+- `review.checklists`: [user-guide.md]; `review.max_rounds: 2` (+1 контрольний)
+- перевірки: `check_guides.py` (UG-cover, UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
+- ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
+- примітки: скриншоти зі стенда на поточному SHA; текст кроків українською без англійських підписів
+- ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); стенд недоступний -> A-15
+
+### A-17. Приймання пакета (змінена картка 0.4.0)
+- `raciR`: Власник продукту (R, A); AI — чернетка `product-decision-drafter`
+- `skillRef`: flow-package-evolution:product-decision-drafter (AI-частина)
+- `inArtifacts`: package/{ACCEPTANCE.md, CHECKS.md, demo/, docs/user-guide/INDEX.md}
+- гейт: так: Затвердити -> A-17b ∥ A-17c; Повернути -> A-08 / A-14 (з повтором A-15 -> A-16 -> A-16b -> A-17) / D-03
+- **рядок картки й чек-листа: «власник тестує стенд за інструкціями A-16b»** — власник проходить сценарії своєї ролі за `package/docs/user-guide/<роль>.md`, фіксує зауваження в `package/demo/defects.md`, у `ACCEPTANCE.md` — «власник тестував: дата, SHA». Стенд — як є (адреса й спосіб — за відкритим рішенням про сервер, `_work/DEMO-SERVER.md`); окремого наряду немає
+- примітки: сам стенд у карту не входить (відкрите рішення), лише точка «власник тестує»
+
+### A-17b. Електронне навчання
+- `raciR`: AI (R); Контент-менеджер / Власник продукту (рецензія, A)
+- `executor`: any; `skillRef`: flow-package-build:elearning-builder; `access_profile`: repo
+- `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: on|off`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
+- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля
+- гейт: ні; AND-split з A-17c, AND-join в A-18
+- `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
+- перевірки: `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang), тести на чистій CE (курсів = ролей, >=5 питань у курсі), `A-17b.yaml`
+- ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
+- ескалація: `website_slides` не встановлюється на CE -> `escalated` з логом; дефект тексту уроку -> A-16b
+
+### A-17c. Інструкції для AI-підтримки
+- `raciR`: AI (R); Власник продукту (A)
+- `executor`: any; `skillRef`: flow-package-build:support-kb-builder; `access_profile`: repo
+- `inArtifacts`: package/addons/td_*; package/docs/user-guide (FAQ); `research/AI-DECISIONS.md` (ризики); package/SPEC.md; `package/demo/defects.md`
+- `outArtifacts`: package/support/{AI-INSTRUCTIONS.md, kb/KB-NNN-*.md, INDEX.md} — **лишається в ToDo, клієнту не передається**; споживачі: flow-client-delivery:support-desk, client-help-bot, odoo19-implementation:hypercare-tracker (зовнішній — лише згадка)
+- гейт: ні; AND-split з A-17b, AND-join в A-18
+- перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-privacy), `no-client-ids`, `A-17c.yaml`
+- ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
+- примітки: читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
+- ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора
+
+### A-18. Реліз (змінена картка 0.4.0)
+- `inArtifacts` додатково: package/docs/user-guide, package/addons/td_<галузь>_elearning, package/support
+- реліз включає A-16b (package/docs/user-guide) і модуль td_<галузь>_elearning; `package/support/` — у репо пакета, з клієнтської передачі виключено (перелік у release-нотатці). B-07 (`user-training-builder`, зовнішній) і client-help-bot беруть пакетні матеріали й лише адаптують під конфіг клієнта
+
 ### C-04. Регрес евалів
 - `raciR`: AI-інженер (R)
 - `executor`: any
@@ -180,7 +237,7 @@
 - ескалація: зауваження без урока -> `LSN-coverage` FAIL (`check_lessons.py`)
 
 ## Назви чек-листів рецензента (`review-checklists/`)
-Картки посилаються на файли: `research.md`, `edition-claims.md` (A-03b, A-20, A-20c), `concept.md` (A-20), `completeness.md` (A-20, самоперевірка повноти), `owner-page.md` (A-20c), `prototype.md` (A-21), `video-materials.md` (A-21c). Назви — контракт: файли створюються з цими іменами; при зміні назви правляться картки тут. Для кроків із `[]` чек-лист не потрібен.
+Картки посилаються на файли: `research.md`, `edition-claims.md` (A-03b, A-20, A-20c), `concept.md` (A-20), `completeness.md` (A-20, самоперевірка повноти), `owner-page.md` (A-20c), `prototype.md` (A-21), `video-materials.md` (A-21c), `user-guide.md` (A-16b). Назви — контракт: файли створюються з цими іменами; при зміні назви правляться картки тут. Для кроків із `[]` чек-лист не потрібен.
 
 ## Відкриті питання
 - Немає відкритих питань (відкриті питання пакета — у плані §5).

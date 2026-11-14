@@ -12,12 +12,16 @@
 | A-04 | flow-research:past-projects-analyzer | — |
 | A-05 | flow-research:segment-selector | `phase` 1\|2 (режим «еталонні клієнти») |
 | A-07 | — (людська задача, без `skill_ref`) | Кнопка-вето за розділом «Рекомендація AI для A-07» у `demand/results.md` (його пише A-23 results) |
+| A-08 | — (скіл організації, зовнішній; `skillRef` з картки) | `mode: from-slice`\|`перша`\|`нова-версія`; `from-slice` (E2) — короткий `package/SPEC.md` з `concept` + `complexity` + `PLAN` зрізу A-21, без повного ТР (за замовчуванням, коли є зріз); `перша` — повний ТР лише без зрізу |
 | A-09 | flow-package-build:questionnaire-builder | `first`\|`review` |
 | A-12 | flow-package-build:config-as-code | `build`\|`fix`\|`new-version`\|`validate` |
 | A-13 | flow-package-build:master-data-template-builder | — |
 | A-14 | flow-package-build:gates-aggregator | `перевірка`\|`повернення`\|`нова-версія`\|`hotfix` |
 | A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія` (стенд пакета) |
+| A-16b | flow-package-build:user-guide-builder | — (посібники ролей і адміністратора, картки, INDEX; профіль `repo`; рецензія `user-guide.md`) |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
+| A-17b | flow-package-build:elearning-builder | — (модуль `td_<галузь>_elearning`; після A-17, паралельно з A-17c) |
+| A-17c | flow-package-build:support-kb-builder | — (`package/support/`, лише ToDo; паралельно з A-17b) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
 | A-20 | flow-research:concept-mapper (+ під-скіл flow-research:completeness-audit у кінці кроку, не окремий крок) | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |
@@ -49,7 +53,7 @@
 | D-04 | flow-package-evolution:product-decision-drafter | `нова-версія` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | D-05 | flow-package-evolution:product-decision-drafter | — (`pilot/decision.md`; AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 
-Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08, A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.
+Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08 (режим `from-slice` — рядок вище), A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.
 
 ## Профіль доступу наряду (`access_profile`)
 Оркестратор ставить у наряд ключ `access_profile` за **ведучим скілом** (`skill_ref[0]`); runner запускає виконавця з однойменним агентом (`naryad-format.md`). Ключа немає = `base`. Профілі не складаються: одному наряду — один агент з мінімальним `tools:`.
@@ -63,6 +67,6 @@
 | `content` | `flow-core:flow-executor-content` | лише файли репо галузі й наряд (контент; клас `commercial`, без баз Odoo, без `internal-raw`) | showcase-content |
 | `outreach` | `flow-core:flow-executor-outreach` | odb-catalog, Drive (читання) + Gmail `create_draft` | demand-test-runner |
 | `drive` | `flow-core:flow-executor-drive` | Drive: лише читання файлів з наряду | package-sow-builder, package-usage-metrics, client-data-migrator |
-| `repo` | `flow-core:flow-executor-repo` | GitHub MCP — лише читання (+ `get_tag`, `list_tags`); WebFetch (лише документація Odoo 19) | ci-pipeline-builder, gates-aggregator, package-release-builder, package-upgrade-runner, odoo-version-migrator, prototype-builder (GitHub-читання модулів REUSE + WebFetch документації Odoo 19; Bash/Odoo/Playwright/ffmpeg виконує runner за «КОМАНДИ:», К-22), skill-retro |
+| `repo` | `flow-core:flow-executor-repo` | GitHub MCP — лише читання (+ `get_tag`, `list_tags`); WebFetch (лише документація Odoo 19) | ci-pipeline-builder, gates-aggregator, user-guide-builder, elearning-builder, support-kb-builder, package-release-builder, package-upgrade-runner, odoo-version-migrator, prototype-builder (GitHub-читання модулів REUSE + WebFetch документації Odoo 19; Bash/Odoo/Playwright/ffmpeg виконує runner за «КОМАНДИ:», К-22), skill-retro |
 
 Наряд із `prod-ro-<клієнт>` (лише client-help-bot, q37) має профіль `mail` і не отримує запису в Gmail/Drive/GitHub — таких інструментів у цього агента немає. Дії, яких виконавець не має (`actions_run_trigger`, запис файлу в Drive, `Bash (git)` у скілі), він віддає runner'у рядком «КОМАНДИ:» (`executor-brief.md`). Скіл, чия інструкція потребує конектора поза профілем наряду, зупиняється `escalated` (не шукає обхідних шляхів). Якщо ведучий скіл не в таблиці — `base`; помилку профілю виправляє AI-інженер у цій таблиці.

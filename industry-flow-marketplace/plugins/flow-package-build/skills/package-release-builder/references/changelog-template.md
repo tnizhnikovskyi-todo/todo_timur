@@ -31,6 +31,10 @@
 ### Команда установки
 `<одна команда скрипта C-00>`
 
+### Передача клієнту        <- release і odoo-upgrade (0.4.0)
+- Входить: `addons/` (td_* вкл. `td_<галузь>_elearning`, якщо `elearning: on`), `docs/user-guide/`, `config/`, `master-data/`, `templates/`
+- Виключено: `support/` (внутрішній KB A-17c), `research/`, `metrics/`, `demo/release-defects.md`
+
 ### Сумісність з Odoo        <- лише odoo-upgrade
 ### Виправлено (hotfix)       <- лише patch: дефект узагальнено, версії клієнтів ідентифікаторами
 ```

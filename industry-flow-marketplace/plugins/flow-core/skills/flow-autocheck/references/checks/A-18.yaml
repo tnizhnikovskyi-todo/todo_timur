@@ -30,7 +30,10 @@
      "package/templates/migration-plan.md",
      "package/templates/training.md",
      "package/templates/CHANGELOG.md",
-     "observations/"
+     "observations/",
+     "package/docs/user-guide/**",
+     "package/addons/td_*_elearning/**",
+     "package/support/**"
     ]
    }
   },
@@ -167,6 +170,14 @@
    "args": {
     "text": "Тест оновлення з попереднього тегу (CI C-03)",
     "who": "CI"
+   }
+  },
+  {
+   "id": "support-excluded",
+   "prim": "manual",
+   "args": {
+    "text": "package/support/ у репо пакета, але виключено з клієнтської передачі (перелік у release-нотатці); у релізі є package/docs/user-guide; модуль td_<галузь>_elearning — лише при elearning.mode: on (при off модуля в релізі немає, у release-нотатці рядок «вимкнено параметром»)",
+    "who": "runner"
    }
   }
  ]

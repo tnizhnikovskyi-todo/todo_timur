@@ -1,14 +1,13 @@
 ---
 name: package-release-builder
 description: >
-  Запускай на кроці A-18 флоу галузевого пакета: приймання версії (package/ACCEPTANCE.md, A-17) підписано, або після
-  hotfix A-19 з APPROVE гейтів A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує релізну гілку,
-  package/CHANGELOG.md, шаблони package/templates/{migration-plan,training}.md, перевіряє установку в чисту базу Odoo 19
-  і оновлення з попереднього тега, після затвердження формує git-тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N> (рішення q19); дефект пакета
-  пише в package/demo/release-defects.md і повертає в A-14. Тригери — «випусти версію пакета», «реліз пакета», «постав
-  тег пакета», «CHANGELOG пакета», «A-18». НЕ для виправлення дефекту (A-19), гейтів (A-14), підпису ACCEPTANCE.md
-  (A-17), оновлення в клієнта (B-11), міграції на нову Odoo (D-03), CI (C-03), плану міграції чи навчання (B-06/B-07).
-  Результат — CHANGELOG, шаблони, гілка й PR або блок release.
+  Запускай на кроці A-18 флоу галузевого пакета: приймання (ACCEPTANCE.md, A-17) підписано й готові A-17b/A-17c, або після
+  hotfix A-19 з APPROVE A-14 (патч-тег), або кандидат на новій Odoo від D-03. Готує релізну гілку, CHANGELOG, шаблони
+  package/templates/{migration-plan,training}.md; включає в реліз інструкції A-16b і модуль td_<галузь>_elearning (A-17b),
+  виключає package/support/ (A-17c) з клієнтської передачі; перевіряє установку в чисту Odoo 19 й оновлення, після
+  затвердження ставить тег package/vX.Y | vX.Y.Z | vX.Y-odoo<N>; дефект пакета -> release-defects.md і A-14. Тригери — «випусти
+  версію пакета», «реліз пакета», «постав тег пакета», «A-18». НЕ для виправлення (A-19), гейтів (A-14), підпису ACCEPTANCE
+  (A-17), оновлення в клієнта (B-11), міграції Odoo (D-03), CI (C-03), навчання клієнта (B-07).
 ---
 
 # Package Release Builder — випуск версії пакета (A-18)
@@ -47,6 +46,7 @@ description: >
 | `demo-base-builder` (A-15) | `package/demo/` і єдиний стенд — не чіпати; тест оновлення на окремому інстансі |
 | `ci-pipeline-builder` (C-03) | Workflow — лише запускається `workflow_dispatch` і читається результат |
 | `flow-core:flow-autocheck` (C-06) | Загальні звірки SHA/diff/переліків; тут — свої лише релізні (версія, diff-список, ліцензії) |
+| `user-guide-builder` (A-16b), `elearning-builder` (A-17b), `support-kb-builder` (A-17c) | Власники `package/docs/user-guide/`, модуля `td_<галузь>_elearning`, `package/support/`. Тут вони лише включаються/виключаються з релізу й перевіряються (R-18, R-19), не правляться; дефект -> `release-defects.md` -> A-14 (маршрут до A-16b/A-17b/A-17c — у `flow-map.md`) |
 | `data-migration-planner`, `user-training-builder` (B-06/B-07) | Споживачі шаблонів; тут — скелет і пакетні частини, формат клієнтського документа за ними |
 | `package-upgrade-runner` (B-11) | Читає CHANGELOG і тег; у клієнта тег ставить не цей скіл |
 
@@ -64,6 +64,7 @@ description: >
 `version`, `depends`, `license`, `migrations/`), `package/config/CONFIG.md` («Модулі до установки», A-12),
 `package/master-data/README.md` (порядок імпорту, A-13), `package/questionnaire.md` і `package/templates/answers.yaml`
 (A-09) на ревізії й на попередньому тегу, `package/demo/README.md` (A-15), `package/DATA_POLICY.md`.
+Для релізу (`release`, `odoo-upgrade`) також: `package/docs/user-guide/INDEX.md` (A-16b), `package/addons/td_<галузь>_elearning/` (A-17b; немає при `elearning: off` у профілі пакета — тоді запис «модуль не входить» у CHANGELOG), `package/support/INDEX.md` (A-17c). Немає A-16b або A-17c — ескалація (нестача, не дефект); A-17b — лише коли модуль входить у профіль.
 Умовні: `package/demo/scenarios.md` (A-16; release, odoo-upgrade), `docs/industries/<галузь>/ТР.md` (A-08; лише ролі для
 навчання), `package/CHECKS.md` (A-14; patch — обов'язково), `package/hotfix/vX.Y.Z.md` (A-19; patch),
 `package/upgrade-<версія>.md` (D-03; odoo-upgrade); `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`; обов'язковий). Попередній тег: `git.prev_tag` наряду, інакше `git tag -l 'package/v*' --sort=-v:refname`.
@@ -102,6 +103,12 @@ description: >
 — дефект). `depends` кожного td_* має бути в `addons/` або в «Модулі до установки» CONFIG.md. Ліцензія, про сумісність
 якої з політикою пакета немає правила, — не вирішувати: рядок «Невпевнений» у `memo` (Юрист/Архітектор).
 
+Склад релізу з матеріалами 0.4.0 (R-18, R-19): `td_<галузь>_elearning` (A-17b) додається після ACCEPTANCE, тому він не в комплекті ACCEPTANCE — це дозволена добавка
+(`versioning.md`): рядок «Склад пакета» з приміткою «A-17b», version = X.Y, ліцензія як у решти. Посібники `package/docs/user-guide/` (A-16b) входять у реліз як пакетні
+матеріали, `package/support/` (A-17c) лишається в репо пакета й **виключається з клієнтської передачі**: у CHANGELOG окремий розділ «Передача клієнту» зі списком
+включеного (`addons/` вкл. elearning, `docs/user-guide/`, `config/`, `master-data/`, `templates/`) і виключеного (`support/`, `research/`, `metrics/`, `demo/release-defects.md`).
+Передачу клієнту (B-01...) виконує `package-sow-builder`/runner за цим переліком; цей скіл лише фіксує його в release-нотатці.
+
 Чернетка `package/metrics/key-models.yaml` (рішення q36; режими `release` і `odoo-upgrade`, у `patch` не створюється й не змінюється). Сформувати з `package/addons/*/models/*.py` на ревізії: перелік моделей (`_name`/`_inherit`) за форматом `package/metrics/key-models.yaml` з `flow-package-evolution/skills/package-usage-metrics/references/model-inventory.md`, нових полів не вигадувати; причину (`reason`) брати лише з коду/README модуля, невідоме — «уточнити». Заголовок-коментар: «чернетка AI, затверджує Власник продукту». Файл уже є й не відрізняється — не чіпати; склад затверджує людина в PR.
 
 ## Крок 5. Зміни анкети (R-08)
@@ -123,6 +130,7 @@ description: >
 змінився склад/ролі) `package/templates/migration-plan.md` і `training.md`; `package/templates/CHANGELOG.md` — з
 `references/changelog-template.md`. Пакетні частини заповнити (порядок імпорту з `master-data/README.md`, перелік VP, ролі
 з груп td_* і конфігу); клієнтські поля — плейсхолдери для B-06/B-07. Без даних клієнтів.
+У `training.md` (розділ «Посібники по ролях») — посилання на готові матеріали пакета: `package/docs/user-guide/<роль>.md`, `cards/<роль>.md`, курси модуля `td_<галузь>_elearning`; B-07 (`user-training-builder`) і `client-help-bot` беруть їх за основу й лише адаптують під конфіг клієнта, а не пишуть з нуля. Внутрішній `package/support/` у `training.md` не згадується.
 
 ## Крок 8. CHANGELOG і CI (R-07, R-09...R-11): два запуски
 - Редакції: CHANGELOG — розділи по редакціях; установка й оновлення — для кожної редакції з `editions`; EE-бази немає — «не перевірено» (WARN).
@@ -195,7 +203,7 @@ description: >
 | R-04 | Тег не існує, не переноситься | ескалація |
 | R-05 | Комплект addons = ACCEPTANCE = «Склад пакета» | A-14 / повтор |
 | R-06 | Вендорені: version, джерело, ліцензія, LICENSE | A-14 -> A-11 |
-| R-07 | Заголовки CHANGELOG за grep-контрактом (+ режимні) | повтор |
+| R-07 | Заголовки CHANGELOG за grep-контрактом (+ режимні: «Передача клієнту» — release/odoo-upgrade) | повтор |
 | R-08 | «Зміни анкети» = diff ключів answers.yaml | повтор / A-14 -> A-09 |
 | R-09 | Установка однією командою, CI зелений, прогін на коміті, що є предком HEAD (різниця лише `package/CHANGELOG.md`) | A-14 (збій checkout/доставки — ескалація) |
 | R-10 | Smoke після установки | A-14 |
@@ -206,13 +214,15 @@ description: >
 | R-14 | Немає даних клієнтів (ЄДРПОУ, +380..., email, назви з CRM) | повтор; у майстер-даних/демо — A-14 -> A-13/A-15 |
 | R-15 | `boost:odoo19-lint` по `package/addons/td_*/` на ревізії | A-14 -> A-11 |
 | R-17 | `package/metrics/key-models.yaml` є (чернетка), моделі є в `package/addons/` | повтор |
+| R-18 | A-16b і A-17b у релізі: `package/docs/user-guide/INDEX.md` є, SHA стенда в INDEX = SHA модулів без `td_*_elearning`; `check_guides.py` і `check_elearning.py` (якщо модуль входить) без FAIL на ревізії; X.Y модуля elearning = ACCEPTANCE | A-14 -> A-16b / A-17b (дефект), ескалація (немає матеріалів) |
+| R-19 | `package/support/` не потрапила в клієнтську передачу: розділ «Передача клієнту» CHANGELOG виключає `support/`; у `package/templates/*` і клієнтських каталогах немає посилань на `package/support`; `check_kb.py` без FAIL | повтор / A-14 -> A-17c |
 | R-16 | SHA ревізії однаковий у ACCEPTANCE, scenarios.md, README A-15 | ескалація Власнику продукту |
 Команди — `references/release-checks.md`. Без логу CI немає PASS: R-09...R-11 без логу — `NOT_RUN`.
 
 **Готово, коли (фаза release — після запуску 2):** пакет з тегом ставиться в чисту базу Odoo 19 однією командою без помилок; тег на нащадку ревізії з
 ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEPTANCE = version td_*; CHANGELOG має версію, склад з вендореними,
 шаблони документів клієнта, «Зміни анкети», «Несумісні зміни», «Міграція з попереднього тегу»; для версії з попереднім
-тегом оновлення пройшло на окремому інстансі; шаблони migration-plan/training є; дефект пакета — у `release-defects.md` з
+тегом оновлення пройшло на окремому інстансі; шаблони migration-plan/training є; A-16b і td_<галузь>_elearning включені, `package/support/` виключено з передачі (R-18, R-19); дефект пакета — у `release-defects.md` з
 кодом A-14, тег не поставлено. patch: тег на коміті з APPROVE гейтів A-14; R-02 рахується від SHA APPROVE (лише CHANGELOG-файли), ACCEPTANCE/A-17 не вимагаються. odoo-upgrade: плюс розділ «Сумісність з Odoo».
 
 ### Дані для звіту (повертає скіл, не постить)
@@ -232,6 +242,7 @@ ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEP
 - [ ] Запуск 1: CI не запускався, `waiting_human` з resume. Запуск 2: лог CI на комітi-предку HEAD, або `NOT_RUN` і done не заявлено.
 - [ ] Фаза tag: PR змерджено, `sha` = merge-коміт, R-02 на ньому PASS.
 - [ ] Кожна редакція з `editions` має рядки R-09/R-10/R-11 і розділ CHANGELOG; тег не позначено як перевірений на EE без перевірки; випуск із `EE не перевірено` — лише після рішення Власника.
+- [ ] R-18: user-guide і (якщо входить) модуль elearning у складі; SHA INDEX = SHA модулів без elearning. R-19: `package/support/` виключено з «Передачі клієнту», посилань на неї в клієнтських шаблонах немає.
 - [ ] Дефект пакета має рядок у `release-defects.md`; тег не ставився.
 - [ ] У файлах немає даних клієнтів (R-14); жодного виклику odoo-mcp без `connection_id`.
 
@@ -245,6 +256,7 @@ ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEP
 - Не формувати тег на HEAD гілки наряду-тега чи на незмерджений коміт; лише на merge-коміт PR релізу, нащадок ревізії, diff у дозволеному списку; тег не переносити й не перезаписувати.
 - Не «виправляти на місці» `answers.yaml`, `version`, addons/, config/, master-data/, `questionnaire.md`, SPEC.md.
 - Не вважати порушенням diff `README A-15`, `scenarios.md`, `ACCEPTANCE.md` — вони в дозволеному списку.
+- Не передавати клієнту `package/support/` і не згадувати її в `training.md`/клієнтських шаблонах; не правити user-guide, elearning-модуль, support — лише включати/виключати й перевіряти.
 - Не змінювати version td_* у `patch` і не вимагати для нього ACCEPTANCE/A-17.
 - Не запускати CI з `sha` коміту, якого немає на GitHub; помилку checkout не видавати за дефект пакета.
 - Не проганяти тест оновлення на єдиному стенді A-15; немає інстанса — ескалація, не «пропущено»; R-11 без логу — `NOT_RUN`.

@@ -1,0 +1,79 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-17c",
+ "checks": [
+  {
+   "id": "support-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/support/AI-INSTRUCTIONS.md",
+     "package/support/INDEX.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-support",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/support/",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "ai-instructions-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/support/AI-INSTRUCTIONS.md",
+    "headings": [
+     "re:джерел",
+     "re:меж",
+     "re:prod-ro",
+     "re:маршрут"
+    ]
+   }
+  },
+  {
+   "id": "script-check-kb",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons: KB-module (кожен модуль td_* має сторінку), KB-ids (унікальні KB-NNN), KB-route (кожен сценарій діагностики має маршрут B-13/A-19/D-02), KB-privacy (без даних клієнтів). Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py",
+     "--dir",
+     "package/support",
+     "--addons",
+     "package/addons"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-client-ids",
+   "prim": "grep_clients"
+  },
+  {
+   "id": "no-pii",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/support/"
+    ]
+   }
+  },
+  {
+   "id": "risks-from-ai-decisions",
+   "prim": "manual",
+   "args": {
+    "text": "Відомі обмеження й ризики в KB = рядки AI-DECISIONS (ризик, перевірити на пілоті); читання проду лише через prod-ro-<клієнт>; package/support/ не потрапляє в клієнтську передачу",
+    "who": "Власник продукту"
+   }
+  }
+ ]
+}

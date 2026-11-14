@@ -90,6 +90,18 @@
         "відповідь «немає наряду»",
         "немає викликів Gmail, odoo-mcp і create_draft"
       ]
+    },
+    {
+      "id": "package-guides-as-source",
+      "prompt": "Наряд B-07, answer. Користувач клієнта питає «як прийняти плиту на склад». У пакеті є package/docs/user-guide/komirnyk.md (розділ SC-01) і package/support/kb (FAQ та KB-004 з ризиком AI-07). У config-log клієнта склад називається «Основний цех». Підготуй чернетку.",
+      "expected_output": "Чернетка спирається на SC-01 з user-guide, адаптована до складу клієнта з config-log; без згадки KB-/AI-кодів і ризиків; джерела вказано у help-log.",
+      "assertions": [
+        "Джерела в help-log: config-log і package/docs/user-guide/komirnyk.md#SC-01",
+        "Назва складу взята з config-log клієнта, кроки — з пакетної інструкції (адаптація, не переписування з нуля)",
+        "У чернетці немає KB-/AI-/DG-кодів, ризиків і рішень AI з package/support",
+        "З package/support використано лише FAQ/параметри",
+        "Прод не читається, якщо відповідь є в матеріалах"
+      ]
     }
   ]
 }

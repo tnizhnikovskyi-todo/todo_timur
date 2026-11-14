@@ -193,6 +193,67 @@
     "text": "знімки 390/1280 px і кадри для рецензента збережено в prototype-real/screens/ і screens-mobile/ і їхні шляхи передано в брифі рецензента (рецензент лише читає файли й не запускає браузер: немає знімків -> major «runner не підготував», review-checklists)",
     "who": "runner"
    }
+  },
+  {
+   "id": "rejected-vs-code",
+   "prim": "no_rejected_in_code",
+   "route_on_fail": "A-21",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/REJECTED.md",
+    "addons": "package/addons"
+   }
+  },
+  {
+   "id": "plan-modules-exist",
+   "prim": "plan_modules_exist",
+   "route_on_fail": "A-21",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/prototype-real/PLAN.md",
+    "section": "(?i)модул",
+    "addons": "package/addons"
+   }
+  },
+  {
+   "id": "kpi-count",
+   "prim": "value_eq",
+   "route_on_fail": "A-21",
+   "args": {
+    "msg": "Кількість показників дашборда: концепція ↔ зріз (мітка «Показників дашборда: N» у concept/screens.md і prototype-real/PLAN.md)",
+    "on_missing": "WARN",
+    "sources": [
+     {
+      "name": "концепція",
+      "ref": "head:docs/industries/<галузь>/concept/screens.md",
+      "regex": "(?m)^[\\s>*#\\-]*Показників дашборда[\\s*`]*[:：][\\s*`]*(\\d+)"
+     },
+     {
+      "name": "зріз",
+      "ref": "head:docs/industries/<галузь>/prototype-real/PLAN.md",
+      "regex": "(?m)^[\\s>*#\\-]*Показників дашборда[\\s*`]*[:：][\\s*`]*(\\d+)"
+     }
+    ]
+   }
+  },
+  {
+   "id": "box-eq",
+   "prim": "value_eq",
+   "route_on_fail": "A-21",
+   "args": {
+    "msg": "Коробка показу = коробка входу (мітки «Коробка входу: X» у research/BOX.md і «Коробка показу: X» у prototype-real/PLAN.md)",
+    "on_missing": "WARN",
+    "sources": [
+     {
+      "name": "вхід (BOX)",
+      "ref": "head:docs/industries/<галузь>/research/BOX.md",
+      "regex": "(?m)^[\\s>*#\\-]*Коробка входу[\\s*`]*[:：][\\s*`]*([A-CА-В])\\b"
+     },
+     {
+      "name": "показ (PLAN)",
+      "ref": "head:docs/industries/<галузь>/prototype-real/PLAN.md",
+      "regex": "(?m)^[\\s>*#\\-]*Коробка показу[\\s*`]*[:：][\\s*`]*([A-CА-В])\\b"
+     }
+    ]
+   }
   }
  ]
 }

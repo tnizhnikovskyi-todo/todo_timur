@@ -1,0 +1,80 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-17b",
+ "checks": [
+  {
+   "id": "module-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/addons/td_<галузь>_elearning/__manifest__.py",
+     "docs/industries/<галузь>/research/AI-DECISIONS.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-elearning",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/addons/td_*_elearning/**",
+     "docs/industries/<галузь>/research/AI-DECISIONS.md",
+     "package/templates/answers.yaml",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "script-check-elearning",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide [--pass-score <elearning.pass_score>]: EL-courses (курс на кожну роль з INDEX A-16b), EL-quiz (>=5 питань, рівно одна правильна відповідь, якщо інше не задано), EL-source (урок посилається на розділ A-16b), EL-lang. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py",
+     "--module",
+     "package/addons/td_<галузь>_elearning",
+     "--guide",
+     "package/docs/user-guide"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "module-tests",
+   "prim": "manual",
+   "args": {
+    "text": "Тести модуля (установка на чистій CE: tools/odoo/run_tests.sh <db> /td_<галузь>_elearning за C-00; кількість курсів = ролей; у кожного курсу >=5 питань); odoo19-lint по td_*_elearning; залежність website_slides; поріг проходження з package/templates/answers.yaml elearning.pass_score (за замовчуванням 80); параметр пакета elearning.mode: on|off",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "cert-claim",
+   "prim": "manual",
+   "args": {
+    "text": "Сертифікація — лише якщо website_slides_survey підтверджено у вихідниках 19.0 (файл:рядок); інакше рядок «не перевірено» в AI-DECISIONS. Твердження про slide.channel/slide.slide/slide.question/slide.answer — тільки з файлом:рядком",
+    "who": "Архітектор"
+   }
+  },
+  {
+   "id": "no-pii",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/addons/"
+    ]
+   }
+  },
+  {
+   "id": "review",
+   "prim": "manual",
+   "args": {
+    "text": "Курси відкриваються на стенді під ролями A-16b; тест проходиться на порозі; уроки = розділи A-16b",
+    "who": "Власник продукту / Контент-менеджер"
+   }
+  }
+ ]
+}

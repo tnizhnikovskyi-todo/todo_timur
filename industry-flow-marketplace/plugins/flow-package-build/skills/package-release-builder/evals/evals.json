@@ -111,6 +111,27 @@
         "evals/fixtures/release-both-editions/package/CHECKS.md",
         "evals/fixtures/release-both-editions/package/ACCEPTANCE.md"
       ]
+    },
+    {
+      "id": "release-with-guides-elearning-support",
+      "prompt": "Наряд A-18, release, editions: ce. ACCEPTANCE підписано (SHA S0). Після нього змерджено A-17b (модуль td_mebli_elearning, version 19.0.1.0) і A-17c (package/support/). package/docs/user-guide/ готовий з A-16b (INDEX: SHA стенда = SHA модулів без elearning). Підготуй реліз.",
+      "expected_output": "R-02 не дає порушення для td_mebli_elearning/** і support/**; R-18 PASS (user-guide, SHA без elearning, elearning X.Y = ACCEPTANCE); R-19 PASS: CHANGELOG має розділ «Передача клієнту» з виключенням support/; training.md посилається на user-guide і курси, не на support; склад пакета містить elearning з приміткою A-17b.",
+      "assertions": [
+        "CHANGELOG має розділ «Передача клієнту» зі списком включеного (addons вкл. td_mebli_elearning, docs/user-guide, config, master-data, templates) і виключеного (support/, research/, metrics/)",
+        "R-02 не вважає порушенням зміни в package/addons/td_mebli_elearning/ і package/support/; зміна іншого модуля в addons/ — порушення",
+        "R-18: SHA стенда в INDEX звіряється із git log -1 -- package/addons з виключенням td_*_elearning",
+        "У training.md розділ «Посібники по ролях» посилається на package/docs/user-guide і курси, без згадки package/support",
+        "package/support/ не потрапляє в клієнтську передачу; R-19 = PASS",
+        "Модуль td_mebli_elearning у «Складі пакета» з version 19.0.1.0 і приміткою A-17b; дефект user-guide/elearning/support не правиться тут, а йде в release-defects.md -> A-14",
+        "Відсутність package/docs/user-guide або package/support -> ескалація (нестача), а не done"
+      ],
+      "input": {
+        "naryad": "A-18, release",
+        "editions": "ce"
+      },
+      "files": [
+        "evals/fixtures/release-both-editions/package/ACCEPTANCE.md"
+      ]
     }
   ]
 }

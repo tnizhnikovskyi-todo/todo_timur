@@ -1,0 +1,84 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-16b",
+ "checks": [
+  {
+   "id": "index-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/docs/user-guide/INDEX.md",
+     "package/docs/user-guide/admin.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-guides",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/docs/user-guide/",
+     "package/demo/defects.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "index-headings",
+   "prim": "headings",
+   "args": {
+    "ref": "head:package/docs/user-guide/INDEX.md",
+    "headings": [
+     "re:покриття",
+     "re:sha"
+    ]
+   }
+  },
+  {
+   "id": "script-check-guides",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --spec package/SPEC.md [--modules-sha <git.head>]: UG-cover (кожен сценарій SPEC має розділ), UG-img (кожне зображення існує й на нього є посилання, сиріт немає), UG-sha (SHA в INDEX = SHA модулів), UG-lang (без англійських підписів у тексті кроків). Без --modules-sha UG-sha = SKIPPED, звірку виконує примітив demo-sha. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-package-build>/skills/user-guide-builder/scripts/check_guides.py",
+     "--dir",
+     "package/docs/user-guide",
+     "--spec",
+     "package/SPEC.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-pii",
+   "prim": "pii_strict",
+   "args": {
+    "paths": [
+     "package/docs/user-guide/"
+    ]
+   }
+  },
+  {
+   "id": "demo-sha",
+   "prim": "sha_eq",
+   "args": {
+    "refs": [
+     "head:package/docs/user-guide/INDEX.md",
+     "head:package/demo/README.md"
+    ]
+   }
+  },
+  {
+   "id": "review-checklist",
+   "prim": "manual",
+   "args": {
+    "text": "Рецензія за review-checklists/user-guide.md: скриншоти з поточного SHA, кроки відтворюються на стенді, ролі = ролі стенда, дефект UI знайдено під час зйомки -> повернення A-14 (не правка модуля в цьому кроці)",
+    "who": "Контент-менеджер / власник"
+   }
+  }
+ ]
+}

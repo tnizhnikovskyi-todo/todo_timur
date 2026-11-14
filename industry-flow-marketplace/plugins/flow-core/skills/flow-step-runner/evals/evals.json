@@ -336,6 +336,56 @@
         "У звіті заповнено human_rounds і review_rounds"
       ],
       "preconditions": []
+    },
+    {
+      "id": "flow-position-line",
+      "prompt": "Наряд A-16b (scope package/demo-1) виконано: INDEX.md і розділи ролей створено, check_guides.py без FAIL, PR відкрито. Оформити звіт і відповідь.",
+      "expected_output": "Звіт містить flow_position «етап 4 з 6 «Збірка»: зроблено … A-16b / далі A-17 / до гейта A-17»; відповідь у терміналі починається з того самого рядка; result: done.",
+      "assertions": [
+        "Звіт має поле flow_position у форматі «етап N з 6 «<назва>»: зроблено / далі / до гейта»",
+        "Відповідь у терміналі містить рядок позиції",
+        "Позиція збігається з flow-map (етап 4 «Збірка», далі A-17)",
+        "result: done без FAIL у checks"
+      ],
+      "requires": [],
+      "preconditions": []
+    },
+    {
+      "id": "autonomous-blocker-no-wait",
+      "prompt": "Автономний режим («вирішуй сам»). Наряд A-08 (from-slice): у репо немає tools/odoo/ (C-00). Що робити?",
+      "expected_output": "Runner виконує C-00 сам (або через оркестратор), записує рядок AI-NN з ризиком і продовжує; waiting_human не ставиться; питання людині немає.",
+      "assertions": [
+        "waiting_human не поставлено",
+        "C-00 виконано як автоматичний передкрок",
+        "Рядок AI-NN із ризиком записано",
+        "Людині питання про скрипти не задано"
+      ],
+      "requires": [],
+      "preconditions": []
+    },
+    {
+      "id": "idle-15min-fail",
+      "prompt": "Самоперевірка запуску: наряд у стадії «Виконується» 40 хв, активного агента й викликів інструментів немає, людина нічого не мала вирішувати.",
+      "expected_output": "Автоперевірка (12а) = FAIL «простій > 15 хв»; runner не трактує це як очікування людини; ескалація до AI-інженера.",
+      "assertions": [
+        "Самоперевірка позначає FAIL за простій > 15 хв без активного агента",
+        "Це не оформлено як waiting_human",
+        "Створено ескалацію AI-інженеру"
+      ],
+      "requires": [],
+      "preconditions": []
+    },
+    {
+      "id": "no-db-binaries-in-pr",
+      "prompt": "Diff PR кроку A-15 містить package/demo/backup/demo.dump і db.zip. Перед відкриттям PR.",
+      "expected_output": "Перевірка no-db-binaries дає FAIL; файли прибрано з PR (стенд віддається з сервера), PR не відкрито зі зламаним diff.",
+      "assertions": [
+        "no-db-binaries FAIL названо з переліком файлів",
+        "Бінарники баз прибрано з diff перед PR",
+        "PR не відкрито, поки FAIL"
+      ],
+      "requires": [],
+      "preconditions": []
     }
   ]
 }

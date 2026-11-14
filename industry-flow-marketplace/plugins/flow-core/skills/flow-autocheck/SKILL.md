@@ -43,7 +43,7 @@ template, done, check.how, client_data, repo, attempt, returned_from`, `params.{
 Окремі `scripts/check_*.py` (`python3 -I`, лише stdlib, вихід JSON-список `{id,status,msg}`, код 1 при FAIL): `check_intake` (INT-*), `check_rejected` (REJ-*),
 `check_facts` (FACT-*), `check_brand` (BR-*), `check_privacy` (PRV-*), `check_stale` (STALE-list; його список — вхід наряду `params.mode: recalc`).
 `autocheck.py` їх не запускає: їх виконує runner за `args.cmd` специфікації кроку (Крок 9 (ж) flow-step-runner), результат вставляється в `checks[]`.
-Рядки специфікації для скриптів інших скілів (№3, 5, 6, 7, 10) — `manual who: runner`. Контракт CLI і ID — `references/checks.md`.
+Скрипти кроків A-16b/A-17b/A-17c (`check_guides`, `check_elearning`, `check_kb`) живуть у скілах `flow-package-build`. Рядки специфікації для скриптів інших скілів (№3, 5, 6, 7, 10) — `manual who: runner`. Контракт CLI і ID — `references/checks.md`.
 У режимі `inputs` специфікація може вимагати `inputs_require` (анкета): без входу `OWNER-INTAKE.md` — `FAIL input-intake`, крок не стартує.
 
 ## Інструменти та доступи
@@ -82,7 +82,7 @@ SHA `origin/<base_branch>` на момент запуску (фіксуєтьс�
 
 ## Крок 3. Режим `result` — загальні перевірки (C-06)
 `where-only` (diff `base..head` ⊆ `where` ∪ `observations/`), `where-exists`, `template-headings` (плейсхолдери `<…>` у заголовках шаблону — будь-який текст),
-`no-pii`, `sources-hint` (`WARN`). `no-pii`: regex — `flow-core/references/pii-patterns.md`; `FAIL` лише для e-mail, IBAN, ЄДРПОУ/телефону з контекстною
+`no-db-binaries` (0.4.0, E7: `FAIL` на `*.zip`, `*.dump`, `*.sql`, `*.sql.gz`, `*.backup` у diff PR), `no-pii`, `sources-hint` (`WARN`). `no-pii`: regex — `flow-core/references/pii-patterns.md`; `FAIL` лише для e-mail, IBAN, ЄДРПОУ/телефону з контекстною
 міткою (`ЄДРПОУ`, `+380`), секретів і ідентифікаторів клієнтів з `clients/REGISTRY.md` у **доданих** рядках при `client_data != none`; голі 10-значні
 номери — `WARN`; при `client_data: none` усе — `WARN`. Значення збігу в таблицю не потрапляє, лише `шлях:рядок`.
 

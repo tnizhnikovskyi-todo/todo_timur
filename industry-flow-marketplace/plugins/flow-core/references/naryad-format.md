@@ -67,11 +67,12 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 Значення `params.mode` (оркестратор виводить за картками; якщо ключ відсутній — значення за замовчуванням):
 | step | mode | коли | за замовчуванням |
 |---|---|---|---|
-| A-08 | `перша`, `нова-версія` | `нова-версія` — від D-04/D-05; | `перша` |
+| A-08 | `from-slice`, `перша`, `нова-версія` | `from-slice` (E2) — короткий `package/SPEC.md` з `concept` + `complexity` + `PLAN` зрізу A-21 (без повного ТР; скіли A-08 зовнішні, режим — лише ключ наряду й входи зрізу); `перша` — повний ТР, лише коли зрізу немає; `нова-версія` — від D-04/D-05 | `from-slice` (є зріз) / `перша` (немає) |
 | A-14 | `перевірка`, `повернення`, `нова-версія`, `hotfix` | ставить C-01 за `returned_from` і джерелом; | `перевірка` |
 | A-17, A-18 | `перша`, `нова-версія`, `hotfix` | A-18 hotfix — від A-19; | `перша` |
 | A-09 | `first`, `review` (через `phase: review`) | `review` — оркестратор після `resume` | `first` |
 | A-12 | `build`, `fix`, `new-version`, `validate` | `fix` — повернення з A-14; `new-version` — від D-04/D-05 | `build` |
+| A-16b, A-17b, A-17c | — (режимів немає) | `where`: A-16b `package/docs/user-guide/` (+ `package/demo/defects.md` — лише запис дефекту UI для повернення на A-14); A-17b `package/addons/td_<галузь>_elearning/` (+ рядок в `research/AI-DECISIONS.md` і `package/templates/answers.yaml` — ключі `elearning.mode: on|off`, `elearning.pass_score`); A-17c `package/support/`; A-17b і A-17c — два наряди, створюються разом (AND-split після A-17), A-18 — після обох (AND-join); `access_profile: repo` | `—` |
 | A-15, A-22 | `перша`, `нова-версія` | `нова-версія` — змінені AC і `git.prev_tag` | `перша` |
 | A-02b | `prepare`, `validate` | `prepare` -> (власник заповнює 6 пунктів ≤5 хв: `waiting_human`+`resume`) -> `validate`; правка анкети після старту = новий `validate` (режиму `amend` немає) | `prepare` |
 | A-03b | `—`, `recalc`; `params.sample: false` (за замовчуванням; `true` лише на явний запит) | K1 і питань власнику немає (рішення AI -> AI-DECISIONS); повний обсяг без зупинки (зразок — лише за явного `sample: true`: профіль одного конкурента + 10 рядків матриці -> `waiting_human`); `recalc` — за `params.stale` | `—` (`sample: false`) |

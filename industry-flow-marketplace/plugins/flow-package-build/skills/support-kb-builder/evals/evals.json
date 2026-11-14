@@ -1,0 +1,82 @@
+{
+  "skill_name": "support-kb-builder",
+  "evals": [
+    {
+      "id": "happy-kb",
+      "prompt": "Наряд A-17c, меблі. У package/addons модулі td_mebli_core, td_mebli_elearning. AI-DECISIONS має AI-03 і AI-07 (ризики). A-16b готово. Збери package/support/. Вхідні файли — у `files`.",
+      "expected_output": "AI-INSTRUCTIONS.md з 5 обов'язковими розділами; сторінки KB-001, KB-002 по модулях; діагностика з DG-NN і маршрутами; обмеження з AI-03, AI-07; INDEX.md; check_kb.py без FAIL.",
+      "assertions": [
+        "Кожен td_* має сторінку kind: module з module:",
+        "Кожен DG-NN має Симптом/Перевірка/Виправлення/Маршрут, маршрут з triage-routes.md",
+        "Обмеження й ризики посилаються на AI-03 і AI-07, нічого не додано від себе",
+        "AI-INSTRUCTIONS: прод лише читання через prod-ro-<клієнт>",
+        "Скрипт на fixtures/support-ok: KB-ai, KB-ids, KB-module, KB-route, KB-privacy = PASS",
+        "Змінено лише package/support/"
+      ],
+      "files": [
+        "evals/fixtures/support-ok/addons/",
+        "evals/fixtures/support-ok/support/"
+      ]
+    },
+    {
+      "id": "bad-kb-fails",
+      "prompt": "Перевір KB скриптом: python3 -I scripts/check_kb.py --dir evals/fixtures/support-bad/support --addons evals/fixtures/support-bad/addons. Що не так?",
+      "expected_output": "KB-ids FAIL (дубль KB-001, KB-003 не в INDEX), KB-module FAIL (td_mebli_elearning без сторінки), KB-route FAIL (маршрут «розібратись пізніше»), KB-privacy FAIL (телефон, email).",
+      "assertions": [
+        "KB-ids = FAIL: дубль KB-001 і KB-003 немає в INDEX",
+        "KB-module = FAIL: немає сторінки td_mebli_elearning",
+        "KB-route = FAIL: DG-02 має маршрут не з таблиці",
+        "KB-privacy = FAIL: телефон і email у KB-001-dup.md",
+        "Код повернення 1; done не заявляється"
+      ],
+      "files": [
+        "evals/fixtures/support-bad/addons/",
+        "evals/fixtures/support-bad/support/"
+      ]
+    },
+    {
+      "id": "no-invented-behaviour",
+      "prompt": "Наряд A-17c. У td_mebli_core є модель з полем, призначення якого з коду не зрозуміле, у SPEC про нього нічого немає. Що записати в KB?",
+      "expected_output": "У сторінці модуля — «Відкрите питання: призначення поля <ім'я> не підтверджено кодом/SPEC»; поведінка не вигадана; у memo — «Невпевнений».",
+      "assertions": [
+        "Призначення поля не вигадано",
+        "Є рядок «Відкрите питання» або «не підтверджено» із назвою поля",
+        "У memo блок «Невпевнений:» з цим полем",
+        "Діагностичних сценаріїв на неперевірену поведінку не створено"
+      ]
+    },
+    {
+      "id": "route-by-severity",
+      "prompt": "Наряд A-17c. Серед ризиків AI-DECISIONS: «розрахунок дати відвантаження може бути хибним при нестандартній партії» (AI-09). Створи сценарій діагностики з маршрутом.",
+      "expected_output": "DG-NN з Симптом/Перевірка/Виправлення; Маршрут: B-13 (B-05) для бага коду або A-19 для критичного/високого дефекту пакета (згідно triage-routes.md), не вигаданий маршрут; посилання AI-09 у «Обмеження й ризики».",
+      "assertions": [
+        "Маршрут із переліку triage-routes.md (B-13 (B-05) або A-19)",
+        "Критична серйозність -> ескалація негайно, окремо зазначено",
+        "AI-09 присутній у сторінці limits",
+        "Рішення «у продукт чи в кастом» не ухвалюється (D-02 — власник)"
+      ]
+    },
+    {
+      "id": "client-handoff-exclusion",
+      "prompt": "Наряд A-17c. PM просить покласти KB у передачу клієнту «щоб вони самі розбиралися». Що робити?",
+      "expected_output": "Відмова: package/support/ внутрішній, клієнту не передається; клієнту — інструкції user-guide і eLearning; у memo — рішення AI за замовчуванням, власник може накласти вето; A-18 виключає support/ з передачі.",
+      "assertions": [
+        "package/support/ не позначено як клієнтський матеріал",
+        "Клієнту пропонується user-guide й eLearning",
+        "Рішення записано як рішення AI з правом вето власника, без очікування блокера",
+        "У memo — перелік для A-18: package/support/ виключено з клієнтської передачі"
+      ]
+    },
+    {
+      "id": "module-added-update",
+      "prompt": "Наряд A-17c повтор. Додано модуль td_mebli_planning після попередньої KB. Оновити.",
+      "expected_output": "Нова сторінка KB-NNN для td_mebli_planning (новий ID, старі не змінюються), INDEX оновлено, KB-module = PASS.",
+      "assertions": [
+        "Нова сторінка має новий KB-NNN, існуючі ID не змінено й не перевикористано",
+        "INDEX.md містить новий ID",
+        "KB-module = PASS з двома+ модулями",
+        "Змінено лише package/support/"
+      ]
+    }
+  ]
+}
