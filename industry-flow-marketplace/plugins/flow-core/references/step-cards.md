@@ -95,6 +95,18 @@
 - примітки: Справжні моделі `td_`, без `x_`/Studio; `defaults.prototype.fidelity: mock` -> `waiting_human` (К-23); EE — позначкою (К-06)
 - ескалація: preflight середовища не пройдено -> `waiting_human` до витрат бюджету
 
+### A-21d. Огляд покриття зрізу (slice-coverage, E3)
+- `raciR`: AI (R); власник — вето через `veto-batch`
+- `executor`: ai; `skillRef`: flow-research:completeness-audit (`params.mode: slice-coverage`)
+- `access_profile`: research; `client_data: none`
+- `inArtifacts`: prototype-real/{PLAN,complexity,ACCEPTED,README}.md; package/addons/td_* (імена моделей, `__manifest__.py`); concept/*; research/{BOX,SALES,REJECTED,AI-DECISIONS,FUNCTIONAL-MAP,REUSE}.md, facts.yaml; OWNER-INTAKE.md
+- `outArtifacts`: research/COVERAGE-SLICE.md; рядки в research/AI-DECISIONS.md (разом <=15 рядків «Рішення»)
+- гейт: ні (`done` -> A-21c, а при `skip_market_check` -> A-07)
+- перевірки: `check_slice_coverage.py` (CS-*) — `flow-autocheck/references/checks/A-21d.yaml`
+- ліміти: opus/medium; 2 год; стартова зрілість: 1
+- примітки: зріз, REJECTED і код не правити; пропозиції "в A" входять у `from-slice` SPEC A-08
+- ескалація: немає зрізу A-21 (`ACCEPTED.md`) -> `returned` на A-21
+
 ### A-21c. Продаючі матеріали
 - `raciR`: Контент-менеджер (R); Власник продукту (A, гейт)
 - `executor`: any (Контент-менеджер)
@@ -171,17 +183,18 @@
 ### A-17b. Електронне навчання
 - `raciR`: AI (R); Контент-менеджер / Власник продукту (рецензія, A)
 - `executor`: any; `skillRef`: flow-package-build:elearning-builder; `access_profile`: repo
-- `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: on|off`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
-- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля
+- `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: "on"|"off"`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
+- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає)
 - гейт: ні; AND-split з A-17c, AND-join в A-18
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
-- перевірки: `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang), тести на чистій CE (курсів = ролей, >=5 питань у курсі), `A-17b.yaml`
+- перевірки: `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang, EL-score, EL-access, EL-content, EL-pass, EL-mode), тести на чистій CE (курсів = ролей, >=5 питань у курсі), lint, CI C-03, security-review (недоступний гейт = рішення AI + MANUAL), `A-17b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - ескалація: `website_slides` не встановлюється на CE -> `escalated` з логом; дефект тексту уроку -> A-16b
 
 ### A-17c. Інструкції для AI-підтримки
 - `raciR`: AI (R); Власник продукту (A)
 - `executor`: any; `skillRef`: flow-package-build:support-kb-builder; `access_profile`: repo
+- `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний); рецензент — Власник продукту (Архітектор — KB-facts)
 - `inArtifacts`: package/addons/td_*; package/docs/user-guide (FAQ); `research/AI-DECISIONS.md` (ризики); package/SPEC.md; `package/demo/defects.md`
 - `outArtifacts`: package/support/{AI-INSTRUCTIONS.md, kb/KB-NNN-*.md, INDEX.md} — **лишається в ToDo, клієнту не передається**; споживачі: flow-client-delivery:support-desk, client-help-bot, odoo19-implementation:hypercare-tracker (зовнішній — лише згадка)
 - гейт: ні; AND-split з A-17b, AND-join в A-18

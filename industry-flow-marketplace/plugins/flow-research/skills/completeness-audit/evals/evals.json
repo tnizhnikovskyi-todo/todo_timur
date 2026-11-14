@@ -119,6 +119,94 @@
       "input": {
         "fixtures": "evals/fixtures/incomplete-concept/"
       }
+    },
+    {
+      "id": "slice-coverage-after-slice",
+      "prompt": "Наряд params.mode: slice-coverage, галузь меблі: зріз A-21 прийнято, A-07/A-08 ще не було. Зроби огляд покриття зрізу перед документацією.",
+      "expected_output": "research/COVERAGE-SLICE.md з §1–5 і Підсумком; кожна F-xx має статус з 7; 11 областей запуску; блок «Ще пропозиції» ≤3 партій з рекомендацією в A / в B-C / не робимо; 4 перевірки нестиковок; рядки AI-NN групові; зріз і код не змінено; check_slice_coverage.py PASS.",
+      "assertions": [
+        "Запущено 3 ролі в окремих контекстах (покриття F-xx, галузевий експерт циклу, архітектор Odoo 19)",
+        "Усі 11 областей запуску є в §3",
+        "Кожна пропозиція P-NN має рекомендацію в A / в B-C / не робимо й колонку «Вето власника»",
+        "Є 4 перевірки нестиковок з результатом OK/ПРОГАЛИНА",
+        "Файли зрізу, REJECTED.md і код td_* не змінено; рішення — рядки AI-NN",
+        "check_slice_coverage.py з --features --ai-decisions --plan --addons --rejected: CS-sections, CS-status, CS-cover, CS-cycle, CS-launch, CS-proposals, CS-consistency, CS-plan-modules, CS-sum, CS-money PASS; CS-ai PASS; CS-manual лишається MANUAL"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/slice-coverage-ok/",
+        "mode": "slice-coverage"
+      }
+    },
+    {
+      "id": "slice-coverage-bad-register",
+      "prompt": "Перевір COVERAGE-SLICE.md із фікстури slice-coverage-bad.",
+      "expected_output": "check_slice_coverage.py повертає FAIL: статус «майже готово», «відбраковано» без REJ-NNN (у -bad рядок F-07 без ID), немає області «банки», рекомендація «потім», немає перевірки «коробка показу», підсумок не збігається, грошові маркери.",
+      "assertions": [
+        "CS-status, CS-launch, CS-proposals, CS-consistency, CS-sum, CS-money дають FAIL",
+        "CS-cycle FAIL: етап 3 без рекомендації",
+        "Код виходу 1, скрипт не правив файл",
+        "CS-cover FAIL (F-11 без рядка в §1), CS-ai FAIL (AI-05..07 немає в «Рішення»), CS-plan-modules FAIL (td_mebli_planner без каталогу, а §5 каже OK)",
+        "Неіснуючий шлях у --features/--ai-decisions дає FAIL «немає <шлях>», а не SKIP"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/slice-coverage-bad/"
+      }
+    },
+    {
+      "id": "slice-coverage-nestykovky",
+      "prompt": "У зрізі оптимізатор розкрою є в td_mebli_cut, хоча в REJECTED.md він REJ-003 «не робимо»; PLAN згадує модуль td_mebli_planner, якого немає в package/addons; дашборд у концепції має 12 показників, у зрізі 11; показано коробку B замість A. Склади розділ нестиковок.",
+      "expected_output": "§5 з чотирма рядками, усі ПРОГАЛИНА з місцем і рекомендацією; рішення не прийнято за власника; AI-NN групові.",
+      "assertions": [
+        "Усі 4 перевірки нестиковок названо окремими рядками",
+        "Для кожної вказано де (файл/модуль) і рекомендацію",
+        "Код і REJECTED.md не змінено",
+        "gaps у Підсумку враховує 4 нестиковки"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/slice-coverage-ok/"
+      }
+    },
+    {
+      "id": "slice-coverage-more-proposals",
+      "prompt": "Огляд покриття дав 3 ролі знахідок. Додай блок «Ще пропозиції»: що ще дешево зробити на стандарті й що нестандартне.",
+      "expected_output": "Партія 1: 5–8 P-NN; дві групи; рекомендація в A / в B-C / не робимо для кожної; нова партія лише якщо попередня дала прийняті; власник — вето; нічого не додано в код.",
+      "assertions": [
+        "Партій не більше 3",
+        "Кожна пропозиція має групу «дешева на стандарті» або «нестандартна»",
+        "Рекомендація з переліку, вето власника позначено",
+        "Грошових оцінок немає (CS-money PASS)"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/slice-coverage-ok/"
+      }
+    },
+    {
+      "id": "slice-coverage-no-odoo-claims",
+      "prompt": "Архітектор пише: «у 19.0 slide.channel має поле Х». Вихідників 19.0 у середовищі немає. Заповни область «майстер-дані/навчання».",
+      "expected_output": "Твердження не внесено як факт: «перевірити у вихідниках 19.0, файл:рядок» або «не перевірено»; рядок AI-NN ризик.",
+      "assertions": [
+        "Поля й API Odoo 19 не вигадано",
+        "Область отримує статус частково/немає з рекомендацією і AI-NN ризик",
+        "У memo названо, що не перевірено"
+      ],
+      "input": {
+        "mode": "slice-coverage"
+      }
+    },
+    {
+      "id": "slice-coverage-merge-ai-rows",
+      "prompt": "Наряд slice-coverage: у AI-DECISIONS.md уже 14 рядків «Рішення». Огляд має «в A» (P-01, P-03), «в B-C / не робимо» і 2 незакриті області запуску. Куди писати рішення?",
+      "expected_output": "Огляд зливає свої рядки в один AI-NN з посиланням на §§ COVERAGE-SLICE.md (деталі — у файлі огляду); чужі рядки не змінено; ліміт ≤15 рядків «Рішення» не порушено, CA-gaps/CM-* не падають.",
+      "assertions": [
+        "Власні рядки огляду злито в один AI-NN з посиланням на §§ COVERAGE-SLICE.md",
+        "Чужі рядки AI-DECISIONS.md не змінено й не перенумеровано",
+        "Рядків у «Рішення» ≤15",
+        "Пропозиції подано як рекомендації, вето власника збережено"
+      ],
+      "input": {
+        "fixtures": "evals/fixtures/slice-coverage-ok/",
+        "mode": "slice-coverage"
+      }
     }
   ]
 }

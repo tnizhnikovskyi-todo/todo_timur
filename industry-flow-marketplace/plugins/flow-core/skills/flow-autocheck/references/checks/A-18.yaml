@@ -33,8 +33,18 @@
      "observations/",
      "package/docs/user-guide/**",
      "package/addons/td_*_elearning/**",
-     "package/support/**"
+     "package/templates/answers.yaml",
+     "package/support/**",
+     "docs/industries/*/research/AI-DECISIONS.md"
     ]
+   }
+  },
+  {
+   "id": "answers-elearning-only",
+   "prim": "manual",
+   "args": {
+    "text": "package/templates/answers.yaml змінено лише блоком `elearning:` (змінено лише блок elearning:); інші ключі — без змін відносно ACCEPTANCE",
+    "who": "runner"
    }
   },
   {

@@ -5,18 +5,15 @@
       <field name="key">td_mebli_elearning.pass_score</field>
       <field name="value">80</field>
     </record>
-    <record id="param_mode" model="ir.config_parameter">
-      <field name="key">td_mebli_elearning.mode</field>
-      <field name="value">on</field>
-    </record>
     <record id="course_komirnyk" model="slide.channel">
       <!-- role: komirnyk -->
       <field name="name">Курс: Комірник</field>
     </record>
     <record id="lesson_komirnyk_1" model="slide.slide">
-      <!-- source: komirnyk.md#SC-01 -->
+      <!-- source: komirnyk.md#SC-01 (ім'я поля тексту звірити у вихідниках 19.0) -->
       <field name="name">Урок: SC-01</field>
       <field name="channel_id" ref="course_komirnyk"/>
+      <field name="html_content"><![CDATA[<ol><li>Відкрийте «Склад» і натисніть «Прийняти».</li></ol><img src="/td_mebli_elearning/static/img/komirnyk/SC-01-1.png"/>]]></field>
     </record>
     <record id="test_komirnyk" model="slide.slide">
       <field name="name">Тест: Комірник</field>
@@ -122,9 +119,10 @@
       <field name="name">Курс: Майстер цеху</field>
     </record>
     <record id="lesson_master_1" model="slide.slide">
-      <!-- source: master.md#SC-02 -->
+      <!-- source: master.md#SC-02 (ім'я поля тексту звірити у вихідниках 19.0) -->
       <field name="name">Урок: SC-02</field>
       <field name="channel_id" ref="course_master"/>
+      <field name="html_content"><![CDATA[<ol><li>Відкрийте «Склад».</li></ol>]]></field>
     </record>
     <record id="test_master" model="slide.slide">
       <field name="name">Тест: Майстер цеху</field>
@@ -230,9 +228,10 @@
       <field name="name">Курс: Адміністратор</field>
     </record>
     <record id="lesson_admin_1" model="slide.slide">
-      <!-- source: admin.md#SC-03 -->
+      <!-- source: admin.md#SC-03 (ім'я поля тексту звірити у вихідниках 19.0) -->
       <field name="name">Урок: SC-03</field>
       <field name="channel_id" ref="course_admin"/>
+      <field name="html_content"><![CDATA[<ol><li>Відкрийте «Склад».</li></ol>]]></field>
     </record>
     <record id="test_admin" model="slide.slide">
       <field name="name">Тест: Адміністратор</field>

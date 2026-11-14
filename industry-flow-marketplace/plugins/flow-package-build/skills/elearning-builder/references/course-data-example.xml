@@ -8,10 +8,6 @@
       <field name="key">td_mebli_elearning.pass_score</field>
       <field name="value">80</field>
     </record>
-    <record id="param_mode" model="ir.config_parameter">
-      <field name="key">td_mebli_elearning.mode</field>
-      <field name="value">on</field>
-    </record>
 
     <record id="course_komirnyk" model="slide.channel">
       <!-- role: komirnyk -->
@@ -21,10 +17,22 @@
       <!-- source: komirnyk.md#SC-01 -->
       <field name="name">Прийняти плиту на склад</field>
       <field name="channel_id" ref="course_komirnyk"/>
+      <!-- ЗАПОВНЮВАЧ: тип уроку (стаття) і публікація — поле та значення взяти з вихідників 19.0, файл:рядок; без них урок може бути невидимий -->
+      <!-- Текст кроків і зображення — з розділу komirnyk.md#SC-01 без переписування. Ім'я поля тексту (тут html_content) і
+           поля зображення (image_1920) ЗВІРИТИ у вихідниках 19.0 (slide_slide.py, файл:рядок у README) — це чернетка.
+           check_elearning.py: урок без тексту або без зображення (коли розділ має знімки) = FAIL EL-content. -->
+      <field name="html_content"><![CDATA[
+        <ol>
+          <li>Відкрийте «Склад» і натисніть «Прийняти».</li>
+          <li>Натисніть «Зберегти» і перевірте статус.</li>
+        </ol>
+        <img src="/td_mebli_elearning/static/img/komirnyk/SC-01-1.png"/>
+      ]]></field>
     </record>
     <record id="test_komirnyk" model="slide.slide">
       <field name="name">Тест: Комірник</field>
       <field name="channel_id" ref="course_komirnyk"/>
+      <!-- ЗАПОВНЮВАЧ: тип уроку (тест) і публікація — поле та значення взяти з вихідників 19.0, файл:рядок -->
     </record>
     <record id="q_komirnyk_1" model="slide.question">
       <field name="question">Де підтвердити приймання плити?</field>
@@ -40,6 +48,7 @@
       <field name="question_id" ref="q_komirnyk_1"/>
       <field name="is_correct" eval="False"/>
     </record>
-    <!-- ... ще >=4 питання на курс; по одному правильному варіанту -->
+    <!-- Питання з multi: true -> >=1 правильна відповідь; інакше рівно одна.
+         ... ще >=4 питання на курс; по одному правильному варіанту -->
   </data>
 </odoo>

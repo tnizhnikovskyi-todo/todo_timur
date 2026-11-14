@@ -9,7 +9,7 @@ CM-pii: ПІБ (три слова з великої) дає MANUAL, а не FAIL
 Шлях до скриптів flow-autocheck (плагін flow-core): --autocheck-dir <шлях до .../flow-core/skills/flow-autocheck/scripts> або змінна оточення FLOW_AUTOCHECK_DIR
 (у кеші встановлених плагінів сусідній плагін може лежати деінде; за замовчуванням — відносно цього файла).
 Із --research додатково: CM-research (розділи BOX §1-13, SALES §1-7, файли REJECTED.md і AI-DECISIONS.md; OWNER-BRIEF не пишеться), CM-buyer (роль-покупець має екран-дашборд і сценарій),
-CM-roles-scenarios (кожна роль має SC, кожна F — крок SC, роль SC = роль екрана), CM-base-edition (основа екрана: Стд CE|Стд EE|td_|ToDo-готовий|Інтегр),
+CM-roles-scenarios (кожна роль має SC, кожна F — крок SC, роль SC = роль екрана), CM-base-edition (основа екрана: Стд CE|Стд EE|td_|ToDo-готовий|Інтегр), CM-entity-matrix (матриця «сутність × роль × екран» у screens.md: кожна сутність видна на екрані кожної ролі, що з нею працює),
 CM-money (LESSONS §24: у concept/* і research/{BOX,SALES,REJECTED,AI-DECISIONS}.md немає окупності, TCO, вартості володіння, business-case, «вердикту про гроші», ROI,
 беззбитковості, ставки розробки, годин × ставка; секції money), CM-facts (check_facts.py: числа = facts.yaml). Без --research (лише з --concept-only) вони SKIP.
 Ключ --input = ім'я файлу з колонки «Джерело» (наприклад past-projects.md); значення = шлях до файлу на SHA наряду."""
@@ -191,7 +191,7 @@ def main():
     ci_r, ci_t, ci_b = col(screen_head, "Ролі"), col(screen_head, "Тип"), col(screen_head, "Основа")
     role_rows = {r[0]: r for r in rows(feat["Ролі"])}
     if not a.research:
-        for i in ("CM-research", "CM-buyer", "CM-roles-scenarios", "CM-base-edition", "CM-money", "CM-facts"):
+        for i in ("CM-research", "CM-buyer", "CM-roles-scenarios", "CM-base-edition", "CM-entity-matrix", "CM-money", "CM-facts"):
             res.append({"id": i, "status": "SKIP", "msg": "--concept-only: без --research"})
     else:
         rd = Path(a.research)
@@ -248,6 +248,48 @@ def main():
                 if not v.strip() or not all(x.strip() in BASES for x in re.split(r"[,;/+]", v) if x.strip()):
                     why.append(f"{r[0]}: основа «{v}» не з {BASES} (OCA — лише ідея, пишемо в td_)")
         add("CM-base-edition", not why, "; ".join(why[:8]))
+        s_roles_m = {r[0]: set(re.findall(r"ROLE-\d+", r[ci_r])) for r in screen_rows if ci_r is not None and len(r) > ci_r}
+        # CM-entity-matrix (E1, 0.4.0): «сутність × роль × екран» — кожна сутність видна на екрані кожної ролі, що з нею працює
+        why = []; xwarn = []; mr = None
+        msec = next((v for k, v in secs["screens.md"].items() if k.lower().startswith("матриця")), None)
+        if msec is None:
+            why.append("у screens.md немає розділу «## Матриця сутність × роль × екран»")
+        else:
+            mh, mr = table(msec)
+            c_ent, c_roles, c_scr = col(mh, "Сутність"), col(mh, "Хто працює", "Ролі"), col(mh, "Де видно", "Екран")
+            if None in (c_ent, c_roles, c_scr) or not mr:
+                why.append("таблиця матриці: потрібні колонки «Сутність», «Хто працює», «Де видно (ROLE-xx → S-xx)» і ≥1 рядок")
+            else:
+                for r in mr:
+                    if len(r) <= max(c_ent, c_roles, c_scr): continue
+                    ent = r[c_ent]
+                    roles = set(re.findall(r"ROLE-\d+", r[c_roles]))
+                    pairs = re.findall(r"(ROLE-\d+)\s*(?:→|->)\s*((?:S-\d+[\s,]*)+)", r[c_scr])
+                    seen = {}
+                    for rid, ss in pairs: seen.setdefault(rid, set()).update(re.findall(r"S-\d+", ss))
+                    if not roles: why.append(f"«{ent}»: не названо жодної ролі")
+                    ent_scr = set().union(*seen.values()) if seen else set()
+                    for blk, srid in zip(sc, sc_roles):
+                        hit = ent_scr & set(re.findall(r"S-\d+", blk))
+                        if srid and srid not in roles and hit:
+                            xwarn.append(f"«{ent}»: {srid} має крок SC на екрані {sorted(hit)}, але не названа в «Хто працює»")
+                    for rid in sorted(roles):
+                        if rid not in role_rows: why.append(f"«{ent}»: {rid} немає в реєстрі ролей")
+                        elif rid not in seen: why.append(f"«{ent}»: роль {rid} працює з сутністю, але екрана для неї немає")
+                        elif not any(rid in s_roles_m.get(s, set()) for s in seen[rid]):
+                            why.append(f"«{ent}»: екран {sorted(seen[rid])} не містить ролі {rid} у screens.md")
+        add("CM-entity-matrix", not why, "; ".join(why[:8]))
+        # глибина матриці (WARN): ≥3 рядків; екран ролі не «довідник». Решта — пункт рецензії review-checklists/concept.md
+        warn = list(xwarn)
+        if msec is not None and mr is not None:
+            if len(mr) < 3: warn.append(f"у матриці {len(mr)} рядків (<3)")
+            ref = {r[0] for r in screen_rows if re.search(r"довідник|окремий список", " ".join(r), re.I)}
+            for r in (mr if c_scr is not None else []):
+                if len(r) > c_scr:
+                    for rid, ss in re.findall(r"(ROLE-\d+)\s*(?:→|->)\s*((?:S-\d+[\s,]*)+)", r[c_scr]):
+                        bad = sorted(set(re.findall(r"S-\d+", ss)) & ref)
+                        if bad: warn.append(f"«{r[c_ent]}»: {rid} → {bad} — екран-довідник, не робоче місце ролі")
+        if warn: res.append({"id": "CM-entity-matrix-depth", "status": "WARN", "msg": "; ".join(warn[:6])})
         # CM-money (LESSONS §24): грошей у документах концепції немає
         why = []
         files = [x for x in sorted(d.glob("*.md"))] + [rd / f for f in ("BOX.md", "SALES.md", "REJECTED.md", "AI-DECISIONS.md")]

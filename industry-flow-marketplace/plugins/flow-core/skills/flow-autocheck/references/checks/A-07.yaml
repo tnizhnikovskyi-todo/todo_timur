@@ -9,7 +9,8 @@
     "paths": [
      "docs/industries/<галузь>/demand/results.md"
     ]
-   }
+   },
+   "when": "in:A-23"
   },
   {
    "id": "recommendation-heading",
@@ -19,7 +20,8 @@
     "headings": [
      "re:рекомендація ai для a-07"
     ]
-   }
+   },
+   "when": "in:A-23"
   },
   {
    "id": "no-money",
@@ -27,6 +29,28 @@
    "args": {
     "paths": [
      "docs/industries/<галузь>/demand/results.md"
+    ]
+   },
+   "when": "in:A-23"
+  },
+  {
+   "id": "skip-decisions-exists",
+   "prim": "exists",
+   "when": "not_in:A-23",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/AI-DECISIONS.md"
+    ]
+   }
+  },
+  {
+   "id": "skip-recommendation-heading",
+   "prim": "headings",
+   "when": "not_in:A-23",
+   "args": {
+    "ref": "head:docs/industries/<галузь>/research/AI-DECISIONS.md",
+    "headings": [
+     "re:рекомендація ai для a-07"
     ]
    }
   },

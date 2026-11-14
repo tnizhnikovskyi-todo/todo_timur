@@ -19,7 +19,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 PLUGIN = os.path.dirname(os.path.dirname(SKILL))
-SHA_RE = re.compile(r"(?i)\b(SHA|commit)\b[:\s]*([0-9a-f]{7,40})")  # id-patterns.md
+SHA_RE = re.compile(r"(?i)\b(SHA|commit)(?:\s+(?:стенда|модулів|пакета))?\b[:\s]*([0-9a-f]{7,40})")  # id-patterns.md
 TAG_RE = re.compile(r"^package/v\d+\.\d+(-odoo\d+)?$")  # id-patterns.md, q19
 ORDER = ["FAIL", "ERROR", "WARN", "MANUAL", "SKIP", "PASS"]
 PII = [  # pii-patterns.md; (тип, regex, статус при client_data != none)
@@ -381,7 +381,9 @@ def p_git_diff_allowed(ctx, c):
         return
     rc, out = git(ctx, "diff", "--name-only", a, b)
     files = [x for x in out.split("\n") if x]
-    extra = [f for f in files if not any(glob_match(f, p) for p in s["allow"])]
+    ind = industry_of(ctx)
+    allow = [p.replace("<галузь>", ind) if ind else p.replace("<галузь>", "*") for p in s["allow"]]
+    extra = [f for f in files if not any(glob_match(f, p) for p in allow)]
     ctx.add(c["id"], "FAIL" if extra else "PASS", ("Зайві файли поза дозволеним переліком: " + ", ".join(extra)) if extra else "",
             f"{a[:12]}..{b[:12]}", c.get("route_on_fail") if extra else None)
     if s.get("compare_done"):
@@ -448,6 +450,9 @@ def industry_of(ctx):
     for t in cands:
         m = re.search(r"docs/industries/([^/\s,+]+)/", t)
         if m and m.group(1) != "_template":
+            return m.group(1)
+        m = re.search(r"td_([a-z0-9]+)_elearning", t)
+        if m:
             return m.group(1)
     return None
 
@@ -771,6 +776,11 @@ def p_plan_modules_exist(ctx, c):
             c.get("route_on_fail") if miss else None)
 
 
+def norm_box(v):
+    """Кирилічні а/в/с (коробки A/B/C) -> латиниця, лише для односимвольних значень."""
+    return {"а": "a", "в": "b", "с": "c"}.get(v, v)
+
+
 def p_value_eq(ctx, c):
     """E3: значення з кількох документів збігаються (кількість показників дашборда, коробка показу = коробка входу).
     sources: [{name, ref, regex (група 1), pick: first|last|max, optional}]."""
@@ -792,7 +802,7 @@ def p_value_eq(ctx, c):
             continue
         pick = src.get("pick", "first")
         v = max(found, key=lambda x: int(x) if x.isdigit() else x) if pick == "max" else (found[-1] if pick == "last" else found[0])
-        vals[src.get("name", src["ref"])] = v.strip().lower()
+        vals[src.get("name", src["ref"])] = norm_box(v.strip().lower())
     if len(set(vals.values())) > 1:
         bad.append("розбіжність: " + "; ".join(f"{k}={v}" for k, v in vals.items()))
     if warn and not bad:
@@ -965,6 +975,9 @@ def when_ok(ctx, w):
     if w.startswith("mode:"):
         vals = w[5:].split("|")
         return ctx.params.get("mode") in vals, f"режим не з {{{', '.join(vals)}}}"
+    if w.startswith("not_in:"):
+        ok = not any(i.get("from") == w[7:] for i in ctx.n.get("inputs") or [])
+        return ok, f"є вхід {w[7:]}"
     if w.startswith("in:"):
         ok = any(i.get("from") == w[3:] for i in ctx.n.get("inputs") or [])
         return ok, f"немає входу {w[3:]}"
@@ -1136,6 +1149,9 @@ def selftest():
     t = tables("| AC | трек |\n|---|---|\n| AC-01 | конфіг |\n")[0]
     assert t["rows"][0]["cells"] == ["AC-01", "конфіг"] and colidx(t["hdr"], ["ac"]) == 0
     assert SHA_RE.search("SHA: abc1234").group(2) == "abc1234"
+    assert norm_box("а") == "a" and norm_box("12") == "12"
+    assert SHA_RE.search("SHA стенда: abc1234").group(2) == "abc1234"
+    assert SHA_RE.search("SHA модулів: abc1234").group(2) == "abc1234"
     fx = os.path.join(SKILL, "evals", "fixtures")
     for case, want in (("a10-coverage", 1), ("spec-missing", 2)):
         mk = os.path.join(fx, case, "make_repo.sh")
@@ -1155,6 +1171,7 @@ def selftest():
         r = subprocess.run([sys.executable, "-I", os.path.join(HERE, scr)] + args, capture_output=True, text=True, cwd=os.path.join(fx, d))
         assert r.returncode == want, f"{scr} {d}: код {r.returncode}, очікувано {want}: {r.stdout[-200:]}{r.stderr[-200:]}"
     selftest_templates()
+    selftest_templates_pkg()
     selftest_stale()
     selftest_e3()
     cdir = os.path.join(SKILL, "references", "checks")
@@ -1182,6 +1199,24 @@ def selftest_templates():
             for w in c["args"]["headings"]:
                 ok = any((re.search(w[3:], h, re.I) if w.startswith("re:") else norm(w) in h) for h in have)
                 assert ok, f"{step}/{c['id']}: заголовок «{w}» не знайдено в шаблоні {os.path.basename(tpl)}"
+
+
+def selftest_templates_pkg():
+    """A-17c / A-16b: `re:`-заголовки специфікацій мають збігатися з H1-H3 шаблонів скілів flow-package-build."""
+    base = os.path.join(os.path.dirname(PLUGIN), "flow-package-build", "skills")
+    pairs = (("A-17c", "ai-instructions-headings", "support-kb-builder/references/ai-instructions-template.md"),
+             ("A-16b", "index-headings", "user-guide-builder/references/index-template.md"))
+    for step, cid, rel in pairs:
+        tpl = os.path.join(base, *rel.split("/"))
+        if not os.path.exists(tpl):
+            continue
+        have = [norm(h) for lv, h, _, _ in sections(open(tpl, encoding="utf-8").read())]
+        for c in load_spec(step).get("checks", []):
+            if c["id"] != cid:
+                continue
+            for w in c["args"]["headings"]:
+                ok = any((re.search(w[3:], h, re.I) if w.startswith("re:") else norm(w) in h) for h in have)
+                assert ok, f"{step}/{cid}: заголовок «{w}» не знайдено в шаблоні {os.path.basename(tpl)}"
 
 
 def selftest_stale():

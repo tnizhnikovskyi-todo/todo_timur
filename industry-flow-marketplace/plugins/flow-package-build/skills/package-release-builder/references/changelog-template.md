@@ -32,7 +32,8 @@
 `<одна команда скрипта C-00>`
 
 ### Передача клієнту        <- release і odoo-upgrade (0.4.0)
-- Входить: `addons/` (td_* вкл. `td_<галузь>_elearning`, якщо `elearning: on`), `docs/user-guide/`, `config/`, `master-data/`, `templates/`
+- Модулі до установки (A-17b), лише при `elearning.mode: "on"`: `website_slides`, `td_<галузь>_elearning` (порядок установки; CONFIG.md не змінюється)
+- Входить: `addons/` (td_* вкл. `td_<галузь>_elearning`, якщо `elearning.mode: "on"`), `docs/user-guide/`, `config/`, `master-data/`, `templates/`
 - Виключено: `support/` (внутрішній KB A-17c), `research/`, `metrics/`, `demo/release-defects.md`
 
 ### Сумісність з Odoo        <- лише odoo-upgrade

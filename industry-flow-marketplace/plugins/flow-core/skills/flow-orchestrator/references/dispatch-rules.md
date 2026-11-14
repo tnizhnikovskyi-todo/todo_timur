@@ -23,7 +23,8 @@
 - `recalc`: один наряд на **крок-власник** застарілих артефактів (крок — за `flow/ARTIFACTS.md`), `params.stale: [...]` і `where` = ці артефакти (для A-20 `where` завжди ще й `research/AI-DECISIONS.md` — розділ «Повнота» і рядки AI-NN); порядок кроків — за `DEPENDS.yaml`. Список бере зі звіту (`stale:`) наряду-джерела, де runner запустив `check_stale.py` (C-02 `record`/`veto-batch`, A-02b `validate`, PR із `facts.yaml`). Ключ — `(step, scope.id, mode=recalc, base_sha)`; повторний прохід з тим самим `base` — `skipped`. Приклад: STALE = features.md + BOX.md + owner-page/index.html → 2 наряди (A-20: два артефакти; A-20c: сторінка).
 - A-20 (самоперевірка повноти, 0.3.1; окремого A-20b немає): кабінетні (`desk`) прогалини закриваються правкою в тому ж наряді, 1 коло критика; повернення не створює (незакрите — рядки AI-NN у блоці рішень A-20c).
 - A-20c «Повернути» з вето: `veto-batch` → A-20 `recalc` → A-20c (показує лише змінене); A-20 `recalc` сам оновлює розділ «Повнота» по зачеплених пунктах; єдиний крок-власник `AI-DECISIONS.md` і `REJECTED.md` для `recalc` — A-20; окремих чернеток рішень і повторних кіл «питання власнику» немає.
-- Усі кандидати A-20c/A-21/A-21c — лише після `done` попередника; AND-join A-03b: A-03 (+A-06 якщо сесії) і A-04.
+- Огляд покриття зрізу (E3): після `Затвердити` A-21 ставити наряд A-21d (`completeness-audit`, `params.mode: slice-coverage`, `where` = `research/COVERAGE-SLICE.md` + `research/AI-DECISIONS.md`, профіль `research`); A-21c — лише після `done` A-21d; при `skip_market_check` після `done` A-21d — A-07 (A-21c, A-23, A-22 не ставляться). Без наряду A-21d не переходити ні до A-21c, ні до A-07 (`skipped_precondition`).
+- Усі кандидати A-20c/A-21/A-21d/A-21c — лише після `done` попередника; AND-join A-03b: A-03 (+A-06 якщо сесії) і A-04.
 
 ## 5. Кроки «на одиницю», людські й змішані
 - «На одиницю» (кроки з `per_unit_steps` у `dispatcher.yaml`): `limits` × N; N (клієнтів або запитів) записати в `units_N`.
@@ -66,6 +67,6 @@
 Не збігся жоден id → стоп і активність Тімліду «немає коду повернення». A-17 / A-18 (і A-16b, A-17b, A-17c): коди бере лише з `returned_to` (таблиці немає); порожньо → стоп.
 Лічильник циклів A-11/12/13 → A-14 (3 без APPROVE → ескалація Архітектору) — за `attempt` кроку A-14 у стані Odoo.
 
-## §4б. `elearning.mode: off`
+## 4в. `elearning.mode: off`
 
-Якщо в `package/templates/answers.yaml` `elearning.mode: off`: після `Затвердити` A-17 ставиться лише наряд A-17c; A-17b не створюється, у задачу A-17 і в `research/AI-DECISIONS.md` вноситься рядок AI-NN «A-17b вимкнено параметром». AND-join A-18 чекає лише `done` A-17c. При `on` (за замовчуванням) — AND-split A-17b ∥ A-17c як у flow-map правило 9.
+Значення пишемо в лапках: `elearning.mode: "on"`/`"off"` (булеве `true`/`false` теж приймається: true = on). Ключа немає = `"on"`; оркестратор передає значення в наряд A-17c як `params.elearning: on|off` (A-17c у паралельній гілці ключа ще не бачить). Якщо `elearning.mode: "off"`: після `Затвердити` A-17 ставиться лише наряд A-17c; A-17b не створюється, у задачу A-17 і в `research/AI-DECISIONS.md` вноситься рядок AI-NN «A-17b вимкнено параметром». AND-join A-18 чекає лише `done` A-17c. При `on` (за замовчуванням) — AND-split A-17b ∥ A-17c як у flow-map правило 9. Режим нова-версія (D-03): після `Затвердити` A-17 також A-17b ∥ A-17c (refresh за новим SHA; без змін user-guide/модулів — режим звірки), потім A-18.

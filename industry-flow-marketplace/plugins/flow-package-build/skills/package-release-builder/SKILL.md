@@ -64,7 +64,7 @@ description: >
 `version`, `depends`, `license`, `migrations/`), `package/config/CONFIG.md` («Модулі до установки», A-12),
 `package/master-data/README.md` (порядок імпорту, A-13), `package/questionnaire.md` і `package/templates/answers.yaml`
 (A-09) на ревізії й на попередньому тегу, `package/demo/README.md` (A-15), `package/DATA_POLICY.md`.
-Для релізу (`release`, `odoo-upgrade`) також: `package/docs/user-guide/INDEX.md` (A-16b), `package/addons/td_<галузь>_elearning/` (A-17b; немає при `elearning: off` у профілі пакета — тоді запис «модуль не входить» у CHANGELOG), `package/support/INDEX.md` (A-17c). Немає A-16b або A-17c — ескалація (нестача, не дефект); A-17b — лише коли модуль входить у профіль.
+Для релізу (`release`, `odoo-upgrade`) також: `package/docs/user-guide/INDEX.md` (A-16b), `package/addons/td_<галузь>_elearning/` (A-17b; немає при `elearning.mode: "off"` у профілі пакета — тоді запис «модуль не входить» у CHANGELOG), `package/support/INDEX.md` (A-17c). Немає A-16b або A-17c — ескалація (нестача, не дефект); A-17b — лише коли модуль входить у профіль.
 Умовні: `package/demo/scenarios.md` (A-16; release, odoo-upgrade), `docs/industries/<галузь>/ТР.md` (A-08; лише ролі для
 навчання), `package/CHECKS.md` (A-14; patch — обов'язково), `package/hotfix/vX.Y.Z.md` (A-19; patch),
 `package/upgrade-<версія>.md` (D-03; odoo-upgrade); `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`; обов'язковий). Попередній тег: `git.prev_tag` наряду, інакше `git tag -l 'package/v*' --sort=-v:refname`.
@@ -99,8 +99,8 @@ description: >
 
 ## Крок 4. Склад пакета (R-05, R-06)
 Перелік `package/addons/*/__manifest__.py`: td_* і вендорені "готове" — ім'я, version, джерело/коміт з `package/addons/<модуль>/README.md` (A-11; `module-skeleton.md` —
-плановий спільний reference), ліцензія з маніфесту + наявність LICENSE (вендорені — лише MIT/BSD/Apache-2.0/LGPL-3, q42; інша — «Невпевнений» у `memo`, Юрист). Звірити множину з комплектом ACCEPTANCE (не збігається
-— дефект). `depends` кожного td_* має бути в `addons/` або в «Модулі до установки» CONFIG.md. Ліцензія, про сумісність
+плановий спільний reference), ліцензія з маніфесту + наявність LICENSE (вендорені — лише MIT/BSD/Apache-2.0/LGPL-3, q42; інша — «Невпевнений» у `memo`, Юрист). Звірити множину **без `td_*_elearning`** з комплектом ACCEPTANCE (не збігається
+— дефект); модуль elearning — окремий рядок «Складу пакета» з приміткою «A-17b» (дозволена добавка, не «комплект ≠»). `depends` кожного td_* має бути в `addons/` або в «Модулі до установки» CONFIG.md. **Виняток td_*_elearning (механізм «Модулі до установки (A-17b)»):** CONFIG.md після ACCEPTANCE заморожений (R-02), A-17b його не править, тому при `elearning.mode: "on"` реліз сам додає в CHANGELOG, розділ «Команда установки» (і в «Передачу клієнту»), окремий рядок «Модулі до установки (A-17b): `website_slides`, `td_<галузь>_elearning`» (порядок: залежність, потім модуль). Перевірка depends враховує цей рядок: `website_slides` у ньому — не дефект, відсутність рядка при наявному модулі — дефект релізу. Чи ставить цей рядок runbook-executor (B-04) — «Відкрите питання» власнику flow-core (до рішення B-04 ставить за рядком вручну, фіксується в `memo`). Ліцензія, про сумісність
 якої з політикою пакета немає правила, — не вирішувати: рядок «Невпевнений» у `memo` (Юрист/Архітектор).
 
 Склад релізу з матеріалами 0.4.0 (R-18, R-19): `td_<галузь>_elearning` (A-17b) додається після ACCEPTANCE, тому він не в комплекті ACCEPTANCE — це дозволена добавка
@@ -116,7 +116,8 @@ description: >
 `references/release-checks.md`). Нові VP-xx: ключ, default зі схеми, чи потрібне рішення клієнта (з `questionnaire.md`). Deprecated
 (`deprecated` змінилось з `false` на рядок): що робити зі старою відповіддю; немає інструкції — FAIL «deprecated без інструкції»; ключ
 видалено, не бувши deprecated на попередньому тегу — FAIL «видалено без deprecated» (A-09 через A-14). Без змін — «немає»; перша
-версія — «Перша версія: попереднього тега немає». Перелік у CHANGELOG дорівнює diff ключів, не більше й не менше.
+версія — «Перша версія: попереднього тега немає». Перелік у CHANGELOG дорівнює diff ключів, не більше й не менше. Ключі `elearning.mode` / `elearning.pass_score`, додані A-17b після ACCEPTANCE
+у `package/templates/answers.yaml`, теж перелічуються тут (рядок «eLearning: нові ключі elearning.*, A-17b»; скрипт нижче бачить лише VP-xx).
 
 ## Крок 6. Несумісні зміни і міграція (R-13)
 `git diff --stat <попередній тег>..HEAD -- package/addons/td_*/models package/addons/td_*/views`, далі `git diff -U0` лише
@@ -201,7 +202,7 @@ description: >
 | R-02 | `git diff --name-only <SHA>..HEAD` входить у дозволений список (`versioning.md`) | A-14 (після R-01 PASS) |
 | R-03 | X.Y тега = ACCEPTANCE = version td_* | A-14 -> A-11 |
 | R-04 | Тег не існує, не переноситься | ескалація |
-| R-05 | Комплект addons = ACCEPTANCE = «Склад пакета» | A-14 / повтор |
+| R-05 | Комплект addons без `td_*_elearning` = ACCEPTANCE; усі addons = «Склад пакета», elearning — окремий рядок з приміткою A-17b | A-14 / повтор |
 | R-06 | Вендорені: version, джерело, ліцензія, LICENSE | A-14 -> A-11 |
 | R-07 | Заголовки CHANGELOG за grep-контрактом (+ режимні: «Передача клієнту» — release/odoo-upgrade) | повтор |
 | R-08 | «Зміни анкети» = diff ключів answers.yaml | повтор / A-14 -> A-09 |
@@ -238,7 +239,7 @@ ACCEPTANCE.md, diff лише дозволені файли; X.Y тега = ACCEP
 - [ ] Режим, фаза, тег обчислені за `versioning.md`; тег не існує.
 - [ ] База гілки runner = `inputs[ACCEPTANCE.md].sha` (patch — SHA APPROVE); гілок і тегів не створено/не пушено.
 - [ ] `git diff --name-only <SHA>..HEAD` у дозволеному списку.
-- [ ] У CHANGELOG усі заголовки; «Зміни анкети» = diff ключів; склад = комплект ACCEPTANCE.
+- [ ] У CHANGELOG усі заголовки; «Зміни анкети» = diff ключів; склад без `td_*_elearning` = комплект ACCEPTANCE, elearning — окремий рядок «A-17b».
 - [ ] Запуск 1: CI не запускався, `waiting_human` з resume. Запуск 2: лог CI на комітi-предку HEAD, або `NOT_RUN` і done не заявлено.
 - [ ] Фаза tag: PR змерджено, `sha` = merge-коміт, R-02 на ньому PASS.
 - [ ] Кожна редакція з `editions` має рядки R-09/R-10/R-11 і розділ CHANGELOG; тег не позначено як перевірений на EE без перевірки; випуск із `EE не перевірено` — лише після рішення Власника.

@@ -32,7 +32,8 @@
     "headings": [
      "re:джерел",
      "re:меж",
-     "re:prod-ro",
+     "re:читання проду",
+     "re:діагностик",
      "re:маршрут"
     ]
    }
@@ -41,7 +42,7 @@
    "id": "script-check-kb",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons: KB-module (кожен модуль td_* має сторінку), KB-ids (унікальні KB-NNN), KB-route (кожен сценарій діагностики має маршрут B-13/A-19/D-02), KB-privacy (без даних клієнтів). Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons: KB-module (кожен модуль td_* має сторінку), KB-ids (унікальні KB-NNN), KB-route (кожен сценарій діагностики має маршрут B-13/A-19/D-02), KB-privacy (без даних клієнтів). При elearning on (params.elearning; ключа немає = on) додати `--expect-module td_<галузь>_elearning` (модуль ще не злито з паралельним A-17b; без прапорця KB-module дасть FAIL «сторінка без модуля»); при off — без нього; R-19 на A-18 — без прапорця. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
     "cmd": [
      "python3",
      "-I",
@@ -49,7 +50,9 @@
      "--dir",
      "package/support",
      "--addons",
-     "package/addons"
+     "package/addons",
+     "--expect-module",
+     "td_<галузь>_elearning (лише при elearning on; при off прибрати пару аргументів)"
     ],
     "who": "runner"
    }

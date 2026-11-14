@@ -71,8 +71,8 @@ description: >
 | AC | `docs/industries/<галузь>/ТР.md` (grep рядків AC), `clients/<к>/ТР-доробок.md` |
 | Реєстри | `hypercare.md`, `support-log.md` (обидва — для дедуплікації) |
 | Записи B-12 | `clients/<к>/delivery-log.md` (за ID) |
-| Консультації | `clients/<к>/training.md`; інструкції пакета `package/docs/user-guide/` (A-16b) |
-| Діагностика пакета | `package/support/AI-INSTRUCTIONS.md` і `kb/KB-NNN-*.md` (A-17c: архітектура `td_*`, обмеження й ризики, сценарії `DG-NN` «симптом -> перевірка -> виправлення -> маршрут»); внутрішні, клієнту не передаються; лише читання |
+| Консультації | `clients/<к>/training.md`; інструкції пакета `package/docs/user-guide/` (A-16b) — читати на тезі пакета клієнта (`git show package/vX.Y:<шлях>`, X.Y з `config-log.md` / `clients/REGISTRY.md`), не на HEAD; розбіжність з HEAD — у memo |
+| Діагностика пакета (читати на тезі пакета клієнта `git show package/vX.Y:<шлях>`, X.Y з `config-log.md` / `clients/REGISTRY.md`; розбіжність з HEAD — у memo) | `package/support/AI-INSTRUCTIONS.md` і `kb/KB-NNN-*.md` (A-17c: архітектура `td_*`, обмеження й ризики, сценарії `DG-NN` «симптом -> перевірка -> виправлення -> маршрут»); внутрішні, клієнту не передаються; лише читання |
 | Правила | `flow-client-delivery/references/triage-routes.md` (спільна таблиця «тип -> маршрут»), `flow-core/references/pii-patterns.md`, `flow-core/references/id-patterns.md` (коди кроків, теги `package/vX.Y`), `references/severity-scale.md`, `references/sla-contract-extraction.md`, `references/gmail-intake.md`, `references/draft-replies.md` |
 | Шаблони | `package/templates/hypercare.md` / `support-log.md` на тегу пакета; немає -> `references/hypercare-template.md` / `support-log-template.md` + memo «шаблон не в пакеті» |
 | Політика даних | `package/DATA_POLICY.md`: «Знеособлення», «Ідентифікатор клієнта в репозиторії», «Матеріали минулих проєктів і звернення клієнтів: підстава обробки й режим читання» |
@@ -117,7 +117,7 @@ description: >
      пошта/інтеграції = платформа-інфраструктура;
    - AC (grep по ТР галузі / ТР-доробок): обов'язково для баг конфіг і баг код; не знайдено -> тип не міняти,
      статус «потрібен AC — Підтримка», check FAIL для рядка; для платформа-інфраструктура і консультація AC не вимагати;
-   - діагностика: знайти в `package/support/kb` сценарій `DG-NN` за симптомом — перевірка (лише читання) і запропонований маршрут беруться звідти, але **кінцевий маршрут — за `triage-routes.md`**; суперечність -> `triage-routes.md` і memo. Сценарію немає — не вигадувати, memo «прогалина KB» (A-19/новий KB-запис). У чернетку клієнту й у `incidents/` внутрішні коди KB-/DG-/AI- не потрапляють;
+   - діагностика: знайти в `package/support/kb` сценарій `DG-NN` за симптомом — перевірка (лише читання) і запропонований маршрут беруться звідти, але **кінцевий маршрут — за `triage-routes.md`**; суперечність -> `triage-routes.md` і memo. Сценарію немає — не вигадувати, memo «прогалина KB» — маршрут за flow-map: прогалина в інструкціях -> A-17c (оновлення KB); дефект поведінки модуля — за `triage-routes.md` (A-19/D-02). У чернетку клієнту й у `incidents/` внутрішні коди KB-/DG-/AI- не потрапляють;
    - версія пакета з `config-log.md` — у примітку; баг конфіг — з посиланням на рядок `config-log.md`; якщо баг
      виправлений у новішій версії — «виправлено у версії X.Y, B-11».
 10. Маршрут — **лише** з `triage-routes.md` за типом (для дефекту пакета — ще й за серйозністю):

@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+    <record id="param_pass_score" model="ir.config_parameter">
+      <field name="key">td_mebli_elearning.pass_score</field>
+      <field name="value">80</field>
+    </record>
+    <record id="course_komirnyk" model="slide.channel">
+      <!-- role: komirnyk -->
+      <field name="name">Курс: Комірник</field>
+    </record>
+    <record id="lesson_komirnyk_1" model="slide.slide">
+      <!-- source: komirnyk.md#SC-01 (ім'я поля тексту звірити у вихідниках 19.0) -->
+      <field name="name">Урок: SC-01</field>
+      <field name="channel_id" ref="course_komirnyk"/>
+      <field name="html_content"><![CDATA[<ol><li>Відкрийте «Склад» і натисніть «Прийняти».</li></ol>]]></field>
+    </record>
+    <record id="test_komirnyk" model="slide.slide">
+      <field name="name">Тест: Комірник</field>
+      <field name="channel_id" ref="course_komirnyk"/>
+    </record>
+    <record id="q_komirnyk_1" model="slide.question">
+      <field name="question">Питання 1 для ролі «Комірник»?</field>
+      <field name="slide_id" ref="test_komirnyk"/>
+    </record>
+    <record id="a_komirnyk_1_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_komirnyk_1"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_komirnyk_1_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_komirnyk_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_komirnyk_1_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_komirnyk_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_komirnyk_2" model="slide.question">
+      <field name="question">Питання 2 для ролі «Комірник»?</field>
+      <field name="slide_id" ref="test_komirnyk"/>
+    </record>
+    <record id="a_komirnyk_2_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_komirnyk_2"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_komirnyk_2_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_komirnyk_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_komirnyk_2_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_komirnyk_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_komirnyk_3" model="slide.question">
+      <field name="question">Питання 3 для ролі «Комірник»?</field>
+      <field name="slide_id" ref="test_komirnyk"/>
+    </record>
+    <record id="a_komirnyk_3_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_komirnyk_3"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_komirnyk_3_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_komirnyk_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_komirnyk_3_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_komirnyk_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_komirnyk_4" model="slide.question">
+      <field name="question">Питання 4 для ролі «Комірник»?</field>
+      <field name="slide_id" ref="test_komirnyk"/>
+    </record>
+    <record id="a_komirnyk_4_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_komirnyk_4"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_komirnyk_4_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_komirnyk_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_komirnyk_4_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_komirnyk_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_komirnyk_5" model="slide.question">
+      <field name="question">Питання 5 для ролі «Комірник»?</field>
+      <field name="slide_id" ref="test_komirnyk"/>
+    </record>
+    <record id="a_komirnyk_5_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_komirnyk_5"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_komirnyk_5_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_komirnyk_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_komirnyk_5_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_komirnyk_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="course_master" model="slide.channel">
+      <!-- role: master -->
+      <field name="name">Курс: Майстер цеху</field>
+    </record>
+    <record id="lesson_master_1" model="slide.slide">
+      <!-- source: master.md#SC-02 (ім'я поля тексту звірити у вихідниках 19.0) -->
+      <field name="name">Урок: SC-02</field>
+      <field name="channel_id" ref="course_master"/>
+      <field name="html_content"></field>
+    </record>
+    <record id="test_master" model="slide.slide">
+      <field name="name">Тест: Майстер цеху</field>
+      <field name="channel_id" ref="course_master"/>
+    </record>
+    <record id="q_master_1" model="slide.question">
+      <field name="question">Питання 1 для ролі «Майстер цеху»?</field>
+      <field name="slide_id" ref="test_master"/>
+    </record>
+    <record id="a_master_1_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_master_1"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_master_1_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_master_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_master_1_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_master_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_master_2" model="slide.question">
+      <field name="question">Питання 2 для ролі «Майстер цеху»?</field>
+      <field name="slide_id" ref="test_master"/>
+    </record>
+    <record id="a_master_2_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_master_2"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_master_2_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_master_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_master_2_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_master_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_master_3" model="slide.question">
+      <field name="question">Питання 3 для ролі «Майстер цеху»?</field>
+      <field name="slide_id" ref="test_master"/>
+    </record>
+    <record id="a_master_3_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_master_3"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_master_3_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_master_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_master_3_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_master_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_master_4" model="slide.question">
+      <field name="question">Питання 4 для ролі «Майстер цеху»?</field>
+      <field name="slide_id" ref="test_master"/>
+    </record>
+    <record id="a_master_4_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_master_4"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_master_4_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_master_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_master_4_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_master_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_master_5" model="slide.question">
+      <field name="question">Питання 5 для ролі «Майстер цеху»?</field>
+      <field name="slide_id" ref="test_master"/>
+    </record>
+    <record id="a_master_5_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_master_5"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_master_5_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_master_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_master_5_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_master_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="course_admin" model="slide.channel">
+      <!-- role: admin -->
+      <field name="name">Курс: Адміністратор</field>
+    </record>
+    <record id="lesson_admin_1" model="slide.slide">
+      <!-- source: admin.md#SC-03 (ім'я поля тексту звірити у вихідниках 19.0) -->
+      <field name="name">Урок: SC-03</field>
+      <field name="channel_id" ref="course_admin"/>
+      <field name="html_content"><![CDATA[<ol><li>Відкрийте «Склад».</li></ol>]]></field>
+    </record>
+    <record id="test_admin" model="slide.slide">
+      <field name="name">Тест: Адміністратор</field>
+      <field name="channel_id" ref="course_admin"/>
+    </record>
+    <record id="q_admin_1" model="slide.question">
+      <field name="question">Питання 1 для ролі «Адміністратор»?</field>
+      <field name="slide_id" ref="test_admin"/>
+    </record>
+    <record id="a_admin_1_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_admin_1"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_admin_1_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_admin_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_admin_1_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_admin_1"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_admin_2" model="slide.question">
+      <field name="question">Питання 2 для ролі «Адміністратор»?</field>
+      <field name="slide_id" ref="test_admin"/>
+    </record>
+    <record id="a_admin_2_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_admin_2"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_admin_2_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_admin_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_admin_2_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_admin_2"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_admin_3" model="slide.question">
+      <field name="question">Питання 3 для ролі «Адміністратор»?</field>
+      <field name="slide_id" ref="test_admin"/>
+    </record>
+    <record id="a_admin_3_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_admin_3"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_admin_3_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_admin_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_admin_3_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_admin_3"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_admin_4" model="slide.question">
+      <field name="question">Питання 4 для ролі «Адміністратор»?</field>
+      <field name="slide_id" ref="test_admin"/>
+    </record>
+    <record id="a_admin_4_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_admin_4"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_admin_4_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_admin_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_admin_4_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_admin_4"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="q_admin_5" model="slide.question">
+      <field name="question">Питання 5 для ролі «Адміністратор»?</field>
+      <field name="slide_id" ref="test_admin"/>
+    </record>
+    <record id="a_admin_5_1" model="slide.answer">
+      <field name="text_value">Варіант 1</field>
+      <field name="question_id" ref="q_admin_5"/>
+      <field name="is_correct" eval="True"/>
+    </record>
+    <record id="a_admin_5_2" model="slide.answer">
+      <field name="text_value">Варіант 2</field>
+      <field name="question_id" ref="q_admin_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+    <record id="a_admin_5_3" model="slide.answer">
+      <field name="text_value">Варіант 3</field>
+      <field name="question_id" ref="q_admin_5"/>
+      <field name="is_correct" eval="False"/>
+    </record>
+  </data>
+</odoo>

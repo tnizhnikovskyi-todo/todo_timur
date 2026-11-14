@@ -8,11 +8,12 @@
 | ID | Команда / спосіб |
 |---|---|
 | R-01 | `git merge-base --is-ancestor $SHA HEAD && echo PASS` |
-| R-02 | `git diff --name-only $SHA..HEAD \| grep -vxFf allowed.txt` — вивід порожній = PASS; `allowed.txt` з `versioning.md` для режиму; каталоги 0.4.0 відсіяти: `\| grep -vE '^package/(addons/td_[a-z0-9_]+_elearning/\|support/)'` |
+| R-02 | `git diff --name-only $SHA..HEAD \| grep -vxFf allowed.txt` — вивід порожній = PASS; `allowed.txt` з `versioning.md` для режиму; каталоги 0.4.0 відсіяти: `\| grep -vE '^package/(addons/td_[a-z0-9_]+_elearning/\|support/)'`; `package/templates/answers.yaml` допустимий лише як додавання блоку `elearning:` (A-17b): `git diff $SHA..HEAD -- package/templates/answers.yaml \| grep -E '^[+-][^+-]' \| grep -vE '^\+(elearning:\|  (mode\|pass_score):)'` — порожньо = PASS |
 | R-17 | `git show HEAD:package/metrics/key-models.yaml` існує (release/odoo-upgrade), кожна модель є в `_name`/`_inherit` у `package/addons/` (`git grep`); немає — повтор |
 | R-03 | `grep -h "'version'" package/addons/td_*/__manifest__.py` — усі `19.0.X.Y` (odoo-upgrade `<N>.0.X.Y`), X.Y = ACCEPTANCE |
 | R-04 | `git ls-remote --tags origin "refs/tags/$TAG"` — порожньо = PASS |
-| R-05 | множина `ls package/addons` = перелік комплекту ACCEPTANCE = таблиця «Склад пакета» (`flow-core:flow-autocheck`) |
+| R-05a | при `elearning.mode: "on"` у CHANGELOG є рядок «Модулі до установки (A-17b)» з `website_slides` і `td_*_elearning`; `depends` elearning-модуля ⊂ {цей рядок, `addons/`, CONFIG} — інакше дефект |
+| R-05 | множина `ls package/addons \| grep -vE '^td_[a-z0-9_]+_elearning$'` = перелік комплекту ACCEPTANCE; усі `ls package/addons` = таблиця «Склад пакета», де `td_*_elearning` — окремий рядок з приміткою «A-17b» (дозволена добавка, не дефект; `flow-core:flow-autocheck`) |
 | R-06 | у маніфесті вендореного `license`, у каталозі LICENSE, у файлі вендорингу джерело/коміт і version |
 | R-07 | `grep -c -E '^#{2,3} (Версія\|Склад пакета\|Шаблони документів клієнта\|Зміни анкети\|Несумісні зміни\|Міграція з попереднього тегу\|Команда установки)' <розділ>` = 7 (+ режимні: «Передача клієнту» для release/odoo-upgrade) |
 | R-08 | скрипт нижче (блоки `VP-xx` і поле `deprecated`, `answers-schema.md`); результат = «Зміни анкети» |
@@ -21,7 +22,7 @@
 | R-13 | `git diff -U0 $PREV..HEAD -- package/addons/td_*/models` і `ls package/addons/td_*/migrations/<серія>.X.Y/` (`<серія>` = `19.0`, odoo-upgrade `<N>.0`) |
 | R-14 | regex нижче по CHANGELOG, шаблонах, release-defects.md; у майстер-даних/демо — лише повідомлення про факт, без копіювання |
 | R-15 | `boost:odoo19-lint` по `package/addons/td_*/` |
-| R-18 | `test -f package/docs/user-guide/INDEX.md`; `S=$(git log -1 --format=%H -- package/addons ':(exclude)package/addons/td_*_elearning')`; `python3 -I <flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --spec package/SPEC.md --modules-sha $S`; якщо є модуль: `python3 -I <flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide`; `grep -h "'version'" package/addons/td_*_elearning/__manifest__.py` = X.Y |
+| R-18 | `test -f package/docs/user-guide/INDEX.md`; `S=$(<SHA_STAND з package/demo/README.md>)`; `git diff --quiet $S..HEAD -- package/addons ':(exclude)package/addons/td_*_elearning'` (код 0); `python3 -I <flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --spec <шлях із рядка «Джерело сценаріїв:» INDEX> --stand-sha $S`; якщо є модуль: `python3 -I <flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml`; `grep -h "'version'" package/addons/td_*_elearning/__manifest__.py` = X.Y |
 | R-19 | `grep -n -E 'support/' package/CHANGELOG.md` — лише в рядку виключення; `git grep -n 'package/support' -- package/templates package/docs` — порожньо; `python3 -I <flow-package-build>/skills/support-kb-builder/scripts/check_kb.py --dir package/support --addons package/addons` |
 | R-16 | `grep -n <SHA> package/ACCEPTANCE.md package/demo/scenarios.md package/demo/README.md` |
 

@@ -1,0 +1,55 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-21d",
+ "checks": [
+  {
+   "id": "coverage-exists",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "docs/industries/<галузь>/research/COVERAGE-SLICE.md"
+    ]
+   }
+  },
+  {
+   "id": "script-check-slice-coverage",
+   "prim": "manual",
+   "args": {
+    "text": "python3 -I <корінь плагіна flow-research>/skills/completeness-audit/scripts/check_slice_coverage.py docs/industries/<галузь>/research/COVERAGE-SLICE.md --features docs/industries/<галузь>/concept/features.md --ai-decisions docs/industries/<галузь>/research/AI-DECISIONS.md --plan docs/industries/<галузь>/prototype-real/PLAN.md --addons package/addons --rejected docs/industries/<галузь>/research/REJECTED.md: CS-* без FAIL. Скрипт autocheck.py не запускає: виконує runner (не виконано -> ERROR, не PASS), JSON вставляється у checks[].",
+    "cmd": [
+     "python3",
+     "-I",
+     "<корінь плагіна flow-research>/skills/completeness-audit/scripts/check_slice_coverage.py",
+     "docs/industries/<галузь>/research/COVERAGE-SLICE.md",
+     "--features",
+     "docs/industries/<галузь>/concept/features.md",
+     "--ai-decisions",
+     "docs/industries/<галузь>/research/AI-DECISIONS.md",
+     "--plan",
+     "docs/industries/<галузь>/prototype-real/PLAN.md",
+     "--addons",
+     "package/addons",
+     "--rejected",
+     "docs/industries/<галузь>/research/REJECTED.md"
+    ],
+    "who": "runner"
+   }
+  },
+  {
+   "id": "no-money",
+   "prim": "manual",
+   "args": {
+    "text": "у COVERAGE-SLICE.md і нових рядках AI-DECISIONS немає грошових маркерів (CS-money) і рішень, поданих як ухвалені: усе — рекомендації з вето власника",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "slice-untouched",
+   "prim": "manual",
+   "args": {
+    "text": "зріз (prototype-real/**, package/addons/**), REJECTED.md і concept/* не змінено: змінюються лише research/COVERAGE-SLICE.md і research/AI-DECISIONS.md",
+    "who": "runner"
+   }
+  }
+ ]
+}

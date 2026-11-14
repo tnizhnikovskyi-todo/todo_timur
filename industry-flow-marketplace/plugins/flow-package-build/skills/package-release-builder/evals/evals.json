@@ -123,7 +123,10 @@
         "У training.md розділ «Посібники по ролях» посилається на package/docs/user-guide і курси, без згадки package/support",
         "package/support/ не потрапляє в клієнтську передачу; R-19 = PASS",
         "Модуль td_mebli_elearning у «Складі пакета» з version 19.0.1.0 і приміткою A-17b; дефект user-guide/elearning/support не правиться тут, а йде в release-defects.md -> A-14",
-        "Відсутність package/docs/user-guide або package/support -> ескалація (нестача), а не done"
+        "Відсутність package/docs/user-guide або package/support -> ескалація (нестача), а не done",
+        "R-05: множина addons без td_*_elearning = комплект ACCEPTANCE; td_mebli_elearning — окремий рядок «Складу пакета» з приміткою A-17b, а не «комплект ≠» і не дефект пакета",
+        "R-02 допускає зміну package/templates/answers.yaml лише як додавання блоку elearning:; ключі elearning.* перелічено в «Зміни анкети» (R-08)",
+        "R-18: check_elearning.py запущено з --answers package/templates/answers.yaml; check_guides.py — зі шляхом із «Джерело сценаріїв:» INDEX"
       ],
       "input": {
         "naryad": "A-18, release",
@@ -131,6 +134,17 @@
       },
       "files": [
         "evals/fixtures/release-both-editions/package/ACCEPTANCE.md"
+      ]
+    },
+    {
+      "id": "elearning-depends-website-slides",
+      "prompt": "Наряд A-18, release, editions: ce, elearning.mode: \"on\". Модуль td_mebli_elearning (depends: website_slides) доданий після ACCEPTANCE. CONFIG.md «Модулі до установки» website_slides не містить і заморожений. Підготуй реліз.",
+      "expected_output": "depends website_slides не вважається дефектом: CHANGELOG, «Команда установки», має рядок «Модулі до установки (A-17b)» з website_slides і td_mebli_elearning; CONFIG.md не правиться; відкрите питання про B-04 у memo.",
+      "assertions": [
+        "CHANGELOG містить рядок «Модулі до установки (A-17b)» з website_slides і td_mebli_elearning (у такому порядку)",
+        "website_slides у depends не записано як дефект, CONFIG.md і manifest.yaml не змінюються",
+        "у memo є відкрите питання, чи ставить рядок runbook-executor B-04",
+        "значення записано як elearning.mode: \"on\" (у лапках)"
       ]
     }
   ]

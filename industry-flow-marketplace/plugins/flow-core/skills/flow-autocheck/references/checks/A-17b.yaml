@@ -20,8 +20,8 @@
     "to": "head",
     "allow": [
      "package/addons/td_*_elearning/**",
-     "docs/industries/<галузь>/research/AI-DECISIONS.md",
      "package/templates/answers.yaml",
+     "docs/industries/<галузь>/research/AI-DECISIONS.md",
      "observations/"
     ]
    }
@@ -30,7 +30,7 @@
    "id": "script-check-elearning",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide [--pass-score <elearning.pass_score>]: EL-courses (курс на кожну роль з INDEX A-16b), EL-quiz (>=5 питань, рівно одна правильна відповідь, якщо інше не задано), EL-source (урок посилається на розділ A-16b), EL-lang. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml (EL-mode, EL-pass: звірка з answers.yaml): EL-courses (курс на кожну роль з INDEX A-16b), EL-quiz (>=5 питань, рівно одна правильна відповідь, якщо інше не задано), EL-source (урок посилається на розділ A-16b), EL-lang. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
     "cmd": [
      "python3",
      "-I",
@@ -38,7 +38,9 @@
      "--module",
      "package/addons/td_<галузь>_elearning",
      "--guide",
-     "package/docs/user-guide"
+     "package/docs/user-guide",
+     "--answers",
+     "package/templates/answers.yaml"
     ],
     "who": "runner"
    }
@@ -47,8 +49,32 @@
    "id": "module-tests",
    "prim": "manual",
    "args": {
-    "text": "Тести модуля (установка на чистій CE: tools/odoo/run_tests.sh <db> /td_<галузь>_elearning за C-00; кількість курсів = ролей; у кожного курсу >=5 питань); odoo19-lint по td_*_elearning; залежність website_slides; поріг проходження з package/templates/answers.yaml elearning.pass_score (за замовчуванням 80); параметр пакета elearning.mode: on|off",
+    "text": "Тести модуля (установка на чистій CE: tools/odoo/run_tests.sh <db> /td_<галузь>_elearning за C-00; кількість курсів = ролей; у кожного курсу >=5 питань); odoo19-lint по td_*_elearning; залежність website_slides; поріг проходження з package/templates/answers.yaml elearning.pass_score (за замовчуванням 80); параметр пакета elearning.mode: \"on\"|\"off\"",
     "who": "runner"
+   }
+  },
+  {
+   "id": "answers-elearning-only",
+   "prim": "manual",
+   "args": {
+    "text": "package/templates/answers.yaml змінено лише блоком `elearning:` (mode \"on\"|\"off\" у лапках, pass_score 1..100, за замовчуванням 80); `git diff base..head -- package/templates/answers.yaml` не торкається інших ключів",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "ci-c03",
+   "prim": "manual",
+   "args": {
+    "text": "CI C-03 зелений на SHA head кроку (матриця CE). Недоступний у сесії -> рішення AI з ризиком у AI-DECISIONS + цей рядок лишається MANUAL для людини, не замінюється",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "security-review",
+   "prim": "manual",
+   "args": {
+    "text": "odoo19-mvp-build:security-review по td_*_elearning без блокерів (EL-access: курси не публічні; EL-score; EL-content: уроки мають текст і зображення). Скіл організації недоступний у сесії -> рішення AI з ризиком у AI-DECISIONS + MANUAL для Архітектора, замінника не вигадувати",
+    "who": "Архітектор"
    }
   },
   {

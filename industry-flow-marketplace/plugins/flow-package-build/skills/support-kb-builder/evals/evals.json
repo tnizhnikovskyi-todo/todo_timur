@@ -11,7 +11,8 @@
         "Обмеження й ризики посилаються на AI-03 і AI-07, нічого не додано від себе",
         "AI-INSTRUCTIONS: прод лише читання через prod-ro-<клієнт>",
         "Скрипт на fixtures/support-ok: KB-ai, KB-ids, KB-module, KB-route, KB-privacy = PASS",
-        "Змінено лише package/support/"
+        "Змінено лише package/support/",
+        "Сторінки kind: architecture, limits (з AI-NN) і faq є (KB-kinds = PASS); у «Маршрути» AI-INSTRUCTIONS названо B-13, A-19, D-02"
       ],
       "files": [
         "evals/fixtures/support-ok/addons/",
@@ -27,7 +28,8 @@
         "KB-module = FAIL: немає сторінки td_mebli_elearning",
         "KB-route = FAIL: DG-02 має маршрут не з таблиці",
         "KB-privacy = FAIL: телефон і email у KB-001-dup.md",
-        "Код повернення 1; done не заявляється"
+        "Код повернення 1; done не заявляється",
+        "KB-kinds = FAIL (немає architecture/limits); KB-ai = FAIL (у «Маршрути» не названо A-19, D-02)"
       ],
       "files": [
         "evals/fixtures/support-bad/addons/",
@@ -76,6 +78,21 @@
         "INDEX.md містить новий ID",
         "KB-module = PASS з двома+ модулями",
         "Змінено лише package/support/"
+      ]
+    },
+    {
+      "id": "parallel-elearning-page",
+      "prompt": "Наряд A-17c. answers.yaml: elearning.mode: \"on\". У гілці A-17c модуля td_mebli_elearning ще немає (A-17b збирається паралельно). Як пройти KB-module?",
+      "expected_output": "Сторінка kind: module для td_mebli_elearning створена за module-structure.md із «звірити після злиття A-17b»; check_kb.py запущено з --expect-module td_mebli_elearning (KB-module і KB-merge PASS); на A-18 (R-19) перевірка проходить без прапорця після злиття.",
+      "assertions": [
+        "Сторінку модуля створено за контрактом структури модуля, а не вигадано з пам'яті; є позначка «звірити після злиття A-17b»",
+        "check_kb.py запущено з --expect-module; на fixtures/support-race без прапорця KB-module FAIL «сторінка без модуля», з прапорцем PASS",
+        "При elearning.mode \"off\" сторінки немає",
+        "Після злиття A-17b сторінку звірено з реальним модулем"
+      ],
+      "files": [
+        "evals/fixtures/support-race/addons/",
+        "evals/fixtures/support-race/support/"
       ]
     }
   ]

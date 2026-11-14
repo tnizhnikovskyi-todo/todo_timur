@@ -26,6 +26,7 @@
 | A-20 | flow-research:concept-mapper (+ під-скіл flow-research:completeness-audit у кінці кроку, не окремий крок) | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |
 | A-21 | flow-research:prototype-builder | `params.sample: true` (зразок) \| повний обсяг; `defaults.prototype.fidelity: mock` не підтримується (К-23) |
+| A-21d | flow-research:completeness-audit | `params.mode: slice-coverage` (E3, обов'язковий; без `params.mode` скіл діє як `self-check` — тому ключ у наряді обов'язковий); `where`: `research/COVERAGE-SLICE.md`, `research/AI-DECISIONS.md`; профіль `research` |
 | A-21c | flow-research:showcase-content | — (виконавець — Контент-менеджер, `executor: any`) |
 | A-22 | flow-package-build:demo-base-builder | база зрізу для гарячого ліда (`перша`\|`нова-версія`) |
 | A-23 / `prep`\|`results` | flow-research:demand-test-runner | `mode: prep`\|`results` |
@@ -53,7 +54,7 @@
 | D-04 | flow-package-evolution:product-decision-drafter | `нова-версія` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | D-05 | flow-package-evolution:product-decision-drafter | — (`pilot/decision.md`; AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 
-Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-00, C-08) скіла не мають. Кроки, закриті скілами організації (A-03, A-08 (режим `from-slice` — рядок вище), A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.
+Не через цю таблицю: C-01 (`flow-orchestrator`) і C-02 (`flow-state-keeper`) працюють за розкладом/подіями без наряду; C-06 — це сам runner; людські кроки (A-02, A-06, B-08b, B-08d, B-12, C-08) і людська частина C-00 (доступи, сервери) скіла не мають; автоматична частина C-00 («розгорнути `tools/odoo` з `templates/tools-odoo`») — передкрок runner без наряду й `skill_ref`, виконується за `c00-checklist.md`. Кроки, закриті скілами організації (A-03, A-08 (режим `from-slice` — рядок вище), A-10, A-11, A-16, A-19, B-05, B-07 (навчання; бот — рядки вище), B-08c) — `skillRef` з картки.
 
 ## Профіль доступу наряду (`access_profile`)
 Оркестратор ставить у наряд ключ `access_profile` за **ведучим скілом** (`skill_ref[0]`); runner запускає виконавця з однойменним агентом (`naryad-format.md`). Ключа немає = `base`. Профілі не складаються: одному наряду — один агент з мінімальним `tools:`.

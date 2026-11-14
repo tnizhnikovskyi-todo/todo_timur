@@ -1,0 +1,4 @@
+# CHECKS
+Вердикт: APPROVE
+AC-01 PASS
+AC-02 PASS

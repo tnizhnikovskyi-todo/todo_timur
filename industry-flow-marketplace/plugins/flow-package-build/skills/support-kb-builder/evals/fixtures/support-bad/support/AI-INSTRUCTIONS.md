@@ -10,7 +10,7 @@ KB-001...KB-004; package/docs/user-guide (FAQ); research/AI-DECISIONS.md.
 Лише читання, через prod-ro-<клієнт>, лише allow-list; записів немає.
 
 ## Маршрути
-B-13 (B-04), B-13 (B-05), B-06, B-07, D-02, A-19, C-07, support-desk.
+B-13 (B-04), B-06, B-07, support-desk.
 
 ## Діагностика
 Сценарії DG-NN у kb/KB-003-diagnostics.md.

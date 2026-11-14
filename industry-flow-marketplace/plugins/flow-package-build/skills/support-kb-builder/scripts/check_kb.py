@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Автоперевірки A-17c без бази: KB-ai, KB-module, KB-ids, KB-route, KB-privacy.
+"""Автоперевірки A-17c без бази: KB-ai, KB-module, KB-merge, KB-kinds, KB-ids, KB-route, KB-privacy.
 Агент перевіряє сам (скрипт не робить): KB-facts (твердження про поведінку модулів звірено з кодом/SPEC на SHA, не вигадано),
 KB-risks (ризики й обмеження = рядки AI-DECISIONS), KB-faq (FAQ узято з A-16b).
-Запуск: python3 -I check_kb.py --dir package/support --addons package/addons
+Запуск: python3 -I check_kb.py --dir package/support --addons package/addons [--expect-module td_<галузь>_elearning]
+  --expect-module (можна кілька): модуль, якого ще немає в --addons, бо його будує паралельний крок (A-17b у своїй гілці); сторінка kind: module
+  для нього обов'язкова й має містити «звірити після злиття A-17b» (KB-merge); коли модуль з'явиться в addons — маркер не потрібен.
 Формати: сторінка kb/KB-NNN-<slug>.md починається з «# KB-NNN <назва>» і має рядки «kind: module|diagnostics|faq|limits|architecture»
 та для module — «module: td_x». Сценарій діагностики — «### DG-NN <назва>» з рядками Симптом:, Перевірка:, Виправлення:, Маршрут:.
 Вихід: JSON [{id,status,msg}]. Код повернення 1, якщо є FAIL."""
@@ -21,6 +23,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True)
     ap.add_argument("--addons", required=True)
+    ap.add_argument("--expect-module", action="append", default=[])
     a = ap.parse_args()
     res = []
 
@@ -43,6 +46,11 @@ def main():
         miss.append("згадка prod-ro-<клієнт>")
     if ai and not re.search(r"лише\s+читання|тільки\s+читання", low):
         miss.append("«лише читання проду»")
+    sec = re.search(r"^#{1,4}\s*маршрути[^\n]*\n(.*?)(?=^#{1,4}\s|\Z)", ai, re.M | re.S | re.I)
+    if ai and sec:
+        nr = [r for r in ("B-13", "A-19", "D-02") if r not in sec.group(1)]
+        if nr:
+            miss.append("у розділі «Маршрути» не названо " + ", ".join(nr))
     add("KB-ai", "FAIL" if (miss or not ai or not index) else "PASS",
         ("немає: " + ", ".join(miss + (["INDEX.md"] if not index else []))) if (miss or not ai or not index) else "")
 
@@ -68,6 +76,18 @@ def main():
         msg.append("немає сторінок kb/")
     add("KB-ids", "FAIL" if msg else "PASS", "; ".join(msg[:10]))
 
+    # KB-kinds: обов'язкові види сторінок
+    kinds = {}
+    for n, t in texts.items():
+        m = re.search(r"^kind:\s*(\w+)\s*$", t, re.M)
+        if m:
+            kinds.setdefault(m.group(1), []).append(n)
+    msg = [f"немає сторінки kind: {k}" for k in ("architecture", "limits", "faq") if k not in kinds]
+    for n in kinds.get("limits", []):
+        if not re.search(r"\bAI-\d+", texts[n]):
+            msg.append(f"{n}: сторінка limits без посилання AI-NN")
+    add("KB-kinds", "FAIL" if msg else "PASS", "; ".join(msg))
+
     # KB-module
     mods = sorted(d for d in os.listdir(a.addons) if d.startswith("td_") and os.path.isfile(os.path.join(a.addons, d, "__manifest__.py"))) if os.path.isdir(a.addons) else []
     covered = set()
@@ -75,8 +95,9 @@ def main():
         m = re.search(r"^module:\s*(td_\w+)\s*$", t, re.M)
         if m and re.search(r"^kind:\s*module\s*$", t, re.M):
             covered.add(m.group(1))
-    nomod = [m for m in mods if m not in covered]
-    ghost = sorted(covered - set(mods))
+    expected = [m for m in a.expect_module if m not in mods]
+    nomod = [m for m in mods + expected if m not in covered]
+    ghost = sorted(covered - set(mods) - set(expected))
     msg = []
     if not mods:
         msg.append(f"у {a.addons} немає модулів td_*")
@@ -85,6 +106,15 @@ def main():
     if ghost:
         msg.append("сторінка без модуля: " + ", ".join(ghost))
     add("KB-module", "FAIL" if msg else "PASS", "; ".join(msg))
+
+    # KB-merge: сторінка модуля, якого ще немає в addons (паралельний крок), має позначку «звірити після злиття A-17b»
+    msg = []
+    for m in expected:
+        pg = [t for t in texts.values() if re.search(r"^module:\s*" + re.escape(m) + r"\s*$", t, re.M)]
+        if pg and "звірити після злиття A-17b" not in pg[0]:
+            msg.append(f"{m}: немає позначки «звірити після злиття A-17b»")
+    add("KB-merge", "FAIL" if msg else ("PASS" if expected else "SKIPPED"),
+        "; ".join(msg) if msg else ("" if expected else "немає --expect-module"))
 
     # KB-route
     msg, total = [], 0

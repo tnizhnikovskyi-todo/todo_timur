@@ -2,7 +2,7 @@
 name: gates-aggregator
 description: >
   Запускай на кроці A-14 флоу галузевого пакета, коли A-11 (package/addons/), A-12 (package/config/) і
-  A-13 (package/master-data/) готові до перевірки або A-15/A-16/A-17/A-18 повернули дефекти. Диригент
+  A-13 (package/master-data/) готові до перевірки або A-15/A-16/A-16b/A-17/A-17b/A-17c/A-18 повернули дефекти. Диригент
   п'яти гейтів (pr-review, security-review, config-review, odoo19-lint, track-convergence) і статусу CI C-03:
   зводить вердикти в package/CHECKS.md з SHA і кодом повернення A-11/A-12/A-13. Тригерні фрази —
   "автоперевірки пакета", "прожени гейти", "зведи гейти", "CHECKS.md", "A-14". НЕ використовуй для рев'ю
@@ -45,16 +45,17 @@ description: >
 Обов'язкові, кожен із SHA з наряду: `docs/industries/<галузь>/OWNER-INTAKE.md` (`editions`), `package/addons/` (A-11), `package/config/` + `CONFIG.md` (A-12),
 `package/master-data/` + `README.md` (A-13), `package/ALLOCATION.md` (A-10), `package/SPEC.md` (A-08),
 прогін C-03. Умовні: `answers.example.yaml` і `package/demo/profiles/` (фаза 2, матричний тест); артефакти
-дефектів `package/demo/defects.md` (A-15), `package/demo/scenarios.md` (A-16), `package/ACCEPTANCE.md`
-(A-17), `package/demo/release-defects.md` (A-18) — режим `повернення`; попередній `package/CHECKS.md` у
+дефектів `package/demo/defects.md` (A-15), `package/demo/scenarios.md` (A-16; дефекти UI зі зйомки A-16b — теж `package/demo/defects.md`), `package/ACCEPTANCE.md`
+(A-17; дефекти модуля `td_<галузь>_elearning` і пакета `package/support/` від A-17b/A-17c — у `defects.md`), `package/demo/release-defects.md` (A-18) — режим `повернення`; попередній `package/CHECKS.md` у
 base_branch — для перенесення вердиктів і обліку циклів. Шаблон: `package/templates/CHECKS.md`;
 немає — створити з спільного `plugins/flow-package-build/references/checks-template.md`
 (якщо файлу ще немає — за структурою з `references/gate-protocol.md`, розділ «Структура CHECKS.md»).
 
 ## Крок 0. Режим і SHA
+Джерела повернень (0.4.0): A-16b (дефект UI, знайдений під час зйомки), A-17b і A-17c (дефект модуля) повертають на A-14 так само, як A-15/A-16/A-17. Після виправлення ланцюг повторюється повністю: A-15 -> A-16 -> A-16b -> A-17 (A-16b — у режимі `refresh` на новому SHA).
 Режим і версія — з `params` наряду (`naryad-format.md`; ставить C-01): `params.mode` ∈ {перевірка, повернення,
 нова-версія, hotfix}; `params.flow_version` ∈ {1, 2}. **Ключа немає — не питати й не вгадувати:** режим
-`перевірка` (якщо при цьому `returned_from` ∈ {A-15, A-16, A-17, A-18} — `повернення`), версія 2. Режим `нова-версія` — повний регрес,
+`перевірка` (якщо при цьому `returned_from` ∈ {A-15, A-16, A-16b, A-17, A-17b, A-17c, A-18} — `повернення`), версія 2. Режим `нова-версія` — повний регрес,
 вердикти не переносяться; `hotfix` — гейти на патчі (маршрут — `flow-map.md`). `SHA_GATES` = `git.head` наряду
 (звірити з `git rev-parse HEAD` гілки кроку) і більше не змінювати до кінця запуску; `git.base`/`git.prev_tag` — для diff і перенесення вердиктів.
 Фаза — `params.phase` (1|2); немає — фаза 1, а в версії 2 фази 1 і 2 виконуються в одному запуску. Фаза 2 версії 1 стартує з `params.resume`.
