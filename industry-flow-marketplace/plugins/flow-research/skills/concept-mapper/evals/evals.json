@@ -258,6 +258,18 @@
       "input": {
         "fixtures": "evals/fixtures/check_concept-bad-matrix/ (FAIL), evals/fixtures/check_concept-ok/ (PASS)"
       }
+    },
+    {
+      "id": "core-modules-in-every-box",
+      "prompt": "A-20: скласти концепцію й BOX для галузі з двома коробками (A і B).",
+      "expected_output": "У BOX.md кожна коробка містить td_home_menu (лише CE) і td_support; у BOX є рядок «Коробка входу: X», у screens.md — «Показників дашборда: N» і екрани «Головний екран» та «Підтримка ToDo» з основою ToDo-готовий; CM-box-core PASS.",
+      "assertions": [
+        "BOX.md називає td_home_menu і td_support",
+        "Є рядок «Коробка входу: A|B|C»",
+        "screens.md має рядок «Показників дашборда: N»",
+        "Екрани td_home_menu і td_support мають основу ToDo-готовий",
+        "CM-box-core PASS"
+      ]
     }
   ]
 }

@@ -45,7 +45,7 @@
 - `skillRef`: flow-research:reuse-modules
 - `access_profile`: research-internal
 - `inArtifacts`: OWNER-INTAKE.md (`reuse`); research/FUNCTIONAL-MAP.md
-- `outArtifacts`: research/{REUSE.md (розділ `## Інвентар` + реєстр; REUSE-xx), sources-log.md; дописує рядки A-03c в `research/AI-DECISIONS.md`}
+- `outArtifacts`: research/{REUSE.md (розділ `## Інвентар` + реєстр; REUSE-xx), sources-log.md; дописує рядки A-03c в `research/AI-DECISIONS.md`} (§27: в інвентарі завжди `td_home_menu` (лише CE) і `td_support` (CE і EE), рішення «беремо»; перевірка RU-core)
 - гейт: ні; «беремо / адаптуємо / ні» вирішує AI (рядки AI-DECISIONS), вето — на A-20c
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -59,7 +59,7 @@
 - `skillRef`: flow-research:concept-mapper
 - `access_profile`: research
 - `inArtifacts`: OWNER-INTAKE.md; research/{FUNCTIONAL-MAP.md, REJECTED.md, AI-DECISIONS.md, facts.yaml, REUSE.md, edition-claims.md}; flow/decisions.md (вето власника — режим `recalc`); briefing.md; past-projects.md; протоколи сесій A-05/A-06 (якщо були)
-- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{BOX.md (склад коробок без годин і грошей), SALES.md, facts.yaml (доповнює)}; розділ «Повнота» в `research/AI-DECISIONS.md` (самоперевірка в кінці кроку: `flow-research:completeness-audit` як під-скіл, 3 ролі, 14 пунктів, 1 коло; кабінетні прогалини закриваються правкою тут, незакрите — рядки AI-NN «ризик, перевірити на пілоті»); дописує в `research/REJECTED.md` і `research/AI-DECISIONS.md` (A-03b, A-03c) свої рядки, не перезаписуючи чужі
+- `outArtifacts`: concept/{features.md, screens.md, scenarios.md}; research/{BOX.md (склад коробок без годин і грошей), SALES.md, facts.yaml (доповнює)}; розділ «Повнота» в `research/AI-DECISIONS.md` (самоперевірка в кінці кроку: `flow-research:completeness-audit` як під-скіл, 3 ролі, 14 пунктів, 1 коло; кабінетні прогалини закриваються правкою тут, незакрите — рядки AI-NN «ризик, перевірити на пілоті»); дописує в `research/REJECTED.md` і `research/AI-DECISIONS.md` (A-03b, A-03c) свої рядки, не перезаписуючи чужі (§27: у кожній коробці `td_home_menu` (лише CE) і `td_support`; перевірка CM-box-core; мітки `Коробка входу`, `Показників дашборда`)
 - гейт: ні (єдиний гейт — A-20c)
 - `review.checklists`: [concept.md, edition-claims.md, completeness.md]; `review.max_rounds: 2` (+1 контрольний)
 - `params.sample`: false
@@ -199,7 +199,7 @@
 - `inArtifacts`: package/addons/td_*; package/docs/user-guide (FAQ); `research/AI-DECISIONS.md` (ризики); package/SPEC.md; `package/demo/defects.md`
 - `outArtifacts`: package/support/{AI-INSTRUCTIONS.md, kb/KB-NNN-*.md, INDEX.md} — **лишається в ToDo, клієнту не передається**; споживачі: flow-client-delivery:support-desk, client-help-bot, odoo19-implementation:hypercare-tracker (зовнішній — лише згадка)
 - гейт: ні; AND-split з A-17b, AND-join в A-18
-- перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-privacy), `no-client-ids`, `A-17c.yaml`
+- перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
 - примітки: читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
 - ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора

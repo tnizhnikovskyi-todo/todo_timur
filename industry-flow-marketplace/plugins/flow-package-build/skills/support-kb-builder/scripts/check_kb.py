@@ -137,6 +137,21 @@ def main():
         msg.append("немає сценаріїв діагностики DG-NN у kb/ з kind: diagnostics")
     add("KB-route", "FAIL" if msg else "PASS", "; ".join(msg[:10]))
 
+    # KB-support (§27): розділ KB «звернення з td_support» (kind: diagnostics, заголовок містить td_support, тег [ToDo-support], >=1 DG-NN)
+    sup = [n for n, t in texts.items() if re.search(r"^kind:\s*diagnostics\s*$", t, re.M) and "td_support" in t.split("\n", 1)[0]]
+    have_mod = os.path.isdir(os.path.join(a.addons, "td_support")) or "td_support" in a.expect_module
+    bad = []
+    if not sup:
+        bad.append("немає сторінки kind: diagnostics із «td_support» у заголовку (звернення з td_support, §27)")
+    else:
+        t = texts[sup[0]]
+        if "[ToDo-support]" not in t:
+            bad.append("немає тега теми «[ToDo-support]»")
+        if not re.search(r"^###\s+DG-\d+", t, re.M):
+            bad.append("немає сценаріїв DG-NN")
+    add("KB-support", ("FAIL" if have_mod else "WARN") if bad else "PASS",
+        ("; ".join(bad) + ("" if have_mod else " (модуля td_support ще немає в пакеті: WARN; додати розділ із позначкою «звірити після злиття»)")) if bad else "")
+
     # KB-privacy
     hits = []
     scan = [("AI-INSTRUCTIONS.md", ai), ("INDEX.md", index)] + list(texts.items())

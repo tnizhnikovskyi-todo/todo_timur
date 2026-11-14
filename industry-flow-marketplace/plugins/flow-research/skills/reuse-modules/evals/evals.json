@@ -140,6 +140,17 @@
       ],
       "gold": "flow/A-03b-deep @ 008541fb4d4ced7adfa7061c1edf5576eaa9bf36, docs/industries/mebli/research/ (тестове репо industry-flow-test-mebli), хронологія: блок готових модулів з'явився після концепції (SHA кроку A-03c — відкрите питання, план §5)",
       "fixtures": "evals/fixtures/check_reuse-ok/"
+    },
+    {
+      "id": "core-modules-always",
+      "prompt": "A-03c, анкета: defaults.reuse.repos = \"—\" (зовнішніх репо немає).",
+      "expected_output": "Зелений шлях «нуль зовнішніх кандидатів», але в Інвентарі й Реєстрі є REUSE-01 td_home_menu (лише CE) і REUSE-02 td_support (CE і EE), рішення «беремо», основа ToDo-готовий; check_reuse.py RU-core PASS.",
+      "assertions": [
+        "td_home_menu і td_support є в Інвентарі й Реєстрі з рішенням беремо",
+        "td_home_menu позначено «лише CE»",
+        "RU-core PASS",
+        "Не зупинено на waiting_human"
+      ]
     }
   ]
 }

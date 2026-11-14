@@ -153,6 +153,17 @@
       "fixtures": [
         "evals/fixtures/config-both-editions/"
       ]
+    },
+    {
+      "id": "core-and-elearning-modules",
+      "prompt": "A-12 для editions: both; REUSE.md містить td_home_menu і td_support; elearning.mode \"on\" буде після A-17b.",
+      "expected_output": "manifest.yaml: td_support в обох профілях ce і ee, td_home_menu лише в ce; рядків website_slides і td_<галузь>_elearning ще немає й CFG-modules їх не вимагає; у режимі new-version після A-17b ці рядки зберігаються.",
+      "assertions": [
+        "td_home_menu відсутній у профілі ee",
+        "td_support є в ce і ee",
+        "Немає FAIL CFG-modules через відсутній elearning",
+        "origin: todo-ready, source: vendored для обох"
+      ]
     }
   ]
 }

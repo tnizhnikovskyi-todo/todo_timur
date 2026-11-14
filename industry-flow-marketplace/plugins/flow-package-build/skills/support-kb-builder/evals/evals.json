@@ -94,6 +94,17 @@
         "evals/fixtures/support-race/addons/",
         "evals/fixtures/support-race/support/"
       ]
+    },
+    {
+      "id": "td-support-section",
+      "prompt": "A-17c; в package/addons є td_support і td_home_menu.",
+      "expected_output": "Є сторінка kind: diagnostics «Звернення з td_support» із тегом [ToDo-support] і сценаріями DG-NN з маршрутами за triage-routes.md; сторінки модулів td_support і td_home_menu; check_kb.py KB-support PASS.",
+      "assertions": [
+        "Є сторінка діагностики td_support з [ToDo-support]",
+        "DG-NN мають Симптом, Перевірка, Виправлення, Маршрут",
+        "KB-support PASS",
+        "Трасування в KB лише як переказ, без ПДн"
+      ]
     }
   ]
 }
