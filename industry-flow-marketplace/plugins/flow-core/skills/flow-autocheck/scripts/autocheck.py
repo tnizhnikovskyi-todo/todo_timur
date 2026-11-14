@@ -705,6 +705,96 @@ def p_manual(ctx, c):
     ctx.add(c["id"], "MANUAL", c["args"]["text"] + f" ({c['args']['who']})")
 
 
+# ---------- примітиви узгодженості зрізу й PR (E3, E7; 0.4.0) ----------
+DB_BIN_RE = re.compile(r"(?i)\.(zip|dump|sql|sql\.gz|backup)$")
+TD_TOKEN = r"td[_.][a-z0-9_.]*[a-z0-9]"
+
+
+def code_names(ctx, addons):
+    """(імена тек модулів, значення _name = 'td.*' з .py) у addons на head."""
+    dirs = {d for d in lsdir(ctx, ctx.head, addons)}
+    rc, out = git(ctx, "grep", "-h", "-I", "-E", "-e", r"_name\s*=\s*['\"]td[._]", ctx.head, "--", addons)
+    names = set(re.findall(r"_name\s*=\s*['\"](td[._][a-z0-9_.]+)['\"]", out)) if rc == 0 else set()
+    return dirs, names
+
+
+def p_no_db_binaries(ctx, c):
+    """E7: у diff PR немає бінарників баз (*.zip, *.dump, *.sql, *.sql.gz, *.backup)."""
+    rc, out = git(ctx, "diff", "--name-only", "--diff-filter=ACMR", ctx.base, ctx.head)
+    bad = [f for f in out.split("\n") if f and DB_BIN_RE.search(f)]
+    ctx.add(c.get("id", "no-db-binaries"), "FAIL" if bad else "PASS",
+            ("Прибери з PR бекапи баз і архіви (дані клієнта/демо не комітяться; стенд віддається з сервера): " + ", ".join(bad[:8])) if bad else "", ",".join(bad)[:200])
+
+
+def p_no_rejected_in_code(ctx, c):
+    """E3: позиції REJECTED (токени td_*/td.*) не мають коду в package/addons (тека модуля або _name)."""
+    s = c["args"]
+    text, lab = resolve(ctx, s["ref"])
+    if text is None:
+        return ctx.add(c["id"], "ERROR", f"Немає джерела {lab}: перевірку не виконано", lab)
+    addons = s.get("addons", "package/addons")
+    dirs, names = code_names(ctx, addons)
+    if not dirs:
+        return ctx.add(c["id"], "SKIP", f"немає {addons}: коду ще немає", lab)
+    hits = []
+    for l in text.split("\n"):
+        if not re.match(r"\s*\|\s*REJ-\d{3}", l):
+            continue
+        for tok in re.findall(r"(?<![a-z0-9_.])" + TD_TOKEN, l):
+            if tok in dirs or tok in names or tok.replace(".", "_") in dirs or tok.replace("_", ".") in names:
+                hits.append(f"{l.split('|')[1].strip()}:{tok}")
+    ctx.add(c["id"], "FAIL" if hits else "PASS",
+            ("Позицію відкинуто в REJECTED, а код є: прибери код або зніми позицію з реєстру (рішення AI-DECISIONS): " + ", ".join(sorted(set(hits)))) if hits else "",
+            lab, c.get("route_on_fail") if hits else None)
+
+
+def p_plan_modules_exist(ctx, c):
+    """E3: модулі td_<галузь>_* з розділу «Модулі» PLAN існують у package/addons (поза рядками «Поза зрізом»/«не робимо»)."""
+    s = c["args"]
+    ind = industry_of(ctx)
+    if not ind:
+        return ctx.add(c["id"], "ERROR", "Не визначено галузь: додай docs/industries/<код>/ у where наряду", "")
+    text, lab = resolve(ctx, s["ref"])
+    if text is None:
+        return ctx.add(c["id"], "ERROR", f"Немає джерела {lab}: перевірку не виконано", lab)
+    addons = s.get("addons", "package/addons")
+    dirs, _ = code_names(ctx, addons)
+    if not dirs:
+        return ctx.add(c["id"], "SKIP", f"немає {addons}: коду ще немає", lab)
+    body = "\n".join(b for lv, h, b, ln in sections(text) if re.search(s.get("section", r"(?i)модул"), h))
+    code = re.sub(r"(?i)^.*(поза зрізом|не робимо|відкинуто).*$", "", body, flags=re.M)
+    mods = sorted(set(re.findall(r"`(td_" + re.escape(ind.replace("-", "_")) + r"_[a-z0-9_]*[a-z0-9])`", code)))
+    miss = [m for m in mods if m not in dirs]
+    if not mods:
+        return ctx.add(c["id"], "WARN", "У розділі «Модулі» PLAN немає модулів td_<галузь>_* у зворотних лапках: звірка не відбулась", lab)
+    ctx.add(c["id"], "FAIL" if miss else "PASS", ("Модулі з PLAN без теки в " + addons + " (створи або прибери з PLAN): " + ", ".join(miss)) if miss else "", lab,
+            c.get("route_on_fail") if miss else None)
+
+
+def p_value_eq(ctx, c):
+    """E3: значення з кількох документів збігаються (кількість показників дашборда, коробка показу = коробка входу).
+    sources: [{name, ref, regex (група 1), pick: first|last|max, optional}]."""
+    vals, bad = {}, []
+    for src in c["args"]["sources"]:
+        text, lab = resolve(ctx, src["ref"])
+        if text is None:
+            if src.get("optional"):
+                continue
+            return ctx.add(c["id"], "ERROR", f"Немає джерела {lab}: перевірку не виконано", lab)
+        found = re.findall(src["regex"], text)
+        found = [f if isinstance(f, str) else f[0] for f in found]
+        if not found:
+            bad.append(f"{src.get('name', src['ref'])}: значення не знайдено за {src['regex']}")
+            continue
+        pick = src.get("pick", "first")
+        v = max(found, key=lambda x: int(x) if x.isdigit() else x) if pick == "max" else (found[-1] if pick == "last" else found[0])
+        vals[src.get("name", src["ref"])] = v.strip().lower()
+    if len(set(vals.values())) > 1:
+        bad.append("розбіжність: " + "; ".join(f"{k}={v}" for k, v in vals.items()))
+    ctx.add(c["id"], "FAIL" if bad else "PASS", (c["args"].get("msg", "Узгодь значення") + ": " + "; ".join(bad)) if bad else "",
+            "; ".join(f"{k}={v}" for k, v in vals.items())[:200], c.get("route_on_fail") if bad else None)
+
+
 PRIMS = {k[2:]: v for k, v in globals().items() if k.startswith("p_")}
 
 
@@ -727,6 +817,7 @@ def generic(ctx, extra_allowed):
     if ph:
         ctx.add("path-placeholder", "FAIL", "Непідставлений плейсхолдер у where: " + ", ".join(ph))
         return
+    p_no_db_binaries(ctx, {"id": "no-db-binaries"})
     allowed = wh + ["observations/"] + list(extra_allowed or [])
     extra = [f for f in changed_files(ctx) if not any(glob_match(f, a) or f == a.rstrip("/") for a in allowed)]
     ctx.add("where-only", "FAIL" if extra else "PASS", ("Прибери зміни поза where: " + ", ".join(extra)) if extra else "", f"{ctx.base[:8]}..{ctx.head[:8]}")
@@ -1059,6 +1150,7 @@ def selftest():
         assert r.returncode == want, f"{scr} {d}: код {r.returncode}, очікувано {want}: {r.stdout[-200:]}{r.stderr[-200:]}"
     selftest_templates()
     selftest_stale()
+    selftest_e3()
     print("selftest OK")
     return 0
 
@@ -1103,6 +1195,38 @@ def selftest_stale():
     run("add", "."); run("commit", "-qm", "depends sha"); c4 = run("rev-parse", "HEAD")
     r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_stale.py"), dep, "--base", c4], capture_output=True, text=True)
     assert r.returncode == 0, f"check_stale-same-step: очікувано PASS: {r.stdout[-200:]}"
+
+
+def selftest_e3():
+    """E3/E7: no_db_binaries, no_rejected_in_code, plan_modules_exist, value_eq на тимчасовому репо."""
+    import types
+    d = tempfile.mkdtemp()
+    run = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, text=True, check=True).stdout.strip()
+    run("init", "-q", "-b", "main"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+    ind = "docs/industries/mebli/"
+    os.makedirs(os.path.join(d, "package/addons/td_mebli_core/models")); os.makedirs(os.path.join(d, ind + "research")); os.makedirs(os.path.join(d, ind + "prototype-real"))
+    w = lambda f, t: open(os.path.join(d, f), "w", encoding="utf-8").write(t)
+    w("README.md", "x"); run("add", "."); run("commit", "-qm", "c0"); base = run("rev-parse", "HEAD")
+    w("package/addons/td_mebli_core/models/a.py", "class A:\n    _name = 'td.mebli.part'\n")
+    w(ind + "research/REJECTED.md", "| ID | що не робимо | чому |\n|---|---|---|\n| REJ-001 | оптимізатор `td_mebli_optimizer` | рішення |\n| REJ-002 | модель `td.mebli.part` | тест |\n")
+    w(ind + "prototype-real/PLAN.md", "## 3. Модулі\n`td_mebli_core`, `td_mebli_ghost`, клас `td_card`\n- Поза зрізом: `td_mebli_later`\n\nКоробка: A, 11 показників\n")
+    w(ind + "research/BOX.md", "Коробка: B, 12 показників\n")
+    w("db.dump", "bin"); w("x/backup.sql.gz", "bin")
+    run("add", "."); run("commit", "-qm", "c1"); head = run("rev-parse", "HEAD")
+    a = types.SimpleNamespace(repo=d, mode="result", base=base, head=head, agent_pattern=None)
+    ctx = Ctx(a, {"where": ind})
+    def one(fn, args, route=None):
+        ctx.rows = []; fn(ctx, {"id": "t", "args": args}); return ctx.rows[0]["status"], ctx.rows[0]["msg"]
+    st, m = one(p_no_db_binaries, {}); assert st == "FAIL" and "db.dump" in m and "backup.sql.gz" in m, (st, m)
+    st, m = one(p_no_rejected_in_code, {"ref": f"head:{ind}research/REJECTED.md"}); assert st == "FAIL" and "REJ-002" in m and "REJ-001" not in m, (st, m)
+    st, m = one(p_plan_modules_exist, {"ref": f"head:{ind}prototype-real/PLAN.md"}); assert st == "FAIL" and "td_mebli_ghost" in m and "td_mebli_later" not in m and "td_card" not in m, (st, m)
+    st, m = one(p_value_eq, {"sources": [{"name": "показники концепція", "ref": f"head:{ind}research/BOX.md", "regex": r"(\d+)\s+показник"},
+                                          {"name": "показники зріз", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"(\d+)\s+показник"}]}); assert st == "FAIL" and "11" in m and "12" in m, (st, m)
+    st, m = one(p_value_eq, {"sources": [{"name": "коробка вхід", "ref": f"head:{ind}research/BOX.md", "regex": r"Коробка:\s*([A-Z])"},
+                                          {"name": "коробка показу", "ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}]}); assert st == "FAIL", (st, m)
+    # позитив: те саме значення
+    st, m = one(p_value_eq, {"sources": [{"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}, {"ref": f"head:{ind}prototype-real/PLAN.md", "regex": r"Коробка:\s*([A-Z])"}]}); assert st == "PASS", (st, m)
+    st, m = one(p_no_db_binaries, {}) if False else ("PASS", "")
 
 
 if __name__ == "__main__":
