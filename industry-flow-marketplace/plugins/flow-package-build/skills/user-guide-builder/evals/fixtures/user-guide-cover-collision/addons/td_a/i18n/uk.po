@@ -1,0 +1,6 @@
+msgid ""
+msgstr ""
+"Language: uk\n"
+
+msgid "Receiving"
+msgstr "Отримання"

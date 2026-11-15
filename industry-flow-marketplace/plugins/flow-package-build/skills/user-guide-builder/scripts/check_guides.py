@@ -226,10 +226,13 @@ def main():
         add("UG-cover-dev", "SKIPPED", "немає --addons: покриття розробленого (меню, дії, звіти td_*) перевірити вручну")
     else:
         items = {}
-        po = {}  # msgid -> msgstr з i18n/uk.po модулів (назви в XML англійські, посібник — «як у UI», українською)
-        for dp, _, fs in os.walk(a.addons):
+        po = {}  # модуль -> {msgid: msgstr} з i18n/uk.po (назви в XML англійські, посібник — «як у UI», українською); колізії msgid між модулями не змішуються
+        for dp, dirs, fs in os.walk(a.addons):
+            dirs.sort()
+            fs.sort()
             if os.path.basename(dp) == "i18n" and "uk.po" in fs:
                 cur, key = {}, None
+                pm = po.setdefault(os.path.relpath(dp, a.addons).split(os.sep)[0], {})
                 for ln in open(os.path.join(dp, "uk.po"), encoding="utf-8", errors="replace"):
                     ln = ln.strip()
                     m_ = re.match(r'^(msgid|msgstr)\s+"(.*)"$', ln)
@@ -237,14 +240,16 @@ def main():
                         key = m_.group(1)
                         if key == "msgid" and "msgstr" in cur:
                             if cur.get("msgid") and cur["msgstr"]:
-                                po[cur["msgid"]] = cur["msgstr"]
+                                pm[cur["msgid"]] = cur["msgstr"]
                             cur = {}
                         cur[key] = m_.group(2)
                     elif ln.startswith('"') and key:
                         cur[key] = cur.get(key, "") + ln.strip('"')
                 if cur.get("msgid") and cur.get("msgstr"):
-                    po[cur["msgid"]] = cur["msgstr"]
-        for dp, _, fs in os.walk(a.addons):
+                    pm[cur["msgid"]] = cur["msgstr"]
+        for dp, dirs, fs in os.walk(a.addons):
+            dirs.sort()
+            fs.sort()
             rel = os.path.relpath(dp, a.addons).split(os.sep)  # лише компоненти ПІСЛЯ кореня --addons: шлях до addons (demo-x, tests) не фільтрується
             mod = rel[0]
             if not mod.startswith("td_") or re.search(r"_(elearning|demo)$", mod) or "tests" in rel[1:] or "demo" in rel[1:]:
@@ -266,12 +271,19 @@ def main():
                                 nm = fl.text.strip()
                     if nm and not nm.startswith("%"):
                         items.setdefault(nm, mod)
-        def named(n):  # ціле слово/фраза: вихідна назва або її переклад із uk.po
-            for v in (n, po.get(n)):
+        def trs(n, m):  # переклади msgid: спершу модуля-власника меню, потім решта модулів (запасний варіант)
+            own = po.get(m, {}).get(n)
+            rest = [po[k][n] for k in sorted(po) if k != m and n in po[k]]
+            return ([own] if own else []) + [t for t in rest if t != own]
+        def named(n, m):  # ціле слово/фраза: вихідна назва або будь-який переклад із uk.po
+            for v in [n] + trs(n, m):
                 if v and re.search(r"(?<!\w)" + re.escape(v.lower()) + r"(?!\w)", body):
                     return True
             return False
-        miss = sorted(f"{m}: «{n}»" + (f" → «{po[n]}»" if po.get(n) and po[n] != n else "") for n, m in items.items() if not named(n))
+        def shown(n, m):
+            t = (trs(n, m) or [None])[0]
+            return f"{m}: «{n}»" + (f" → «{t}»" if t and t != n else "")
+        miss = sorted(shown(n, m) for n, m in items.items() if not named(n, m))
         noidx = [] if re.search(r"(?mi)^##\s*Покриття:\s*розроблене", index) else ["в INDEX немає таблиці «## Покриття: розроблене»"]
         if not items and any(d.startswith("td_") for d in os.listdir(a.addons)):
             noidx.append("не зібрано жодного меню/дії td_* в --addons (перевір шлях)")

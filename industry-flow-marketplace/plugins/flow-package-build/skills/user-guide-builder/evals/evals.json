@@ -224,6 +224,18 @@
         "evals/fixtures/user-guide-cover-demopath/user-guide/",
         "evals/fixtures/user-guide-cover-demopath/demo-x/tests/addons/"
       ]
+    },
+    {
+      "id": "coverage-msgid-collision",
+      "prompt": "Перевір інструкції на повноту §26а: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-cover-collision/user-guide --spec evals/fixtures/user-guide-cover-collision/SPEC.md --addons evals/fixtures/user-guide-cover-collision/addons --answers evals/fixtures/user-guide-cover-collision/answers.yaml --config evals/fixtures/user-guide-cover-collision/CONFIG.md. Той самий msgid «Receiving» перекладений у td_a, td_x і td_z по-різному; дію «Receiving» має td_x.",
+      "expected_output": "UG-cover-dev = PASS незалежно від порядку обходу каталогів: береться переклад модуля-власника дії (td_x, «Приймання деталей»), інші переклади — запасний варіант.",
+      "assertions": [
+        "UG-cover-dev = PASS",
+        "Результат не залежить від імен модулів і порядку os.walk"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-cover-collision/"
+      ]
     }
   ]
 }

@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Language: uk\n"
+
+msgid "Furniture Stock"
+msgstr "Склад меблів"
+
+msgid "Receiving"
+msgstr "Приймання деталей"
+
+msgid "Pack Label"
+msgstr "Наклейка на пачку"
