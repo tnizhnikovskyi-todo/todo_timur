@@ -24,7 +24,7 @@
 | 13 | E6: test-kit CLAUDE.md (test-CLAUDE.md), flow-state-keeper | flow-core/references/templates/test-CLAUDE.md |
 | 14 | `--answers` у script-check-elearning | elearning-builder, checks |
 | 15 | рецензент A-17c = Власник продукту | support-kb-builder, картка A-17c |
-| 16 | gates-aggregator, demo-base-builder: джерела повернень A-16b/A-17b/A-17c | gates-aggregator, demo-base-builder |
+| 16 | gates-aggregator: джерела повернень A-16b/A-17b/A-17c; demo-base-builder: A-16b refresh | gates-aggregator, demo-base-builder |
 | 17 | лічильник checks (48), примітка A-17 на карті | flow-map, README |
 | 18 | звірка зі стандартом Odoo: локальні вихідники 19.0 допустимі | elearning-builder, user-guide-builder |
 
