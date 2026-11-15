@@ -173,12 +173,12 @@ description: >
 Шлях до скрипта — від теки скіла (`<тека скіла>/scripts/…`), cwd — корінь репо, аргумент-файл репо-відносний, `--base` = `git.base` наряду:
 `python3 <тека скіла>/scripts/check_support.py clients/<к>/<файл>.md --base <git.base> [--mode intake|hypercare-close|sla-month]
 [--routes <шлях до flow-client-delivery/references/triage-routes.md>] [--tr <ТР.md>] [--delivery-log <delivery-log.md>]
-[--other <hypercare.md|support-log.md>] [--period РРРР-ММ]` -> JSON `[{id, status, msg}]` у `checks`.
+[--other <hypercare.md|support-log.md>] [--period РРРР-ММ] [--drafts <файл|тека чернеток>] [--incidents <тека incidents/>]` -> JSON `[{id, status, msg}]` у `checks`.
 Перелік: `SD-columns`, `SD-enums` (регістр статусів не важливий), `SD-route`, `SD-route-table` (маршрут за типом і
 серйозністю з `triage-routes.md`; без `--routes` — SKIP), `SD-ac`, `SD-close`, `SD-pkg-defect`, `SD-d02` (нова вимога,
 дефект пакета не середньої серйозності), `SD-protected` (змінені чужі колонки; у нових рядках людські колонки порожні),
 `SD-dup`, `SD-sla`, `SD-sla-source`, `SD-report`, `SD-14days` (дата завершення ≥ start+14 і ≤ граничного строку),
-`SD-pii` (шаблони з `pii-patterns.md`), `SD-pii-name` (MANUAL: можливе ПІБ). Що скрипт не може перевірити — SKIP, не PASS;
+`SD-kbcodes` (у чернетках клієнту й `incidents/` немає KB-NNN, DG-NN, AI-NN; без `--drafts`/`--incidents` — SKIP), `SD-pii` (шаблони з `pii-patterns.md`), `SD-pii-name` (MANUAL: можливе ПІБ). Що скрипт не може перевірити — SKIP, не PASS;
 MANUAL іде в чек-лист Підтримки. Тести скрипта: `python3 -I <тека скіла>/scripts/test_check_support.py`. FAIL, який скіл виправляє сам
 (формат, маршрут), — виправити й повторити до `maxAttempts`; FAIL, що потребує людини (немає часу реакції, AC), здачу не
 блокує — іде в memo і чек-лист Підтримки.

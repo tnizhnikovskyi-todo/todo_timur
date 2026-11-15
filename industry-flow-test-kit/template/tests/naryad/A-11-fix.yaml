@@ -1,4 +1,4 @@
-# ТЕСТОВИЙ наряд A-11 (0.4.0): fix — версія td_<галузь>_knowledge = 19.0.<X.Y пакета>.0 (інакше A-17 version-eq FAIL); перший у контурі A-11 fix -> A-12 fix -> A-14 -> A-15 (повний) -> A-16 -> A-16b
+# ТЕСТОВИЙ наряд A-11 (0.4.0; ПРОПУСТИТИ, якщо модуля td_<галузь>_knowledge немає в package/addons: рядок AI-NN, контур з A-12-fix): fix — версія td_<галузь>_knowledge = 19.0.<X.Y пакета>.0 (інакше A-17 version-eq FAIL); перший у контурі A-11 fix -> A-12 fix -> A-14 -> A-15 (повний) -> A-16 -> A-16b
 step: A-11
 scope: {kind: package, id: mebli}
 executor: any

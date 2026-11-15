@@ -5,7 +5,7 @@
 Закрито цим фіксом: мітки `Показників дашборда`/`Коробка входу`/`Коробка показу` пишуть concept-mapper і prototype-builder (шаблони screens.md, BOX.tpl.md, slice-plan-template.md); перелік установки `website_slides` + `td_<галузь>_elearning` (elearning-builder Крок 6, config-as-code Крок 4, A-17b/A-18 allow, картка A-17b); §27 у reuse-modules (RU-core), concept-mapper/BOX (CM-box-core), config-as-code, support-desk, support-kb-builder (KB-support); евали.
 
 
-## Перелік (оригінальні рядки обрізано при збереженні; відновлено як таблицю)
+## Перелік (відновлено; первісний текст — у рецензіях кіл 1–23 workflow 0.4.0)
 
 | # | Пункт — чим закрито | Файл |
 |---|---|---|
@@ -16,10 +16,9 @@
 | 5 | мітки Показників дашборда / Коробка входу / Коробка показу в шаблонах | concept-mapper, prototype-builder |
 | 6 | skip_market_check: A-07.yaml, flow-map, A-21d | flow-core/references, checks |
 | 7 | перелік установки website_slides + td_<галузь>_elearning | elearning-builder Крок 6, config-as-code Крок 4 |
-| 8 | slice-coverage: A-21d у flow-map/step-skill-map/step-cards/checks | flow-core/references |
+| 8 | slice-coverage (A-21d у flow-map/step-skill-map/step-cards/checks; E3 — completeness-audit) | flow-core/references, completeness-audit |
 | 9 | CS-plan-modules: лише модулі з каталогом | completeness-audit/scripts |
 | 10 | product-decision-drafter: A-17b ∥ A-17c, INDEX | flow-package-evolution |
-| 11 | slice-coverage повністю (E3) | completeness-audit |
 | 12 | Playwright/Chromium — засіб знімків за замовчуванням | user-guide-builder, prototype-builder |
 | 13 | E6: test-kit CLAUDE.md (test-CLAUDE.md), flow-state-keeper | flow-core/references/templates/test-CLAUDE.md |
 | 14 | `--answers` у script-check-elearning | elearning-builder, checks |
@@ -29,3 +28,5 @@
 | 18 | звірка зі стандартом Odoo: локальні вихідники 19.0 допустимі | elearning-builder, user-guide-builder |
 
 Первісний повний текст зауважень є в рецензіях workflow 0.4.0; тут зафіксовано лише факт закриття.
+
+| 19 | §27а: вирівняти RU-core / CM-box-core з td_knowledge — прохід після 0.4.0 | flow-map, A-03c, A-20 |

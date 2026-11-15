@@ -68,6 +68,7 @@ for ag in "$SRC_PKG"/plugins/flow-core/agents/*.md; do
   n_agents=$((n_agents + 1))
 done
 
+START_BR=""; [ "$UPGRADE" = 1 ] && START_BR="$(git -C "$TARGET" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"; [ "$START_BR" != HEAD ] || START_BR=""
 # 4. Шаблони (без перезапису наявних, якщо немає --force)
 n_new=0; n_skip=0; n_over=0; skipped_list=""
 while IFS= read -r -d '' f; do
@@ -84,6 +85,8 @@ while IFS= read -r -d '' f; do
     else n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; fi
   else
     cp "$f" "$dst"; n_new=$((n_new + 1))
+    # --upgrade: нові наряди з base_branch = гілка старту (для репо з історією це не main)
+    if [ "$UPGRADE" = 1 ] && [ -n "$START_BR" ]; then case "$rel" in tests/naryad/*.yaml) sed -i "s#base_branch: main#base_branch: $START_BR#" "$dst" ;; esac; fi
   fi
 done < <(find "$TEMPLATE" -type f -print0 | sort -z)
 
@@ -130,7 +133,7 @@ if [ "$UPGRADE" = 1 ]; then
       [ "$k" -le "$mx" ] || mx="$k"
     done
     nx=$((mx + 1))
-    sed -e "s/^attempt: .*/attempt: $nx/" -e "s#^\(repo: .*branch: flow/\)$stem-test#\1$stem-$nx-test#" "$f" > "$tdir/$stem-$nx.yaml"
+    sed -e "s#base_branch: main#base_branch: ${START_BR:-main}#" -e "s/^attempt: .*/attempt: $nx/" -e "s#^\(repo: .*branch: flow/\)$stem-test#\1$stem-$nx-test#" "$f" > "$tdir/$stem-$nx.yaml"
     n_att=$((n_att + 1)); att_list="$att_list $stem-$nx.yaml"
   done
 fi

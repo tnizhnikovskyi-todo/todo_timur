@@ -102,6 +102,16 @@
         "З package/support використано лише FAQ/параметри",
         "Прод не читається, якщо відповідь є в матеріалах"
       ]
+    },
+    {
+      "id": "kb-codes-in-draft",
+      "prompt": "Наряд B-07 answer: чернетка відповіді користувачу містить «KB-005» і «DG-02». Запусти check_help.py --dir clients/client-demo-01/help-bot --drafts <чернетка>.",
+      "expected_output": "HB-codes = FAIL: внутрішні коди KB/DG/AI не потрапляють у чернетки; після виправлення PASS.",
+      "assertions": [
+        "HB-codes = FAIL на KB-NNN, DG-NN, AI-NN",
+        "Чернетку переписано без кодів, повторно PASS"
+      ],
+      "files": []
     }
   ]
 }

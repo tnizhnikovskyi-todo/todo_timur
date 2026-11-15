@@ -4,7 +4,7 @@
 # Інструкції користувача: <галузь>, пакет <X.Y>
 SHA стенда: <SHA_STAND з package/demo/README.md, повний>
 Джерело сценаріїв: <package/SPEC.md | package/demo/scenarios.md | concept/scenarios.md>
-Дозволені латинські назви: <галузеві назви в підписах UI, напр. BAS, CAD, DXF; ToDo (назви пунктів td_support); через кому; читають check_guides.py і check_elearning.py>
+Дозволені латинські назви: <галузеві назви в підписах UI, напр. BAS, CAD, DXF; ToDo (назви пунктів td_support); через кому (назву з дефісом вносити частинами або писати в зворотних лапках); читають check_guides.py і check_elearning.py>
 Дата зйомки: <РРРР-ММ-ДД>. Адреса стенда: <з README A-15 або «локальний»>.
 
 ## Ролі

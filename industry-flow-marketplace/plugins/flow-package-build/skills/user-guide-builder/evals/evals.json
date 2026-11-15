@@ -193,6 +193,22 @@
       "files": [
         "evals/fixtures/user-guide-cover-schema/"
       ]
+    },
+    {
+      "id": "standard-label-untranslated",
+      "prompt": "Наряд A-16b. У стенді підпис поля стандартного складського екрана Odoo англійський (`Done Quantity`): у uk.po 19.0 перекладу немає, у td_* такого елемента немає. Крок SC-01 у komirnyk.md уже містить цей підпис. Перевір: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-std-label/user-guide --spec evals/fixtures/user-guide-std-label/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678. Опиши, як вчинити з підписом.",
+      "expected_output": "Це не дефект пакета й не блокування: підпис у зворотних лапках з приміткою «стандартний підпис Odoo без перекладу», один зведений рядок AI-NN в AI-DECISIONS (ризик, власник — вето), сценарій «готово», рядка в defects.md і повернення на A-14 немає; UG-lang і UG-cover = PASS.",
+      "assertions": [
+        "Рядок у defects.md не створюється, маршрут A-14 не запускається",
+        "Підпис у зворотних лапках із приміткою «стандартний підпис Odoo без перекладу»",
+        "Створено один зведений рядок AI-NN у AI-DECISIONS (ризик, вето власника)",
+        "UG-lang = PASS, UG-cover = PASS; result не returned",
+        "Для підпису td_* латиницею лишається дефект у defects.md з маршрутом A-14"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-std-label/SPEC.md",
+        "evals/fixtures/user-guide-std-label/user-guide/"
+      ]
     }
   ]
 }

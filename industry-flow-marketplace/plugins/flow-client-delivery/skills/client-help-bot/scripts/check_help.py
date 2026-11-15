@@ -14,7 +14,7 @@ IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 SECRET = re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*\S+", re.I)
 FIO = re.compile(r"\b[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+\b")
 PII = [("email", EMAIL), ("phone", PHONE), ("iban", IBAN), ("url", URL), ("ip", IP), ("secret", SECRET), ("fio", FIO)]
-CODES = re.compile(r"\b[A-D]-\d{2}\b|\btd\.\w+|\bINC-\d+")
+CODES = re.compile(r"\b[A-D]-\d{2}\b|\btd\.\w+|\bINC-\d+|\bKB-\d{3}\b|\bDG-\d{2}\b|\bAI-\d+\b")  # + внутрішні коди package/support (§26: KB лишається в ToDo)
 READ_TOOLS = {"odoo_search_read", "odoo_get_fields"}
 REQ = {"help-log.md": ["Реєстр питань", "Передано в support-desk", "Прогалини матеріалів", "Журнал запусків"],
        "query-log.md": ["Журнал запитів до проду"], "kb-index.md": ["Теми", "Чек-лист передумов"]}

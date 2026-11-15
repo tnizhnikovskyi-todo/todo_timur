@@ -121,6 +121,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("file"); ap.add_argument("--base"); ap.add_argument("--mode", default="intake")
     ap.add_argument("--tr"); ap.add_argument("--delivery-log"); ap.add_argument("--other"); ap.add_argument("--period"); ap.add_argument("--routes")
+    ap.add_argument("--drafts"); ap.add_argument("--incidents")  # файл/тека чернеток клієнту; тека incidents/
     a = ap.parse_args()
     text = Path(a.file).read_text(encoding="utf-8")
     kind = "support-log" if "support" in Path(a.file).name else "hypercare"
@@ -265,6 +266,19 @@ def main():
             pii.append(f"{name}: рядки {ln[:5]}")  # значення збігу не друкуємо
     if any(len(q.split()) > 10 for q in QUOTE.findall(text)): pii.append("цитата >10 слів")
     add("SD-pii", not pii, "знайдено: " + "; ".join(pii) if pii else "")
+    # SD-kbcodes: внутрішні коди package/support (KB-NNN, DG-NN, AI-NN) не виходять у чернетки клієнту й incidents/ (§26, A-17c)
+    kb_rx = re.compile(r"\bKB-\d{3}\b|\bDG-\d{2}\b|\bAI-\d+\b")
+    srcs = []
+    for opt in (a.drafts, a.incidents):
+        if opt:
+            p = Path(opt)
+            srcs += sorted(p.rglob("*")) if p.is_dir() else [p]
+    srcs = [p for p in srcs if p.is_file()]
+    if srcs:
+        hit = [f"{p.name}:{i}" for p in srcs for i, l in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1) if kb_rx.search(l)]
+        add("SD-kbcodes", not hit, "внутрішні коди KB/DG/AI у чернетках чи incidents/: " + ", ".join(hit[:10]) if hit else "")
+    else:
+        add("SD-kbcodes", True, "не передано --drafts/--incidents", skip=True)
     fio = [i + 1 for i, l in enumerate(text.splitlines()) if FIO.search(l)]
     if fio:  # три слова з великої: можливі хибні спрацьовування -> MANUAL, не FAIL
         res.append({"id": "SD-pii-name", "status": "MANUAL", "msg": f"можливе ПІБ, рядки {fio[:5]}: перевірити людиною"})

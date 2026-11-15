@@ -63,7 +63,7 @@ def main():
         for ln in open(os.path.join(a.dir, "INDEX.md"), encoding="utf-8"):
             m_ = re.match(r"\s*Дозволені латинські назви:\s*(.+)", ln)
             if m_:
-                allow = set(allow) | {w.strip() for w in re.split(r"[,;]", m_.group(1)) if w.strip()}
+                allow = set(allow) | {p for w in re.split(r"[,;]", m_.group(1)) if w.strip() for p in [w.strip()] + re.split(r"[-\u2011]", w.strip()) if p}
     except OSError:
         pass
     res = []

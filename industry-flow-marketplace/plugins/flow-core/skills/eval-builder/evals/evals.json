@@ -47,7 +47,7 @@
     {
       "id": "regress-regression-no-restore",
       "source": "failureMode картки C-04: регрес зелений не перевірено; повернення зрілості без прогону",
-      "prompt": "Режим regress, крок C-04, params.mode: regress; нова версія плагіна odoo19-mvp-build@1.4.1. У evals/pr-review/evals.json 3 кейси regress; evals/B-06/evals.json (set_kind: step) має кейс incident cl-02 з requires [\"step-run\"]. Фікстури й плагін-заглушка у evals/fixtures/regress/. Один кейс pr-review після 3 прогонів червоний (2 з 3). Передумови: агент має Bash, специфікація flow-autocheck/references/checks/C-04.yaml встановлена (перевірено test -f), запуск під runner'ом.",
+      "prompt": "Режим regress, крок C-04, params.mode: regress; нова версія плагіна odoo19-mvp-build@1.4.1. У evals/pr-review/evals.json 3 кейси regress; evals/B-06/evals.json (set_kind: step) має кейс incident cl-02 з requires [\"step-run\"]. Фікстури й плагін-заглушка — умовні (вміст описано в prompt, файлів немає). Один кейс pr-review після 3 прогонів червоний (2 з 3). Передумови: агент має Bash, специфікація flow-autocheck/references/checks/C-04.yaml встановлена (перевірено test -f), запуск під runner'ом.",
       "expected_output": "Прогнано лише кейси зі статусом regress; червоний кейс -> рядок 'регресія' і pr-review у fix_list; кейс кроку B-06 skipped з причиною step-run; пропозиції restore немає, у INDEX 'повернення заблоковано: немає харнесу кроку'; версію плагіна не підвищено.",
       "assertions": [
         "Нових кейсів не створено; прогін 3 рази, рішення більшістю",

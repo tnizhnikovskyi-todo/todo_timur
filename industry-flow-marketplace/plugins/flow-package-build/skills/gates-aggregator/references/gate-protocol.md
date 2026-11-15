@@ -25,6 +25,10 @@
 
 Підсумок кроку виводиться з таблиці механічно: APPROVE лише якщо всі п'ять гейтів APPROVE (по кожній редакції `editions` окремо); при `editions: both` і недоступній EE — `APPROVE (CE); EE не перевірено` (`ee` = `WARN: EE не перевірено`, `partial: true`) — правила в SKILL.md, «Редакції CE/EE». BLOCK за AGPL/EE-залежністю — серйозність правки (код A-11), а не вердикт гейта.
 
+## Скіл-гейт недоступний у сесії
+
+Дзеркало A-17b. Гейт без скіла в каталозі сесії (`pr-review`, `security-review`, `config-review`, `track-convergence`, `boost:odoo19-lint`) не дає «збій виконання»: AI проходить чек-лист гейта сам; у CHECKS.md вердикт (APPROVE / правки) + позначка «виконано AI без скіла гейта»; рядок AI-NN з ризиком; рядок MANUAL для Архітектора; `result: done`, `partial: true`. Допустимі підсумки CHECKS.md для споживачів (demo-base-builder Крок 0 п.4, product-decision-drafter Крок 1): `APPROVE`, `APPROVE (CE); EE не перевірено`, будь-який із них + «без скіла гейта». Збій виконання лишається лише для гейта, що має скіл, але не дав вердикту.
+
 ## Перенесення вердикту (лише режим `перевірка`)
 Попередній CHECKS.md з SHA гейтів `P`. Для кожного обсягу:
 - `git diff --quiet P HEAD -- package/addons/` -> вердикти pr-review, security-review і lint-частини addons

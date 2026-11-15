@@ -72,6 +72,15 @@ class T(unittest.TestCase):
         r = self.check(template() + "\nписав test@example.com, +380 67 123 45 67\n")
         self.assertEqual(r["SD-pii"]["status"], "FAIL")
 
+    def test_kbcodes(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "support-log.md"; f.write_text(template(), encoding="utf-8")
+            ok = Path(d) / "draft-ok.md"; ok.write_text("Добрий день, перевірте налаштування складу.", encoding="utf-8")
+            bad = Path(d) / "draft-bad.md"; bad.write_text("Див. KB-012, сценарій DG-03 і AI-7.", encoding="utf-8")
+            self.assertEqual(run(f, "--drafts", str(ok))["SD-kbcodes"]["status"], "PASS")
+            self.assertEqual(run(f, "--drafts", str(bad))["SD-kbcodes"]["status"], "FAIL")
+            self.assertEqual(run(f)["SD-kbcodes"]["status"], "SKIP")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

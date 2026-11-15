@@ -28,7 +28,7 @@ PII = [  # pii-patterns.md; (тип, regex, статус при client_data != n
     ("edrpou", re.compile(r"ЄДРПОУ\D{0,5}\d{8}\b", re.I), "FAIL"),
     ("phone", re.compile(r"(?<![\w:])(?!\+?380[\s()-]?00(?!\d))(\+?380[\s()-]?\d{2}[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?!\w)"), "FAIL"),
     ("phone-bare", re.compile(r"(?<![\w:.,/-])(0\d{9})(?![\w.,/-])"), "WARN"),
-    ("secret", re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*\S+", re.I), "FAIL"),
+    ("secret", re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*(?!os\.environ|os\.getenv|[\x22\x27]?\$)\S+", re.I), "FAIL"),
 ]
 
 
@@ -49,7 +49,7 @@ class Ctx:
 
 
 def git(ctx, *args):
-    p = subprocess.run(["git", "-c", "core.quotepath=off", "-C", ctx.repo, *args], capture_output=True, text=True)
+    p = subprocess.run(["git", "-c", "core.quotepath=off", "-C", ctx.repo, *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return p.returncode, p.stdout
 
 
@@ -1230,6 +1230,16 @@ def selftest():
     assert sch["VP-01"]["allowed"] == ["a", "b"] and not deprecated(sch["VP-01"]) and deprecated(sch["VP-02"])
     assert "VP-01" in parse_schema("edition:\n  a: b\ncontract_mode: x\nVP-01:\n  param: A\nelearning:\n  mode: m\n") and len(parse_schema("edition:\n  a: b\nVP-01:\n  param: A\n")) == 1
     selftest_template_headings()
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as _d:  # не-UTF-8 вивід git не валить autocheck
+        subprocess.run(["git", "-C", _d, "init", "-q", "-b", "main"], check=True)
+        subprocess.run(["git", "-C", _d, "config", "user.email", "t@example.test"], check=True)
+        subprocess.run(["git", "-C", _d, "config", "user.name", "t"], check=True)
+        open(os.path.join(_d, "a.csv"), "wb").write(b"\x89PNG\r\n\x1a\n \xff\xfe")
+        subprocess.run(["git", "-C", _d, "add", "."], check=True)
+        subprocess.run(["git", "-C", _d, "commit", "-q", "-m", "x"], check=True)
+        class _C: repo = _d
+        assert git(_C, "show", "HEAD:a.csv")[0] == 0
     t = tables("| AC | трек |\n|---|---|\n| AC-01 | конфіг |\n")[0]
     assert t["rows"][0]["cells"] == ["AC-01", "конфіг"] and colidx(t["hdr"], ["ac"]) == 0
     assert SHA_RE.search("SHA: abc1234").group(2) == "abc1234"

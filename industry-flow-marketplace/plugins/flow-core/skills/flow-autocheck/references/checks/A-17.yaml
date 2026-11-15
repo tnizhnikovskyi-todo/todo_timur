@@ -40,6 +40,7 @@
     "to": "extract:head:package/ACCEPTANCE.md",
     "allow": [
      "package/CHECKS.md",
+     "package/templates/CHECKS.md",
      "package/ACCEPTANCE.md",
      "package/demo/**",
      "package/templates/demo-README.md",
