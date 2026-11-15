@@ -404,6 +404,22 @@
         "evals/fixtures/user-guide-v041-neg/user-guide/",
         "evals/fixtures/user-guide-v041-neg/addons/"
       ]
+    },
+    {
+      "id": "v041-menu-override-and-fragment-negation",
+      "prompt": "Перевизначення груп меню й заперечення в сусідньому реченні: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-override/user-guide --spec evals/fixtures/user-guide-v041-override/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-override/addons --answers evals/fixtures/user-guide-v041-override/answers.yaml --config evals/fixtures/user-guide-v041-override/CONFIG.md --role-groups evals/fixtures/user-guide-v041-override/plan.md --odoo-src evals/fixtures/user-guide-v041-override/odoo-src. Фікстура: чотири стандартні меню purchase (groups=purchase_manager), td_x/security/overrides.xml змінює їхні групи записами ir.ui.menu без name: Command.link(group_mgr), Command.set([purchase_user]), (3, purchase_manager), (4, group_sign). Крок 8 клітинки: «Відкрийте «Обмін з BAS». Меню «Сканувати етикетки» комірник не бачить».",
+      "expected_output": "UG-access FAIL рівно з двома пунктами: «Звіт чотири» (додано групу підпису, якої немає в ролі) і «Обмін з BAS» (заперечення в сусідньому реченні його не вимикає). «Звіт один/два/три» не дають FAIL (link додає групу ролі, set замінює, unlink знімає), «Сканувати етикетки» пропущено як заперечене.",
+      "assertions": [
+        "UG-access = FAIL, items містять «Звіт чотири» і «Обмін з BAS» і більше нічого",
+        "«Звіт один», «Звіт два», «Звіт три» не в items",
+        "«Сканувати етикетки» не в items",
+        "джерело — img/ROLE-GROUPS.json, не plan.md"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-override/user-guide/",
+        "evals/fixtures/user-guide-v041-override/addons/",
+        "evals/fixtures/user-guide-v041-override/odoo-src/"
+      ]
     }
   ]
 }

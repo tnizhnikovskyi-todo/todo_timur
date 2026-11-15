@@ -1,0 +1,34 @@
+msgid ""
+msgstr ""
+"Language: uk\n"
+
+msgid "Furniture Stock"
+msgstr "Склад меблів"
+
+msgid "BAS Exchange"
+msgstr "Обмін з BAS"
+
+msgid "Send to BAS"
+msgstr "Передати в BAS"
+
+msgid "Acts"
+msgstr "Акти"
+
+msgid "Finance TD"
+msgstr "Фінансист td"
+
+msgid "Upload the file first."
+msgstr "Спершу завантажте файл."
+
+msgid "Only the finance role runs the exchange."
+msgstr "Обмін з BAS запускає лише фінансист."
+
+
+msgid "Scan labels"
+msgstr "Сканувати етикетки"
+
+msgid "Cash desk"
+msgstr "Каса"
+
+msgid "Cancel confirmed"
+msgstr "Скасувати підтверджені"

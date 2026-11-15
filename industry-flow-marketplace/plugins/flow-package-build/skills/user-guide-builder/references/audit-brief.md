@@ -3,7 +3,7 @@
 Запуск: після самоперевірки, обов'язково (блок `review:` наряду; `flow-core:flow-reviewer`, інша модель, ніж виконавець). Рецензентів **3**, паралельно,
 кожен складає **власний перелік із джерел** (не з таблиць INDEX і не з розділів посібника), а потім звіряє з посібниками. Рецензент має Read/Grep/Glob;
 runner передає шляхи: `package/docs/user-guide/` (INDEX, admin.md, `<роль>.md`, cards/, reference/messages.md, img/, shoot-plan.json), `package/addons/td_*`,
-`package/config/CONFIG.md`, `package/templates/answers.yaml`, `package/demo/plan.md`, `package/demo/README.md`, `package/ACCEPTANCE.md`, концепція (`F-xx`, `scenarios.md`),
+`package/config/CONFIG.md`, `package/templates/answers.yaml`, `package/demo/plan.md`, `package/docs/user-guide/img/ROLE-GROUPS.json`, `package/demo/README.md`, `package/ACCEPTANCE.md`, концепція (`F-xx`, `scenarios.md`),
 лог туру A-16 і вихідники Odoo 19.0 (uk.po, security).
 
 ## Кут (а) — новий адміністратор, наскрізно `admin.md`
@@ -14,7 +14,7 @@ runner передає шляхи: `package/docs/user-guide/` (INDEX, admin.md, `
 
 ## Кут (б) — працівник кожної ролі, цикл замовлення
 Для кожної ролі: перелік дій у життєвому циклі замовлення складається з SPEC/концепції/коду, не з INDEX. Для кожної дії: названо в посібнику роли? кадр знято під
-логіном цієї ролі (SHOOT-LOG, shoot-plan.json)? меню/кнопка доступні групам ролі (`plan.md` + `groups` у XML, `implied_ids`)? дія не падає з AccessError (sudo, ACL)?
+логіном цієї ролі (SHOOT-LOG, shoot-plan.json)? меню/кнопка доступні групам ролі (групи ролі — з `img/ROLE-GROUPS.json` зі стенда (`plan.md` — запасне) + `groups` у XML, `implied_ids`)? дія не падає з AccessError (sudo, ACL)?
 кадри не прямим URL? Передача між ролями (хто бачить результат попередньої ролі) описана? Повідомлення системи цієї ролі — у `reference/messages.md`.
 
 ## Кут (в) — переліки з коду, F/AC, ACCEPTANCE

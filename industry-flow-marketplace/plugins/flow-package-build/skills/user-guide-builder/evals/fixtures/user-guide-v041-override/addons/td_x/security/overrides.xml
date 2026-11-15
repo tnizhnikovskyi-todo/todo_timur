@@ -1,0 +1,15 @@
+<odoo>
+  <!-- перевизначення груп стандартних меню записом ir.ui.menu без name -->
+  <record id="purchase.menu_r1" model="ir.ui.menu">
+    <field name="group_ids" eval="[Command.link(ref('group_mgr'))]"/>
+  </record>
+  <record id="purchase.menu_r2" model="ir.ui.menu">
+    <field name="group_ids" eval="[Command.set([ref('purchase.group_purchase_user')])]"/>
+  </record>
+  <record id="purchase.menu_r3" model="ir.ui.menu">
+    <field name="group_ids" eval="[(3, ref('purchase.group_purchase_manager'))]"/>
+  </record>
+  <record id="purchase.menu_r4" model="ir.ui.menu">
+    <field name="group_ids" eval="[(4, ref('group_sign'), 0)]"/>
+  </record>
+</odoo>

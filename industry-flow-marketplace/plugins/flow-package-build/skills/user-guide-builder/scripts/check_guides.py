@@ -66,6 +66,42 @@ OTHER_ROLE = re.compile(r"\(\s*(?:у|в|для)\s+[^()—–:]{2,40}?\s*[—–:
 ADMIN_LOGIN = re.compile(r"(?i)^(admin|administrator|root|__system__)(@.*)?$")
 
 
+def step_text(line):
+    """Текст доручення кроку: для рядка таблиці — лише клітинка «Дія» (колонку результату/кадру не розбираємо), для нумерованого списку — увесь рядок."""
+    if line.lstrip().startswith("|"):
+        cells = line.strip().strip("|").split("|")
+        return cells[1] if len(cells) > 1 else ""
+    return line
+
+
+def split_fragments(text):
+    """Речення/фрагменти за . ; ! ? поза лапками «…»."""
+    out, cur, depth = [], "", 0
+    for ch in text:
+        cur += ch
+        if ch == "«":
+            depth += 1
+        elif ch == "»":
+            depth = max(0, depth - 1)
+        elif ch in ".;!?" and depth == 0:
+            out.append(cur)
+            cur = ""
+    out.append(cur)
+    return [f for f in out if f.strip()]
+
+
+def step_names(line):
+    """Назви «…» кроку, згадані як доручення: фрагменти із запереченням (NEGATION) відкидаються поодинці, а не весь крок."""
+    names = []
+    for fr in split_fragments(OTHER_ROLE.sub(" ", step_text(line))):
+        if NEGATION.search(fr):  # «не бачить», «лише в режимі розробника», «скасовує керівник»: назва згадана як те, чого роль НЕ робить
+            continue
+        sm = re.search(r"смарт-кнопк\w*", fr, re.I)  # назви після «смарт-кнопки …:» — кнопки, не меню (збіг назви зі стандартним меню — не доручення меню)
+        head, tail = (fr[:sm.start()], fr[sm.start():]) if sm else (fr, "")
+        names += [(n, False) for n in re.findall(r"«([^»]+)»", head)] + [(n, True) for n in re.findall(r"«([^»]+)»", tail)]
+    return names
+
+
 def unq(s):
     return s.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
 
@@ -132,9 +168,40 @@ def parse_security(path, mod, groups):
                     g["implied"].append(qual(mod, fl.get("ref")))
 
 
+_GOP = re.compile(r"Command\.(link|set|unlink|clear)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)|\(\s*(4|6|3|5)\s*(?:,([^()]*(?:\([^()]*\)[^()]*)*))?\)")
+
+
+def group_ops(ev, mod):
+    """eval поля groups_id/group_ids -> [(op, [групи])], op: add (Command.link/(4,id)), set (Command.set/(6,0,[..])), remove (Command.unlink/(3,id)), clear."""
+    ops = []
+    for m in _GOP.finditer(ev or ""):
+        kind = m.group(1) or {"4": "link", "6": "set", "3": "unlink", "5": "clear"}[m.group(3)]
+        refs = [qual(mod, r_) for r_ in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", m.group(2) if m.group(1) else (m.group(4) or ""))]
+        ops.append(({"link": "add", "set": "set", "unlink": "remove", "clear": "clear"}[kind], refs))
+    if not ops and ev:  # простий список ref(...) без Command — як заміна
+        refs = [qual(mod, r_) for r_ in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", ev)]
+        if refs:
+            ops.append(("set", refs))
+    return ops
+
+
+def apply_group_ops(cur, ops):
+    cur = list(cur)
+    for op, gs in ops:
+        if op == "add":
+            cur += [g for g in gs if g not in cur]
+        elif op == "set":
+            cur = list(gs)
+        elif op == "remove":
+            cur = [g for g in cur if g not in gs]
+        elif op == "clear":
+            cur = []
+    return cur
+
+
 def collect_td_ui(addons):
     """Меню, кнопки й групи модулів td_* з XML: {menus, buttons, groups}."""
-    menus, buttons, groups, unresolved = [], [], {}, []
+    menus, buttons, groups, unresolved, overrides = [], [], {}, [], []
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".xml"):
             parse_security(path, mod, groups)
@@ -148,16 +215,19 @@ def collect_td_ui(addons):
                     menus.append({"id": qual(mod, el.get("id") or ""), "name": el.get("name"), "parent": qual(mod, el.get("parent")) if el.get("parent") else None,
                                   "groups": split_groups(el.get("groups"), mod), "mod": mod})
                 elif el.tag == "record" and el.get("model") == "ir.ui.menu":
-                    m = {"id": qual(mod, el.get("id") or ""), "name": None, "parent": None, "groups": [], "mod": mod}
+                    m = {"id": qual(mod, el.get("id") or ""), "name": None, "parent": None, "groups": [], "mod": mod, "group_ops": None}
                     for fl in el.findall("field"):
                         if fl.get("name") == "name" and (fl.text or "").strip():
                             m["name"] = fl.text.strip()
                         elif fl.get("name") == "parent_id" and fl.get("ref"):
                             m["parent"] = qual(mod, fl.get("ref"))
                         elif fl.get("name") in ("groups_id", "group_ids"):
-                            m["groups"] = [qual(mod, r_) for r_ in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", fl.get("eval") or "")]
+                            m["group_ops"] = group_ops(fl.get("eval"), mod)
+                            m["groups"] = apply_group_ops([], m["group_ops"])
                     if m["name"] and not m["name"].startswith("%"):
                         menus.append(m)
+                    elif not m["name"] and m["id"] and m["group_ops"]:  # без name: перевизначення меню (групи стандартного чи чужого меню), у by_name не потрапляє
+                        overrides.append(m)
                 elif el.tag == "button" and (el.get("string") or el.get("name")):
                     chain, smart, header = [], False, False
                     p_ = pm.get(el)
@@ -177,7 +247,7 @@ def collect_td_ui(addons):
                             unresolved.append({"mod": mod, "action": el.get("name") or "", "file": os.path.relpath(path, addons)})
                     if label and not label.startswith("%"):
                         buttons.append({"name": label, "groups": split_groups(el.get("groups"), mod), "smart": smart, "header": header, "mod": mod, "action": el.get("name") or ""})
-    return {"menus": menus, "buttons": buttons, "groups": groups, "smart_unresolved": unresolved}
+    return {"menus": menus, "buttons": buttons, "groups": groups, "smart_unresolved": unresolved, "menu_overrides": overrides}
 
 
 def std_modules(a):
@@ -237,6 +307,17 @@ def demo_implied(a, groups):
                     parse_security(os.path.join(dp, f), m, groups)
 
 
+def mod_installable_ce(a, mod):
+    """Модуль td_* ставиться на CE: усі depends є в td_-аддонах чи у вихідниках --odoo-src. EE-мости (depends: helpdesk, quality_control, …) на CE-стенді не встановлені — їхні перевизначення меню не діють."""
+    if not a.odoo_src or not a.addons:
+        return True
+    try:
+        deps = ast.literal_eval(open(os.path.join(a.addons, mod, "__manifest__.py"), encoding="utf-8").read()).get("depends", [])
+    except (OSError, ValueError, SyntaxError):
+        return True
+    return all(d.startswith("td_") or any(os.path.isdir(os.path.join(r_, d)) for r_ in std_roots(a.odoo_src)) for d in deps)
+
+
 def collect_std_menus(a):
     """Меню стандартних модулів із --odoo-src: {id: {id, name, parent, groups, mod}}; для ланцюжка батьків UG-access (LESSONS §28а)."""
     out = {}
@@ -275,7 +356,7 @@ def collect_std_menus(a):
                                 elif fl.get("name") == "parent_id" and fl.get("ref"):
                                     e["parent"] = qual(m, fl.get("ref"))
                                 elif fl.get("name") in ("groups_id", "group_ids"):
-                                    e["groups"] += [qual(m, x) for x in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", fl.get("eval") or "")]
+                                    e["groups"] = apply_group_ops(e["groups"], group_ops(fl.get("eval"), m))
             break
     return out
 
@@ -888,11 +969,16 @@ def main():
                     by_name.setdefault(v.lower(), []).append(("меню", sm))
         for m in ui_all["menus"]:
             if m["id"] in std_menus:
-                std_menus[m["id"]]["groups"] += m["groups"]
+                if mod_installable_ce(a, m["mod"]):
+                    std_menus[m["id"]]["groups"] = apply_group_ops(std_menus[m["id"]]["groups"], m.get("group_ops") or [("add", m["groups"])])
             else:
                 menu_by_id[m["id"]] = m
             for v in {m["name"], po_by.get(m["mod"], {}).get(m["name"]) or m["name"]}:
                 by_name.setdefault(v.lower(), []).append(("меню", m))
+        for o in ui_all.get("menu_overrides", []):  # записи ir.ui.menu без name: link/(4,id) додає, set/(6,0,[..]) замінює, unlink/(3,id) знімає групу
+            tgt = std_menus.get(o["id"]) or menu_by_id.get(o["id"])
+            if tgt is not None and mod_installable_ce(a, o["mod"]):
+                tgt["groups"] = apply_group_ops(tgt["groups"], o["group_ops"])
         for b in ui_all["buttons"]:
             for v in {b["name"], po_by.get(b["mod"], {}).get(b["name"]) or b["name"]}:
                 by_name.setdefault(v.lower(), []).append(("кнопка", b))
@@ -919,10 +1005,8 @@ def main():
             for i, line in enumerate(open(os.path.join(root, n), encoding="utf-8").read().splitlines(), 1):
                 if not STEP_LINE.match(line):
                     continue
-                if NEGATION.search(line):  # «не бачить», «лише в режимі розробника», «скасовує керівник»: назва згадана як те, чого роль НЕ робить
-                    continue
-                for nm in re.findall(r"«([^»]+)»", OTHER_ROLE.sub(" ", line)):
-                    cands = by_name.get(nm.strip().lower())
+                for nm, btn_only in step_names(line):
+                    cands = [c_ for c_ in (by_name.get(nm.strip().lower()) or []) if not btn_only or c_[0] == "кнопка"]
                     if not cands:
                         continue
                     res_ = [(k, it) + reach(it, k, rg_) for k, it in cands]
@@ -935,7 +1019,11 @@ def main():
                             warn_inc.append(msg_)
                         elif msg_ not in bad:
                             bad.append(msg_)
-        msg = ([f"крок доручає ролі те, чого роль не бачить (усього {len(bad)}): " + "; ".join(bad) + " — дефект у defects.md і повернення A-11/A-12 (код/права), не обхід текстом"] if bad else []) \
+        if bad and not from_stand:  # plan.md — запасне джерело: FAIL має дві можливі причини
+            route = f"джерело груп — {rg_src} (запасне, може бути застарілим): причини дві — (1) права справді не видано в коді/конфігу, (2) plan.md не збігається зі стендом; спершу зніміть img/ROLE-GROUPS.json зі стенда (shoot.mjs) і повторіть, на A-11/A-12 повертайте лише коли FAIL підтверджено групами зі стенда"
+        else:
+            route = "дефект у defects.md і повернення A-11/A-12 (код/права), не обхід текстом"
+        msg = ([f"крок доручає ролі те, чого роль не бачить (усього {len(bad)}): " + "; ".join(bad) + " — " + route] if bad else []) \
             + ([f"немає груп для ролей: {', '.join(warn_roles)} (додайте в {os.path.basename(rg_src)})"] if warn_roles else []) \
             + ([f"функції коробки (група вмикається параметром, не роллю; перевірте VP; усього {len(set(warn_feat))}): " + "; ".join(sorted(set(warn_feat)))] if warn_feat else []) \
             + ([f"перелік груп неповний («…»/«+» у plan.md; джерело {rg_src}), можливі пропуски (усього {len(set(warn_inc))}): " + "; ".join(sorted(set(warn_inc))) + " — зніміть групи зі стенда (shoot.mjs → img/ROLE-GROUPS.json)"] if warn_inc or rg_incomplete else []) \

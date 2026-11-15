@@ -1,0 +1,7 @@
+<odoo>
+  <menuitem id="purchase_report_main" name="Reporting" parent="purchase.menu_purchase_root" sequence="99"/>
+  <menuitem id="menu_r1" name="Звіт один" parent="purchase.purchase_report_main" groups="purchase.group_purchase_manager"/>
+  <menuitem id="menu_r2" name="Звіт два" parent="purchase.purchase_report_main" groups="purchase.group_purchase_manager"/>
+  <menuitem id="menu_r3" name="Звіт три" parent="purchase.purchase_report_main" groups="purchase.group_purchase_manager"/>
+  <menuitem id="menu_r4" name="Звіт чотири" parent="purchase.purchase_report_main" groups="purchase.group_purchase_manager"/>
+</odoo>
