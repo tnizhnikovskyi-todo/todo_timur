@@ -1,0 +1,45 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-11",
+ "extra_allowed": ["tests/reports/", "docs/industries/*/research/AI-DECISIONS.md"],
+ "checks": [
+  {
+   "id": "scope-addons-only",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/addons/",
+     "docs/industries/*/research/AI-DECISIONS.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "addons-exist",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/addons/"
+    ]
+   }
+  },
+  {
+   "id": "version-manifests",
+   "prim": "manual",
+   "args": {
+    "text": "версія `td_<галузь>_*` у __manifest__.py = 19.0.<X.Y пакета>.0 (спільні td_home_menu, td_support, td_knowledge — власна версія, виняток); `version_eq` між маніфестами й ТР/ACCEPTANCE перевіряє A-14/A-17",
+    "who": "runner"
+   }
+  },
+  {
+   "id": "tests-lint",
+   "prim": "manual",
+   "args": {
+    "text": "тести модулів (run_tests.sh) і boost:odoo19-lint по зміненим модулям: результат у звіті `checks`",
+    "who": "runner"
+   }
+  }
+ ]
+}

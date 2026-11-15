@@ -24,7 +24,7 @@
 | `keys_diff_eq` | `file`, `changelog`, `heading` | ключі VP, додані чи позначені `deprecated` між `prev` і `head` = VP розділу CHANGELOG |
 | `example_valid` | — | `answers.example.yaml` проти схеми (`# schema: 1`, ключі, `default`, `allowed`, `min..max`, не «уточнити») власним розбором за `answers-schema.md` |
 | `exists` / `vendored_license` / `addons_in_text` | шляхи / — / `ref` | непорожні файли; ліцензія у вендореному модулі (тека `package/addons/*` не `^td_`); теки `package/addons/*` згадані в тексті |
-| `allocation_coverage` | — | теки `package/addons/*` ↔ колонка «модуль Odoo» ALLOCATION; модулі з треком код/готове мають теку; кожен файл `package/config/` згаданий у CHECKS.md |
+| `allocation_coverage` | — | теки `package/addons/*` ↔ колонка «модуль Odoo» ALLOCATION; модулі з треком код/готове мають теку; кожен файл `package/config/` згаданий у CHECKS.md; ALLOCATION не вимагає спільних вендорених (§27/§27а: `td_home_menu`, `td_support`, `td_knowledge`) і `td_*_(demo\|elearning\|knowledge)` |
 | `grep_clients` | — | ідентифікатори з `clients/REGISTRY.md` (колонка «ідентифікатор клієнта», ≥4 символів) у `package/` через `git grep`; `шлях:рядок` без витягу; немає клієнтів — `SKIP` |
 | `section_contains` | `ref`, `heading`, `patterns` | розділ містить усі патерни |
 | `signature_by_ai` | `file`, `heading` | блок з позначкою «внесено AI від імені власника» (E6) → `PASS`; інакше блок змінено комітом, автор якого збігається з `--agent-pattern` → `FAIL`; патерну немає → `MANUAL` |
@@ -58,7 +58,7 @@
 - **A-16b / A-17b / A-17c** (0.4.0): A-16b — `index-exists`, `index-headings`, `check_guides.py` (UG-cover, UG-cover-dev, UG-cover-admin, UG-img, UG-sha, UG-lang), `demo-sha`, `no-pii`; A-17b — `module-exists`, `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang), тести модуля, `cert-claim` (MANUAL); A-17c — `support-exists`, `check_kb.py` (KB-module, KB-ids, KB-route, KB-privacy), `no-client-ids`. Скрипти живуть у скілах `flow-package-build` і викликаються рядками `manual who: runner`. A-17 (+`owner-tests-stand`, `user-guide-exists`), A-15 (+`no-db-binaries-tree`, `tree: package/`); `git_diff_allowed` не рахує службові шляхи тестового репо (`.claude/`, `industry-flow-marketplace/`, `CLAUDE.md`, `TEST-START.md`, `START-HERE.md`) і видалення бінарників баз; A-18 (diff-allowed-7 дозволяє `package/demo/.gitignore`, `package/docs/user-guide/**`, `package/addons/td_*_elearning/**`, `package/support/**`).
 - **E3 (A-20/A-21)**: `rejected-vs-code` (REJECTED ↔ код td_*), `plan-modules-exist`, `kpi-count`, `box-eq` — примітиви `no_rejected_in_code`, `plan_modules_exist`, `value_eq`.
 - **C-08R**: `lessons-index`, `check_lessons`, формат LSN, `no-pii`.
-- **A-16** (відкладено): `Сценарій N` ТР ↔ рядки scenarios.md; специфікації немає → `spec-missing`.
+- **A-11 / A-16** (0.4.0, мінімальні): A-11 — `scope-addons-only`, `addons-exist`, manual (версії маніфестів, тести й lint); A-16 — `scenarios-exist`, `scope-tours`, `scenarios-sha` (scenarios.md ↔ demo/README.md), manual (тури). Повна відповідність `Сценарій N` ТР ↔ рядки scenarios.md — відкладена.
 
 ## Скрипти перевірок галузі (flow-autocheck/scripts, `python3 -I`, вихід JSON `[{id,status,msg}]`, код 1 при FAIL)
 Запускає runner за `args.cmd` специфікації кроку (див. «`args.cmd`» нижче); `autocheck.py --selftest` проганяє їх на `evals/fixtures/<скрипт>-ok|-bad/`.

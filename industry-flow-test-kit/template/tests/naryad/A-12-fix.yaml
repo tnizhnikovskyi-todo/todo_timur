@@ -12,7 +12,7 @@ inputs:
   - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: HEAD}
 where: package/config/
 template: "немає — форма за SKILL.md"
-done: "package/config/ оновлено: «Модулі до установки» містить td_home_menu, td_support, td_knowledge (ce+ee) і td_mebli_knowledge у порядку залежностей (рядок AI-NN); install-log.md"
+done: "package/config/ оновлено: «Модулі до установки» містить td_home_menu (лише ce, §27; в ee не вносити), td_support, td_knowledge (ce+ee) і td_mebli_knowledge у порядку залежностей (рядок AI-NN); install-log.md"
 check: {mode: both, how: "flow-autocheck: checks/A-12.yaml + скрипти скіла", audit_every_n: 10}
 limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
 client_data: none

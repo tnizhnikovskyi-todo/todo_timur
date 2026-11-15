@@ -1,0 +1,48 @@
+# Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
+{
+ "step": "A-16",
+ "extra_allowed": ["tests/reports/", "docs/industries/*/research/AI-DECISIONS.md"],
+ "checks": [
+  {
+   "id": "scenarios-exist",
+   "prim": "exists",
+   "args": {
+    "paths": [
+     "package/demo/scenarios.md"
+    ]
+   }
+  },
+  {
+   "id": "scope-tours",
+   "prim": "git_diff_allowed",
+   "args": {
+    "from": "base",
+    "to": "head",
+    "allow": [
+     "package/demo/scenarios.md",
+     "package/demo/defects.md",
+     "docs/industries/*/research/AI-DECISIONS.md",
+     "observations/"
+    ]
+   }
+  },
+  {
+   "id": "scenarios-sha",
+   "prim": "sha_eq",
+   "args": {
+    "refs": [
+     "head:package/demo/scenarios.md",
+     "head:package/demo/README.md"
+    ]
+   }
+  },
+  {
+   "id": "tours-run",
+   "prim": "manual",
+   "args": {
+    "text": "тури по кожному сценарію ТР пройдено на стенді SHA з README.md; дефекти — рядки `package/demo/defects.md` з маршрутом повернення (A-14 / A-15)",
+    "who": "runner"
+   }
+  }
+ ]
+}

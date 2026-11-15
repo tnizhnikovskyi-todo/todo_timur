@@ -154,7 +154,7 @@ description: >
 | CM-pii | email, телефон, суми, ЄДРПОУ/IBAN, ПІБ (`flow-core/references/pii-patterns.md`) | email/телефон/сума/ЄДРПОУ/IBAN — FAIL; ПІБ — **MANUAL** (хибні спрацьовування: посади/процеси); при MANUAL у `memo` «CM-pii MANUAL: <файл>, що це», справжнє ПІБ прибрати |
 | CM-args | передано `--research` і `--intake` (або явний `--concept-only`) | немає — нові перевірки не виконувались |
 | CM-research | `research/BOX.md` §1–13, `SALES.md` §1–7, `REJECTED.md`, `AI-DECISIONS.md` (OWNER-BRIEF не вимагається) | немає файлу/розділу |
-| CM-box-core | `research/BOX.md` не називає `td_home_menu` і `td_support` (обов'язкові складові кожної коробки, §27) | немає назви |
+| CM-box-core | `research/BOX.md` не називає `td_home_menu` і `td_support` (обов'язкові складові кожної коробки, §27; §27а (`td_knowledge`, `td_<галузь>_knowledge`): наступний прохід після 0.4.0 -- до нього перевірка CM-box-core їх не вимагає, але в складі збірки (A-12, A-18) вони є.) | немає назви |
 | CM-buyer | є роль `[покупець]`; вона має екран «Зведення» і сценарій | покупця немає, без екрана-дашборда чи сценарію |
 | CM-roles-scenarios | кожна роль має SC; кожна F (не «знято») — у кроці SC; екран у SC містить роль SC | роль без сценарію, F без кроку, роль не з екрана |
 | CM-base-edition | колонка «Основа» екрана ∈ `Стд CE · Стд EE · td_ · ToDo-готовий · Інтегр` | колонки немає, порожньо, «OCA» тощо |

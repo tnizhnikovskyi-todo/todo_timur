@@ -10,7 +10,7 @@ params: {}
 inputs:
   - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
   - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: HEAD}
-where: package/demo/, docs/industries/mebli/research/AI-DECISIONS.md
+where: package/demo/, package/templates/demo-README.md, docs/industries/mebli/research/AI-DECISIONS.md
 template: "немає — форма за SKILL.md"
 done: "повний цикл demo-base-builder: скрипти підйому/скидання й профілі CE/EE з новим переліком модулів (td_home_menu, td_support, td_knowledge, td_<галузь>_knowledge); стенд піднято up.sh; мітки SHA в README, scenarios.md оновлено; zip бази видалено за R-22; тури й сценарії A-16 буде перезапущено наступним нарядом; рядок у AI-DECISIONS"
 check: {mode: both, how: "flow-autocheck: checks/A-15.yaml + скрипти скіла", audit_every_n: 10}

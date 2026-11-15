@@ -113,8 +113,17 @@ def main():
         pg = [t for t in texts.values() if re.search(r"^module:\s*" + re.escape(m) + r"\s*$", t, re.M)]
         if pg and "звірити після злиття A-17b" not in pg[0]:
             msg.append(f"{m}: немає позначки «звірити після злиття A-17b»")
-    add("KB-merge", "FAIL" if msg else ("PASS" if expected else "SKIPPED"),
-        "; ".join(msg) if msg else ("" if expected else "немає --expect-module"))
+    stale = []  # модуль уже в addons, а позначка лишилась: власник знімання — A-17c (наступний запуск) або WARN тут
+    for m in mods:
+        if m in expected:
+            continue
+        pg = [t for t in texts.values() if re.search(r"^module:\s*" + re.escape(m) + r"\s*$", t, re.M)]
+        if pg and "звірити після злиття A-17b" in pg[0]:
+            stale.append(m)
+    status = "FAIL" if msg else ("WARN" if stale else ("PASS" if expected else "SKIPPED"))
+    if stale:
+        msg.append("модуль уже в addons, позначка «звірити після злиття A-17b» лишилась: звір сторінку з кодом і зніми позначку (" + ", ".join(sorted(stale)) + ")")
+    add("KB-merge", status, "; ".join(msg) if msg else ("" if expected else "немає --expect-module"))
 
     # KB-route
     msg, total = [], 0

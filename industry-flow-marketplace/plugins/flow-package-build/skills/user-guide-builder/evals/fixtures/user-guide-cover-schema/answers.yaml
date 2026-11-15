@@ -14,3 +14,21 @@ VP-02:
   type: str
   allowed: null
   default: WH1
+edition:
+  param: edition
+  question: Редакція Odoo
+  type: str
+  allowed: [ce, ee]
+  default: ce
+  default_from: null
+  ac: [AC-01]
+  deprecated: false
+contract_mode:
+  param: contract_mode
+  question: Режим договору
+  type: str
+  allowed: [a, b]
+  default: a
+  default_from: edition
+  ac: [AC-01]
+  deprecated: false

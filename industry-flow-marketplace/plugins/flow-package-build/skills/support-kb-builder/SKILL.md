@@ -62,7 +62,7 @@ Odoo/прод не використовується: знання берутьс
 9. **Автоперевірка**; виправне — виправити до `max_attempts`.
 
 ## Запис
-Лише `package/support/{AI-INSTRUCTIONS.md, INDEX.md, kb/KB-NNN-*.md}` і (виняток) `package/demo/defects.md`: дефект модуля, знайдений під час A-17c -> рядок у `package/demo/defects.md` з маршрутом A-14, `result: returned`; сам модуль не правити. Не змінювати код, SPEC, AI-DECISIONS, user-guide, `triage-routes.md`.
+Лише `package/support/{AI-INSTRUCTIONS.md, INDEX.md, kb/KB-NNN-*.md}` і (виняток) `package/demo/defects.md`: дефект модуля, знайдений під час A-17c -> рядок у `package/demo/defects.md` з маршрутом A-14, `result: returned`; сам модуль не правити. Рішення AI кроку A-17c (рядки з ризиком) — у розділ «Рішення AI» `package/support/INDEX.md` і в `memo`, не в AI-DECISIONS (немає конфлікту номерів AI-NN з паралельним A-17b). Не змінювати код, SPEC, AI-DECISIONS, user-guide, `triage-routes.md`.
 Усі файли — українською. Нумерація `KB-NNN` наскрізна, ID не перевикористовуються між версіями.
 
 ## Автоперевірка
@@ -72,7 +72,7 @@ Odoo/прод не використовується: знання берутьс
 |---|---|---|
 | KB-ai | AI-INSTRUCTIONS.md має розділи «Джерела», «Межі», «Читання проду», «Маршрути», «Діагностика», згадку `prod-ro-<клієнт>` і «лише читання»; у «Маршрути» названо B-13, A-19, D-02; є INDEX.md | немає |
 | KB-module | кожен модуль `td_*` (крім демо-модулів `td_*_demo`: клієнтам не ставляться) з `package/addons/` (+ `--expect-module`) має сторінку `kind: module` + `module: td_x`; сторінок без модуля немає | немає / зайва |
-| KB-merge | сторінка модуля, якого ще немає в addons (паралельний A-17b), має «звірити після злиття A-17b» | немає позначки (SKIPPED без `--expect-module`) |
+| KB-merge | сторінка модуля, якого ще немає в addons (паралельний A-17b), має «звірити після злиття A-17b» | немає позначки (SKIPPED без `--expect-module`); WARN «звір і зніми», якщо модуль уже в addons, а позначка лишилась (знімає наступний запуск A-17c, не A-18) |
 | KB-kinds | є сторінки `kind: architecture`, `limits`, `faq`; limits містить посилання `AI-NN` | немає |
 | KB-ids | файли `KB-NNN-*.md`, ID унікальні, заголовок `# KB-NNN`, є `kind:`, усі в INDEX | дубль/форма |
 | KB-route | кожен `DG-NN` має Симптом/Перевірка/Виправлення/Маршрут, маршрут із таблиці; діагностика існує | немає |

@@ -1,4 +1,4 @@
-# ТЕСТОВИЙ наряд A-14 (0.4.0): повторна перевірка гейтів після змін модулів/конфігу (режим повернення)
+# ТЕСТОВИЙ наряд A-14 (0.4.0): повна перевірка гейтів після змін модулів/конфігу (режим перевірка)
 step: A-14
 scope: {kind: package, id: mebli}
 executor: any
@@ -6,7 +6,7 @@ access_profile: repo
 skill_ref: ["flow-package-build:gates-aggregator@0.4.0"]
 model: sonnet
 effort: medium
-params: {mode: повернення}
+params: {mode: перевірка}
 inputs:
   - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: HEAD}
 where: package/CHECKS.md

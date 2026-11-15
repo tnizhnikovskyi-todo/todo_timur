@@ -9,8 +9,9 @@ UG-pii (на знімках немає чужих даних), lint.
   --id-pattern: регулярний вираз ID сценарію (за замовчуванням SC-NN; для SPEC з UC-NN/іншим форматом — свій).
   --stand-sha: SHA_STAND з package/demo/README.md (SHA стенда A-15; == SHA в INDEX.md, scenarios.md, ACCEPTANCE.md); без нього UG-sha = SKIPPED.
           --modules-sha — застарілий псевдонім. Свіжість знімків (код пакета = SHA_CHECKS з package/CHECKS.md) — окремо:
-          git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'
-          (SHA_CHECKS з package/CHECKS.md; код 0 = знімки актуальні).
+          git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning' ':!package/config/manifest.yaml' ':!package/config/CONFIG.md'
+          (SHA_CHECKS з package/CHECKS.md; код 0 = знімки актуальні). manifest.yaml/CONFIG.md виключено: A-17b дописує в них навчання;
+          окремо їх diff без рядків website_slides/_elearning має бути порожнім.
         [--addons package/addons] [--answers package/templates/answers.yaml [--answers package/demo/profiles/<профіль>.yaml]] [--config package/config/CONFIG.md]
   --addons: UG-cover-dev (§26а, «розроблене»): кожне меню, дія вікна й звіт (menuitem / ir.actions.act_window / ir.actions.report з XML модулів td_*,
           крім td_*_elearning і td_*_demo; включно зі спільними td_home_menu, td_support, td_knowledge) має назву (українську з i18n/uk.po або вихідну, цілим словом) в тексті посібників
@@ -29,7 +30,7 @@ SRC_LINE = re.compile(r"Джерело сценаріїв:\s*(\S+)")
 IMG = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
 SHA_LINE = re.compile(r"SHA\s+стенда\W{0,6}([0-9a-f]{7,40})\b", re.I)
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
-DEFAULT_ALLOW = {"Odoo", "PDF", "CSV", "Excel", "QR", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
+DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
 STEP_LINE = re.compile(r"^\s*(\|\s*\d+\s*\||\d+[.)]\s)")
 ADMIN_HEADERS = ["параметри", "профілі", "редакції", "перший запуск"]
 CARD_MAX_LINES = 45
@@ -264,10 +265,12 @@ def main():
                 if v and re.search(r"(?<!\w)" + re.escape(v.lower()) + r"(?!\w)", body):
                     return True
             return False
-        miss = sorted(f"{m}: «{n}»" for n, m in items.items() if not named(n))
+        miss = sorted(f"{m}: «{n}»" + (f" → «{po[n]}»" if po.get(n) and po[n] != n else "") for n, m in items.items() if not named(n))
         noidx = [] if re.search(r"(?mi)^##\s*Покриття:\s*розроблене", index) else ["в INDEX немає таблиці «## Покриття: розроблене»"]
-        msg = noidx + ([f"немає в посібниках: {', '.join(miss[:12])}" + (f" (+{len(miss) - 12})" if len(miss) > 12 else "")] if miss else [])
+        msg = noidx + ([f"немає в посібниках ({len(miss)}; «msgid → переклад uk.po» — вжити переклад): {', '.join(miss)}"] if miss else [])
         add("UG-cover-dev", "FAIL" if msg else "PASS", "; ".join(msg))
+        if miss:
+            res[-1]["items"] = miss
     if not a.answers and not a.config:
         add("UG-cover-admin", "SKIPPED", "немає --answers/--config: покриття параметрів і налаштувань в admin.md перевірити вручну")
     else:
@@ -279,12 +282,25 @@ def main():
             def flush():
                 if vp and vp.lower() not in adm_txt and not (vp_param and vp_param.lower() in adm_txt):
                     miss.append(vp + (f" ({vp_param})" if vp_param else ""))
-            for ln in (open(ap2, encoding="utf-8").read().splitlines() if os.path.exists(ap2) else []):
+            lines2 = open(ap2, encoding="utf-8").read().splitlines() if os.path.exists(ap2) else []
+            schema_blocks, cur_b = set(), None  # верхні блоки з полем param:/type: у схемі (edition, contract_mode) — не блоки значень
+            for ln in lines2:
+                mb = re.match(r"^([A-Za-z_][\w-]*)\s*:\s*$", ln)
+                if mb:
+                    cur_b = mb.group(1)
+                elif cur_b and re.match(r"^\s+(param|type)\s*:", ln):
+                    schema_blocks.add(cur_b)
+            for ln in lines2:
                 m_ = re.match(r"^(\s*)([A-Za-z_][\w-]*)\s*:\s*(.*)$", ln)
                 if not m_:
                     continue
                 ind = len(m_.group(1))
                 if ind == 0 and re.fullmatch(r"VP-\d+", m_.group(2)):  # блок схеми VP-NN: лише ідентифікатор або param:, без полів схеми
+                    flush()
+                    vp, vp_param = m_.group(2), None
+                    stack = []
+                    continue
+                if ind == 0 and m_.group(3).strip() == "" and m_.group(2) in schema_blocks:  # службовий блок схеми (edition:, contract_mode:): як VP, достатньо назви або param:
                     flush()
                     vp, vp_param = m_.group(2), None
                     stack = []
@@ -309,8 +325,10 @@ def main():
                 if vp.lower() not in adm_txt:
                     miss.append(vp)
         msg = ([] if re.search(r"(?mi)^##\s*Покриття:\s*налаштування", index) else ["в INDEX немає таблиці «## Покриття: налаштування й експлуатація»"]) \
-            + ([f"немає в admin.md: {', '.join(sorted(set(miss))[:12])}"] if miss else [])
+            + ([f"немає в admin.md ({len(set(miss))}): {', '.join(sorted(set(miss)))}"] if miss else [])
         add("UG-cover-admin", "FAIL" if msg else "PASS", "; ".join(msg))
+        if miss:
+            res[-1]["items"] = sorted(set(miss))
 
     for i, why in (("UG-fresh", "знімки на стенді з SHA INDEX — перевіряє агент (журнал зйомки)"),
                    ("UG-ui", "підписи кроків = підписи в UI — агент/рецензент"),

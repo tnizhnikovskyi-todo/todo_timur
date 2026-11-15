@@ -16,8 +16,7 @@ description: >
 ## Мета
 Перетворити конфігурацію пакета (CONFIG.md по AC) на **декларативні дані**: кожна точка варіативності VP-xx з анкети --
 параметр, а не константа. Агент генерує `manifest.yaml`, `vp-map.yaml`, `data/NN_<область>.yaml` і **сам** застосовує їх у
-чисту тестову базу пакета через `odoo-mcp` (`references/apply-semantics.md`). **Версія 0.1: скриптів `install.sh`,
-`apply.py`, `validate.py`, `check_config.py` у `tools/odoo/` репозиторію ще немає (еталони `apply.py`/`validate.py`/`install.sh` -- у `flow-core/references/templates/tools-odoo/`, q17; в `tools/odoo/` їх ставить C-00) -- власних не створювати.** Є лише контракт майбутніх скриптів
+чисту тестову базу пакета через `odoo-mcp` (`references/apply-semantics.md`). **Скрипти `install.sh`, `apply.py`, `validate.py`, `check_config.py` ставить C-00 (автоматичний передкрок, §25 E5; еталони -- `flow-core/references/templates/tools-odoo/`): якщо вони є в `tools/odoo/` -- використовувати, власних не створювати; немає -- покрокова інструкція в `install-log.md`.** Є лише контракт майбутніх скриптів
 (`references/config-package-format.md`); `install-one-command: N/A (скриптів немає; рішення q29 -- у 0.1 замість нього покрокова інструкція в `install-log.md`)`, `maturity 1`. Усі перевірки `CFG-*`
 виконує агент за таблицею нижче.
 
@@ -104,7 +103,7 @@ description: >
 
 ## Крок 2. Обсяг
 З ALLOCATION: `M_std` («стандарт»/«конфіг»), `M_ready` («готове» в складі конфіг-пакета), `AC_cfg`. Зі схеми: множина VP з
-треками. `fix` -- лише рядки CHECKS.md з кодом A-12 (рядки інших кодів не чіпати й не закривати). `new-version` -- лише змінені
+треками. `fix` -- лише рядки CHECKS.md з кодом A-12 (рядки інших кодів не чіпати й не закривати), а також обов'язкові складові §27/§27а (`td_home_menu`, `td_support`, `td_knowledge`, `td_<галузь>_knowledge`) і рядки A-17b, якщо модулі є в `package/addons` (рішення AI, рядок AI-NN), навіть без рядка в CHECKS.md. `new-version` -- лише змінені
 AC/VP за diff ALLOCATION між `git.prev_tag` і SHA наряду.
 
 ## Крок 3. CONFIG.md
@@ -164,12 +163,12 @@ config-log. Даних у базі немає (установка не відб�
 (SHA і alias), `memo`, `phase: null`, `partial: false`.
 
 ## Редакції CE/EE (правила — `flow-package-build/references/editions-and-bridges.md`; формат -- `references/config-package-format.md`, `format: 2`)
-- `manifest.yaml` має два профілі `edition_profiles.ce` / `edition_profiles.ee` (`ee` ⊇ `ce`); редакції беруться з `editions` анкети (`OWNER-INTAKE.md`), не вгадуються. «Модулі до установки» складаються окремо на кожен профіль у порядку залежностей; кожен модуль має `origin` (`std-ce|std-ee|td|todo-ready|integration`).
+- `manifest.yaml` має два профілі `edition_profiles.ce` / `edition_profiles.ee` (`ee` ⊇ `ce`, крім `td_home_menu` (лише `ce`, §27)); редакції беруться з `editions` анкети (`OWNER-INTAKE.md`), не вгадуються. «Модулі до установки» складаються окремо на кожен профіль у порядку залежностей; кожен модуль має `origin` (`std-ce|std-ee|td|todo-ready|integration`).
 - `vp-map.yaml`/`answers.yaml` мають параметри `edition` (`ce|ee`) і `contract_mode` (юридично неоднозначне -> параметр, §21 №17; значення задає власник/ТР, перелік не вигадувати), обидва з `default`.
 - Ядро `td_*` без EE у `depends`; EE-частина — мости `td_*_ee` з `auto_install` (лише в профілі `ee`). Порушення — дефект для `build-allocator`/`code-dev`, не правка тут.
 - Застосування й read-back — на **двох** чистих тестових базах (CE і, при `editions: both`, EE; `ODOO_EDITION`, `tools/odoo/preflight.sh --edition`). `install-log.md` — окремий розділ на редакцію. EE-база недоступна -> розділ `ee` = «не перевірено» (WARN), крок не позначати як повний.
 - Ліцензії залежностей ядра: для кожного імені з `depends` `td_*` шукати маніфест у `package/addons/` і в `ODOO_ADDONS_PATH`; `AGPL-3` -> дефект (не вносити); не знайдено і модуль не стандартний Odoo -> «невідома залежність, ліцензія не перевірена» (WARN, не PASS).
-- Перевірки редакцій (`CFG-editions`): `edition_profiles` відповідають `editions` (при `editions: ce` ключа `ee` немає — це норма, не FAIL; при `both|ee` `ee` обов'язковий); `ee ⊇ ce`; `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` є у `vp-map.yaml` і схемі з `default`; `origin` у кожного модуля; `install-log.md` має розділ на кожну редакцію; розділ `ee` при недоступній EE -- «не перевірено».
+- Перевірки редакцій (`CFG-editions`): `edition_profiles` відповідають `editions` (при `editions: ce` ключа `ee` немає — це норма, не FAIL; при `both|ee` `ee` обов'язковий); `ee ⊇ ce`, крім `td_home_menu` (лише `ce`, §27); `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` є у `vp-map.yaml` і схемі з `default`; `origin` у кожного модуля; `install-log.md` має розділ на кожну редакцію; розділ `ee` при недоступній EE -- «не перевірено».
 - Залежності від AGPL-модулів (включно з OCA) у «Модулі до установки» ядра не вносити: OCA — лише ідея.
 
 ## Автоперевірка (перед здачею)
@@ -187,12 +186,12 @@ config-log. Даних у базі немає (установка не відб�
 | `CFG-readback` | значення VP у базі != `answers.example.yaml` після `transform`; обов'язковий; `MANUAL` лише для пунктів `manual: true`; пункт `settings` без read-back (`default_get` або якір `related`) -- FAIL, не MANUAL |
 | `CFG-td-isolation` | у даних є моделі/поля `td_*` (дозволено лише `td_param`) |
 | `CFG-vendored` | у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом, або ліцензія поза переліком q42 (MIT, BSD, Apache-2.0, LGPL-3) |
-| `CFG-editions` | немає `edition_profiles`/`format: 2`; ключ `ee` є при `editions: ce` або немає при `both|ee`; `ee` не ⊇ `ce`; `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра (маніфест — у `package/addons/` або `ODOO_ADDONS_PATH`; не знайдено й не стандартний — WARN «ліцензія не перевірена»); розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
+| `CFG-editions` | немає `edition_profiles`/`format: 2`; ключ `ee` є при `editions: ce` або немає при `both|ee`; `ee` не ⊇ `ce` (поза винятком `td_home_menu`); `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра (маніфест — у `package/addons/` або `ODOO_ADDONS_PATH`; не знайдено й не стандартний — WARN «ліцензія не перевірена»); розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
 | `CFG-checks-closed` | правка A-12 з CHECKS.md без рядка «закрито: файл/пункт» |
 | `CFG-scope` | diff поза `package/config/**` і `package/addons/<готове>/**` |
 | `CFG-secrets` | збіг із шаблоном secret з `pii-patterns.md` у файлах чи лозі |
 | `lint`, `config-review` | знахідки 18->19; вердикт не APPROVE; `config-review: N/A` |
-| `ED-edition` | PASS — `edition_profiles` відповідають `editions`; `ee ⊇ ce`; `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` у `vp-map.yaml` із `default`; `install-log.md` — розділ на кожну редакцію; FAIL — порушено будь-яке з правил профілів або AGPL у ядрі; WARN — розділ `ee` без EE-бази — «не перевірено», не PASS |
+| `ED-edition` | PASS — `edition_profiles` відповідають `editions`; `ee ⊇ ce`, крім `td_home_menu` (лише `ce`, §27); `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` у `vp-map.yaml` із `default`; `install-log.md` — розділ на кожну редакцію; FAIL — порушено будь-яке з правил профілів або AGPL у ядрі; WARN — розділ `ee` без EE-бази — «не перевірено», не PASS |
 
 ### Статуси checks -> result
 | Стан | result |
@@ -234,7 +233,7 @@ config-review.
 - [ ] Немає числових id; власні xml-id лише `td_config.*`; немає `td_*` у даних крім `td_param`;
 - [ ] Кожен пункт має AC і `source`; `manual` має причину; секретів у файлах і лозі немає;
 - [ ] 2-й прохід-порівняння без розбіжностей; read-back = `answers.example.yaml`; `Config-log` заповнений;
-- [ ] `manifest.yaml` `format: 2` з `edition_profiles` (ee ⊇ ce, `td_*_ee`/`std-ee` лише в ee), `origin` у кожного модуля; `edition`/`contract_mode` у `vp-map.yaml`; розділ кожної редакції в `install-log.md` (`ee` без EE -- «не перевірено»);
+- [ ] `manifest.yaml` `format: 2` з `edition_profiles` (ee ⊇ ce, крім `td_home_menu` -- лише ce; `td_*_ee`/`std-ee` лише в ee), `origin` у кожного модуля; `edition`/`contract_mode` у `vp-map.yaml`; розділ кожної редакції в `install-log.md` (`ee` без EE -- «не перевірено»);
 - [ ] `git diff --stat` лише в дозволених шляхах; скриптів `install.sh`/`bin/*` не створено.
 
 ## Наступний крок

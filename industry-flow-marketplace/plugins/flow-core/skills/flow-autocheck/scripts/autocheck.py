@@ -516,8 +516,8 @@ def p_allocation_coverage(ctx, c):
             need_dir |= mods
     dirs = set(addon_dirs(ctx))
     cfg = [f for f in lsdir(ctx, ctx.head, "package/config")]
-    # спільні вендорені (§27/§27а), демо- та e-learning модулі ALLOCATION не вимагають
-    exempt = lambda d: d in SHARED_VENDORED or re.match(r"^td_.+_(demo|elearning)$", d)
+    # спільні вендорені (§27/§27а), td_<галузь>_knowledge, демо- та e-learning модулі ALLOCATION не вимагають
+    exempt = lambda d: d in SHARED_VENDORED or re.match(r"^td_.+_(demo|elearning|knowledge)$", d)
     bad = [f"теки {d} немає в ALLOCATION" for d in sorted(dirs - alloc) if not exempt(d)] + [f"модуль {m} (код/готове) без теки в package/addons" for m in sorted(need_dir - dirs)]
     bad += [f"файл package/config/{f} не перелічено в CHECKS.md" for f in cfg if os.path.splitext(f)[0].lower() not in chk.lower()]
     ctx.add(c["id"], "FAIL" if bad else "PASS", ("Узгодь ALLOCATION, package/addons і package/config: " + "; ".join(bad)) if bad else "", lab,
@@ -1262,6 +1262,7 @@ def selftest():
     selftest_stale()
     selftest_e3()
     selftest_service_paths()
+    selftest_ai_decisions_scope()
     cdir = os.path.join(SKILL, "references", "checks")
     for f in sorted(os.listdir(cdir)):
         for c in load_spec(f[:-5])["checks"]:
@@ -1352,6 +1353,34 @@ def selftest_service_paths():
     assert ctx.rows[0]["status"] == "FAIL" and "td_x/m.py" in ctx.rows[0]["msg"], ctx.rows[0]
     ctx.rows = []; p_vendored_license(ctx, {"id": "t"})
     assert ctx.rows[0]["status"] == "PASS" and "AC-COVERAGE" not in ctx.rows[0]["msg"], ctx.rows[0]
+
+
+def selftest_ai_decisions_scope():
+    """0.4.0: рядок AI-NN в AI-DECISIONS і шаблон demo-README не дають хибного FAIL where-only на A-12/A-14/A-15/A-17/A-18 (спека кроку з extra_allowed)."""
+    import types
+    d = tempfile.mkdtemp()
+    run = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, text=True, check=True).stdout.strip()
+    run("init", "-q", "-b", "main"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+    w = lambda f, t: (os.makedirs(os.path.dirname(os.path.join(d, f)), exist_ok=True), open(os.path.join(d, f), "w").write(t))
+    ai = "docs/industries/mebli/research/AI-DECISIONS.md"
+    w(ai, "x"); w("package/x.md", "x"); run("add", "."); run("commit", "-qm", "c0"); a = run("rev-parse", "HEAD")
+    w(ai, "x\nAI-99"); w("package/templates/demo-README.md", "t"); run("add", "-A"); run("commit", "-qm", "c1"); b = run("rev-parse", "HEAD")
+    for step, where, tpl in (("A-12", "package/config/", False), ("A-14", "package/CHECKS.md", False), ("A-15", "package/demo/", True),
+                             ("A-17", "package/ACCEPTANCE.md", False), ("A-18", "package/CHANGELOG.md", False)):
+        spec = load_spec(step)
+        ctx = Ctx(types.SimpleNamespace(repo=d, mode="result", base=a, head=b, agent_pattern=None), {"where": where})
+        ctx.rows = []
+        changed = [ai] + (["package/templates/demo-README.md"] if tpl else [])
+        # лише AI-DECISIONS (і шаблон README для A-15) -> where-only PASS
+        if not tpl:
+            run("checkout", "-q", "-b", "t" + step, a); w(ai, "x\nAI-99"); run("add", "-A"); run("commit", "-qm", "only-ai"); bb = run("rev-parse", "HEAD"); run("checkout", "-q", "main")
+            ctx.head = bb
+        generic(ctx, (spec or {}).get("extra_allowed"))
+        row = [r for r in ctx.rows if r["id"] == "where-only"][0]
+        assert row["status"] == "PASS", (step, row, changed)
+    spec = load_spec("A-12")
+    sc = [c for c in spec["checks"] if c["id"] == "scope-config-only"][0]
+    assert "docs/industries/*/research/AI-DECISIONS.md" in sc["args"]["allow"], sc
 
 
 def selftest_e3():

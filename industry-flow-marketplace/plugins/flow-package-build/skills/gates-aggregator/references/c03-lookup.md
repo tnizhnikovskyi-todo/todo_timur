@@ -19,6 +19,12 @@ C-03 тестує пакет і модулі; A-14 тести не запуск�
      «збій виконання: C-03 in_progress, run id …», повтор у межах `maxAttempts`.
 5. workflow_dispatch лише якщо жодного прогону для кандидатів немає (захист від зависання на комітах лише з master-data/CHECKS).
 
+## Репо без C-03 (немає `.github/workflows/ci.yml`)
+Рішення AI за замовчуванням, без ескалації (як A-18, `package-release-builder` Крок 8 п.5): `actions_*` не викликати; за наявності скриптів C-00
+`tools/odoo/` і локального Odoo AI сам проганяє `run_tests.sh <db> …` на `SHA_GATES` (вивід лише підсумок і помилки). У CHECKS.md: статус
+«локальний прогін, не CI», SHA, база; рядок AI-NN у `AI-DECISIONS.md` з ризиком «CI не бачив коміт»; рядок C-03 — MANUAL. Локальний прогін
+червоний -> як `failure`. `waiting_human` лише коли немає ні CI, ні C-00. Вердикт APPROVE допустимий із цією позначкою.
+
 ## Що писати в CHECKS.md
 `SHA_C03`, run id, статус (success / failure / cancelled), посилання на прогін, «предок без змін у
 addons/config: так/ні». Окремим полем від `SHA_GATES`.

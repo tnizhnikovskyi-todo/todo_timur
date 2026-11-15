@@ -17,7 +17,7 @@
 
 ## 2. Профілі модулів у `package/config/manifest.yaml`
 Формат — `flow-package-build/skills/config-as-code/references/config-package-format.md` (`format: 2`): `edition_profiles.ce` — завжди; `edition_profiles.ee` — лише при `editions: both|ee` (при `editions: ce` ключа `ee` немає). Кожен модуль — словник `{name, origin, source, ac}`, а не рядок.
-- `ee` ⊇ `ce` (EE-профіль = CE-профіль + EE-модулі + мости). Модуль у `ce`, якого немає в `ee`, — помилка складання.
+- `ee` ⊇ `ce` (EE-профіль = CE-профіль + EE-модулі + мости). Модуль у `ce`, якого немає в `ee`, — помилка складання, крім `td_home_menu` (лише `ce`: на EE свій головний екран, §27).
 - `origin: std-ce | std-ee | td | todo-ready | integration`; `std-ee` і `td_*_ee` — лише в профілі `ee`.
 - Параметри `vp-map.yaml`/`answers.yaml`: `edition: ce|ee` і `contract_mode: <значення>` — звичайні параметри (VP-xx) із `default`; `contract_mode` лише
   відображає юридично неоднозначне, винесене в параметр (`legal_ambiguous.to_answers_yaml` анкети); перелік значень задає власник/ТР, скіл його **не вигадує**.

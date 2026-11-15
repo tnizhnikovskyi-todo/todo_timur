@@ -21,9 +21,10 @@ SCHEMA = {  # ЧЕРНЕТКА: звірити з вихідниками 19.0 (w
     "answer_correct_field": "is_correct", "lesson_text_field": "html_content", "lesson_image_field": "image_1920",
     "text_fields": ["name", "description", "question", "text_value", "comment", "html_content"],
 }
-DEFAULT_ALLOW = {"Odoo", "PDF", "CSV", "Excel", "QR", "SC", "AC", "VP", "ID"}
+DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "SC", "AC", "VP", "ID"}
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
-SOURCE = re.compile(r"source:\s*([\w./-]+\.md)#(SC-\d{2,})")
+ID_PATTERN = r"SC-\d{2,}"  # ID сценарію; змінюється --id-pattern
+SOURCE = re.compile(r"source:\s*([\w./-]+\.md)#(" + ID_PATTERN + ")")
 ROLE = re.compile(r"role:\s*([\w-]+)")
 IMG = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
 EVID = re.compile(r"\S+\.(?:py|xml|js|csv):\d+")
@@ -56,7 +57,7 @@ def guide_sections(guide, role):
         return res
     parts = re.split(r"(?m)^(?=##\s)", open(p, encoding="utf-8").read())
     for part in parts:
-        m = re.match(r"##\s.*?\b(SC-\d{2,})\b", part)
+        m = re.match(r"##\s.*?\b(" + ID_PATTERN + r")\b", part)
         if m:
             st = re.search(r"Статус:\s*(.+)", part)
             res[m.group(1)] = ("заблоковано" in (st.group(1).lower() if st else ""), IMG.findall(part))
@@ -121,6 +122,7 @@ def parse_records(module):
 
 
 def main():
+    global ID_PATTERN, SOURCE
     ap = argparse.ArgumentParser()
     ap.add_argument("--module", required=True)
     ap.add_argument("--guide", required=True)
@@ -128,8 +130,11 @@ def main():
     ap.add_argument("--pass-score", type=int, default=None)
     ap.add_argument("--min-questions", type=int, default=5)
     ap.add_argument("--allow", default="")
+    ap.add_argument("--id-pattern", default=ID_PATTERN, help="regex ID сценарію (як у check_guides.py; за замовчуванням SC-\\d{2,})")
     ap.add_argument("--schema")
     a = ap.parse_args()
+    ID_PATTERN = a.id_pattern
+    SOURCE = re.compile(r"source:\s*([\w./-]+\.md)#(" + ID_PATTERN + ")")
     S = dict(SCHEMA)
     if a.schema:
         S.update(json.load(open(a.schema, encoding="utf-8")))

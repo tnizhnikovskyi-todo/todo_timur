@@ -35,7 +35,7 @@
    "id": "script-check-elearning",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml (EL-mode, EL-pass: звірка з answers.yaml): EL-courses (курс на кожну роль з INDEX A-16b), EL-quiz (>=5 питань, рівно одна правильна відповідь, якщо інше не задано), EL-source (урок посилається на розділ A-16b), EL-lang. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/elearning-builder/scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml (EL-mode, EL-pass: звірка з answers.yaml): EL-courses (курс на кожну роль з INDEX A-16b), EL-quiz (>=5 питань, рівно одна правильна відповідь, якщо інше не задано), EL-source (урок посилається на розділ A-16b), EL-lang. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта; якщо ID сценаріїв не SC-NN — `--id-pattern` з A-16b.",
     "cmd": [
      "python3",
      "-I",
@@ -54,7 +54,7 @@
    "id": "module-tests",
    "prim": "manual",
    "args": {
-    "text": "Тести модуля (установка на чистій CE: tools/odoo/run_tests.sh <db> /td_<галузь>_elearning за C-00; кількість курсів = ролей; у кожного курсу >=5 питань); odoo19-lint по td_*_elearning; залежність website_slides; поріг проходження з package/templates/answers.yaml elearning.pass_score (за замовчуванням 80); параметр пакета elearning.mode: \"on\"|\"off\"",
+    "text": "Тести модуля (установка на чистій CE: tools/odoo/run_tests.sh <db> /td_<галузь>_elearning за C-00, потім smoke стенда або тести решти td_* пакета з установленим website_slides (залежить від website: корінь `/` стає сайтом) або явне віднесення до R-09/R-10 A-18; кількість курсів = ролей; у кожного курсу >=5 питань); odoo19-lint по td_*_elearning; залежність website_slides; поріг проходження з package/templates/answers.yaml elearning.pass_score (за замовчуванням 80); параметр пакета elearning.mode: \"on\"|\"off\"",
     "who": "runner"
    }
   },

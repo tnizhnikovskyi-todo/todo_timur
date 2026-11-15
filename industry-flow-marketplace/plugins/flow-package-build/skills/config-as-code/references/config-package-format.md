@@ -21,7 +21,7 @@ package/addons/<готове>/                      вендорене (vendorin
 format: 2                 # 1 = старий плоский `modules:` з `edition:`; нові пакети -- лише 2
 odoo: "19.0"
 editions: both            # з docs/industries/<галузь>/OWNER-INTAKE.md (ce|ee|both); не вгадується
-edition_profiles:         # ce завжди; ee -- при editions: both|ee; ee ⊇ ce
+edition_profiles:         # ce завжди; ee -- при editions: both|ee; ee ⊇ ce (крім td_home_menu: лише ce, §27)
   ce:
     modules:              # порядок = порядок установки
       - {name: sale_management, origin: std-ce, source: standard, ac: [AC-01]}

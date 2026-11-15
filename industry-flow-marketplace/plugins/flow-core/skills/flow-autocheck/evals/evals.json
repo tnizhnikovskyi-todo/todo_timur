@@ -34,7 +34,7 @@
     },
     {
       "id": "a14-allocation-shared",
-      "prompt": "Режим result, крок A-14, scope package/demo-1. Фікстуру будує evals/fixtures/a14-allocation-shared/make_repo.sh <тека>. У package/addons є файл AC-COVERAGE.md і теки td_home_menu, td_support, td_knowledge, td_x_demo, td_x_elearning без рядків в ALLOCATION; package/config має CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md.",
+      "prompt": "Режим result, крок A-14, scope package/demo-1. Фікстуру будує evals/fixtures/a14-allocation-shared/make_repo.sh <тека>. У package/addons є файл AC-COVERAGE.md і теки td_home_menu, td_support, td_knowledge, td_x_demo, td_x_elearning, td_x_knowledge без рядків в ALLOCATION; package/config має CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md.",
       "expected_output": "allocation-coverage PASS: файл AC-COVERAGE.md не рахується текою, спільні (§27/§27а), demo- та elearning-модулі не вимагають рядка в ALLOCATION, файли config звіряються з CHECKS.md за назвою без розширення.",
       "assertions": [
         "allocation-coverage має статус PASS",

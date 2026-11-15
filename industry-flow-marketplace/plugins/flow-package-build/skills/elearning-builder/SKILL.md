@@ -93,7 +93,7 @@ elearning:
 A-12 уже закрито, тому модуль у перелік установки вносить сам A-17b (рішення AI, власник — вето): у `package/config/manifest.yaml` в обох
 профілях `edition_profiles.ce` і `.ee` (`ee` ⊇ `ce`) — після останнього `td_*` додати `{name: website_slides, origin: std-ce, source: standard, ac: []}`
 (перед модулем) і `{name: td_<галузь>_elearning, origin: td, source: code, ac: []}`; той самий рядок — у розділ «Модулі до установки» `package/config/CONFIG.md`.
-`website_slides_survey` — лише якщо підтверджений Крок 1 і є в `depends`. При `elearning.mode: "off"` рядків не додавати (і прибрати, якщо були).
+**Обов'язково** рядок AI-NN у AI-DECISIONS з ризиком: `website_slides` тягне `website`, `website_mail`, `website_profile`, `portal_rating` (пункт 8 `source-verification.md`) — установлюється застосунок «Вебсайт», корінь `/` стає сайтом, з'являються портал і меню сайту; у `admin.md`/KB — примітка про `/` (передати A-16b/A-17c); регрес решти `td_*` з установленим `website` — у R-09/R-10 A-18. `website_slides_survey` — лише якщо підтверджений Крок 1 і є в `depends`. При `elearning.mode: "off"` рядків не додавати (і прибрати, якщо були).
 `config-as-code` у режимах `fix`/`new-version` ці два рядки зберігає й додає сам, якщо `mode: "on"` і модуль є в `package/addons/`.
 
 ## Запис
@@ -101,7 +101,7 @@ A-12 уже закрито, тому модуль у перелік устано
 `package/templates/answers.yaml` (Крок 4), рядки елемента навчання в `package/config/{manifest.yaml,CONFIG.md}` (Крок 6; інше в `package/config/` не чіпати) і рядки `research/AI-DECISIONS.md` (рішення AI з ризиками). Виняток: дефект модуля, знайдений під час A-17b -> рядок у `package/demo/defects.md` з маршрутом A-14, `result: returned`; сам модуль не правити. Не змінювати інші модулі, `package/docs/user-guide/`, дані `package/config/data/` і `vp-map.yaml`.
 
 ## Автоперевірка
-`python3 -I scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml [--schema schema.json]`
+`python3 -I scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml [--schema schema.json] [--id-pattern "<regex ID сценарію>"]` (за замовчуванням `SC-\d{2,}`; значення — те саме, що дало `check_guides.py` в A-16b)
 (stdlib; JSON `[{id,status,msg}]`; код 1 = є FAIL). Латинські назви галузі (BAS, CAD, DXF) — рядок `Дозволені латинські назви:` в INDEX.md (читається автоматично) або `--allow BAS,CAD`; `<code>` і уроки з `source: admin.md` EL-lang не перевіряє.
 
 | ID | Перевірка | FAIL, коли |

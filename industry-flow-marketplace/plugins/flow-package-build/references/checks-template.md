@@ -24,6 +24,9 @@
 | odoo19-lint | `boost:odoo19-lint` | APPROVE / правки / не виконано | APPROVE / правки / WARN: EE не перевірено / SKIP | |
 | track-convergence | `odoo19-mvp-build:track-convergence` | APPROVE / правки / не виконано: гейти pr-review/config-review не APPROVE | APPROVE / правки / WARN: EE не перевірено / SKIP: гейти pr-review/config-review не APPROVE | виконується лише після APPROVE pr-review і config-review |
 
+## Покриття ALLOCATION
+Імена файлів — дослівно (їх шукає `allocation-coverage`): модулі `td_*` і вендорені «готове» з ALLOCATION; `package/config/`: `CONFIG.md`, `manifest.yaml`, `vp-map.yaml`, `install-log.md`, `data/` (кожен наявний файл і тека); CSV майстер-даних з `package/master-data/README.md`. Спільні модулі §27/§27а й `td_*_(demo|elearning|knowledge)` ALLOCATION не вимагає — їх можна не перелічувати.
+
 ## Правки
 | № | опис | код кроку повернення (A-11 / A-12 / A-13) | джерело | редакція |
 |---|---|---|---|---|

@@ -53,7 +53,7 @@ description: >
 ## Інструменти та доступи
 - `git` у репо (лише читання й коміт у гілці runner): `merge-base`, `cat-file`, `diff` (`--stat`, `--name-only`, точкові `-U0`), `tag -l`, `ls-remote --tags`. Заборонено: `switch -c`, `push` (гілки й тега), `tag` будь-який, `tag -f`, `push --force`, мердж `main` у гілку.
 - MCP `github`: `actions_run_trigger` (workflow C-03, `workflow_dispatch`) — через runner, рядок «КОМАНДИ: gh workflow run», `actions_list`/`actions_get`, `get_job_logs` (лише хвіст/grep), `get_tag` (читання). Контракт — `references/ci-contract.md` (маппінг на `ci-pipeline-builder`).
-- MCP `odoo-mcp`: `flow` (через runner) і, якщо є в allow-list наряду, alias «чиста база пакета» — лише читання `ir.module.module` (`state`, `latest_version`; `installed_version` — версія з маніфесту). Перед першим викликом `list_odoo_connections`, звірити з `odoo_connections`; кожен виклик — з явним `connection_id`, після виклику звірити `connection.db`. Без `connection_id` odoo-mcp дивиться в прод: виклик без нього заборонено. Alias бази клієнта, прод, стенда A-15 — стоп «недозволене підключення». Видалень немає.
+- MCP `odoo-mcp`: `flow` (через runner) і, якщо є в allow-list наряду, alias «чиста база пакета» — лише читання `ir.module.module` (`state`, `latest_version`; `installed_version` — версія з маніфесту). Перед першим викликом `list_odoo_connections`, звірити з `odoo_connections`; При `odoo_connections: []` у наряді `list_odoo_connections` і будь-які `odoo_*` пропускаються: працюють лише локальний Odoo і скрипти C-00. кожен виклик — з явним `connection_id`, після виклику звірити `connection.db`. Без `connection_id` odoo-mcp дивиться в прод: виклик без нього заборонено. Alias бази клієнта, прод, стенда A-15 — стоп «недозволене підключення». Видалень немає.
 - Скіли: `boost:odoo19-lint` (R-21), `boost:odoo-model-map` (хто наслідує змінену модель), `flow-core:flow-autocheck`.
 - Клієнтських даних немає (`client_data: none`); правила — `package/DATA_POLICY.md` (C-05, «Знеособлення»).
 - Контекст ≤ 40k токенів: `git diff --stat` і точкові `-U0`, не повний diff; логи CI лише хвіст/grep `ERROR|CRITICAL|Traceback` (≤ 30 рядків).
@@ -71,7 +71,7 @@ description: >
 Шаблон розділу CHANGELOG: `references/changelog-template.md` цього скіла (спільного `flow-package-build/references/changelog-template.md` немає).
 
 ## Крок 0. Наряд, режим, доступи
-Прочитати `params.mode`, `params.phase`, SHA входів, `git.*`, `attempt`, `returned_from`. `list_odoo_connections` → у allow-list мають бути
+Прочитати `params.mode`, `params.phase`, SHA входів, `git.*`, `attempt`, `returned_from`. `list_odoo_connections` (пропустити при `odoo_connections: []`) → у allow-list мають бути
 лише `flow` і (опційно) чиста база пакета; інше — стоп. Невідомий `mode`/`phase` — `escalated_to: AI-інженер`, не вгадувати.
 Повторний наряд після «чекає CI» (ознака одна: `params.resume.ci == pending`; плюс попередній звіт у задачі): у `memo` — run id і SHA; читати
 прогін через `actions_get`, новий не запускати. Фаза `release` — два запуски (крок 8): запуск 1 — файли й коміт, без CI; запуск 2 — CI й
@@ -87,7 +87,7 @@ description: >
 
 ## Крок 2. Версія і SHA (R-01...R-04)
 Обчислити тег за `references/versioning.md`. Перевірити: SHA ревізії = SHA у заголовку `scenarios.md` = SHA у README A-15
-(R-16; розбіжність — ескалація Власнику продукту); X.Y тега = номер ACCEPTANCE = X.Y у `version` усіх `td_*` на ревізії
+(R-16; розбіжність — ескалація Власнику продукту); X.Y тега = номер ACCEPTANCE = X.Y у `version` усіх `td_<галузь>_*` на ревізії (без спільних §27/§27а: td_home_menu, td_support, td_knowledge — власна версія, R-03)
 (R-03; patch: version не змінюється, Z лише в тегу); тег не існує (R-04, тег не переносити й не перезаписувати).
 Розбіжність версій — дефект пакета (A-14 -> A-11), крок 9.
 

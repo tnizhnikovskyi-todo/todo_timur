@@ -1,6 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-12",
+ "extra_allowed": ["tests/reports/", "docs/industries/*/research/AI-DECISIONS.md"],
  "checks": [
   {
    "id": "config-files",
@@ -23,6 +24,7 @@
     "allow": [
      "package/config/",
      "package/addons/",
+     "docs/industries/*/research/AI-DECISIONS.md",
      "observations/"
     ]
    }

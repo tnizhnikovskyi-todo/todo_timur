@@ -76,11 +76,12 @@ package/config package/master-data`: входи не змінились → пр
 
 ## Крок 3. C-03
 - Редакція: C-03 — окремий прогін на кожну редакцію з `editions`; `SHA_C03` на редакцію.
-Тести в A-14 не запускати — лише читати статус прогону C-03. Алгоритм — `references/c03-lookup.md`:
+Тести в A-14 не запускати — лише читати статус прогону C-03 (виняток — репо без ci.yml, нижче). Алгоритм — `references/c03-lookup.md`:
 Деталі пошуку й очікування (`actions_list`/`actions_get`) — лише `references/c03-lookup.md`. Порядок: `BASE = git log -n1 --format=%H SHA_GATES -- package/addons/ package/config/`; прогін шукати серед `git rev-list BASE^..SHA_GATES` (від найновішого).
 - `success` → записати `SHA_C03`, run id, статус (окремо від `SHA_GATES`; якщо `SHA_C03` ≠ `SHA_GATES` — позначка «предок без змін у addons/config»).
 - `failure`/`cancelled` → C-03 червоний: вердикт кроку не APPROVE, правка за шляхом тесту (зазвичай A-11) з посиланням на прогін.
-- Прогону немає / `in_progress` → `actions_run_trigger` (`run_workflow`, `ref` = `repo.branch`, `inputs.sha`); далі очікувати за `c03-lookup.md` (без input `sha` у ci.yml, В-2, `head_sha` = вершина гілки = `SHA_GATES`).
+- Немає `.github/workflows/ci.yml` у репо (C-03 не налаштовано) → не `actions_run_trigger`: якщо є скрипти C-00 `tools/odoo/` і локальний Odoo — AI сам проганяє `run_tests.sh` на `SHA_GATES`, у CHECKS.md пише «локальний прогін, не CI», додає рядок AI-NN з ризиком «CI не бачив коміт», рядок C-03 лишає MANUAL (не FAIL); `waiting_human` лише без CI і без C-00 (деталі — `c03-lookup.md`, «Репо без C-03»).
+- Прогону немає / `in_progress` (ci.yml є) → `actions_run_trigger` (`run_workflow`, `ref` = `repo.branch`, `inputs.sha`); далі очікувати за `c03-lookup.md` (без input `sha` у ci.yml, В-2, `head_sha` = вершина гілки = `SHA_GATES`).
 - Ліміт очікування (залишок `timeout_min` мінус резерв на зведення) вичерпано → «збій виконання: C-03 in_progress, run id …» (повтор у межах `maxAttempts`).
 
 ## Крок 4. Гейти коду й конфігу (фаза 1)
@@ -124,7 +125,7 @@ A-12. До першого A-15 — «не застосовно: профілів
 
 ## Крок 8. Зведення
 Заповнити CHECKS.md за шаблоном: шапка (режим, версія флоу, `SHA_GATES`, `SHA_C03` + статус + run id),
-таблиця п'яти гейтів, покриття ALLOCATION, правки (`F-nn`, джерело, файл:рядок, опис, серйозність, код
+таблиця п'яти гейтів, розділ «Покриття ALLOCATION» (за `references/checks-template.md`: у ньому прямо названо кожен файл `package/config/` — CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md, data/ — інакше FAIL allocation-coverage), правки (`F-nn`, джерело, файл:рядок, опис, серйозність, код
 повернення, статус `відкрито|закрито`; закриті з попередніх циклів лишаються з кодом), лічильник циклів
 (значення оркестратора з задачі — `flow-map.md` правило 5; CHECKS.md його лише відображає), підсумок. Код повернення — за шляхом файлу знахідки, не за
 гейтом (`references/return-routing.md`); не вдалось визначити — правка з кодом «?» заборонена, ескалація
@@ -169,7 +170,7 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
   (б) у security-review — лише з причиною В-4 і лише при pr-review ≠ APPROVE; «збій виконання» — допустиме значення будь-якого гейта, коли `result` ∈ {`stopped` (спроба 1–2), `escalated` (спроба 3)}, ніколи `done`/`returned`.
 - `editions`: розділ «Редакції» є; за `editions: both` — рядок на `ce` і `ee` з SHA; `ee` = `WARN: EE не перевірено` ⇒ зведений вердикт не `APPROVE` без дописки «(CE); EE не перевірено» і `partial: true`; AGPL/EE у `depends` ядра ⇒ відкрита правка A-11 серйозності BLOCK.
 - `return-codes`: кожна правка (відкрита й закрита) має код ∈ {A-11, A-12, A-13} (hotfix — так само, за шляхом); APPROVE при ≥1 відкритій правці → FAIL.
-- `allocation-coverage` (через `flow-autocheck`): кожен td_*, вендорений «готове» і файл конфігу з ALLOCATION
+- `allocation-coverage` (через `flow-autocheck`): кожен td_*, вендорений «готове» і файл конфігу з ALLOCATION (модулі §27/§27а — `td_home_menu`, `td_support`, `td_knowledge`, `td_<галузь>_knowledge` — і `td_*_demo/_elearning` ALLOCATION не вимагає; кожен файл `package/config/` названо в розділі «Покриття ALLOCATION» CHECKS.md)
   в обсязі pr-review/lint або config-review; кожен CSV з `master-data/README.md` — у track-convergence/тест-імпорті.
 - `returns-carried` (режим повернення): кількість дефектів в артефакті = кількість правок з посиланням на джерело.
 - `no-own-edits`: `git diff --name-only origin/<repo.base_branch>..HEAD` — лише `package/CHECKS.md` (і
@@ -192,9 +193,9 @@ track-convergence лише після APPROVE pr-review і config-review. Скі
 - [ ] `SHA_GATES` зафіксовано на старті й збігається з HEAD; `SHA_C03` записано окремо.
 - [ ] П'ять гейтів мають вердикт або «не виконано»/«перенесено» з причиною; security-review викликано (вердикт або «не виконано: В-4»).
 - [ ] Кожна правка має код повернення за шляхом; жодного «?».
-- [ ] APPROVE лише якщо всі п'ять APPROVE, C-03 success, відкритих правок 0; при `editions: both` і недоступній EE — `APPROVE (CE); EE не перевірено`, `partial: true`.
+- [ ] APPROVE лише якщо всі п'ять APPROVE, C-03 success (або локальний прогін success у репо без ci.yml), відкритих правок 0; при `editions: both` і недоступній EE — `APPROVE (CE); EE не перевірено`, `partial: true`.
 - [ ] Розділ «Редакції» заповнено (ce/ee, SHA, C-03 на редакцію); grep `license`/`depends` виконано.
-- [ ] У diff гілки лише `package/CHECKS.md` (і шаблон).
+- [ ] У diff гілки лише `package/CHECKS.md` (і шаблон) та, за потреби, рядок AI-NN у `AI-DECISIONS.md` (`extra_allowed` A-14.yaml).
 - [ ] Жодного виклику odoo-mcp без `connection_id`; тести в A-14 не запускались.
 - [ ] У CHECKS.md немає ПІБ/контактів/паролів з дефектів чи логів.
 
