@@ -81,6 +81,7 @@ def analyze(py, base):
         name = inherit = None
         inh_all = []
         fields = []
+        exempt = any((isinstance(b, ast.Attribute) and b.attr in ("TransientModel", "AbstractModel")) for b in c.bases)
         for st in c.body:
             if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name):
                 t, val = st.targets[0].id, st.value
@@ -88,6 +89,8 @@ def analyze(py, base):
                 t, val = st.target.id, st.value
             else:
                 continue
+            if t == "_auto" and isinstance(val, ast.Constant) and val.value is False:
+                exempt = True
             if t == "_name":
                 name = const_str(val)
             elif t == "_inherit":
@@ -110,7 +113,7 @@ def analyze(py, base):
                         computed = True
                 fields.append({"name": t, "type": ft, "comodel": com, "computed": computed})
         if name or inherit:
-            out.append({"name": name, "inherit": inherit, "inherit_all": inh_all, "fields": fields, "file": os.path.relpath(py, base)})
+            out.append({"name": name, "inherit": inherit, "inherit_all": inh_all, "exempt": exempt, "fields": fields, "file": os.path.relpath(py, base)})
     return out
 
 
@@ -144,15 +147,19 @@ def main(argv):
 
     if not files:
         return fail("DM-table", f"у {d} не знайдено жодного .py — перевір шлях до addons")
-    miss, empty, debt, foreign, td_models, n_checked = [], [], [], [], [], 0
+    miss, empty, debt, foreign, td_models, n_checked, exempt_models = [], [], [], [], [], 0, []
     for m in models:
-        if m["name"] and m["name"].startswith("td."):
+        if m["name"] and m["name"].startswith("td.") and m.get("exempt"):
+            exempt_models.append(m["name"])  # майстер/SQL-звіт/абстрактна: рядок «Модель даних» не обов'язковий
+        elif m["name"] and m["name"].startswith("td."):
             n_checked += 1
             td_models.append(m)
             r = covered(m["name"])
             if r is None: miss.append(f"модель {m['name']} ({m['file']})")
             elif isinstance(r, str): debt.append(f"модель {m['name']} (знайдено «{r[5:]}»)")
             elif not r: empty.append(f"модель {m['name']}")
+        elif m["name"] and m["name"].startswith("report.") and m["name"] != m["inherit"]:
+            continue  # AbstractModel парсера QWeb-звіту: ім'я задане Odoo
         elif m["name"] and m["name"] != m["inherit"]:
             n_checked += 1
             foreign.append(f"{m['name']} ({m['file']})")

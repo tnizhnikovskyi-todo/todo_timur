@@ -14,7 +14,7 @@
 | R-04 | `git ls-remote --tags origin "refs/tags/$TAG"` — порожньо = PASS |
 | R-05a | при `elearning.mode: "on"` у CHANGELOG є рядок «Модулі до установки (A-17b)» з `website_slides` і `td_*_elearning`; `depends` elearning-модуля ⊂ {цей рядок, `addons/`, CONFIG} — інакше дефект |
 | R-05 | множина `ls package/addons \| grep -vE '^td_[a-z0-9_]+_elearning$'` = перелік комплекту ACCEPTANCE; усі `ls package/addons` = таблиця «Склад пакета», де `td_*_elearning` — окремий рядок з приміткою «A-17b» (дозволена добавка, не дефект; `flow-core:flow-autocheck`) |
-| R-06 | у маніфесті вендореного `license`, у каталозі LICENSE, у файлі вендорингу джерело/коміт і version |
+| R-06 | (спільні td_home_menu/td_support/td_knowledge/td_<галузь>_knowledge -- PASS без LICENSE/коміту) у маніфесті вендореного `license`, у каталозі LICENSE, у файлі вендорингу джерело/коміт і version |
 | R-07 | `grep -c -E '^#{2,3} (Версія\|Склад пакета\|Шаблони документів клієнта\|Зміни анкети\|Несумісні зміни\|Міграція з попереднього тегу\|Команда установки)' <розділ>` = 7 (+ режимні: «Передача клієнту» для release/odoo-upgrade) |
 | R-08 | скрипт нижче (блоки `VP-xx` і поле `deprecated`, `answers-schema.md`); результат = «Зміни анкети» |
 | R-09/R-10/R-11 | прогін знайти за C-03 («Статус на SHA»): push/PR — check-run на `head_sha`; dispatch — `actions_list` `event=workflow_dispatch`, `display_title` = `ci <SHA>…` (не `head_sha`) або commit status `context: ci`; `conclusion: success`; SHA прогону — предок HEAD і `git diff --name-only <SHA>..HEAD` лише `package/CHANGELOG.md`; лог — `get_job_logs` + grep; без логу `NOT_RUN`. Помилка checkout — ескалація, не FAIL пакета |

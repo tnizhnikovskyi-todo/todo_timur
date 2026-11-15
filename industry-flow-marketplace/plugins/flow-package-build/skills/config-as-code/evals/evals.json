@@ -164,6 +164,16 @@
         "Немає FAIL CFG-modules через відсутній elearning",
         "origin: todo-ready, source: vendored для обох"
       ]
+    },
+    {
+      "id": "td-support-no-license",
+      "prompt": "A-12, editions: both. У package/addons є td_support і td_home_menu (власний код ToDo) без файлу LICENSE і без коміту джерела в README; license у маніфесті є.",
+      "expected_output": "CFG-vendored = PASS для td_support і td_home_menu; не ескалація, не питання власнику; модулі в manifest.yaml (td_home_menu лише в ce).",
+      "requires": [],
+      "assertions": [
+        "td_support без LICENSE -> не FAIL, не ескалація",
+        "CFG-vendored PASS для спільних модулів ToDo"
+      ]
     }
   ]
 }

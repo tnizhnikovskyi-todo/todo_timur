@@ -18,6 +18,7 @@ _s = importlib.util.spec_from_file_location("_miniyaml", os.path.join(HERE, "_mi
 Y = importlib.util.module_from_spec(_s); _s.loader.exec_module(Y)
 EXT = {".md", ".txt", ".csv", ".html", ".htm", ".yaml", ".yml", ".json"}
 NUM = r"-?(?:\d{1,3}(?:[\s\u00a0\u202f]\d{3})+|\d+)(?:[.,]\d+)?"  # групи через пробіл — лише по 3 цифри (інакше «2026 12 000» склеюється)
+DATE_RE = re.compile(r"^\d{4}[-./]\d{2}([-./]\d{2})?$")  # значення-дата (РРРР-ММ[-ДД]) порівнюється як текст, не як число
 MULT = {"тис": 1e3, "тис.": 1e3, "млн": 1e6, "млрд": 1e9, "k": 1e3, "m": 1e6}
 res = []
 
@@ -95,7 +96,7 @@ def main():
                     orph.append(f"{os.path.basename(f)}:{n} {key}"); continue
                 used.add(key)
                 want = facts[key]
-                if want is None or isinstance(want, (str, bool)) and not str(want).replace(".", "").isdigit():
+                if want is None or isinstance(want, (str, bool)) and (DATE_RE.match(str(want).strip()) or not str(want).replace(".", "").isdigit()):
                     if isinstance(want, str) and inner is not None and want.strip().lower() == inner.strip().lower():
                         continue
                     if isinstance(want, str) and inner is None and want.lower() in l.lower():

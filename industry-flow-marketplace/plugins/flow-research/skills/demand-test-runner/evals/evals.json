@@ -149,7 +149,7 @@
     },
     {
       "id": "script-risks-ok",
-      "prompt": "Запусти python3 -I scripts/demand_tool.py risks --features fixtures/risks-ok/features.md --plan fixtures/risks-ok/risk-plan.md --decisions fixtures/risks-ok/AI-DECISIONS.md; потім exp --plan … --landing fixtures/risks-ok/landing.md.",
+      "prompt": "Запусти python3 -I scripts/demand_tool.py risks --features evals/fixtures/risks-ok/features.md --plan evals/fixtures/risks-ok/risk-plan.md --decisions evals/fixtures/risks-ok/AI-DECISIONS.md; потім exp --plan … --landing fixtures/risks-ok/landing.md.",
       "expected_output": "Обидві команди — код 0, без рядків-помилок.",
       "assertions": [
         "risks код 0",
@@ -159,7 +159,7 @@
     },
     {
       "id": "script-risks-bad",
-      "prompt": "Запусти python3 -I scripts/demand_tool.py risks (з --decisions fixtures/risks-bad/AI-DECISIONS.md) і exp на fixtures/risks-bad.",
+      "prompt": "Запусти python3 -I scripts/demand_tool.py risks (з --decisions evals/fixtures/risks-bad/AI-DECISIONS.md) і exp на evals/fixtures/risks-bad.",
       "expected_output": "risks код 1: row-1-no-поріг, row-1-no-fallback, F-03-not-in-plan, AI-02-not-in-plan (з --decisions); exp код 1: fake-door-block-missing.",
       "assertions": [
         "risks код 1 і називає F-03-not-in-plan",

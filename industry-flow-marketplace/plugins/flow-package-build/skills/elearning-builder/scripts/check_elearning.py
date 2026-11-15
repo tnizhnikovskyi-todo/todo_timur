@@ -21,7 +21,7 @@ SCHEMA = {  # ЧЕРНЕТКА: звірити з вихідниками 19.0 (w
     "answer_correct_field": "is_correct", "lesson_text_field": "html_content", "lesson_image_field": "image_1920",
     "text_fields": ["name", "description", "question", "text_value", "comment", "html_content"],
 }
-DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "SC", "AC", "VP", "ID"}
+DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "CRM", "SMS", "URL", "BAS", "Email", "SC", "AC", "VP", "ID"}
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
 SOURCE_ADMIN = re.compile(r"source:\s*(admin\.md)#([^\n(]+)")
 ID_PATTERN = r"SC-\d{2,}"  # ID сценарію; змінюється --id-pattern

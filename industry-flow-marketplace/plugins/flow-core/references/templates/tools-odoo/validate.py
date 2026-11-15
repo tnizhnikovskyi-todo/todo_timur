@@ -9,7 +9,9 @@ expect.json: {"modules": ["stock","mrp"],                       # ir.module.modu
 Відкрите для C-00: модель/поле стану модуля (ir.module.module.state) і ir.config_parameter у Odoo 19 звірити з реальною базою.
 """
 import argparse, json, sys
-import apply as A  # той самий каталог: guard_db, guard_host, rpc_conn, norm
+import importlib.util as _ilu, os as _os  # python3 -I не додає каталог скрипта в sys.path
+_spec = _ilu.spec_from_file_location('apply', _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'apply.py'))
+A = _ilu.module_from_spec(_spec); _spec.loader.exec_module(A)  # guard_db, guard_host, rpc_conn, norm
 
 
 def main():

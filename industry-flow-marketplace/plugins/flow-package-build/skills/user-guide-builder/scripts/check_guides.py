@@ -30,7 +30,7 @@ SRC_LINE = re.compile(r"Джерело сценаріїв:\s*(\S+)")
 IMG = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
 SHA_LINE = re.compile(r"SHA\s+стенда\W{0,6}([0-9a-f]{7,40})\b", re.I)
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
-DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
+DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "CRM", "SMS", "URL", "ID", "BAS", "Email", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
 STEP_LINE = re.compile(r"^\s*(\|\s*\d+\s*\||\d+[.)]\s)")
 ADMIN_HEADERS = ["параметри", "профілі", "редакції", "перший запуск"]
 ADMIN_OPS = ["майстер-дані", "обмін", "пошта", "оновлення", "резервні копії", "звернення в підтримку", "база знань"]
@@ -245,8 +245,9 @@ def main():
                 if cur.get("msgid") and cur.get("msgstr"):
                     po[cur["msgid"]] = cur["msgstr"]
         for dp, _, fs in os.walk(a.addons):
-            mod = os.path.relpath(dp, a.addons).split(os.sep)[0]
-            if not mod.startswith("td_") or re.search(r"_(elearning|demo)$", mod) or os.sep + "tests" in dp or os.sep + "demo" in dp:
+            rel = os.path.relpath(dp, a.addons).split(os.sep)
+            mod = rel[0]
+            if not mod.startswith("td_") or re.search(r"_(elearning|demo)$", mod) or "tests" in rel[1:] or "demo" in rel[1:]:
                 continue
             for f in fs:
                 if not f.endswith(".xml"):
@@ -272,6 +273,8 @@ def main():
             return False
         miss = sorted(f"{m}: «{n}»" + (f" → «{po[n]}»" if po.get(n) and po[n] != n else "") for n, m in items.items() if not named(n))
         noidx = [] if re.search(r"(?mi)^##\s*Покриття:\s*розроблене", index) else ["в INDEX немає таблиці «## Покриття: розроблене»"]
+        if not items and any(d.startswith("td_") for d in os.listdir(a.addons)):
+            noidx.append("не зібрано жодного меню/дії td_* в --addons (перевір шлях)")
         msg = noidx + ([f"немає в посібниках ({len(miss)}; «msgid → переклад uk.po» — вжити переклад): {', '.join(miss)}"] if miss else [])
         add("UG-cover-dev", "FAIL" if msg else "PASS", "; ".join(msg))
         if miss:
