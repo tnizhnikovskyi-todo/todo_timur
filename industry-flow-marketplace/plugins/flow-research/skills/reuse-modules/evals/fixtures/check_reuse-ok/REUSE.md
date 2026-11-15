@@ -8,6 +8,7 @@
 | REUSE-03 | td_example_c |
 | REUSE-04 | td_home_menu |
 | REUSE-05 | td_support |
+| REUSE-06 | td_knowledge |
 
 ## Реєстр
 | ID | Модуль | Версія Odoo | Редакція | Права/ліцензія | F-xx | Рішення | Основа |
@@ -17,6 +18,7 @@
 | REUSE-03 | td_example_c | 19.0 | EE | невідомо | F-09 | ні | — |
 | REUSE-04 | td_home_menu | 19.0 | CE | ToDo, LGPL-3 | — | беремо | ToDo-готовий |
 | REUSE-05 | td_support | 19.0 | CE і EE | ToDo, LGPL-3 | — | беремо | ToDo-готовий |
+| REUSE-06 | td_knowledge | 19.0 | CE і EE | ToDo, LGPL-3 | — | беремо | ToDo-готовий |
 
 ## Вплив на карту
 F-03, F-07 змінюють основу з `td_ (новий)` на `ToDo-готовий`.

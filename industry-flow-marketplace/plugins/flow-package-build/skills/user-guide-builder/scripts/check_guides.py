@@ -245,7 +245,7 @@ def main():
                 if cur.get("msgid") and cur.get("msgstr"):
                     po[cur["msgid"]] = cur["msgstr"]
         for dp, _, fs in os.walk(a.addons):
-            rel = os.path.relpath(dp, a.addons).split(os.sep)
+            rel = os.path.relpath(dp, a.addons).split(os.sep)  # лише компоненти ПІСЛЯ кореня --addons: шлях до addons (demo-x, tests) не фільтрується
             mod = rel[0]
             if not mod.startswith("td_") or re.search(r"_(elearning|demo)$", mod) or "tests" in rel[1:] or "demo" in rel[1:]:
                 continue

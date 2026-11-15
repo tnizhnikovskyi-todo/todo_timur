@@ -81,7 +81,7 @@ def analyze(py, base):
         name = inherit = None
         inh_all = []
         fields = []
-        exempt = any((isinstance(b, ast.Attribute) and b.attr in ("TransientModel", "AbstractModel")) for b in c.bases)
+        exempt = any(((isinstance(b, ast.Attribute) and b.attr in ("TransientModel", "AbstractModel")) or (isinstance(b, ast.Name) and b.id in ("TransientModel", "AbstractModel"))) for b in c.bases)
         for st in c.body:
             if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name):
                 t, val = st.targets[0].id, st.value
@@ -158,8 +158,8 @@ def main(argv):
             if r is None: miss.append(f"модель {m['name']} ({m['file']})")
             elif isinstance(r, str): debt.append(f"модель {m['name']} (знайдено «{r[5:]}»)")
             elif not r: empty.append(f"модель {m['name']}")
-        elif m["name"] and m["name"].startswith("report.") and m["name"] != m["inherit"]:
-            continue  # AbstractModel парсера QWeb-звіту: ім'я задане Odoo
+        elif ((m["name"] or "").startswith("report.") or (not m["name"] and (m["inherit"] or "").startswith("report."))):
+            continue  # report.<module>.<name>: AbstractModel парсера QWeb-звіту (ім'я задане Odoo), не модель даних; і розширення такого звіту через _inherit
         elif m["name"] and m["name"] != m["inherit"]:
             n_checked += 1
             foreign.append(f"{m['name']} ({m['file']})")

@@ -19,6 +19,13 @@ Y = importlib.util.module_from_spec(_s); _s.loader.exec_module(Y)
 EXT = {".md", ".txt", ".csv", ".html", ".htm", ".yaml", ".yml", ".json"}
 NUM = r"-?(?:\d{1,3}(?:[\s\u00a0\u202f]\d{3})+|\d+)(?:[.,]\d+)?"  # групи через пробіл — лише по 3 цифри (інакше «2026 12 000» склеюється)
 DATE_RE = re.compile(r"^\d{4}[-./]\d{2}([-./]\d{2})?$")  # значення-дата (РРРР-ММ[-ДД]) порівнюється як текст, не як число
+DATE_ANY = re.compile(r"(?<![\d.,])(?:\d{4}-\d{1,2}(?:-\d{1,2})?|\d{4}/\d{1,2}(?:/\d{1,2})?|\d{4}\.\d{1,2}\.\d{1,2}|\d{1,2}\.\d{1,2}\.\d{4})(?![\d])")  # дати в тексті (РРРР-ММ[-ДД], ДД.ММ.РРРР); «1200.50» датою не є
+
+
+def date_parts(x):
+    return sorted(int(t) for t in re.findall(r"\d+", x)) if DATE_ANY.fullmatch(x.strip()) else None
+
+
 MULT = {"тис": 1e3, "тис.": 1e3, "млн": 1e6, "млрд": 1e9, "k": 1e3, "m": 1e6}
 res = []
 
@@ -99,12 +106,15 @@ def main():
                 if want is None or isinstance(want, (str, bool)) and (DATE_RE.match(str(want).strip()) or not str(want).replace(".", "").isdigit()):
                     if isinstance(want, str) and inner is not None and want.strip().lower() == inner.strip().lower():
                         continue
+                    if isinstance(want, str) and inner is not None and date_parts(want) and date_parts(want) == date_parts(inner):
+                        continue  # та сама дата в іншому записі (15.08.2026 ↔ 2026-08-15)
                     if isinstance(want, str) and inner is None and want.lower() in l.lower():
                         continue
                     if want is None:
                         mism.append(f"{os.path.basename(f)}:{n} {key}: у facts значення не задано (null)"); continue
                     mism.append(f"{os.path.basename(f)}:{n} {key}: текст ≠ «{want}»"); continue
                 seg = inner if inner is not None else l[:pos]
+                seg = DATE_ANY.sub(" ", seg)  # значення-дати не беремо за числові факти
                 cands = list(re.finditer(f"({NUM})\\s*([A-Za-zА-Яа-яІіЇїЄє.]*)", seg))
                 if not cands:
                     mism.append(f"{os.path.basename(f)}:{n} {key}: у рядку немає числа"); continue

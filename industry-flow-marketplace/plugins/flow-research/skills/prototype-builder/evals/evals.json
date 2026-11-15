@@ -251,6 +251,20 @@
         },
         "matrix_row": "Деталь замовлення | ROLE-01, ROLE-04"
       }
+    },
+    {
+      "id": "check-data-model-report",
+      "prompt": "Перевір python3 -I scripts/check_data_model.py evals/fixtures/check_data_model-report/addons --plan evals/fixtures/check_data_model-report/PLAN.md: у модулі AbstractModel звітів report.<module>.<name> (в т.ч. базовий клас імпортований як AbstractModel) і розширення звіту через _inherit.",
+      "expected_output": "AbstractModel звітів report.* не вважаються моделями даних: DM-table PASS, DM-dup PASS, код 0, 'модель поза простором td.' немає.",
+      "assertions": [
+        "Код 0",
+        "report.td_mebli_sale.* не в списку «модель поза простором td.»",
+        "Клас з базою AbstractModel (ast.Name) теж пропускається"
+      ],
+      "input": {
+        "fixture": "evals/fixtures/check_data_model-report",
+        "script": "scripts/check_data_model.py"
+      }
     }
   ]
 }

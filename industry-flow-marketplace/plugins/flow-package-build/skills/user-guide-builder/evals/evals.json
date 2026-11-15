@@ -209,6 +209,21 @@
         "evals/fixtures/user-guide-std-label/SPEC.md",
         "evals/fixtures/user-guide-std-label/user-guide/"
       ]
+    },
+    {
+      "id": "cover-dev-addons-path-demo",
+      "prompt": "Регрес UG-cover-dev: --addons лежить під шляхом з компонентами demo-x і tests. Перевір: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-cover-demopath/user-guide --spec evals/fixtures/user-guide-cover-demopath/SPEC.md --addons evals/fixtures/user-guide-cover-demopath/demo-x/tests/addons --answers evals/fixtures/user-guide-cover-demopath/answers.yaml --config evals/fixtures/user-guide-cover-demopath/CONFIG.md. Скажи, чи враховано модулі td_*.",
+      "expected_output": "Фільтр demo/tests застосовується лише до відносного шляху всередині --addons (компоненти після кореня addons): модуль td_x зібрано, меню/дії перевірено, UG-cover-dev і UG-cover-admin = PASS, не SKIPPED і не «не зібрано жодного меню».",
+      "assertions": [
+        "Компоненти шляху до --addons (demo-x, tests) не впливають на фільтр",
+        "td_x збирається, td_x_elearning ігнорується",
+        "UG-cover-dev = PASS і UG-cover-admin = PASS"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-cover-demopath/SPEC.md",
+        "evals/fixtures/user-guide-cover-demopath/user-guide/",
+        "evals/fixtures/user-guide-cover-demopath/demo-x/tests/addons/"
+      ]
     }
   ]
 }

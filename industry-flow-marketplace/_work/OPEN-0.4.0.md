@@ -1,7 +1,7 @@
 # Відкрите після workflow 0.4.0 (перед фіксом)
 
 ## Статус (перевірка 2026-11-14, після фіксу)
-Закрито 1–18; 19 — відкладено (прохід після 0.4.0). Уже були виправлені: SHA_RE/sha_eq/index-headings; `<галузь>` у git_diff_allowed; diff-allowed A-18; `--stand-sha` (псевдонім `--modules-sha`); skip_market_check (A-07.yaml, flow-map, A-21d); slice-coverage (A-21d у flow-map/step-skill-map/step-cards/checks); CS-plan-modules (лише модулі); product-decision-drafter (A-17b ∥ A-17c, INDEX); E6 (test-kit CLAUDE.md, flow-state-keeper); Playwright за замовчуванням; `--answers` у A-17b; назви `elearning.mode` у лапках і «Дані на екранах ролей»; кирилична «А» в rec_ok.
+Закрито 1–19. Уже були виправлені: SHA_RE/sha_eq/index-headings; `<галузь>` у git_diff_allowed; diff-allowed A-18; `--stand-sha` (псевдонім `--modules-sha`); skip_market_check (A-07.yaml, flow-map, A-21d); slice-coverage (A-21d у flow-map/step-skill-map/step-cards/checks); CS-plan-modules (лише модулі); product-decision-drafter (A-17b ∥ A-17c, INDEX); E6 (test-kit CLAUDE.md, flow-state-keeper); Playwright за замовчуванням; `--answers` у A-17b; назви `elearning.mode` у лапках і «Дані на екранах ролей»; кирилична «А» в rec_ok.
 Закрито цим фіксом: мітки `Показників дашборда`/`Коробка входу`/`Коробка показу` пишуть concept-mapper і prototype-builder (шаблони screens.md, BOX.tpl.md, slice-plan-template.md); перелік установки `website_slides` + `td_<галузь>_elearning` (elearning-builder Крок 6, config-as-code Крок 4, A-17b/A-18 allow, картка A-17b); §27 у reuse-modules (RU-core), concept-mapper/BOX (CM-box-core), config-as-code, support-desk, support-kb-builder (KB-support); евали.
 
 
@@ -26,6 +26,6 @@
 | 16 | gates-aggregator: джерела повернень A-16b/A-17b/A-17c; demo-base-builder: A-16b refresh | gates-aggregator, demo-base-builder |
 | 17 | лічильник checks (48), примітка A-17 на карті | flow-map, README |
 | 18 | звірка зі стандартом Odoo: локальні вихідники 19.0 допустимі | elearning-builder, user-guide-builder |
-| 19 | §27а: вирівняти RU-core / CM-box-core з td_knowledge | flow-map, A-03c, A-20 — відкладено, прохід після 0.4.0 |
+| 19 | §27а: вирівняти RU-core / CM-box-core з td_knowledge | закрито (RU-core / CM-box-core = 3 модулі: td_home_menu, td_support, td_knowledge) |
 
 Первісний повний текст зауважень є в рецензіях workflow 0.4.0; тут зафіксовано лише факт закриття.

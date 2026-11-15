@@ -28,7 +28,7 @@ PII = [  # pii-patterns.md; (тип, regex, статус при client_data != n
     ("edrpou", re.compile(r"ЄДРПОУ\D{0,5}\d{8}\b", re.I), "FAIL"),
     ("phone", re.compile(r"(?<![\w:])(?!\+?380[\s()-]?00(?!\d))(\+?380[\s()-]?\d{2}[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?!\w)"), "FAIL"),
     ("phone-bare", re.compile(r"(?<![\w:.,/-])(0\d{9})(?![\w.,/-])"), "WARN"),
-    ("secret", re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*(?!os\.environ|os\.getenv|[\x22\x27]?\$)\S+", re.I), "FAIL"),
+    ("secret", re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*(?!os\.environ|os\.getenv|[\x22\x27]?\$|[\x22\x27]?<)[\x22\x27]?[A-Za-z0-9_\-./+=]{6,}", re.I), "FAIL"),
 ]
 
 
@@ -1224,6 +1224,11 @@ def selftest_template_headings():
 
 
 def selftest():
+    sec = [p for n, p, _ in PII if n == "secret"][0]
+    for ok in ("export DEMO_USERS_PASSWORD=<пароль> && bash package/demo/up.sh", "Симптом: помилка «Access token: недійсний»", "(password, token: не передаються)"):
+        assert not sec.search(ok), ok
+    for bad in ("password=Hunter2xyz", "api_key: sk-abc123def456"):
+        assert sec.search(bad), bad
     assert glob_match("package/addons/td_x/a.py", "package/addons/**") and not glob_match("package/SPEC.md", "package/demo/**")
     assert xy("19.0.1.2") == "1.2"
     sch = parse_schema("# schema: 1\nVP-01:\n  param: A\n  type: enum\n  allowed: [a, b]\n  default: a\n  deprecated: false\nVP-02:\n  deprecated: \"з версії 1.1\"\n")
