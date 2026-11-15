@@ -9,12 +9,15 @@ effort: medium
 inputs:
   - {name: ACCEPTANCE.md, from: A-17, path: package/ACCEPTANCE.md, sha: HEAD}
   - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+  - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
+  - {name: INDEX.md, from: A-17c, path: package/support/INDEX.md, sha: HEAD}
+  - {name: answers.yaml, from: A-17b, path: package/templates/answers.yaml, sha: HEAD}
 params: {mode: перша, phase: release}
 where: package/CHANGELOG.md, package/templates/, package/metrics/key-models.yaml
 template: "industry-flow-marketplace/plugins/flow-package-build/skills/package-release-builder/references/changelog-template.md"
 done: "CHANGELOG, шаблони; R-01...R-22 без FAIL (R-20 — WARN, якщо §27 не злито й немає рядка AI-NN) (R-02 за versioning.md пп. 9-15)"
 check: {mode: both, how: "flow-autocheck: checks/A-18.yaml + скрипти скіла", audit_every_n: 10}
-limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+limits: {max_attempts: 2, timeout_min: 240, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 150000}
 client_data: none
 data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
 odoo_connections: []

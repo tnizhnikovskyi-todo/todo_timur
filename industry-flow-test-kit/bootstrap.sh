@@ -145,6 +145,7 @@ echo "bootstrap: готово -> $TARGET"
 echo "  пакет:   $DEST_PKG (без _work/)"
 echo "  скілів:  $n_skills у .claude/skills/"
 echo "  агентів: $n_agents у .claude/agents/"
+if [ "$UPGRADE" = 1 ] && [ -e "$TARGET/START-HERE.md" ]; then echo "  УВАГА: START-HERE.md застарів (не оновлюється --upgrade) — онови або видали"; fi
 echo "  нові спроби нарядів (--upgrade): $n_att$att_list"
 echo "  шаблони: нових $n_new, пропущено наявних $n_skip, перезаписано $n_over"
 if [ -n "$skipped_list" ]; then echo "  пропущені (наявні; --force перезапише):$skipped_list"; fi

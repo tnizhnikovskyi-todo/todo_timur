@@ -1263,6 +1263,7 @@ def selftest():
     selftest_e3()
     selftest_service_paths()
     selftest_ai_decisions_scope()
+    selftest_demo_readme_template()
     cdir = os.path.join(SKILL, "references", "checks")
     for f in sorted(os.listdir(cdir)):
         for c in load_spec(f[:-5])["checks"]:
@@ -1353,6 +1354,23 @@ def selftest_service_paths():
     assert ctx.rows[0]["status"] == "FAIL" and "td_x/m.py" in ctx.rows[0]["msg"], ctx.rows[0]
     ctx.rows = []; p_vendored_license(ctx, {"id": "t"})
     assert ctx.rows[0]["status"] == "PASS" and "AC-COVERAGE" not in ctx.rows[0]["msg"], ctx.rows[0]
+
+
+def selftest_demo_readme_template():
+    """0.4.0: package/templates/demo-README.md (створює A-15 після SHA стенда) дозволений у diff-checks-acc A-17 і diff-allowed-7 A-18."""
+    import types
+    d = tempfile.mkdtemp()
+    run = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, text=True, check=True).stdout.strip()
+    run("init", "-q", "-b", "main"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+    w = lambda f, t: (os.makedirs(os.path.dirname(os.path.join(d, f)), exist_ok=True), open(os.path.join(d, f), "w").write(t))
+    w("package/x.md", "x"); run("add", "."); run("commit", "-qm", "c0"); a = run("rev-parse", "HEAD")
+    w("package/templates/demo-README.md", "t"); run("add", "-A"); run("commit", "-qm", "c1"); b = run("rev-parse", "HEAD")
+    for step, cid in (("A-17", "diff-checks-acc"), ("A-18", "diff-allowed-7")):
+        c = [x for x in load_spec(step)["checks"] if x["id"] == cid][0]
+        ctx = Ctx(types.SimpleNamespace(repo=d, mode="result", base=a, head=b, agent_pattern=None), {})
+        ctx.rows = []
+        p_git_diff_allowed(ctx, {"id": cid, "args": {"from": "base", "to": "head", "allow": c["args"]["allow"]}})
+        assert ctx.rows[0]["status"] == "PASS", (step, ctx.rows[0])
 
 
 def selftest_ai_decisions_scope():

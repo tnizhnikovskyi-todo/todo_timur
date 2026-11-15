@@ -13,9 +13,9 @@ import argparse, json, os, re, sys
 ROUTES = ["B-13 (B-04)", "B-13 (B-05)", "B-06", "B-07", "D-02", "A-19", "C-07", "support-desk"]
 AI_HEADERS = ["джерела", "межі", "читання проду", "маршрути", "діагностика"]
 PII = [(r"(?<![\w:])(\+?380\d{9}|0(?:39|50|63|66|67|68|73|9[1-9])\d{7})(?!\w)|\(0\d{2}\)\s?\d{3}", "телефон"),
-       (r"ЄДРПОУ\D{0,5}\d{8}\b", "ЄДРПОУ"), (r"[\w.+-]+@[\w-]+\.[\w.-]+", "email"), (r"\bUA\d{27}\b", "IBAN"),
+       (r"ЄДРПОУ\D{0,5}\d{8}\b", "ЄДРПОУ"), (r"[\w.+-]+@(?!example\.)(?![\w.-]*\.(?:example|test|invalid)\b)[\w-]+\.[\w.-]+", "email"), (r"\bUA\d{27}\b", "IBAN"),
        (r"\b[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+\s+[А-ЯІЇЄҐ][а-яіїєґ']+(ович|евич|ївна|івна|ична)\b", "ПІБ"),
-       (r"clients/(?!<)[\w-]+", "шлях клієнта")]
+       (r"clients/(?!<|REGISTRY\.md)[\w-]+", "шлях клієнта")]
 PAGE = re.compile(r"^KB-(\d{3,})-.+\.md$")
 
 
@@ -109,21 +109,23 @@ def main():
 
     # KB-merge: сторінка модуля, якого ще немає в addons (паралельний крок), має позначку «звірити після злиття A-17b»
     msg = []
-    for m in expected:
+    pending = [m for m in expected if m not in mods]
+    present = [m for m in a.expect_module if m in mods]
+    for m in pending:
         pg = [t for t in texts.values() if re.search(r"^module:\s*" + re.escape(m) + r"\s*$", t, re.M)]
         if pg and "звірити після злиття A-17b" not in pg[0]:
             msg.append(f"{m}: немає позначки «звірити після злиття A-17b»")
     stale = []  # модуль уже в addons, а позначка лишилась: власник знімання — A-17c (наступний запуск) або WARN тут
     for m in mods:
-        if m in expected:
+        if m in pending:
             continue
         pg = [t for t in texts.values() if re.search(r"^module:\s*" + re.escape(m) + r"\s*$", t, re.M)]
         if pg and "звірити після злиття A-17b" in pg[0]:
             stale.append(m)
-    status = "FAIL" if msg else ("WARN" if stale else ("PASS" if expected else "SKIPPED"))
+    status = "FAIL" if msg else ("WARN" if stale else ("PASS" if (expected or present) else "SKIPPED"))
     if stale:
         msg.append("модуль уже в addons, позначка «звірити після злиття A-17b» лишилась: звір сторінку з кодом і зніми позначку (" + ", ".join(sorted(stale)) + ")")
-    add("KB-merge", status, "; ".join(msg) if msg else ("" if expected else "немає --expect-module"))
+    add("KB-merge", status, "; ".join(msg) if msg else (("модуль уже в addons — позначка не потрібна: " + ", ".join(sorted(present))) if present and not expected else ("" if expected else "немає --expect-module")))
 
     # KB-route
     msg, total = [], 0

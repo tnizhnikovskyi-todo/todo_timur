@@ -8,13 +8,16 @@ model: sonnet
 effort: medium
 inputs:
   - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
+  - {name: AI-DECISIONS.md, from: A-20, path: docs/industries/mebli/research/AI-DECISIONS.md, sha: HEAD}
+  - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
+  - {name: defects.md, from: A-15, path: package/demo/defects.md, sha: HEAD}
   - {name: addons, from: A-11, path: package/addons, sha: HEAD}
 params: {elearning: "on"}
 where: package/support/
 template: "за SKILL.md скіла"
 done: "AI-INSTRUCTIONS, kb/KB-NNN, INDEX; check_kb.py без FAIL"
 check: {mode: both, how: "flow-autocheck: checks/A-17c.yaml + скрипти скіла", audit_every_n: 10}
-limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+limits: {max_attempts: 2, timeout_min: 180, lease_factor: 1.5, cost_limit_usd: 10, context_budget_tokens: 150000}
 client_data: none
 data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
 odoo_connections: []

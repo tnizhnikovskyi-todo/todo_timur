@@ -194,7 +194,7 @@ description: >
 ## Редакції CE/EE (правила — `flow-package-build/references/editions-and-bridges.md`)
 - `CHANGELOG.md` має запис про зміни по редакціях (ядро/CE; мости `td_*_ee`/EE) — «Що нового» для клієнта CE і клієнта EE окремо.
 - Перевірка установки в чисту базу й оновлення з попереднього тега — для кожної редакції з `editions` (CE; EE при `editions: both`); результат у `release`-блоці з колонкою `edition`. EE недоступна -> `WARN`/«не перевірено», тег не позначати як перевірений на EE.
-- Тег `package/vX.Y` ставиться лише коли гейти A-14 дали `APPROVE` по всіх редакціях з `editions`. Підсумок `APPROVE (CE); EE не перевірено` (`editions: both`, EE недоступна): фаза `tag` — `waiting_human` до Власника продукту з питанням «випускаємо з неперевіреною EE?»; до відповіді тег не ставиться; рішення «так» — тег ставиться, у CHANGELOG і повідомленні тега: «EE не перевірено на <SHA>», тег не позначається як перевірений на EE; «ні» — повернення на A-14 з доступом до EE.
+- Тег `package/vX.Y` ставиться лише коли гейти A-14 дали `APPROVE` по всіх редакціях з `editions`. Підсумок `APPROVE (CE); EE не перевірено` (`editions: both`, EE недоступна): за замовчуванням рішення AI: тег ставиться, у CHANGELOG і повідомленні тега «EE не перевірено на <SHA>» (не позначається як перевірений на EE), рядок AI-NN з ризиком; власник має вето (повернення на A-14 з доступом до EE). `waiting_human` лише якщо в `ACCEPTANCE.md` немає прийнятого обмеження щодо EE.
 - Редакція — колонка `edition` у R-09, R-10, R-11 і в CHANGELOG (розділи по редакціях).
 - Матеріали релізу (відео, one-pager, сторінка) — не цей скіл: їх робить контент-менеджер (крок A-21c `flow-research:showcase-content`, `executor: any`); у `CHANGELOG`/PR — лише посилання на картку A-21c, без створення матеріалів.
 
@@ -219,7 +219,7 @@ description: >
 | R-16 | SHA ревізії однаковий у ACCEPTANCE, scenarios.md, README A-15 | ескалація Власнику продукту |
 | R-17 | `package/metrics/key-models.yaml` є (чернетка), моделі є в `package/addons/` | повтор |
 | R-18 | A-16b і A-17b у релізі: `package/docs/user-guide/INDEX.md` є, SHA стенда в INDEX = SHA модулів без `td_*_elearning`; `check_guides.py` і `check_elearning.py` (якщо модуль входить) без FAIL на ревізії; X.Y модуля elearning = ACCEPTANCE | A-14 -> A-16b / A-17b (дефект), ескалація (немає матеріалів) |
-| R-19 | `package/support/` не потрапила в клієнтську передачу: розділ «Передача клієнту» CHANGELOG виключає `support/`; у `package/templates/*` і клієнтських каталогах немає посилань на `package/support`; `check_kb.py` без FAIL | повтор / A-14 -> A-17c |
+| R-19 | `package/support/` не потрапила в клієнтську передачу: розділ «Передача клієнту» CHANGELOG виключає `support/`; у `package/templates/*` і клієнтських каталогах немає посилань на `package/support`; `check_kb.py` без FAIL; KB-merge WARN -> повернення на A-17c `reconcile`, A-18 позначку не знімає | повтор / A-14 -> A-17c |
 | R-20 | Складові §27 у складі: `td_support` (ce+ee) і `td_home_menu` (ce) та `td_knowledge` (ce+ee; і `td_<галузь>_knowledge`, якщо є в addons) є в `package/addons/` і в `package/config/manifest.yaml` — або в `AI-DECISIONS.md` є рядок AI-NN про свідомий випуск без них (з ризиком; власник — вето); немає ні модуля, ні рядка — WARN, не FAIL | повтор з рядком AI-NN або A-14 після злиття модулів |
 | R-21 | `boost:odoo19-lint` по `package/addons/td_*/` на ревізії | A-14 -> A-11 |
 | R-22 | У `package/` на head немає `*.zip`, `*.dump`, `*.sql.gz` (бази й дампи в дереві пакета заборонені) | A-15 (прибрати з дерева, `.gitignore`) |

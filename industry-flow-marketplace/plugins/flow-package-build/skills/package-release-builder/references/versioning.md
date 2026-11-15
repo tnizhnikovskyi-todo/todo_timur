@@ -3,7 +3,7 @@
 Рішення q19: версія модулів `19.0.X.Y`, тег `package/vX.Y`; суфікс `-odoo<N>` -- для гілок переходу на нову мажорну Odoo (режим `odoo-upgrade`). Тег переходу -- `package/vX.Y-odoo<N>` (рішення q19), гілка -- `upgrade/vX.Y-odoo<N>`; звичайні випуски -- без суфікса.
 
 ## Режими
-| Параметр | `release` = `params.mode: перша` (A-17 -> A-18) | `patch` = `hotfix` (A-19 -> A-18) | `odoo-upgrade` = `нова-версія` (D-03 -> A-17 -> A-18) |
+| Параметр | `release` = `params.mode: перша` (A-17 -> A-17b ∥ A-17c -> A-18) | `patch` = `hotfix` (A-19 -> A-18) | `odoo-upgrade` = `нова-версія` (D-03 -> A-17 -> A-17b ∥ A-17c -> A-18) |
 |---|---|---|---|
 | Тег | `package/vX.Y` | `package/vX.Y.Z` | `package/vX.Y-odoo<N>` (рішення q19) |
 | Номер версії з | `ACCEPTANCE.md` | `hotfix/vX.Y.Z.md` + попередній тег `package/vX.Y` | `ACCEPTANCE.md` + `upgrade-<версія>.md` |
@@ -37,6 +37,7 @@
 15. `package/demo/.gitignore`, `package/demo/docker/README.md` (лише заміна кроку Restore на підйом через `up.sh`) і видалення бінарників баз (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) з `package/` (A-15 refresh, R-22)
 16. Службові шляхи тестового репо (`.claude/`, `industry-flow-marketplace/`, `CLAUDE.md`, `TEST-START.md`, `START-HERE.md`; `bootstrap --upgrade`) не є вмістом пакета, у R-02 не враховуються
 17. `package/demo/defects.md`, `package/CHECKS.md`, `flow/**`, `tests/**` (журнал дефектів, зведення гейтів, рішення і звіти флоу)
+18. `package/templates/demo-README.md` (A-15 Крок 0 п.4 створює шаблон README після SHA стенда; шлях лише цей)
 
 Єдиний список для R-02 і `diff-allowed-7` в `flow-autocheck/references/checks/A-18.yaml`; змінюється разом.
 

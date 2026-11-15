@@ -164,7 +164,7 @@
 - `executor`: any; `skillRef`: flow-package-build:user-guide-builder
 - `access_profile`: repo
 - `inArtifacts`: package/SPEC.md (сценарії за ролями, AC); package/demo/ (стенд, ролі, скрипти, README із SHA); тури A-16 (`package/demo/scenarios.md`); `package/templates/answers.yaml` і профілі
-- `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — таблиця покриття «сценарій SPEC -> розділ» і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
+- `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — три таблиці покриття («заявлене»: сценарій SPEC -> розділ; «розроблене»: меню/дії/звіти td_* -> розділ; «налаштування й експлуатація»: ключі answers.yaml/VP-NN -> розділ) і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
 - гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
 - `review.checklists`: [user-guide.md]; `review.max_rounds: 2` (+1 контрольний)
 - перевірки: `check_guides.py` (UG-cover, UG-cover-dev, UG-cover-admin (§26а: заявлене / розроблене / налаштування й експлуатація), UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
@@ -184,7 +184,7 @@
 - `raciR`: AI (R); Контент-менеджер / Власник продукту (рецензія, A)
 - `executor`: any; `skillRef`: flow-package-build:elearning-builder; `access_profile`: repo
 - `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: "on"|"off"`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
-- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає); рядки AI-NN в `AI-DECISIONS.md` (сертифікація, рішення AI)
+- `outArtifacts`: модуль package/addons/td_<галузь>_elearning (залежність `website_slides`; data XML: курс на роль, уроки з розділів A-16b, тест після кожного курсу з оцінкою й порогом; сертифікація — лише якщо підтверджено у вихідниках 19.0, інакше «не перевірено» в `AI-DECISIONS.md`); тести модуля; блок `elearning:` у `package/templates/answers.yaml` (додає A-17b, якщо його немає); рядки AI-NN в `AI-DECISIONS.md` (сертифікація, рішення AI); `package/config/{manifest.yaml,CONFIG.md}` (лише рядки `website_slides` і `td_<галузь>_elearning`)
 - гейт: ні; AND-split з A-17c, AND-join в A-18
 - перелік установки: при `elearning.mode: "on"` крок сам дописує `website_slides` і `td_<галузь>_elearning` у `package/config/{manifest.yaml,CONFIG.md}` (обидва профілі)
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
@@ -201,7 +201,7 @@
 - гейт: ні; AND-split з A-17b, AND-join в A-18
 - перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
-- примітки: читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
+- примітки: режим `params.mode: reconcile` — AI сам після злиття A-17b і A-17c звіряє сторінку `td_<галузь>_elearning`, знімає позначку «звірити після злиття A-17b» (до A-18, без наряду від людини); читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
 - ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27/§27а (`td_home_menu`, `td_support`, `td_knowledge` та будь-який спільний модуль із README): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README
 
 ### A-18. Реліз (змінена картка 0.4.0)

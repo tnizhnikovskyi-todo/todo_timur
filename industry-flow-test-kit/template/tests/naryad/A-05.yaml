@@ -4,7 +4,7 @@ step: A-05
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: research
-skill_ref: ["flow-research:segment-selector@0.1.0"]
+skill_ref: ["flow-research:segment-selector@0.4.0"]
 model: sonnet
 effort: medium
 inputs:

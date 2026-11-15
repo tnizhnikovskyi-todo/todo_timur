@@ -42,6 +42,7 @@
      "package/CHECKS.md",
      "package/ACCEPTANCE.md",
      "package/demo/**",
+     "package/templates/demo-README.md",
      "package/docs/user-guide/**",
      "package/demo/defects.md",
      "docs/industries/*/research/AI-DECISIONS.md",

@@ -48,7 +48,7 @@
   {
    "id": "no-db-binaries-tree",
    "prim": "no_db_binaries",
-   "route_on_fail": "A-15 (прибрати бази з package/, .gitignore)",
+   "route_on_fail": "A-15 (прибрати бази з package/ через git rm, .gitignore; для refresh — теж git rm, див. demo-base-builder п. 10а/13)",
    "args": {
     "tree": "package/"
    }

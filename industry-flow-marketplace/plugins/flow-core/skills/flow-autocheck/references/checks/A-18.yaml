@@ -24,6 +24,7 @@
     "to": "head",
     "allow": [
      "package/demo/**",
+     "package/templates/demo-README.md",
      "package/ACCEPTANCE.md",
      "package/CHANGELOG.md",
      "package/templates/migration-plan.md",

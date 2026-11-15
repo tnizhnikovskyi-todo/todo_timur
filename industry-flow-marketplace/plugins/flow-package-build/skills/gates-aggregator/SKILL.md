@@ -125,7 +125,7 @@ A-12. До першого A-15 — «не застосовно: профілів
 
 ## Крок 8. Зведення
 Заповнити CHECKS.md за шаблоном: шапка (режим, версія флоу, `SHA_GATES`, `SHA_C03` + статус + run id),
-таблиця п'яти гейтів, розділ «Покриття ALLOCATION» (за `references/checks-template.md`: у ньому прямо названо кожен файл `package/config/` — CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md, data/ — інакше FAIL allocation-coverage), правки (`F-nn`, джерело, файл:рядок, опис, серйозність, код
+таблиця п'яти гейтів, розділ «Покриття ALLOCATION» (за `plugins/flow-package-build/references/checks-template.md`: у ньому прямо названо кожен файл `package/config/` — CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md, data/ — інакше FAIL allocation-coverage), правки (`F-nn`, джерело, файл:рядок, опис, серйозність, код
 повернення, статус `відкрито|закрито`; закриті з попередніх циклів лишаються з кодом), лічильник циклів
 (значення оркестратора з задачі — `flow-map.md` правило 5; CHECKS.md його лише відображає), підсумок. Код повернення — за шляхом файлу знахідки, не за
 гейтом (`references/return-routing.md`); не вдалось визначити — правка з кодом «?» заборонена, ескалація

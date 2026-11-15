@@ -138,6 +138,21 @@
         "У memo — заблокований сценарій і маршрут A-14",
         "Текст заблокованого розділу не вигадується"
       ]
+    },
+    {
+      "id": "admin-without-sc",
+      "prompt": "Наряд A-17b, меблі. INDEX A-16b: ролі komirnyk, master, admin; у admin.md розділи «Параметри», «Профілі» без SC-NN (усі SC належать бізнес-ролям). Збери курс «Адміністратор». Вхідні файли — у `files`.",
+      "expected_output": "Курс «Адміністратор» має уроки за розділами admin.md із маркером `source: admin.md#<заголовок>` (наприклад #Параметри) і тест; EL-source = PASS; EL-lang пропускає адмін-уроки; waiting_human не ставиться.",
+      "assertions": [
+        "Курс admin має ≥1 урок із source: admin.md#<існуючий заголовок>, а не лише тест",
+        "EL-source PASS на evals/fixtures/elearning-admin-nosc",
+        "Агент не вигадує SC-NN у admin.md і не ставить waiting_human"
+      ],
+      "files": [
+        "evals/fixtures/elearning-admin-nosc/user-guide/",
+        "evals/fixtures/elearning-admin-nosc/addons/",
+        "evals/fixtures/elearning-admin-nosc/answers.yaml"
+      ]
     }
   ]
 }

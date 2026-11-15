@@ -13,8 +13,8 @@ inputs:
   - {name: scenarios.md, from: A-16, path: package/demo/scenarios.md, sha: HEAD}
   - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
   - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
-  - {name: defects.md, from: A-16, path: package/demo/defects.md, sha: HEAD}
-  - {name: AI-DECISIONS.md, from: A-20, path: docs/industries/mebli/research/AI-DECISIONS.md, sha: HEAD}
+  - {name: defects.md, from: A-15, path: package/demo/defects.md, sha: HEAD}
+  - {name: AI-DECISIONS.md, from: A-03b, path: docs/industries/mebli/research/AI-DECISIONS.md, sha: HEAD}
 where: package/ACCEPTANCE.md
 template: "немає — форма за SKILL.md"
 done: "чернетка ACCEPTANCE.md із SHA стенда, чек-листом приймання і рядком «власник тестує стенд за інструкціями A-16b»; автоперевірка checks/A-17.yaml без FAIL"

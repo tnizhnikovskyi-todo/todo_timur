@@ -10,7 +10,7 @@ EL-cert (website_slides_survey підтверджено у вихідниках 
 Схема моделей/полів (SCHEMA нижче) — ЧЕРНЕТКА: імена моделей і полів website_slides треба підтвердити у вихідниках 19.0
 (файл:рядок) і за потреби підмінити через --schema (JSON з тими самими ключами); до підтвердження EL-* зі схеми мають статус
 «не перевірено на 19.0» у memo.
-Маркери в XML-коментарях усередині <record>: «role: <роль>» (курс), «source: <файл>.md#SC-NN» (урок), «multi: true» (питання з кількома правильними).
+Маркери в XML-коментарях усередині <record>: «role: <роль>» (курс), «source: <файл>.md#SC-NN» (урок; для admin.md — також #<заголовок розділу>), «multi: true» (питання з кількома правильними).
 Вихід: JSON [{id,status,msg}]. Код повернення 1, якщо є FAIL."""
 import argparse, ast, json, os, re, sys
 import xml.etree.ElementTree as ET
@@ -23,6 +23,7 @@ SCHEMA = {  # ЧЕРНЕТКА: звірити з вихідниками 19.0 (w
 }
 DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "SC", "AC", "VP", "ID"}
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
+SOURCE_ADMIN = re.compile(r"source:\s*(admin\.md)#([^\n(]+)")
 ID_PATTERN = r"SC-\d{2,}"  # ID сценарію; змінюється --id-pattern
 SOURCE = re.compile(r"source:\s*([\w./-]+\.md)#(" + ID_PATTERN + ")")
 ROLE = re.compile(r"role:\s*([\w-]+)")
@@ -234,16 +235,24 @@ def main():
             m = SOURCE.search(cm)
             if m:
                 src = m.groups()
+            else:  # admin.md: якір на будь-який заголовок («source: admin.md#Параметри»)
+                ma = SOURCE_ADMIN.search(cm)
+                if ma:
+                    src = (ma.group(1), ma.group(2).strip())
         if src:
             lesson_src[l["id"]] = src[0]
         if not src:
-            msg.append(f"{l['id']}: немає «source: <файл>.md#SC-NN»")
+            msg.append(f"{l['id']}: немає «source: <файл>.md#SC-NN» (для admin.md — #<заголовок розділу>)")
             continue
         fp = os.path.join(a.guide, src[0])
         if not os.path.isfile(fp):
             msg.append(f"{l['id']}: файлу {src[0]} немає в user-guide")
             continue
-        if not re.search(r"^#{2,4}\s.*\b" + re.escape(src[1]) + r"\b", open(fp, encoding="utf-8").read(), re.M):
+        if src[0] == "admin.md" and not re.fullmatch(ID_PATTERN, src[1]):
+            if not any(src[1].lower() in h.lower() for h in re.findall(r"^#{2,4}\s+(.+)$", open(fp, encoding="utf-8").read(), re.M)):
+                msg.append(f"{l['id']}: у {src[0]} немає заголовка «{src[1]}»")
+                continue
+        elif not re.search(r"^#{2,4}\s.*\b" + re.escape(src[1]) + r"\b", open(fp, encoding="utf-8").read(), re.M):
             msg.append(f"{l['id']}: у {src[0]} немає розділу {src[1]}")
             continue
         role = src[0][:-3]

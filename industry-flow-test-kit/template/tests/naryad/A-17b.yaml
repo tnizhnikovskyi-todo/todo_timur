@@ -8,12 +8,13 @@ model: sonnet
 effort: medium
 inputs:
   - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
+  - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
   - {name: answers.yaml, from: A-09, path: package/templates/answers.yaml, sha: HEAD}
 where: package/addons/td_mebli_elearning/, package/templates/answers.yaml, package/config/manifest.yaml, package/config/CONFIG.md, docs/industries/mebli/research/AI-DECISIONS.md
 template: "за SKILL.md скіла"
 done: "модуль td_mebli_elearning: курс на роль, уроки з A-16b, тести; check_elearning.py без FAIL"
 check: {mode: both, how: "flow-autocheck: checks/A-17b.yaml + скрипти скіла", audit_every_n: 10}
-limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+limits: {max_attempts: 2, timeout_min: 240, lease_factor: 1.5, cost_limit_usd: 12, context_budget_tokens: 150000}
 client_data: none
 data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
 odoo_connections: []

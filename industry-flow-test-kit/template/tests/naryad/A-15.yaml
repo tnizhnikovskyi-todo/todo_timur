@@ -11,7 +11,7 @@ inputs:
   - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
 where: package/demo/, package/templates/demo-README.md, docs/industries/mebli/research/AI-DECISIONS.md
 template: "немає — форма за SKILL.md"
-done: "refresh за demo-base-builder: стенд піднято up.sh; мітка SHA в package/demo/README.md і SHA у заголовку package/demo/scenarios.md оновлено; у README дописано відсутні обов'язкові заголовки шаблону («…: немає»); інші файли package/demo/** не змінено; рядок у AI-DECISIONS"
+done: "refresh за demo-base-builder: стенд піднято up.sh; мітка SHA в package/demo/README.md і SHA у заголовку package/demo/scenarios.md оновлено; у README дописано відсутні обов'язкові заголовки шаблону («…: немає»); інші файли package/demo/** не змінено (виняток: `git rm` бінарників баз, R-22); рядок у AI-DECISIONS"
 check: {mode: both, how: "flow-autocheck: checks/A-15.yaml + скрипти скіла", audit_every_n: 10}
 limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
 client_data: none

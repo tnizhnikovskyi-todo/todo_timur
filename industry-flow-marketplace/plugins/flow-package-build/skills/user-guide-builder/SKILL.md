@@ -54,7 +54,7 @@ description: >
    Телефони демо-контрагентів у тексті кроків не наводити (писати «телефон з картки») -- `no-pii` дає FAIL на будь-який телефон; логіни, адреси `.example` і технічні назви -- лише в зворотних лапках (інакше UG-lang FAIL за латиницю).
    Пароль демо-ролей і інші секрети не наводити: лише назву змінної (`DEMO_USERS_PASSWORD` — «задайте перед `up.sh`»), інакше `no-pii` дасть FAIL.
    Імена параметрів — лише з `answers.yaml`/CONFIG; нових не вигадувати. Виняток: `elearning.mode` (за замовчуванням "on") і `elearning.pass_score` (80) описуються в `admin.md` завжди, навіть якщо блоку `elearning:` ще немає в `answers.yaml` (його додає A-17b), інакше refresh A-16b після A-17b дасть FAIL UG-cover-admin.
-8. **INDEX.md** за `references/index-template.md`: «SHA стенда», ролі, **три таблиці покриття** (§26а): заявлене (SC-NN, F-xx концепції, AC, BOX) / розроблене (кожне меню, дія, форма, звіт, кнопка й параметр у `td_*`, зокрема td_home_menu, td_support, td_knowledge) / налаштування й експлуатація (answers.yaml, VP-xx, профілі, CE/EE, групи й права, майстер-дані, обмін з обліковою системою, пошта, оновлення, резервні копії, звернення в підтримку, база знань, типові помилки). Пропуск — дописати розділ у `<роль>.md` або `admin.md`; відкрите лише те, чого немає у стенді (дефект).
+8. **INDEX.md** за `references/index-template.md`: «SHA стенда», ролі, **три таблиці покриття** (§26а): заявлене (SC-NN, F-xx концепції, AC, BOX) / розроблене (кожне меню, дія, форма, звіт, кнопка заголовка форми, поле `res.config.settings` td_* і параметр спільних модулів (td_support: адреса підтримки; скрипт їх не збирає — вручну) у `td_*`, зокрема td_home_menu, td_support, td_knowledge) / налаштування й експлуатація (answers.yaml, VP-xx, профілі, CE/EE, групи й права, майстер-дані, обмін з обліковою системою, пошта, оновлення, резервні копії, звернення в підтримку, база знань, типові помилки). Пропуск — дописати розділ у `<роль>.md` або `admin.md`; відкрите лише те, чого немає у стенді (дефект).
 9. **Автоперевірка** (нижче); виправне виправити до `max_attempts`.
 
 ## Запис
@@ -62,7 +62,7 @@ description: >
 `package/demo/defects.md`; запасний шлях без браузера — рядок у `docs/industries/<галузь>/research/AI-DECISIONS.md`. Бінарників баз (`*.zip`, `*.dump`) у PR немає. Інших файлів не чіпати.
 
 ## Автоперевірка
-`python3 -I scripts/check_guides.py --dir package/docs/user-guide --spec package/SPEC.md [--spec package/demo/scenarios.md --spec concept/scenarios.md] [--id-pattern <ID>] --stand-sha <SHA_STAND з demo/README.md> --addons package/addons --answers package/templates/answers.yaml [--answers package/demo/profiles/<профіль>.yaml] --config package/config/CONFIG.md`
+`python3 -I scripts/check_guides.py --dir package/docs/user-guide --spec package/SPEC.md [--spec package/demo/scenarios.md --spec concept/scenarios.md] [--id-pattern <ID>] --stand-sha <значення мітки `SHA:` з demo/README.md> --addons package/addons --answers package/templates/answers.yaml [--answers package/demo/profiles/<профіль>.yaml] --config package/config/CONFIG.md`
 (stdlib; вихід — JSON `[{id,status,msg}]`; код 1 = є FAIL). Галузеві латинські назви — рядок `Дозволені латинські назви:` в INDEX.md (читається автоматично), `--allow BAS,CAD` або зворотні лапки.
 
 | ID | Перевірка | FAIL, коли |
@@ -70,7 +70,7 @@ description: >
 | UG-files | є INDEX.md, admin.md, `<роль>.md` і `cards/<роль>.md` для кожної ролі | немає файлу |
 | UG-cover | кожен ID сценарію має розділ і рядок у INDEX; INDEX називає «Джерело сценаріїв» | сценарій без розділу; «заблоковано дефектом» (повернення A-14, не done) |
 | UG-img | кожне зображення (png/jpg/webp) існує й на нього є посилання; кожен розділ зі «Статус: готово» має ≥1 знімок | битий шлях, «сирота», розділ без знімка |
-| UG-sha | SHA в INDEX = SHA_STAND з demo/README.md (`--stand-sha`; без нього SKIPPED) | розбіжність або немає рядка |
+| UG-sha | SHA в INDEX = SHA_STAND з demo/README.md (`--stand-sha`; без нього SKIPPED = «не готово», не PASS; так само UG-cover-dev без `--addons` і UG-cover-admin без `--answers`) | розбіжність або немає рядка |
 | UG-lang | у рядках кроків ролей і карток немає англійських підписів (`admin.md` не перевіряється: там імена параметрів) | латиниця поза `код`/білим списком |
 | UG-card | картка ≤ 45 непорожніх рядків | перевищено |
 | UG-roles | у INDEX є таблиця «## Ролі» з файлами `<роль>.md` (її читає `check_elearning.py` EL-courses) і кожен вказаний файл існує | немає таблиці або файлу |

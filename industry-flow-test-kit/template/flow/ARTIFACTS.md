@@ -4,6 +4,7 @@
 | A-01 | docs/industries/scoring.md | |
 | A-02 | docs/industries/mebli/decision.md (людина) | |
 | A-03 | docs/industries/mebli/briefing.md | |
+| A-03b | docs/industries/mebli/research/ | |
 | A-04 | docs/industries/mebli/past-projects.md | |
 | A-05 | docs/industries/mebli/reference-clients.md | |
 | A-20 | docs/industries/mebli/concept/ | |
@@ -17,7 +18,7 @@
 | A-12 | package/config/ | |
 | A-13 | package/master-data/ | |
 | A-14 | package/CHECKS.md | |
-| A-15 | package/demo/README.md | |
+| A-15 | package/demo/ | |
 | A-16 | package/demo/scenarios.md | |
 | A-16b | package/docs/user-guide/ | |
 | A-17 | package/ACCEPTANCE.md | |

@@ -4,7 +4,7 @@ step: A-04
 scope: {kind: package, id: mebli}
 executor: central
 access_profile: research
-skill_ref: ["flow-research:past-projects-analyzer@0.1.0"]
+skill_ref: ["flow-research:past-projects-analyzer@0.4.0"]
 model: sonnet
 effort: medium
 inputs:

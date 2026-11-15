@@ -18,10 +18,10 @@
 | A-13 | flow-package-build:master-data-template-builder | — |
 | A-14 | flow-package-build:gates-aggregator | `перевірка`\|`повернення`\|`нова-версія`\|`hotfix` |
 | A-15 | flow-package-build:demo-base-builder | `перша`\|`нова-версія`\|`refresh` (стенд пакета) |
-| A-16b | flow-package-build:user-guide-builder | `refresh` (режим повторного знімання після A-15 refresh); посібники ролей і адміністратора, картки, INDEX; профіль `repo`; рецензія `user-guide.md`) |
+| A-16b | flow-package-build:user-guide-builder | `params.mode: refresh` (необов'язковий, повторне знімання після A-15 refresh); посібники ролей і адміністратора, картки, INDEX; профіль `repo`; рецензія `user-guide.md` |
 | A-17 | flow-package-evolution:product-decision-drafter | `перша`\|`нова-версія`\|`hotfix` (AI-частина: чернетка; людська задача рішення — без `skill_ref`) |
 | A-17b | flow-package-build:elearning-builder | — (модуль `td_<галузь>_elearning`; після A-17, паралельно з A-17c) |
-| A-17c | flow-package-build:support-kb-builder | `params.elearning: on\|off` (`package/support/`, лише ToDo; паралельно з A-17b) |
+| A-17c | flow-package-build:support-kb-builder | `params.elearning: "on"\|"off"`; `params.mode: reconcile` (звірка сторінки elearning після злиття A-17b+A-17c, ставить AI до A-18) (`package/support/`, лише ToDo; паралельно з A-17b) |
 | A-18 | flow-package-build:package-release-builder | `перша`\|`нова-версія`\|`hotfix`; `phase` `release`\|`tag` |
 | A-20 | flow-research:concept-mapper (+ під-скіл flow-research:completeness-audit у кінці кроку, не окремий крок) | — (BOX, SALES, REJECTED, AI-DECISIONS; `params.mode: recalc` — за вето власника з `flow/decisions.md`) |
 | A-20c | flow-research:concept-presentation | — (гейт концепції; `params.mode: recalc`) |

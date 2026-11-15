@@ -4,21 +4,28 @@
 Усі пункти нижче закрито. Уже були виправлені: SHA_RE/sha_eq/index-headings; `<галузь>` у git_diff_allowed; diff-allowed A-18; `--stand-sha` (псевдонім `--modules-sha`); skip_market_check (A-07.yaml, flow-map, A-21d); slice-coverage (A-21d у flow-map/step-skill-map/step-cards/checks); CS-plan-modules (лише модулі); product-decision-drafter (A-17b ∥ A-17c, INDEX); E6 (test-kit CLAUDE.md, flow-state-keeper); Playwright за замовчуванням; `--answers` у A-17b; назви `elearning.mode` у лапках і «Дані на екранах ролей»; кирилична «А» в rec_ok.
 Закрито цим фіксом: мітки `Показників дашборда`/`Коробка входу`/`Коробка показу` пишуть concept-mapper і prototype-builder (шаблони screens.md, BOX.tpl.md, slice-plan-template.md); перелік установки `website_slides` + `td_<галузь>_elearning` (elearning-builder Крок 6, config-as-code Крок 4, A-17b/A-18 allow, картка A-17b); §27 у reuse-modules (RU-core), concept-mapper/BOX (CM-box-core), config-as-code, support-desk, support-kb-builder (KB-support); евали.
 
-- WP-A blocker: Перевірки `demo-sha` (sha_eq) і `index-headings` ("re:sha") падають на еталонному результаті скіла. INDEX.md за user-guide-builder має рядок «SHA стенда: <sha>» (фікстура user-guide-ok), а SHA_RE auto
-- WP-A blocker: `scope-elearning` завжди FAIL, коли крок робить обов'язковий запис «не перевірено» в AI-DECISIONS: `git_diff_allowed` не підставляє `<галузь>` в `allow` (autocheck.py:376-386, glob_match порівнює букв
-- WP-A blocker: A-17b після приймання змінює `package/templates/answers.yaml` (ключі elearning.*) і `docs/industries/<галузь>/research/AI-DECISIONS.md`, а `diff-allowed-7` A-18 (ACCEPTANCE SHA..head) цих шляхів не до
-- WP-A major: `args.cmd` для check_guides.py не містить `--modules-sha`, тому UG-sha завжди SKIPPED (check_guides.py:111-112) — перевірка контракту «SHA в INDEX = SHA модулів» не виконується. Підказка в тексті `--m
-- WP-A major: E3 `kpi-count` і `box-eq` спираються на мітки «Показників дашборда: N», «Коробка входу: X», «Коробка показу: X», яких не пише жоден скіл (grep по plugins/: лише A-21.yaml і autocheck.py). З `on_missin
-- WP-A major: Маршрут skip_market_check (E4) не замкнено: (1) A-07.yaml не змінено й вимагає `demand/results.md` (exists + headings) — при пропуску A-23 автоперевірка A-07 падає; (2) розділ «Рекомендація AI для A-0
-- WP-C major: Не визначено, як модуль td_<галузь>_elearning і його залежність website_slides потрапляють у перелік установки. package/config (CONFIG.md «Модулі до установки», manifest.yaml) веде A-12 і після ACCEPT
-- WP-B major: Режим slice-coverage «висить у повітрі»: SKILL (розділ «Хто ставить наряд») посилається на перехід A-21 → огляд → A-07 у flow-core/references/flow-map.md, рядок step-skill-map.md і перевірку наявності
-- WP-B major: CS-plan-modules вважає модулем будь-який токен td_[a-z0-9_]+ у PLAN.md. Перевірено: PLAN з текстом «поле `td_cut_date` на mrp.production» дає FAIL «немає каталогу з __manifest__.py: ['td_cut_date']» п
-- FINAL major: Скіл AI-частини A-17 не оновлено під 0.4.0 (у плагіні змінено лише plugin.json). Рядок 179: «A-17 прийнято -> A-18» замість A-17b ∥ A-17c; у входах A-17 (рядок 85) немає package/docs/user-guide/INDEX.md; AC беруться з `Т
-- FINAL major: E3 закрито лише наполовину: режим `slice-coverage` є в flow-research/skills/completeness-audit (SKILL.md рядки 51–79, check_slice_coverage.py, результат research/COVERAGE-SLICE.md), і скіл прямо пише, що наряд ставить fl
-- FINAL major: Засіб зйомки знімків — «той, що є в A-16 або package/demo; якщо немає — Відкрите питання, не вигадувати» (screenshots.md п.7, SKILL.md Крок 4 і «Відкриті питання»). Це суперечить канону «AI вирішує за замовчуванням» і га
-- FINAL major: E6 і готовність «меблів»: правка §25 називає «шаблон тестового CLAUDE.md», але такого шаблону в пакеті немає (оновлено тільки flow-state-keeper: рядок рішення вносить AI «від імені власника»). CLAUDE.md тестового репо до
-- FINAL minor: Команда script-check-elearning розходиться з SKILL.md elearning-builder: у `cmd` немає `--answers package/templates/answers.yaml` (тоді EL-mode = SKIPPED, а EL-pass не звіряється з answers.yaml), у `text` згадано `[--pas
-- FINAL minor: Рецензент A-17c названий по-різному: у SKILL.md — «Тімлід підтримки/Архітектор», у картці A-17c і в A-17c.yaml — «Власник продукту». У картці A-17c немає рядка `review.checklists` (в A-16b і A-17b є). Розділ «звернення з
-- FINAL minor: gates-aggregator і demo-base-builder не згадують нові джерела повернень: A-16b (дефект UI через package/demo/defects.md), A-17b і A-17c (дефект модуля) повертають на A-14, а опис і тіло gates-aggregator перелічують лише 
-- FINAL minor: Рядок 48: «43 файли» yaml-специфікацій, фактично в checks/ 45. У flow-map.md у рядку A-17 лишилась примітка «відкрито: друга стрілка на карті», хоча стрілку `A17 -. дефект реалізації .-> A14` на діаграму вже додано.
-- FINAL minor: Джерелом звірки названо лише GitHub odoo/odoo гілка 19.0; «немає доступу до вихідників -> стоп». У сесії зі стендом вихідники Odoo 19 уже є локально (те, з чого піднято стенд A-15), а доступ до GitHub може бути обмежений
+
+## Перелік (оригінальні рядки обрізано при збереженні; відновлено як таблицю)
+
+| # | Пункт — чим закрито | Файл |
+|---|---|---|
+| 1 | autocheck.py (SHA_RE, sha_eq), checks/A-17.yaml, index-headings | flow-core/skills/flow-autocheck |
+| 2 | autocheck.py git_diff_allowed: підстановка `<галузь>` | flow-core/skills/flow-autocheck |
+| 3 | checks/A-18.yaml diff-allowed (answers.yaml, AI-DECISIONS) | flow-core/skills/flow-autocheck |
+| 4 | `--stand-sha` (псевдонім `--modules-sha`) у check_guides.py | flow-package-build/skills/user-guide-builder |
+| 5 | мітки Показників дашборда / Коробка входу / Коробка показу в шаблонах | concept-mapper, prototype-builder |
+| 6 | skip_market_check: A-07.yaml, flow-map, A-21d | flow-core/references, checks |
+| 7 | перелік установки website_slides + td_<галузь>_elearning | elearning-builder Крок 6, config-as-code Крок 4 |
+| 8 | slice-coverage: A-21d у flow-map/step-skill-map/step-cards/checks | flow-core/references |
+| 9 | CS-plan-modules: лише модулі з каталогом | completeness-audit/scripts |
+| 10 | product-decision-drafter: A-17b ∥ A-17c, INDEX | flow-package-evolution |
+| 11 | slice-coverage повністю (E3) | completeness-audit |
+| 12 | Playwright/Chromium — засіб знімків за замовчуванням | user-guide-builder, prototype-builder |
+| 13 | E6: test-kit CLAUDE.md (test-CLAUDE.md), flow-state-keeper | flow-core/references/templates/test-CLAUDE.md |
+| 14 | `--answers` у script-check-elearning | elearning-builder, checks |
+| 15 | рецензент A-17c = Власник продукту | support-kb-builder, картка A-17c |
+| 16 | gates-aggregator, demo-base-builder: джерела повернень A-16b/A-17b/A-17c | gates-aggregator, demo-base-builder |
+| 17 | лічильник checks (48), примітка A-17 на карті | flow-map, README |
+| 18 | звірка зі стандартом Odoo: локальні вихідники 19.0 допустимі | elearning-builder, user-guide-builder |
+
+Первісний повний текст зауважень є в рецензіях workflow 0.4.0; тут зафіксовано лише факт закриття.
