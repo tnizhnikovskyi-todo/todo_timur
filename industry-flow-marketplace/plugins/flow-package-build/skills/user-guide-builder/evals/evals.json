@@ -359,12 +359,14 @@
     {
       "id": "v041-real-false-fail-regress",
       "prompt": "Регрес на хибні FAIL реального посібника: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-real/user-guide --spec evals/fixtures/user-guide-v041-real/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-real/addons --answers evals/fixtures/user-guide-v041-real/answers.yaml --config evals/fixtures/user-guide-v041-real/CONFIG.md --role-groups evals/fixtures/user-guide-v041-real/plan.md --odoo-src evals/fixtures/user-guide-v041-real/odoo-src. Фікстура має feature-групу td_x.group_feature_scan (implied у base.group_user через td_x_demo), крок із запереченням «комірник не бачить», команди admin.md у зворотних лапках, меню з групою іншого модуля td_y (переклад «Касир»), префікс «-» у groups, plan.md із «…». Що показує UG-access, UG-cover-admin?",
-      "expected_output": "UG-cover-admin = PASS (inline-команди, група td_y.group_cashier з uk.po td_y, «-група» не вимога, feature-групи не вимагаються); UG-access = WARN «перелік груп неповний», не FAIL (feature-група — через base.group_user, рядок із запереченням пропущено); якщо покласти ROLE-GROUPS.live.json у user-guide/img/ROLE-GROUPS.json — UG-access = PASS.",
+      "expected_output": "UG-cover-admin = PASS (inline-команди, група td_y.group_cashier з uk.po td_y, «-група» не вимога, feature-групи не вимагаються); UG-access = WARN «перелік груп неповний», не FAIL (feature-група — через base.group_user, рядок із запереченням пропущено); якщо покласти ROLE-GROUPS.live.json у user-guide/img/ROLE-GROUPS.json — UG-access = PASS. Також UG-std-label = PASS на регрес-рядках реального admin.md (гібрид «A» → блок «B» → галочка «C», «Odoo → BAS», «A → B», заголовок довідника «текст → коли → хто», перелік порядку дій) і UG-access не рахує назви в уточненні про іншу роль («у фінансиста — «…»», «стандарт «…»»).",
       "assertions": [
         "UG-cover-admin = PASS",
         "UG-access не FAIL: WARN про неповний перелік plan.md",
         "Рядок із «не бачить» не рахується дорученням ролі",
-        "З img/ROLE-GROUPS.json (стенд) UG-access = PASS без --role-groups"
+        "З img/ROLE-GROUPS.json (стенд) UG-access = PASS без --role-groups",
+        "UG-std-label = PASS (регрес-рядки admin.md з реального посібника)",
+        "UG-access не FAIL на кроці з уточненням про іншу роль (komirnyk.md, крок 4)"
       ],
       "files": [
         "evals/fixtures/user-guide-v041-real/SPEC.md",

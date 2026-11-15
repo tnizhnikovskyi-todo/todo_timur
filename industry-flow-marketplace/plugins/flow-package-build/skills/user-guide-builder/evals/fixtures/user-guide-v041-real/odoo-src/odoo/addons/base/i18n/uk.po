@@ -20,3 +20,36 @@ msgstr "Параметри системи"
 msgid "Create"
 msgstr "Створити"
 
+
+msgid "Furniture"
+msgstr "Меблі"
+
+msgid "Sales"
+msgstr "Продажі"
+
+msgid "Companies"
+msgstr "Компанії"
+
+msgid "New"
+msgstr "Новий"
+
+msgid "General Settings"
+msgstr "Загальні налаштування"
+
+msgid "Outgoing Mail Servers"
+msgstr "Сервери вихідної пошти"
+
+msgid "Furniture Docs"
+msgstr "Документи меблевого виробництва"
+
+msgid "Printed Contract"
+msgstr "Друкований договір"
+
+msgid "Billing"
+msgstr "Виставлення рахунків"
+
+msgid "Packages"
+msgstr "Пакети"
+
+msgid "Use custom email servers"
+msgstr "Використовуйте кастомні сервери"

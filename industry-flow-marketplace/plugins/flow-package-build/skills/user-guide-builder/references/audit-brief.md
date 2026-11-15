@@ -18,7 +18,7 @@ runner передає шляхи: `package/docs/user-guide/` (INDEX, admin.md, `
 кадри не прямим URL? Передача між ролями (хто бачить результат попередньої ролі) описана? Повідомлення системи цієї ролі — у `reference/messages.md`.
 
 ## Кут (в) — переліки з коду, F/AC, ACCEPTANCE
-Рецензент скриптами/grep складає переліки з коду `td_*`: menuitem і дії, кнопки заголовка й смарт-кнопки (`button_box`), звіти, майстри (`TransientModel`), поля
+Рецензент (інструменти Read/Grep/Glob, без Bash — скриптів не запускає) складає переліки з коду `td_*` через Grep (шаблони: `<menuitem`, `button_box`, `raise (UserError|ValidationError|AccessError)`, `get_param(`, `TransientModel`) або з сирих виводів grep по коду, які runner поклав у теку контексту (це не «чужий перелік», на відміну від таблиць INDEX і виводу `check_guides.py`): menuitem і дії, кнопки заголовка й смарт-кнопки (`button_box`), звіти, майстри (`TransientModel`), поля
 `res.config.settings`, `get_param`, тексти `raise`. Звіряє з посібниками й довідником. Далі: кожен F-xx концепції й AC зі SPEC має сценарій/розділ; якщо `package/ACCEPTANCE.md` уже є (повтор після A-17; на першому проході файла немає, звірка — за `guide-acceptance-consistent` в A-17): статус у посібнику = статус
 в `ACCEPTANCE.md` (немає «готово» в посібнику при «відхилено» в приймальній таблиці); назви стандартного UI — з uk.po 19.0.
 

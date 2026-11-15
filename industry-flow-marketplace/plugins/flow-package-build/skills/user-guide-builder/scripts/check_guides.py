@@ -57,9 +57,12 @@ SUSPECT_LABELS = {
     "системні параметри": "підпис із uk.po base (msgid System Parameters); шлях — у режимі розробника, не «Технічні»",
     "обговорення": "для пошти — «Ел. пошта» (uk.po mail), не «Обговорення»",
 }
+QUAL = r"блок|галочк\w*|вкладк\w*|кнопк\w*|пол[ея]|розділ|меню|значок|значк\w*|пункт|прапорець|перемикач|сторінк\w*|група|секці\w*"
 ACTION_GEAR = re.compile(r"«Дія»[^\n|]{0,60}(імпорт|архів)", re.I)
 URL_ACTION = re.compile(r"/odoo/action-|[#?&]action=|/web#")
 NEGATION = re.compile(r"не\s+(бачить|бачать|доступн|видно|показу|мож)|недоступн|лише\s+в\s+режим\w*\s+розробника|режим\w*\s+розробника|скасовує\s+керівник|тільки\s+керівник|лише\s+керівник", re.I)
+# уточнення про ІНШУ роль чи пояснення назви застосунку: назви в них — не доручення цій ролі
+OTHER_ROLE = re.compile(r"\(\s*(?:у|в|для)\s+[^()—–:]{2,40}?\s*[—–:-]\s*[^()]*(?:\([^()]*\)[^()]*)*\)|\(\s*[А-Яа-яІіЇїЄєҐґ'’ ]{3,30}:\s*[^()]*\)|\(\s*стандарт\w*\s+«[^»]*»\s*\)|стандарт\w*\s+«[^»]*»|користувач\w*\s+із\s+групою\s+«[^»]*»|;\s*(?:у|в|для)\s+[^;«»]{2,40}?\s*[—–:]\s*[^;]*", re.I)
 ADMIN_LOGIN = re.compile(r"(?i)^(admin|administrator|root|__system__)(@.*)?$")
 
 
@@ -131,7 +134,7 @@ def parse_security(path, mod, groups):
 
 def collect_td_ui(addons):
     """Меню, кнопки й групи модулів td_* з XML: {menus, buttons, groups}."""
-    menus, buttons, groups = [], [], {}
+    menus, buttons, groups, unresolved = [], [], {}, []
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".xml"):
             parse_security(path, mod, groups)
@@ -168,12 +171,13 @@ def collect_td_ui(addons):
                     if not label and smart:
                         fl = el.find(".//field[@string]")
                         label = fl.get("string") if fl is not None else None
+                        if not label:  # перший НЕпорожній текст серед усіх span (у першому може бути лише <field/>)
+                            label = next((t_ for t_ in ("".join(sp.itertext()).strip() for sp in el.iter("span")) if t_), None)
                         if not label:
-                            sp = el.find(".//span")
-                            label = (sp.text or "").strip() if sp is not None else None
+                            unresolved.append({"mod": mod, "action": el.get("name") or "", "file": os.path.relpath(path, addons)})
                     if label and not label.startswith("%"):
                         buttons.append({"name": label, "groups": split_groups(el.get("groups"), mod), "smart": smart, "header": header, "mod": mod, "action": el.get("name") or ""})
-    return {"menus": menus, "buttons": buttons, "groups": groups}
+    return {"menus": menus, "buttons": buttons, "groups": groups, "smart_unresolved": unresolved}
 
 
 def std_modules(a):
@@ -855,9 +859,11 @@ def main():
             return False
         sm_miss = sorted({f"{b['mod']}: «{b['name']}»" for b in ui_all["buttons"] if b["smart"] and not bnamed(b)})
         hd_miss = sorted({f"{b['mod']}: «{b['name']}»" for b in ui_all["buttons"] if b["header"] and not b["smart"] and not bnamed(b)})
+        unres = sorted({f"{u['file']}, name={u['action']}" for u in ui_all.get("smart_unresolved", [])})
         msg = ([f"смарт-кнопки без опису дії ({len(sm_miss)}): {', '.join(sm_miss)}"] if sm_miss else [])
-        add("UG-cover-buttons", "FAIL" if msg else ("WARN" if hd_miss else "PASS"),
-            "; ".join(msg + ([f"кнопки заголовка форм без згадки ({len(hd_miss)}): {', '.join(hd_miss)}"] if hd_miss else [])))
+        add("UG-cover-buttons", "FAIL" if msg else ("WARN" if (hd_miss or unres) else "PASS"),
+            "; ".join(msg + ([f"кнопки заголовка форм без згадки ({len(hd_miss)}): {', '.join(hd_miss)}"] if hd_miss else [])
+                      + ([f"підпис смарт-кнопки не визначено, покриття не перевірено ({len(unres)}): {'; '.join(unres)}"] if unres else [])))
 
     # UG-access: groups меню/кнопок, названих у кроках ролі, ⊆ групи ролі (LESSONS §28а). Недоступне = дефект (A-11/A-12), не обхід текстом
     rg, rg_incomplete, rg_src = role_groups_map(a, root)
@@ -915,7 +921,7 @@ def main():
                     continue
                 if NEGATION.search(line):  # «не бачить», «лише в режимі розробника», «скасовує керівник»: назва згадана як те, чого роль НЕ робить
                     continue
-                for nm in re.findall(r"«([^»]+)»", line):
+                for nm in re.findall(r"«([^»]+)»", OTHER_ROLE.sub(" ", line)):
                     cands = by_name.get(nm.strip().lower())
                     if not cands:
                         continue
@@ -1043,20 +1049,57 @@ def main():
             seen_ = set()
             # (а) «A» → «B»: кожен сегмент у власних лапках; (б) «A → B → C»: уся стежка в одній парі лапок (формат шаблону)
             for seg_line in re.findall(r"«[^»]+»(?:\s*(?:→|›|->|>)\s*«[^»]+»)+", line):
-                for seg in re.findall(r"«([^»]+)»", seg_line):
+                segs_a = re.findall(r"«([^»]+)»", seg_line)
+                if all(re.fullmatch(r"[A-Za-z0-9 ._-]+", x_) for x_ in segs_a):
+                    continue
+                for seg in segs_a:
                     paths.append((n, i, seg, ctx_(seg), None))
                     seen_.add(seg)
             for q in re.findall(r"«([^»]+)»|`([^`\n]+)`|\*\*([^*\n]+)\*\*", line):
                 q = next(x for x in q if x)
                 if re.search(r"→|›|->|&gt;", q):
-                    for seg in re.split(r"\s*(?:→|›|->|&gt;|>)\s*", q):
+                    segs_q = re.split(r"\s*(?:→|›|->|&gt;|>)\s*", q)
+                    if all(re.fullmatch(r"[A-Za-z0-9 ._-]+", x_.strip()) for x_ in segs_q if x_.strip()):
+                        continue  # назва напряму/профілю («Odoo → BAS», «A → B»), не шлях меню
+                    segs_q = [re.split(r"[(:]\s*", x_)[-1] if k_ == 0 else (re.split(r"\)", x_)[0] if k_ == len(segs_q) - 1 else x_) for k_, x_ in enumerate(segs_q)]
+                    for seg in segs_q:
                         if seg.strip() and seg not in seen_:
                             paths.append((n, i, seg.strip(), ctx_(seg), None))
                             seen_.add(seg)
-            # (в) стежка без лапок: відкрийте Налаштування → Технічні → Системні параметри, потім …
-            if not re.search(r"«[^»]*(?:→|›)|[`*][^`*\n]*(?:→|›)", line) and re.search(r"→|›", line):
-                plain = re.sub(r"[«»`*\"]", "", line)
+            # (г) гібрид «A» → блок «B» → галочка «C»: сегмент — лише текст у «…» (слова-уточнення відкидаємо), не уривки речення;
+            # (в) стежка без лапок «відкрийте Налаштування → Технічні → Системні параметри» — лише для ланцюжка без лапок поза дужками;
+            # рядок спершу ділимо на речення/«;», стрілки всередині лапок маскуємо ((б) їх уже розібрав)
+            mask_ = lambda m_: re.sub(r"→|›|->|&gt;|>", "\x00", m_.group(0))
+            for clause in re.split(r";|\.\s+(?=[А-ЯІЇЄA-Z«])", line):
+                cm = re.sub(r"«[^»]*»|`[^`\n]*`|\*\*[^*\n]*\*\*", mask_, clause)
+                arrows = [m_ for m_ in re.finditer(r"→|›", cm)]
+                if not arrows:
+                    continue
+                if "«" in cm:
+                    chain = re.split(r"\s*(?:→|›)\s*", cm)
+                    for k, part in enumerate(chain):
+                        if k == 0:
+                            mq = re.search(r"(?:%s)?\s*«([^»]+)»\s*$" % QUAL, part, re.I)
+                        elif k == len(chain) - 1:
+                            mq = re.match(r"\s*(?:%s)?\s*«([^»]+)»" % QUAL, part, re.I)
+                        else:
+                            mq = re.fullmatch(r"\s*(?:%s)?\s*«([^»]+)»\s*" % QUAL, part, re.I)
+                        if mq and mq.group(1) not in seen_:
+                            paths.append((n, i, mq.group(1).strip(), ctx_(mq.group(1)), None))
+                            seen_.add(mq.group(1))
+                    continue
+                depth_in = False
+                for m_ in arrows:
+                    pre = cm[:m_.start()]
+                    if pre.count("(") > pre.count(")"):
+                        depth_in = True
+                bw_ = [(re.findall(r"[\w.-]+", cm[:m_.start()]) or [""])[-1] for m_ in arrows] + [(re.findall(r"[\w.-]+", cm[m_.end():]) or [""])[0] for m_ in arrows]
+                if depth_in or all(re.fullmatch(r"[A-Za-z0-9._-]*", w_) for w_ in bw_):
+                    continue  # заголовок таблиці-довідника, «A → B» як позначення профілів, пояснення в дужках — не шлях меню
+                plain = re.sub(r"[`*\"]", "", cm)
                 parts = re.split(r"\s*(?:→|›)\s*", plain)
+                if any(x_[:1].islower() for x_ in parts[1:-1]):
+                    continue  # перелік порядку дій малими літерами («категорії → контрагенти → …»), назви меню пишуться з великої
                 if len(parts) >= 2:
                     head = re.split(r"[:;,(|]\s*", parts[0])[-1].strip()
                     tail = re.split(r"[,;:)|]|\.\s*$|\.\s+(?=[А-ЯІЇЄA-Z])|\s+(?:і|та|потім|далі|щоб)\s", parts[-1])[0].strip()
@@ -1095,7 +1138,10 @@ def main():
     if not paths:
         add("UG-std-label", "PASS" if a.odoo_src else "SKIPPED", "шляхів меню «A → B» у посібниках немає")
     elif bad:
-        add("UG-std-label", "FAIL", "; ".join(sorted(set(bad))[:10]))
+        ub_ = sorted(set(bad))
+        add("UG-std-label", "FAIL", (f"усього {len(ub_)}: " if ub_ else "") + "; ".join(ub_[:10]) + (f" … (показано 10 з {len(ub_)}, повний перелік — items)" if len(ub_) > 10 else ""))
+        if len(ub_) > 10:
+            res[-1]["items"] = ub_
     elif not a.odoo_src:
         add("UG-std-label", "WARN", "немає --odoo-src: перевірено лише список підозрілих назв, не повну звірку з uk.po 19.0")
     else:

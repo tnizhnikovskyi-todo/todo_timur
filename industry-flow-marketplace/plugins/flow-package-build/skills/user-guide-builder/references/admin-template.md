@@ -97,10 +97,10 @@ admin_passwd = <довгий-випадковий-майстер-пароль>
 pg_dump -Fc klient_prod > klient_prod.dump
 tar czf filestore.tgz -C /var/lib/odoo/filestore klient_prod
 createdb klient_test && pg_restore -d klient_test klient_prod.dump
-tar xzf filestore.tgz -C /var/lib/odoo/filestore && mv /var/lib/odoo/filestore/klient_prod /var/lib/odoo/filestore/klient_test
+mkdir -p /var/lib/odoo/filestore/klient_test && tar xzf filestore.tgz -C /var/lib/odoo/filestore/klient_test --strip-components=1 && chown -R odoo: /var/lib/odoo/filestore/klient_test
 /opt/odoo/odoo/odoo-bin neutralize -d klient_test
 ```
-Копію для тесту знешкодьте: `odoo-bin neutralize` вимикає листи й cron. Далі вручну: у модулях td_* вимкніть канали обміну, перевірте адресу пошти й ключі інтеграцій тестової бази.
+Відновлення пробуйте на окремій базі чи сервері; теку filestore робочої бази (`klient_prod`) не перейменовуйте й не перезаписуйте — розпаковуйте лише в теку тестової бази. Копію для тесту знешкодьте: `odoo-bin neutralize` вимикає листи й cron. Далі вручну: у модулях td_* вимкніть канали обміну, перевірте адресу пошти й ключі інтеграцій тестової бази.
 
 ## Оновлення версії
 Зупиніть сервіс, зробіть резервну копію, оновіть модулі, запустіть сервіс.
