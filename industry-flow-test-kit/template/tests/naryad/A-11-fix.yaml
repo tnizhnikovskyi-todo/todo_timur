@@ -1,0 +1,24 @@
+# ТЕСТОВИЙ наряд A-11 (0.4.0): fix — версія td_<галузь>_knowledge = 19.0.<X.Y пакета>.0 (інакше A-17 version-eq FAIL); перший у контурі A-11 fix -> A-12 fix -> A-14 -> A-15 (повний) -> A-16 -> A-16b
+step: A-11
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["odoo19-mvp-build:code-dev"]
+model: sonnet
+effort: medium
+params: {mode: fix}
+inputs:
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+where: package/addons/td_mebli_knowledge/__manifest__.py
+template: "немає — форма за SKILL.md"
+done: "лише `version` у package/addons/td_mebli_knowledge/__manifest__.py = 19.0.<X.Y решти td_mebli_*>.0 (рядок AI-NN в AI-DECISIONS виконує сесія за потреби дозволу where); код модуля не змінено; версію td_knowledge не чіпати (власна)"
+check: {mode: both, how: "where-only + version-eq з checks/A-17.yaml (звірка з маніфестами td_mebli_*)", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-11-fix-test}
+attempt: 1
+returned_from: null
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

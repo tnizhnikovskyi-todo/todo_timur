@@ -49,7 +49,7 @@ description: >
 Примітка (0.4.0): після перепідйому стенда на новому SHA (повернення з A-14) `A-16b` (інструкції користувача) іде в режимі `refresh` — перезнімає зачеплені сценарії й оновлює SHA в `INDEX.md` і `SHOOT-LOG.md`; ланцюг A-15 -> A-16 -> A-16b -> A-17.
 1. Режим — за `step` наряду: `A-15` → стенд, `A-22` → база зрізу. A-15: **старт 1** (за замовчуванням), **старт 2**
    (`returned_from: A-16`; сценарії з маршрутом A-15 у `package/demo/scenarios.md`), **нова версія** (`params.mode: нова-версія`
-   або в наряді змінені AC і `git.prev_tag`), **refresh** (`params.mode: refresh`; див. кроки нижче). Ключа `params.mode` для A-15/A-22 у таблиці `naryad-format.md` немає —
+   або в наряді змінені AC і `git.prev_tag`), **refresh** (`params.mode: refresh`; див. кроки нижче). `params.mode: refresh` для A-15 є в `naryad-format.md` (для A-22 ключа немає) —
    не питати, виводити за `step`/`returned_from` (`references/open-questions.md`, В-8).
 2. На вході `план_демо-збірки_*` без наряду A-15/A-22 — стоп: «режим "демо під ліда" не реалізовано; для пакета — A-15,
    для гарячого ліда — A-22».
@@ -77,7 +77,7 @@ description: >
     немає — скрипти все одно параметризовані, у README «Відкрите питання: режим обирає Тімлід», першим рядком у `memo`.
 11. **Старт 2:** лише сценарії з маршрутом A-15: причина → правка `package/demo/` → перезбирання/скидання → новий `SHA_STAND`
     (правило з кроку 0) → розділ README «Виправлення стенда/демо-даних» (сценарій, причина, що змінено, новий SHA). Дефект пакета → A-14.
-13. **Refresh** (A-15 refresh; умова: `git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'` = код 0, тобто гейти чинні, застаріла лише мітка SHA або стенд не піднятий):
+13. **Refresh** (A-15 refresh; умова: `git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'` = код 0, тобто гейти чинні, застаріла лише мітка SHA або стенд не піднятий): **Refresh не застосовується, якщо `CHECKS.md` оновлено в цьому ж контурі через зміну коду (повернення з A-14 після A-11/A-12 fix): тоді повний цикл A-15 (без `params.mode`) і повтор A-16.**
     підняти стенд `up.sh`, зафіксувати `SHA_STAND` (правило кроку 0); оновити мітку SHA у `package/demo/README.md` (і SHA по редакціях) та рядок `SHA: <SHA_STAND>` у заголовку `package/demo/scenarios.md`
     з приміткою «тури не перезапускались, код = SHA гейтів»; дописати рядок AI-NN в AI-DECISIONS. Єдиний виняток — бінарники баз і дампи (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) у `package/` (R-22): прибрати їх із дерева (`git rm`), додати шаблони в `package/demo/.gitignore` (локальний стенд піднімається через `up.sh`), рядок AI-NN в AI-DECISIONS (власник — вето). Разом із видаленням бінарника оновити інструкцію локального стенда, що на нього посилалась: `package/demo/docker/README.md` (крок Restore з zip замінити на «чиста база + `up.sh` / `data/seed_demo.py`») і розділ «Режим використання стенда» в `package/demo/README.md`; у `memo` — точні команди підйому стенда власником для A-17 (без рішення про сервер). У README дописати відсутні обов'язкові заголовки шаблону (напр. «Виправлення стенда/демо-даних: немає»). Інші файли `package/demo/**` (`up.sh`, решта `docker/**`, `answers.yaml`, `profiles/`) не змінювати:
     потрібна правка скриптів чи даних — це не refresh, а контур A-14 (`result: returned`/`escalated` до A-14). Дозволені файли — `versioning.md` п. 5, 6, 14. Тури й сценарії A-16 не перезапускати. `up.sh` падає — `waiting_human`.

@@ -10,7 +10,7 @@ printf '# Шаблон\n\n```markdown\n## Версія <тег>\n### Суміс�
 echo x > package/templates/migration-plan.md; echo x > package/templates/training.md
 git add -A; git commit -qm accepted; ACC=$(git rev-parse HEAD)
 printf '# Приймання\nВерсія 1.2\nSHA: %s\n' "$ACC" > package/ACCEPTANCE.md
-echo v2 > package/demo/README.md; echo v2 > package/questionnaire.md; echo "# 1.2 нове" >> package/CHANGELOG.md
+echo v2 > package/demo/README.md; echo "#!/bin/sh" > package/demo/up.sh; echo v2 > package/questionnaire.md; echo "# 1.2 нове" >> package/CHANGELOG.md
 git add -A; git commit -qm candidate; HEAD=$(git rev-parse HEAD)
 cat > "$D/naryad.json" <<X
 {"step":"A-18","scope":{"kind":"package","id":"demo-1"},"inputs":[],"where":"package/","template":"package/templates/changelog-template.md","attempt":1,"client_data":"none",

@@ -1,0 +1,5 @@
+<odoo>
+  <menuitem id="menu_root" name="Склад меблів" sequence="10"/>
+  <record id="act_x" model="ir.actions.act_window"><field name="name">Приймання деталей</field><field name="res_model">stock.picking</field></record>
+  <record id="rep_x" model="ir.actions.report"><field name="name">Наклейка на пачку</field></record>
+</odoo>

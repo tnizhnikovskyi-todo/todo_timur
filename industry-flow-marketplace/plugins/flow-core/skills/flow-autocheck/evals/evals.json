@@ -23,13 +23,23 @@
       "expected_output": "Вердикт FAIL. diff-allowed-7 FAIL, у msg лише package/questionnaire.md (README і CHANGELOG не FAIL), route_on_fail «контур A-14». version-eq FAIL з чотирма значеннями (тег 1.2, CHANGELOG, ACCEPTANCE 1.2, td_x 1.1); можливий додатковий FAIL kit-vs-changelog. odoo19-lint та установка в чисту базу — MANUAL. Тег не поставлено.",
       "assertions": [
         "diff-allowed-7 має статус FAIL і називає лише package/questionnaire.md як зайвий файл",
-        "package/demo/README.md і package/CHANGELOG.md не названо порушенням",
+        "package/demo/README.md, package/demo/up.sh і package/CHANGELOG.md не названо порушенням (package/demo/** дозволено, свіжість стенда перевіряє sha_eq/R-18)",
         "route_on_fail для diff-allowed-7 — контур A-14 і позначений як пропозиція",
         "version-eq має статус FAIL, msg містить усі чотири значення версії (тег, CHANGELOG, ACCEPTANCE, td_x)",
         "Версію з __manifest__.py прочитано через git show і ast.literal_eval, код маніфесту не виконувався й не імпортувався",
         "template-headings (якщо запущено) не дає FAIL за заголовками з приміткою «<- лише odoo-upgrade» / «<- лише patch» у режимі release",
         "odoo19-lint, установка в чисту базу і тест оновлення — рядки MANUAL, не запущені",
         "Тег package/v1.2 не створено, нічого не закомічено, у Odoo нічого не записано"
+      ]
+    },
+    {
+      "id": "a14-allocation-shared",
+      "prompt": "Режим result, крок A-14, scope package/demo-1. Фікстуру будує evals/fixtures/a14-allocation-shared/make_repo.sh <тека>. У package/addons є файл AC-COVERAGE.md і теки td_home_menu, td_support, td_knowledge, td_x_demo, td_x_elearning без рядків в ALLOCATION; package/config має CONFIG.md, manifest.yaml, vp-map.yaml, install-log.md.",
+      "expected_output": "allocation-coverage PASS: файл AC-COVERAGE.md не рахується текою, спільні (§27/§27а), demo- та elearning-модулі не вимагають рядка в ALLOCATION, файли config звіряються з CHECKS.md за назвою без розширення.",
+      "assertions": [
+        "allocation-coverage має статус PASS",
+        "AC-COVERAGE.md не названо текою без ALLOCATION",
+        "td_home_menu, td_support, td_knowledge, td_x_demo, td_x_elearning не названо в FAIL"
       ]
     },
     {

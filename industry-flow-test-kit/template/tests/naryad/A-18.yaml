@@ -12,7 +12,7 @@ inputs:
 params: {mode: перша, phase: release}
 where: package/CHANGELOG.md, package/templates/, package/metrics/key-models.yaml
 template: "industry-flow-marketplace/plugins/flow-package-build/skills/package-release-builder/references/changelog-template.md"
-done: "CHANGELOG, шаблони; R-01...R-20 без FAIL (R-20 — WARN, якщо §27 не злито й немає рядка AI-NN) (R-02 за versioning.md пп. 9-15)"
+done: "CHANGELOG, шаблони; R-01...R-22 без FAIL (R-20 — WARN, якщо §27 не злито й немає рядка AI-NN) (R-02 за versioning.md пп. 9-15)"
 check: {mode: both, how: "flow-autocheck: checks/A-18.yaml + скрипти скіла", audit_every_n: 10}
 limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
 client_data: none

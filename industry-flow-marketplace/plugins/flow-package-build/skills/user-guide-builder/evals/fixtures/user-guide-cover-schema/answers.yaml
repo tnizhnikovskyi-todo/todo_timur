@@ -1,0 +1,16 @@
+VP-01:
+  param: pass_score
+  question: Поріг складання курсу
+  type: int
+  allowed: [60, 80, 100]
+  default: 80
+  default_from: null
+  ac: [AC-01]
+  applies_if: always
+  deprecated: false
+VP-02:
+  param: warehouse_code
+  question: Код складу
+  type: str
+  allowed: null
+  default: WH1

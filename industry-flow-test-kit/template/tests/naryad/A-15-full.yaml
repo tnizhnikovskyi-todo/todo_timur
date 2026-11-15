@@ -1,0 +1,25 @@
+# ТЕСТОВИЙ наряд A-15 (0.4.0): демо-стенд, ПОВНИЙ перепідйом після A-14 (модулі/конфіг змінено після гейтів: td_home_menu, td_support, td_knowledge, td_<галузь>_knowledge); не refresh. Далі A-16 (повтор турів), A-16b
+step: A-15
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["flow-package-build:demo-base-builder@0.4.0"]
+model: sonnet
+effort: medium
+params: {}
+inputs:
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+  - {name: ALLOCATION.md, from: A-10, path: package/ALLOCATION.md, sha: HEAD}
+where: package/demo/, docs/industries/mebli/research/AI-DECISIONS.md
+template: "немає — форма за SKILL.md"
+done: "повний цикл demo-base-builder: скрипти підйому/скидання й профілі CE/EE з новим переліком модулів (td_home_menu, td_support, td_knowledge, td_<галузь>_knowledge); стенд піднято up.sh; мітки SHA в README, scenarios.md оновлено; zip бази видалено за R-22; тури й сценарії A-16 буде перезапущено наступним нарядом; рядок у AI-DECISIONS"
+check: {mode: both, how: "flow-autocheck: checks/A-15.yaml + скрипти скіла", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-15-full-test}
+attempt: 1
+returned_from: A-14
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-14

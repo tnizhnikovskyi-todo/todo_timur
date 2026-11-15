@@ -12,7 +12,7 @@ inputs:
   - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
 where: package/docs/user-guide/
 template: "за SKILL.md скіла"
-done: "посібники ролей і адміністратора, картки, INDEX із покриттям і SHA; check_guides.py без FAIL (package/demo/defects.md і AI-DECISIONS — через extra_allowed)"
+done: "посібники ролей і адміністратора, картки, INDEX із трьома таблицями покриття (заявлене / розроблене / налаштування й експлуатація, §26а) і SHA; check_guides.py без FAIL (package/demo/defects.md і AI-DECISIONS — через extra_allowed)"
 check: {mode: both, how: "flow-autocheck: checks/A-16b.yaml + скрипти скіла", audit_every_n: 10}
 limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
 client_data: none

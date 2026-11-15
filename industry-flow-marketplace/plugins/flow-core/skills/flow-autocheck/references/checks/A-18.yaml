@@ -23,10 +23,7 @@
     "from": "extract:head:package/ACCEPTANCE.md",
     "to": "head",
     "allow": [
-     "package/demo/README.md",
-     "package/demo/.gitignore",
-     "package/demo/docker/README.md",
-     "package/demo/scenarios.md",
+     "package/demo/**",
      "package/ACCEPTANCE.md",
      "package/CHANGELOG.md",
      "package/templates/migration-plan.md",

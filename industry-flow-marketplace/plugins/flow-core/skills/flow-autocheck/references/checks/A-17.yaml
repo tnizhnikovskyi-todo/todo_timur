@@ -180,7 +180,7 @@
    "prim": "signature_by_ai",
    "args": {
     "file": "package/ACCEPTANCE.md",
-    "heading": "(?i)підпис|рішення|затверд"
+    "heading": "(?i)^(Висновок|Рішення) і підпис"
    }
   },
   {

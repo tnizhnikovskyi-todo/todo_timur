@@ -1,170 +1,197 @@
 {
- "skill_name": "user-guide-builder",
- "evals": [
-  {
-   "id": "happy-guides",
-   "prompt": "Наряд A-16b, меблеве виробництво, режим перший запуск. A-16 done; стенд A-15 піднято на SHA a1b2c3d4e5f6…, ролі: Комірник, Майстер цеху, Адміністратор. SPEC має сценарії SC-01 (Комірник), SC-02 (Майстер), SC-03 (Адміністратор). Збери package/docs/user-guide/. Вхідні файли — у `files` кейсу.",
-   "expected_output": "INDEX.md із SHA стенда й таблицею покриття SC-01..03; komirnyk.md, master.md, admin.md; cards/komirnyk.md, cards/master.md; знімки img/<роль>/SC-NN-N.png, на кожен є посилання; check_guides.py без FAIL.",
-   "assertions": [
-    "Кожен SC-NN зі SPEC має розділ ## SC-NN і рядок у таблиці покриття INDEX",
-    "Підписи кнопок у кроках українські, без латиниці поза `код`",
-    "admin.md містить розділи Перший запуск, Параметри, Профілі, Редакції",
-    "Рядок «SHA стенда:» у INDEX збігається з SHA модулів; знімки мають запис у SHOOT-LOG",
-    "Скрипт на fixtures/user-guide-ok дає UG-cover, UG-img, UG-sha, UG-lang = PASS",
-    "Змінено лише package/docs/user-guide/; модулів не правлено"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-ok/SPEC.md",
-    "evals/fixtures/user-guide-ok/user-guide/"
-   ]
-  },
-  {
-   "id": "bad-cover-img-sha-lang",
-   "prompt": "Перевір готові інструкції A-16b скриптом: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-bad/user-guide --spec evals/fixtures/user-guide-bad/SPEC.md --stand-sha a1b2c3d4e5f6. Поясни кожен FAIL і що робити.",
-   "expected_output": "UG-cover FAIL (SC-02 без розділу й рядка INDEX), UG-img FAIL (битий img/master/SC-02-2.png і сирота orphan.png), UG-sha FAIL (INDEX ffff… != a1b2…), UG-lang FAIL («Save» у komirnyk.md). Агент виправляє, а не здає.",
-   "assertions": [
-    "UG-cover = FAIL з SC-02",
-    "UG-img = FAIL: і відсутній файл, і сирота",
-    "UG-sha = FAIL: SHA INDEX не збігається з SHA модулів",
-    "UG-lang = FAIL із «Save»",
-    "Код повернення скрипта 1",
-    "Агент не заявляє done при FAIL; для UG-sha виправляє рядок після перезйомки на правильному SHA, а не підміняє рядок"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-bad/SPEC.md",
-    "evals/fixtures/user-guide-bad/user-guide/"
-   ]
-  },
-  {
-   "id": "ui-defect-to-a14",
-   "prompt": "Наряд A-16b. Під час зйомки сценарію SC-02 Майстра кнопка «Виконати» у стенді відсутня на формі робочого завдання (SPEC вимагає її), інші сценарії працюють. Що робити?",
-   "expected_output": "SC-02 у посібнику має Статус: заблоковано дефектом D-NN; рядок у package/demo/defects.md з маршрутом A-14; знімків не вигадано; модуль не правлено; INDEX перелічує відкритий дефект.",
-   "assertions": [
-    "Рядок дефекту в package/demo/defects.md з маршрутом A-14",
-    "Розділ SC-02 існує зі статусом «заблоковано дефектом», кроків і знімків для відсутньої кнопки не вигадано",
-    "Модуль/XML не правиться в цьому кроці",
-    "INDEX.md має розділ «Відкриті дефекти UI»",
-    "У memo — повернення в A-14, повтор A-15/A-16/A-16b refresh після виправлення"
-   ]
-  },
-  {
-   "id": "stale-sha-refuse",
-   "prompt": "Наряд A-16b. Стенд A-15 піднято на SHA 1111111…, а git log -1 -- package/addons дає 2222222… (модулі змінились після A-15). Збери інструкції.",
-   "expected_output": "Зйомка не виконується на старому стенді; waiting_human або повернення в A-15 з поясненням; знімки зі старого SHA не створюються.",
-   "assertions": [
-    "Скіл виявляє розбіжність SHA стенда й модулів до зйомки",
-    "Знімків зі старого SHA не створено; INDEX не заповнено SHA, якого не було на стенді",
-    "Результат waiting_human або повернення в A-15, а не done",
-    "Відкрите питання/memo називає, що потрібно: перепідняти стенд на SHA модулів"
-   ]
-  },
-  {
-   "id": "admin-params-no-invention",
-   "prompt": "Наряд A-16b. У answers.yaml є ключі elearning.mode і elearning.pass_score (за замовчуванням 80), профілі A, light, B. editions: both, EE недоступна. Напиши admin.md.",
-   "expected_output": "admin.md з таблицею параметрів лише з answers.yaml/CONFIG, профілями A/light/B, розділом «Редакції» де EE-частина позначена «не перевірено».",
-   "assertions": [
-    "У таблиці параметрів лише ключі, що є в answers.yaml/CONFIG.md; нових не вигадано",
-    "Профілі A, light, B описані",
-    "EE-розділ має позначку «не перевірено», а не твердження як факт",
-    "Є заголовки Перший запуск, Параметри, Профілі, Редакції (UG-admin = PASS)",
-    "Команди установки пакета взято з README пакета, не вигадано"
-   ]
-  },
-  {
-   "id": "refresh-after-change",
-   "prompt": "Наряд A-16b, режим refresh. A-16 змінив лише сценарій SC-02 (новий крок), SHA модулів змінився. Оновити інструкції.",
-   "expected_output": "Перезнято й переписано лише SC-02 у master.md і картці; SHA в INDEX і SHOOT-LOG оновлено; інші знімки або перезняті на новому SHA (UG-fresh), або сценарій позначено застарілим; UG-sha = PASS.",
-   "assertions": [
-    "Змінено лише розділ SC-02 і залежні знімки, картку Майстра, INDEX, SHOOT-LOG",
-    "Усі знімки мають SHA нового стенда, або решту позначено «потребує перезйомки» у memo",
-    "INDEX містить новий SHA; UG-sha = PASS з --stand-sha",
-    "git diff --stat у user-guide/ не зачіпає ролей без змін у тексті"
-   ]
-  },
-  {
-   "id": "no-screenshots-fail",
-   "prompt": "Перевір посібник без жодного знімка (img/ видалено, посилань на зображення немає): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-noshot/user-guide --spec evals/fixtures/user-guide-noshot/SPEC.md --stand-sha a1b2c3d4e5f6.",
-   "expected_output": "UG-img FAIL: розділи SC-01, SC-02, SC-03 зі «Статус: готово» без знімків; вимога «тексти зі скрінами» не виконана. Агент знімає знімки на стенді, а не послаблює скрипт.",
-   "assertions": [
-    "UG-img = FAIL «розділ готовий, але без знімка» для всіх трьох сценаріїв",
-    "Агент не здає посібник без знімків і не малює їх; знімає на стенді з SHA модулів",
-    "Ok-фікстура з img/SHOOT-LOG.md проходить UG-img (журнал не є сиротою)"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-noshot/SPEC.md",
-    "evals/fixtures/user-guide-noshot/user-guide/"
-   ]
-  },
-  {
-   "id": "blocked-scenario-returned",
-   "prompt": "Перевір інструкції, де SC-02 має «Статус: заблоковано дефектом D-03»: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-blocked/user-guide --spec evals/fixtures/user-guide-blocked/SPEC.md --stand-sha a1b2c3d4e5f6. Чи можна done?",
-   "expected_output": "UG-cover FAIL «SC-02: заблоковано дефектом — повернення A-14». Результат returned (маршрут A-14), не done; INDEX і defects.md перелічують дефект.",
-   "assertions": [
-    "UG-cover = FAIL із SC-02 і текстом про повернення A-14",
-    "Результат returned, а не done; повтор A-15/A-16/A-16b refresh після виправлення",
-    "Знімків для відсутньої кнопки не вигадано"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-blocked/SPEC.md",
-    "evals/fixtures/user-guide-blocked/user-guide/"
-   ]
-  },
-  {
-   "id": "spec-without-sc-ids",
-   "prompt": "package/SPEC.md описує сценарії як UC-01, UC-02 (без SC-NN), є package/demo/scenarios.md із SC-01..03. Збери інструкції; що вказати скрипту й INDEX?",
-   "expected_output": "Джерело сценаріїв — перше з ID за порядком SPEC -> demo/scenarios.md -> concept/scenarios.md (тут scenarios.md); --spec приймає кілька джерел, INDEX має «Джерело сценаріїв: scenarios.md»; для SPEC з UC-NN — --id-pattern 'UC-\\d{2}'.",
-   "assertions": [
-    "Порядок джерел SPEC -> package/demo/scenarios.md -> concept/scenarios.md застосовано; обране джерело записано в INDEX",
-    "Скрипт викликано з кількома --spec або --id-pattern; UG-cover не падає на «нічого покривати»",
-    "Сценарії не вигадуються"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-noscid/SPEC.md",
-    "evals/fixtures/user-guide-noscid/scenarios.md",
-    "evals/fixtures/user-guide-noscid/user-guide/"
-   ]
-  },
-  {
-   "id": "head-ahead-of-addons",
-   "prompt": "A-16b: SHA_STAND у package/demo/README.md = a1b2c3d4e5f6…; HEAD гілки пізніший (коміти CHECKS.md і package/demo після A-14/A-15), але `git diff --quiet <SHA_STAND>..HEAD -- package/addons ':!package/addons/td_*_elearning'` дає код 0. INDEX.md має «SHA стенда: a1b2c3d4e5f6…». Що робити й що покаже UG-sha?",
-   "expected_output": "Стоп не потрібен: SHA_STAND береться з README стенда, свіжість модулів перевіряється git diff (код 0); check_guides.py --stand-sha <SHA_STAND> -> UG-sha PASS.",
-   "assertions": [
-    "SHA в INDEX береться з package/demo/README.md, а не з git log по package/addons",
-    "Свіжість модулів звіряється окремою командою git diff --quiet, код 0 = PASS",
-    "Крок не повертається в A-15 лише через те, що HEAD ≠ останній коміт addons"
-   ],
-   "files": [
-    "evals/fixtures/user-guide-ok/user-guide/"
-   ]
-  },
-  {
-   "id": "no-shoot-tool-in-demo",
-   "prompt": "A-16b: у package/demo/ немає засобу зйомки, а тури A-16 знімків не роблять. Потрібні знімки для ролей з INDEX. Що робити?",
-   "expected_output": "Агент не ставить Відкрите питання й не зупиняється: складає shoot-plan.json з турів A-16/SPEC і запускає scripts/shoot.mjs (Playwright, headless Chromium); знімки img/<роль>/SC-NN-<крок>.png і рядки SHOOT-LOG.md. Лише якщо shoot.mjs повертає код 2 (браузер не запускається) — рядок AI-NN з ризиком і waiting_human.",
-   "assertions": [
-    "Використано scripts/shoot.mjs або rec_lib.mjs, а не «Відкрите питання»",
-    "shoot-plan.json складено з турів A-16/SPEC, пароль не записано у файл",
-    "Є рядки SHOOT-LOG.md із SHA_STAND",
-    "waiting_human лише за коду 2 скрипта, з рядком AI-NN"
-   ],
-   "must_not": [
-    "зупинка з питанням до людини за наявності браузера",
-    "намальовані знімки",
-    "вигадані селектори як факт без перевірки на стенді"
-   ],
-   "files": []
-  },
-  {
-   "id": "readme-label-older-than-checks",
-   "prompt": "Наряд A-16b, репо з уже зібраним стендом. Мітка SHA в package/demo/README.md (1925fb8) старша за SHA гейтів у package/CHECKS.md (21afe46); після мітки модулі змінювались, але `git diff --quiet <SHA CHECKS.md>..HEAD -- package/addons package/config package/master-data` дає код 0. Модулів td_support і td_home_menu у package/addons ще немає. Як діяти?",
-   "expected_output": "Випадок (а): гейти чинні, застаріла лише мітка стенда -> A-15 refresh окремим нарядом і гілкою (мітка SHA, scenarios.md, рядок AI-DECISIONS; лише up.sh падає -> waiting_human), далі A-16b; повного контуру A-14 не потрібно. §27 не злито -> A-16b знімає без них із рядком AI-NN «§27 не злито; після злиття — контур A-12 fix -> A-14 -> A-15 -> A-16 -> A-16b refresh»; власнику питання не ставиться (вето).",
-   "assertions": [
-    "Розрізнення за SHA з CHECKS.md, а не за міткою README",
-    "Код 0 -> лише A-15 refresh, без A-12 fix/A-14",
-    "Refresh не робиться в гілці A-16b",
-    "Для відсутніх td_support/td_home_menu — рядок AI-NN, а не питання власнику"
-   ],
-   "files": []
-  }
- ]
+  "skill_name": "user-guide-builder",
+  "evals": [
+    {
+      "id": "happy-guides",
+      "prompt": "Наряд A-16b, меблеве виробництво, режим перший запуск. A-16 done; стенд A-15 піднято на SHA a1b2c3d4e5f6…, ролі: Комірник, Майстер цеху, Адміністратор. SPEC має сценарії SC-01 (Комірник), SC-02 (Майстер), SC-03 (Адміністратор). Збери package/docs/user-guide/. Вхідні файли — у `files` кейсу.",
+      "expected_output": "INDEX.md із SHA стенда й таблицею покриття SC-01..03; komirnyk.md, master.md, admin.md; cards/komirnyk.md, cards/master.md; знімки img/<роль>/SC-NN-N.png, на кожен є посилання; check_guides.py без FAIL.",
+      "assertions": [
+        "Кожен SC-NN зі SPEC має розділ ## SC-NN і рядок у таблиці покриття INDEX",
+        "Підписи кнопок у кроках українські, без латиниці поза `код`",
+        "admin.md містить розділи Перший запуск, Параметри, Профілі, Редакції",
+        "Рядок «SHA стенда:» у INDEX збігається з SHA модулів; знімки мають запис у SHOOT-LOG",
+        "Скрипт на fixtures/user-guide-ok дає UG-cover, UG-img, UG-sha, UG-lang = PASS",
+        "Змінено лише package/docs/user-guide/; модулів не правлено"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-ok/SPEC.md",
+        "evals/fixtures/user-guide-ok/user-guide/"
+      ]
+    },
+    {
+      "id": "bad-cover-img-sha-lang",
+      "prompt": "Перевір готові інструкції A-16b скриптом: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-bad/user-guide --spec evals/fixtures/user-guide-bad/SPEC.md --stand-sha a1b2c3d4e5f6. Поясни кожен FAIL і що робити.",
+      "expected_output": "UG-cover FAIL (SC-02 без розділу й рядка INDEX), UG-img FAIL (битий img/master/SC-02-2.png і сирота orphan.png), UG-sha FAIL (INDEX ffff… != a1b2…), UG-lang FAIL («Save» у komirnyk.md). Агент виправляє, а не здає.",
+      "assertions": [
+        "UG-cover = FAIL з SC-02",
+        "UG-img = FAIL: і відсутній файл, і сирота",
+        "UG-sha = FAIL: SHA INDEX не збігається з SHA модулів",
+        "UG-lang = FAIL із «Save»",
+        "Код повернення скрипта 1",
+        "Агент не заявляє done при FAIL; для UG-sha виправляє рядок після перезйомки на правильному SHA, а не підміняє рядок"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-bad/SPEC.md",
+        "evals/fixtures/user-guide-bad/user-guide/"
+      ]
+    },
+    {
+      "id": "ui-defect-to-a14",
+      "prompt": "Наряд A-16b. Під час зйомки сценарію SC-02 Майстра кнопка «Виконати» у стенді відсутня на формі робочого завдання (SPEC вимагає її), інші сценарії працюють. Що робити?",
+      "expected_output": "SC-02 у посібнику має Статус: заблоковано дефектом D-NN; рядок у package/demo/defects.md з маршрутом A-14; знімків не вигадано; модуль не правлено; INDEX перелічує відкритий дефект.",
+      "assertions": [
+        "Рядок дефекту в package/demo/defects.md з маршрутом A-14",
+        "Розділ SC-02 існує зі статусом «заблоковано дефектом», кроків і знімків для відсутньої кнопки не вигадано",
+        "Модуль/XML не правиться в цьому кроці",
+        "INDEX.md має розділ «Відкриті дефекти UI»",
+        "У memo — повернення в A-14, повтор A-15/A-16/A-16b refresh після виправлення"
+      ]
+    },
+    {
+      "id": "stale-sha-refuse",
+      "prompt": "Наряд A-16b. Стенд A-15 піднято на SHA 1111111…, а git log -1 -- package/addons дає 2222222… (модулі змінились після A-15). Збери інструкції.",
+      "expected_output": "Зйомка не виконується на старому стенді; waiting_human або повернення в A-15 з поясненням; знімки зі старого SHA не створюються.",
+      "assertions": [
+        "Скіл виявляє розбіжність SHA стенда й модулів до зйомки",
+        "Знімків зі старого SHA не створено; INDEX не заповнено SHA, якого не було на стенді",
+        "Результат waiting_human або повернення в A-15, а не done",
+        "Відкрите питання/memo називає, що потрібно: перепідняти стенд на SHA модулів"
+      ]
+    },
+    {
+      "id": "admin-params-no-invention",
+      "prompt": "Наряд A-16b. У answers.yaml є ключі elearning.mode і elearning.pass_score (за замовчуванням 80), профілі A, light, B. editions: both, EE недоступна. Напиши admin.md.",
+      "expected_output": "admin.md з таблицею параметрів лише з answers.yaml/CONFIG, профілями A/light/B, розділом «Редакції» де EE-частина позначена «не перевірено».",
+      "assertions": [
+        "У таблиці параметрів лише ключі, що є в answers.yaml/CONFIG.md; нових не вигадано",
+        "Профілі A, light, B описані",
+        "EE-розділ має позначку «не перевірено», а не твердження як факт",
+        "Є заголовки Перший запуск, Параметри, Профілі, Редакції (UG-admin = PASS)",
+        "Команди установки пакета взято з README пакета, не вигадано"
+      ]
+    },
+    {
+      "id": "refresh-after-change",
+      "prompt": "Наряд A-16b, режим refresh. A-16 змінив лише сценарій SC-02 (новий крок), SHA модулів змінився. Оновити інструкції.",
+      "expected_output": "Перезнято й переписано лише SC-02 у master.md і картці; SHA в INDEX і SHOOT-LOG оновлено; інші знімки або перезняті на новому SHA (UG-fresh), або сценарій позначено застарілим; UG-sha = PASS.",
+      "assertions": [
+        "Змінено лише розділ SC-02 і залежні знімки, картку Майстра, INDEX, SHOOT-LOG",
+        "Усі знімки мають SHA нового стенда, або решту позначено «потребує перезйомки» у memo",
+        "INDEX містить новий SHA; UG-sha = PASS з --stand-sha",
+        "git diff --stat у user-guide/ не зачіпає ролей без змін у тексті"
+      ]
+    },
+    {
+      "id": "no-screenshots-fail",
+      "prompt": "Перевір посібник без жодного знімка (img/ видалено, посилань на зображення немає): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-noshot/user-guide --spec evals/fixtures/user-guide-noshot/SPEC.md --stand-sha a1b2c3d4e5f6.",
+      "expected_output": "UG-img FAIL: розділи SC-01, SC-02, SC-03 зі «Статус: готово» без знімків; вимога «тексти зі скрінами» не виконана. Агент знімає знімки на стенді, а не послаблює скрипт.",
+      "assertions": [
+        "UG-img = FAIL «розділ готовий, але без знімка» для всіх трьох сценаріїв",
+        "Агент не здає посібник без знімків і не малює їх; знімає на стенді з SHA модулів",
+        "Ok-фікстура з img/SHOOT-LOG.md проходить UG-img (журнал не є сиротою)"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-noshot/SPEC.md",
+        "evals/fixtures/user-guide-noshot/user-guide/"
+      ]
+    },
+    {
+      "id": "blocked-scenario-returned",
+      "prompt": "Перевір інструкції, де SC-02 має «Статус: заблоковано дефектом D-03»: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-blocked/user-guide --spec evals/fixtures/user-guide-blocked/SPEC.md --stand-sha a1b2c3d4e5f6. Чи можна done?",
+      "expected_output": "UG-cover FAIL «SC-02: заблоковано дефектом — повернення A-14». Результат returned (маршрут A-14), не done; INDEX і defects.md перелічують дефект.",
+      "assertions": [
+        "UG-cover = FAIL із SC-02 і текстом про повернення A-14",
+        "Результат returned, а не done; повтор A-15/A-16/A-16b refresh після виправлення",
+        "Знімків для відсутньої кнопки не вигадано"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-blocked/SPEC.md",
+        "evals/fixtures/user-guide-blocked/user-guide/"
+      ]
+    },
+    {
+      "id": "spec-without-sc-ids",
+      "prompt": "package/SPEC.md описує сценарії як UC-01, UC-02 (без SC-NN), є package/demo/scenarios.md із SC-01..03. Збери інструкції; що вказати скрипту й INDEX?",
+      "expected_output": "Джерело сценаріїв — перше з ID за порядком SPEC -> demo/scenarios.md -> concept/scenarios.md (тут scenarios.md); --spec приймає кілька джерел, INDEX має «Джерело сценаріїв: scenarios.md»; для SPEC з UC-NN — --id-pattern 'UC-\\d{2}'.",
+      "assertions": [
+        "Порядок джерел SPEC -> package/demo/scenarios.md -> concept/scenarios.md застосовано; обране джерело записано в INDEX",
+        "Скрипт викликано з кількома --spec або --id-pattern; UG-cover не падає на «нічого покривати»",
+        "Сценарії не вигадуються"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-noscid/SPEC.md",
+        "evals/fixtures/user-guide-noscid/scenarios.md",
+        "evals/fixtures/user-guide-noscid/user-guide/"
+      ]
+    },
+    {
+      "id": "head-ahead-of-addons",
+      "prompt": "A-16b: SHA_STAND у package/demo/README.md = a1b2c3d4e5f6…; HEAD гілки пізніший (коміти CHECKS.md і package/demo після A-14/A-15), але `git diff --quiet <SHA_STAND>..HEAD -- package/addons ':!package/addons/td_*_elearning'` дає код 0. INDEX.md має «SHA стенда: a1b2c3d4e5f6…». Що робити й що покаже UG-sha?",
+      "expected_output": "Стоп не потрібен: SHA_STAND береться з README стенда, свіжість модулів перевіряється git diff (код 0); check_guides.py --stand-sha <SHA_STAND> -> UG-sha PASS.",
+      "assertions": [
+        "SHA в INDEX береться з package/demo/README.md, а не з git log по package/addons",
+        "Свіжість модулів звіряється окремою командою git diff --quiet, код 0 = PASS",
+        "Крок не повертається в A-15 лише через те, що HEAD ≠ останній коміт addons"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-ok/user-guide/"
+      ]
+    },
+    {
+      "id": "no-shoot-tool-in-demo",
+      "prompt": "A-16b: у package/demo/ немає засобу зйомки, а тури A-16 знімків не роблять. Потрібні знімки для ролей з INDEX. Що робити?",
+      "expected_output": "Агент не ставить Відкрите питання й не зупиняється: складає shoot-plan.json з турів A-16/SPEC і запускає scripts/shoot.mjs (Playwright, headless Chromium); знімки img/<роль>/SC-NN-<крок>.png і рядки SHOOT-LOG.md. Лише якщо shoot.mjs повертає код 2 (браузер не запускається) — рядок AI-NN з ризиком і waiting_human.",
+      "assertions": [
+        "Використано scripts/shoot.mjs або rec_lib.mjs, а не «Відкрите питання»",
+        "shoot-plan.json складено з турів A-16/SPEC, пароль не записано у файл",
+        "Є рядки SHOOT-LOG.md із SHA_STAND",
+        "waiting_human лише за коду 2 скрипта, з рядком AI-NN"
+      ],
+      "must_not": [
+        "зупинка з питанням до людини за наявності браузера",
+        "намальовані знімки",
+        "вигадані селектори як факт без перевірки на стенді"
+      ],
+      "files": []
+    },
+    {
+      "id": "readme-label-older-than-checks",
+      "prompt": "Наряд A-16b, репо з уже зібраним стендом. Мітка SHA в package/demo/README.md (1925fb8) старша за SHA гейтів у package/CHECKS.md (21afe46); після мітки модулі змінювались, але `git diff --quiet <SHA CHECKS.md>..HEAD -- package/addons package/config package/master-data` дає код 0. Модулів td_support і td_home_menu у package/addons ще немає. Як діяти?",
+      "expected_output": "Випадок (а): гейти чинні, застаріла лише мітка стенда -> A-15 refresh окремим нарядом і гілкою (мітка SHA, scenarios.md, рядок AI-DECISIONS; лише up.sh падає -> waiting_human), далі A-16b; повного контуру A-14 не потрібно. §27 не злито -> A-16b знімає без них із рядком AI-NN «§27 не злито; після злиття — контур A-12 fix -> A-14 -> A-15 -> A-16 -> A-16b refresh»; власнику питання не ставиться (вето).",
+      "assertions": [
+        "Розрізнення за SHA з CHECKS.md, а не за міткою README",
+        "Код 0 -> лише A-15 refresh, без A-12 fix/A-14",
+        "Refresh не робиться в гілці A-16b",
+        "Для відсутніх td_support/td_home_menu — рядок AI-NN, а не питання власнику"
+      ],
+      "files": []
+    },
+    {
+      "id": "coverage-dev-admin",
+      "prompt": "Перевір інструкції на повноту §26а: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-cover/user-guide --spec evals/fixtures/user-guide-cover/SPEC.md --addons evals/fixtures/user-guide-cover/addons --answers evals/fixtures/user-guide-cover/answers.yaml --config evals/fixtures/user-guide-cover/CONFIG.md. Потім прибери з komirnyk.md згадку дії «Приймання деталей», а з admin.md — VP-02, і повтори.",
+      "expected_output": "Спершу UG-cover-dev і UG-cover-admin PASS (td_x_elearning ігнорується). Після правки: UG-cover-dev FAIL з «Приймання деталей» і «Наклейка на пачку», UG-cover-admin FAIL з VP-02; крок не done, доповнити розділи.",
+      "assertions": [
+        "UG-cover-dev і UG-cover-admin PASS на повній фікстурі",
+        "Меню td_x_elearning не вимагається",
+        "Після видалення згадок обидві перевірки FAIL з іменами пропусків",
+        "INDEX має три таблиці покриття: заявлене, розроблене, налаштування й експлуатація"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-cover/"
+      ]
+    },
+    {
+      "id": "coverage-schema-i18n",
+      "prompt": "Перевір інструкції на повноту §26а: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-cover-schema/user-guide --spec evals/fixtures/user-guide-cover-schema/SPEC.md --addons evals/fixtures/user-guide-cover-schema/addons --answers evals/fixtures/user-guide-cover-schema/answers.yaml --config evals/fixtures/user-guide-cover-schema/CONFIG.md. answers.yaml у форматі схеми (VP-NN з param/type/allowed/default), назви меню в XML англійські, переклад у i18n/uk.po.",
+      "expected_output": "UG-cover-dev і UG-cover-admin = PASS: назви зараховано за перекладом з uk.po, у answers.yaml перевіряються лише ідентифікатори VP-NN, а не поля схеми (param, type, allowed, default).",
+      "assertions": [
+        "UG-cover-dev = PASS (переклад із uk.po)",
+        "UG-cover-admin = PASS без хибних «VP-01.allowed», «VP-01.type»",
+        "Код повернення 0 щодо цих двох перевірок"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-cover-schema/"
+      ]
+    }
+  ]
 }

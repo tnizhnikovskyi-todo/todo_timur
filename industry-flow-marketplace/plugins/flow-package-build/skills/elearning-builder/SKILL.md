@@ -98,7 +98,7 @@ A-12 уже закрито, тому модуль у перелік устано
 
 ## Запис
 Лише `package/addons/td_<галузь>_elearning/` (`__manifest__.py`, `data/*.xml`, `static/`, `tests/`, `README.md`), ключі `elearning.*` у
-`package/templates/answers.yaml` (Крок 4), рядки елемента навчання в `package/config/{manifest.yaml,CONFIG.md}` (Крок 6; інше в `package/config/` не чіпати) і рядки `research/AI-DECISIONS.md` (рішення AI з ризиками). Не змінювати інші модулі, `package/docs/user-guide/`, дані `package/config/data/` і `vp-map.yaml`.
+`package/templates/answers.yaml` (Крок 4), рядки елемента навчання в `package/config/{manifest.yaml,CONFIG.md}` (Крок 6; інше в `package/config/` не чіпати) і рядки `research/AI-DECISIONS.md` (рішення AI з ризиками). Виняток: дефект модуля, знайдений під час A-17b -> рядок у `package/demo/defects.md` з маршрутом A-14, `result: returned`; сам модуль не правити. Не змінювати інші модулі, `package/docs/user-guide/`, дані `package/config/data/` і `vp-map.yaml`.
 
 ## Автоперевірка
 `python3 -I scripts/check_elearning.py --module package/addons/td_<галузь>_elearning --guide package/docs/user-guide --answers package/templates/answers.yaml [--schema schema.json]`

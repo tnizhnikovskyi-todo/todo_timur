@@ -1,7 +1,7 @@
 # Специфікація перевірок кроку; синтаксис JSON (валідний YAML 1.2). Контракт — ../checks.md
 {
  "step": "A-17b",
- "extra_allowed": ["package/config/manifest.yaml", "package/config/CONFIG.md", "tests/reports/"],
+ "extra_allowed": ["package/config/manifest.yaml", "package/config/CONFIG.md", "package/demo/defects.md", "tests/reports/"],
  "checks": [
   {
    "id": "module-exists",
@@ -24,6 +24,7 @@
      "package/templates/answers.yaml",
      "package/config/manifest.yaml",
      "package/config/CONFIG.md",
+     "package/demo/defects.md",
      "docs/industries/<галузь>/research/AI-DECISIONS.md",
      "tests/reports/",
      "observations/"

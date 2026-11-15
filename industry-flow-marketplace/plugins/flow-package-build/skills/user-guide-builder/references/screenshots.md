@@ -1,6 +1,6 @@
 # Зйомка знімків для інструкцій
 
-1. **Стенд.** Піднятий A-15 на SHA_STAND (`package/demo/README.md`; свіжість модулів — `git diff --quiet <SHA_STAND>..HEAD -- package/addons ':!package/addons/td_*_elearning'`); перед зйомкою кожної ролі — скидання до чистого стану
+1. **Стенд.** Піднятий A-15 на SHA_STAND (`package/demo/README.md`; свіжість — `git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning'`); перед зйомкою кожної ролі — скидання до чистого стану
    скриптом скидання з `package/demo/` (за тегом/профілем). Не відновлювати з бекапу бази, що лежить у git (бінарники баз у PR — FAIL).
 2. **Користувач.** Демо-користувач саме цієї ролі (з README стенда); знімок під ролю адміністратора для `admin.md`.
 3. **Що знімати.** Ключовий результат кроку: список, форма до/після збереження, повідомлення, статус. Не весь екран, якщо

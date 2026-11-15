@@ -220,7 +220,7 @@ description: >
 | R-17 | `package/metrics/key-models.yaml` є (чернетка), моделі є в `package/addons/` | повтор |
 | R-18 | A-16b і A-17b у релізі: `package/docs/user-guide/INDEX.md` є, SHA стенда в INDEX = SHA модулів без `td_*_elearning`; `check_guides.py` і `check_elearning.py` (якщо модуль входить) без FAIL на ревізії; X.Y модуля elearning = ACCEPTANCE | A-14 -> A-16b / A-17b (дефект), ескалація (немає матеріалів) |
 | R-19 | `package/support/` не потрапила в клієнтську передачу: розділ «Передача клієнту» CHANGELOG виключає `support/`; у `package/templates/*` і клієнтських каталогах немає посилань на `package/support`; `check_kb.py` без FAIL | повтор / A-14 -> A-17c |
-| R-20 | Складові §27 у складі: `td_support` (ce+ee) і `td_home_menu` (ce) є в `package/addons/` і в `package/config/manifest.yaml` — або в `AI-DECISIONS.md` є рядок AI-NN про свідомий випуск без них (з ризиком; власник — вето); немає ні модуля, ні рядка — WARN, не FAIL | повтор з рядком AI-NN або A-14 після злиття модулів |
+| R-20 | Складові §27 у складі: `td_support` (ce+ee) і `td_home_menu` (ce) та `td_knowledge` (ce+ee; і `td_<галузь>_knowledge`, якщо є в addons) є в `package/addons/` і в `package/config/manifest.yaml` — або в `AI-DECISIONS.md` є рядок AI-NN про свідомий випуск без них (з ризиком; власник — вето); немає ні модуля, ні рядка — WARN, не FAIL | повтор з рядком AI-NN або A-14 після злиття модулів |
 | R-21 | `boost:odoo19-lint` по `package/addons/td_*/` на ревізії | A-14 -> A-11 |
 | R-22 | У `package/` на head немає `*.zip`, `*.dump`, `*.sql.gz` (бази й дампи в дереві пакета заборонені) | A-15 (прибрати з дерева, `.gitignore`) |
 Команди — `references/release-checks.md`. Без логу CI немає PASS: R-09...R-11 без логу — `NOT_RUN`.

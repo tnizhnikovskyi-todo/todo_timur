@@ -167,7 +167,7 @@
 - `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — таблиця покриття «сценарій SPEC -> розділ» і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
 - гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
 - `review.checklists`: [user-guide.md]; `review.max_rounds: 2` (+1 контрольний)
-- перевірки: `check_guides.py` (UG-cover, UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
+- перевірки: `check_guides.py` (UG-cover, UG-cover-dev, UG-cover-admin (§26а: заявлене / розроблене / налаштування й експлуатація), UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - примітки: скриншоти зі стенда на поточному SHA; текст кроків українською без англійських підписів
 - ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); стенд недоступний -> A-15; стенд застарів (SHA гейтів змінився лише міткою) -> A-15 refresh окремим нарядом (AI сам, без людини)
@@ -202,7 +202,7 @@
 - перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
 - примітки: читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
-- ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27 (`td_home_menu`, `td_support`): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README
+- ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27/§27а (`td_home_menu`, `td_support`, `td_knowledge` та будь-який спільний модуль із README): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README
 
 ### A-18. Реліз (змінена картка 0.4.0)
 - `inArtifacts` додатково: package/docs/user-guide, package/addons/td_<галузь>_elearning, package/support

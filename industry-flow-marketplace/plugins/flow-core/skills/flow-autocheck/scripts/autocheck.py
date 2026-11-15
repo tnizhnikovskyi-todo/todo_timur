@@ -26,7 +26,7 @@ PII = [  # pii-patterns.md; (тип, regex, статус при client_data != n
     ("email", re.compile(r"[\w.+-]+@(?!example\.)(?![\w.-]*\.(?:example|test|invalid)\b)[\w-]+\.[\w.-]+", re.I), "FAIL"),
     ("iban", re.compile(r"\bUA\d{2}[\s\d]{20,}", re.I), "FAIL"),
     ("edrpou", re.compile(r"ЄДРПОУ\D{0,5}\d{8}\b", re.I), "FAIL"),
-    ("phone", re.compile(r"(?<![\w:])(\+?380[\s()-]?\d{2}[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?!\w)"), "FAIL"),
+    ("phone", re.compile(r"(?<![\w:])(?!\+?380[\s()-]?00(?!\d))(\+?380[\s()-]?\d{2}[\s()-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?!\w)"), "FAIL"),
     ("phone-bare", re.compile(r"(?<![\w:.,/-])(0\d{9})(?![\w.,/-])"), "WARN"),
     ("secret", re.compile(r"(password|passwd|pwd|api[_-]?key|token|secret)\s*[:=]\s*\S+", re.I), "FAIL"),
 ]
@@ -408,7 +408,7 @@ def xy(v):
     return f"{p[2]}.{p[3]}" if len(p) >= 4 else (f"{p[0]}.{p[1]}" if len(p) >= 2 else str(v))
 
 
-SHARED_VENDORED = {"td_home_menu", "td_support"}  # спільні вендорені модулі §27: власна версія, не X.Y пакета
+SHARED_VENDORED = {"td_home_menu", "td_support", "td_knowledge"}  # спільні вендорені модулі §27: власна версія, не X.Y пакета
 
 
 def manifest_versions(ctx):
@@ -514,10 +514,12 @@ def p_allocation_coverage(ctx, c):
         alloc |= mods
         if r["cells"][tc].strip().lower() in ("код", "готове"):
             need_dir |= mods
-    dirs = set(lsdir(ctx, ctx.head, "package/addons"))
+    dirs = set(addon_dirs(ctx))
     cfg = [f for f in lsdir(ctx, ctx.head, "package/config")]
-    bad = [f"теки {d} немає в ALLOCATION" for d in sorted(dirs - alloc)] + [f"модуль {m} (код/готове) без теки в package/addons" for m in sorted(need_dir - dirs)]
-    bad += [f"файл package/config/{f} не перелічено в CHECKS.md" for f in cfg if f not in chk]
+    # спільні вендорені (§27/§27а), демо- та e-learning модулі ALLOCATION не вимагають
+    exempt = lambda d: d in SHARED_VENDORED or re.match(r"^td_.+_(demo|elearning)$", d)
+    bad = [f"теки {d} немає в ALLOCATION" for d in sorted(dirs - alloc) if not exempt(d)] + [f"модуль {m} (код/готове) без теки в package/addons" for m in sorted(need_dir - dirs)]
+    bad += [f"файл package/config/{f} не перелічено в CHECKS.md" for f in cfg if os.path.splitext(f)[0].lower() not in chk.lower()]
     ctx.add(c["id"], "FAIL" if bad else "PASS", ("Узгодь ALLOCATION, package/addons і package/config: " + "; ".join(bad)) if bad else "", lab,
             c.get("route_on_fail") if bad else None)
 
@@ -679,6 +681,9 @@ def p_signature_by_ai(ctx, c):
     old = "\n".join(x[2] for x in sections(read_rev(ctx, ctx.base, s["file"]) or "") if re.search(s["heading"], x[1], re.I))
     if old == sec:
         return ctx.add(c["id"], "PASS", "", lab)
+    dec = re.findall(r"(?im)^\W*Рішення\s*:(.*)$", sec)
+    if dec and all(re.fullmatch(r"\s*(\W*ЗАПОВНЮЄ ЛЮДИНА\W*|\[[^\]]*\]|<[^>]*>|_*|…|\.\.\.)\s*", d, re.I) for d in dec):
+        return ctx.add(c["id"], "PASS", "Рядок «Рішення:» містить лише маркер-заглушку", lab)
     if re.search(r"внесено AI від імені (власника|людини)", sec, re.I):
         return ctx.add(c["id"], "PASS", "Блок має позначку «внесено AI від імені власника» (E6): рішення за повідомленням людини, перевір посилання на повідомлення", lab)
     if not ctx.agent_pattern:

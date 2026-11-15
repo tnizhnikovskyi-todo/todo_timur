@@ -22,7 +22,7 @@
 2. `package/templates/CHANGELOG.md`
 3. `package/templates/migration-plan.md`
 4. `package/templates/training.md`
-5. `package/demo/README.md` (A-15: SHA, режим використання стенда)
+5. `package/demo/**` (A-15: README із SHA, `up.sh`, `data/`, `profiles/`, `docker-compose.yml`; свіжість стенда перевіряють `sha_eq` і R-18)
 6. `package/demo/scenarios.md` (A-16: SHA у заголовку)
 7. `package/ACCEPTANCE.md` (A-17: підпис)
 8. `package/metrics/key-models.yaml` (рішення q36: AI-чернетка, затверджує Власник продукту; лише `release`/`odoo-upgrade`)

@@ -56,6 +56,8 @@ for (const r of plan.roles) {
 }
 await browser.close();
 plan.out = plan.out || 'package/docs/user-guide/img';
+if (!rows.length) { console.error('нічого не знято (немає ролей або всі входи LOGIN-FAIL)'); process.exit(1); }
+fs.mkdirSync(plan.out, { recursive: true });
 const log = path.join(plan.out, 'SHOOT-LOG.md');
 if (!fs.existsSync(log)) fs.writeFileSync(log, '# Журнал зйомки\n\n| Файл | SHA | Дата | Демо-роль | Стенд |\n|---|---|---|---|---|\n');
 fs.appendFileSync(log, rows.join('\n') + (rows.length ? '\n' : ''));
