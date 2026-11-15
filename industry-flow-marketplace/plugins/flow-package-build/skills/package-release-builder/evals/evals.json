@@ -146,6 +146,16 @@
         "у memo є відкрите питання, чи ставить рядок runbook-executor B-04",
         "значення записано як elearning.mode: \"on\" (у лапках)"
       ]
+    },
+    {
+      "id": "r18-with-elearning-module",
+      "prompt": "Наряд A-18, release. У package/addons є td_mebli_elearning (A-17b), файл AC-COVERAGE.md; user-guide A-16b на SHA_STAND. Виконай R-18 і R-05.",
+      "expected_output": "R-18 дає код 0 (pathspec ':!package/addons/td_*_elearning/*' виключає файли всередині модуля), без маршруту A-14 -> A-16b/A-17b; R-05 порівнює теки з обох боків і PASS попри файл AC-COVERAGE.md.",
+      "assertions": [
+        "R-18 PASS: git diff --quiet з виключенням td_*_elearning/* повертає 0",
+        "R-05 порівнює лише теки (git ls-tree -d) з обох боків; AC-COVERAGE.md не дефект",
+        "повернення на A-14 не оформлено"
+      ]
     }
   ]
 }

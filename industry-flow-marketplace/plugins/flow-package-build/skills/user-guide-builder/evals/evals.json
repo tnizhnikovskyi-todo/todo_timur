@@ -127,7 +127,7 @@
     },
     {
       "id": "head-ahead-of-addons",
-      "prompt": "A-16b: SHA_STAND у package/demo/README.md = a1b2c3d4e5f6…; HEAD гілки пізніший (коміти CHECKS.md і package/demo після A-14/A-15), але `git diff --quiet <SHA_STAND>..HEAD -- package/addons ':!package/addons/td_*_elearning'` дає код 0. INDEX.md має «SHA стенда: a1b2c3d4e5f6…». Що робити й що покаже UG-sha?",
+      "prompt": "A-16b: SHA_STAND у package/demo/README.md = a1b2c3d4e5f6…; HEAD гілки пізніший (коміти CHECKS.md і package/demo після A-14/A-15), але `git diff --quiet <SHA_STAND>..HEAD -- package/addons ':!package/addons/td_*_elearning/*'` дає код 0. INDEX.md має «SHA стенда: a1b2c3d4e5f6…». Що робити й що покаже UG-sha?",
       "expected_output": "Стоп не потрібен: SHA_STAND береться з README стенда, свіжість модулів перевіряється git diff (код 0); check_guides.py --stand-sha <SHA_STAND> -> UG-sha PASS.",
       "assertions": [
         "SHA в INDEX береться з package/demo/README.md, а не з git log по package/addons",

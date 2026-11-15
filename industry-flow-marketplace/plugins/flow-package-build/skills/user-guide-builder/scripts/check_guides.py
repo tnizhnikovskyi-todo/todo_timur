@@ -9,7 +9,7 @@ UG-pii (на знімках немає чужих даних), lint.
   --id-pattern: регулярний вираз ID сценарію (за замовчуванням SC-NN; для SPEC з UC-NN/іншим форматом — свій).
   --stand-sha: SHA_STAND з package/demo/README.md (SHA стенда A-15; == SHA в INDEX.md, scenarios.md, ACCEPTANCE.md); без нього UG-sha = SKIPPED.
           --modules-sha — застарілий псевдонім. Свіжість знімків (код пакета = SHA_CHECKS з package/CHECKS.md) — окремо:
-          git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning' ':!package/config/manifest.yaml' ':!package/config/CONFIG.md'
+          git diff --quiet <SHA_CHECKS>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning/*' ':!package/config/manifest.yaml' ':!package/config/CONFIG.md'
           (SHA_CHECKS з package/CHECKS.md; код 0 = знімки актуальні). manifest.yaml/CONFIG.md виключено: A-17b дописує в них навчання;
           окремо їх diff без рядків website_slides/_elearning має бути порожнім.
         [--addons package/addons] [--answers package/templates/answers.yaml [--answers package/demo/profiles/<профіль>.yaml]] [--config package/config/CONFIG.md]

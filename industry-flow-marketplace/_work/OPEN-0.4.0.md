@@ -26,6 +26,6 @@
 | 16 | gates-aggregator: джерела повернень A-16b/A-17b/A-17c; demo-base-builder: A-16b refresh | gates-aggregator, demo-base-builder |
 | 17 | лічильник checks (48), примітка A-17 на карті | flow-map, README |
 | 18 | звірка зі стандартом Odoo: локальні вихідники 19.0 допустимі | elearning-builder, user-guide-builder |
-| 19 | §27а: вирівняти RU-core / CM-box-core з td_knowledge | закрито (RU-core / CM-box-core = 3 модулі: td_home_menu, td_support, td_knowledge) |
+| 19 | §27а: вирівняти RU-core / CM-box-core з td_knowledge | частково: склад RU-core / CM-box-core = 3 модулі (td_home_menu, td_support, td_knowledge) вирівняно; наповнення статтями td_<галузь>_knowledge з інструкцій A-16b відкладено на прохід після 0.4.0 (зараз статті пропонує лише support-kb-builder п. 5б) |
 
 Первісний повний текст зауважень є в рецензіях workflow 0.4.0; тут зафіксовано лише факт закриття.

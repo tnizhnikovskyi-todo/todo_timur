@@ -42,7 +42,7 @@ description: >
 | Суміжний скіл / крок | Межа |
 |---|---|
 | `gates-aggregator` (A-14) | Вердикти гейтів і `CHECKS.md`. Тут гейти не перезапускаються (diff лише md); у `patch` читається SHA APPROVE; дефекти йдуть через `release-defects.md` |
-| `product-decision-drafter` (A-17) | `ACCEPTANCE.md` (X.Y, SHA ревізії, перелік комплекту, підпис) — тут лише читається |
+| `product-decision-drafter` (A-17) | `ACCEPTANCE.md` (X.Y, SHA ревізії, підпис; комплект = модулі `package/addons/` на цьому SHA) — тут лише читається |
 | `demo-base-builder` (A-15) | `package/demo/` і єдиний стенд — не чіпати; тест оновлення на окремому інстансі |
 | `ci-pipeline-builder` (C-03) | Workflow — лише запускається `workflow_dispatch` і читається результат |
 | `flow-core:flow-autocheck` (C-06) | Загальні звірки SHA/diff/переліків; тут — свої лише релізні (версія, diff-список, ліцензії) |
@@ -97,7 +97,7 @@ description: >
 
 ## Крок 4. Склад пакета (R-05, R-06)
 Перелік `package/addons/*/__manifest__.py`: td_* і вендорені "готове" — ім'я, version, джерело/коміт з `package/addons/<модуль>/README.md` (A-11; `module-skeleton.md` —
-плановий спільний reference), ліцензія з маніфесту + наявність LICENSE (спільні `td_home_menu`/`td_support`/`td_knowledge`/`td_<галузь>_knowledge` -- власний код ToDo: досить `license` у маніфесті й README, LICENSE і коміт не вимагаються, R-06 = PASS; вендорені — лише MIT/BSD/Apache-2.0/LGPL-3, q42; інша — «Невпевнений» у `memo`, Юрист). Звірити множину **без `td_*_elearning`** з комплектом ACCEPTANCE (не збігається
+плановий спільний reference), ліцензія з маніфесту + наявність LICENSE (спільні `td_home_menu`/`td_support`/`td_knowledge`/`td_<галузь>_knowledge` -- власний код ToDo: досить `license` у маніфесті й README, LICENSE і коміт не вимагаються, R-06 = PASS; вендорені — лише MIT/BSD/Apache-2.0/LGPL-3, q42; інша — «Невпевнений» у `memo`, Юрист). Звірити множину **без `td_*_elearning`** з комплектом = `git ls-tree -d --name-only <SHA ревізії з ACCEPTANCE> package/addons/` (не збігається
 — дефект); модуль elearning — окремий рядок «Складу пакета» з приміткою «A-17b» (дозволена добавка, не «комплект ≠»). `depends` кожного td_* має бути в `addons/` або в «Модулі до установки» CONFIG.md. **Виняток td_*_elearning (механізм «Модулі до установки (A-17b)»):** CONFIG.md після ACCEPTANCE заморожений (R-02) з єдиним винятком: A-17b сам дописує в `package/config/{manifest.yaml,CONFIG.md}` рядки `website_slides` і `td_<галузь>_elearning` (versioning.md п. 13) — це не дефект пакета, у Крок 9 не оформлювати. При `elearning.mode: "on"` реліз додатково дублює їх у CHANGELOG, розділ «Команда установки» (і в «Передачу клієнту»), окремий рядок «Модулі до установки (A-17b): `website_slides`, `td_<галузь>_elearning`» (порядок: залежність, потім модуль; R-05a звіряє CHANGELOG із CONFIG.md). Перевірка depends враховує цей рядок: `website_slides` у ньому — не дефект, відсутність рядка при наявному модулі — дефект релізу. Чи ставить цей рядок runbook-executor (B-04) — «Відкрите питання» власнику flow-core (до рішення B-04 ставить за рядком вручну, фіксується в `memo`). Ліцензія, про сумісність
 якої з політикою пакета немає правила, — не вирішувати: рядок «Невпевнений» у `memo` (Юрист/Архітектор).
 
@@ -205,7 +205,7 @@ description: >
 | R-02 | `git diff --name-only <SHA>..HEAD` входить у дозволений список (`versioning.md`) | A-14 (після R-01 PASS) |
 | R-03 | X.Y тега = ACCEPTANCE = version td_* | A-14 -> A-11 |
 | R-04 | Тег не існує, не переноситься | ескалація |
-| R-05 | Комплект addons без `td_*_elearning` = ACCEPTANCE; усі addons = «Склад пакета», elearning — окремий рядок з приміткою A-17b | A-14 / повтор |
+| R-05 | теки `git ls-tree -d --name-only HEAD package/addons/` без `td_*_elearning` = `git ls-tree -d --name-only <SHA ACCEPTANCE> package/addons/` (теки з обох боків); усі addons = «Склад пакета», elearning — окремий рядок з приміткою A-17b | A-14 / повтор |
 | R-06 | Вендорені (не спільні td_ §27/§27а): version, джерело, ліцензія, LICENSE | A-14 -> A-11 |
 | R-07 | Заголовки CHANGELOG за grep-контрактом (+ режимні: «Передача клієнту» — release/odoo-upgrade) | повтор |
 | R-08 | «Зміни анкети» = diff ключів answers.yaml | повтор / A-14 -> A-09 |

@@ -23,7 +23,14 @@ DATE_ANY = re.compile(r"(?<![\d.,])(?:\d{4}-\d{1,2}(?:-\d{1,2})?|\d{4}/\d{1,2}(?
 
 
 def date_parts(x):
-    return sorted(int(t) for t in re.findall(r"\d+", x)) if DATE_ANY.fullmatch(x.strip()) else None
+    """Нормалізована дата (рік, місяць, день) або None; ДД.ММ.РРРР і РРРР-ММ-ДД дають той самий кортеж."""
+    x = x.strip()
+    if not DATE_ANY.fullmatch(x):
+        return None
+    t = [int(v) for v in re.findall(r"\d+", x)]
+    if re.match(r"\d{4}", x):
+        return tuple(t) + (0,) * (3 - len(t))
+    return (t[2], t[1], t[0]) if len(t) == 3 else None
 
 
 MULT = {"тис": 1e3, "тис.": 1e3, "млн": 1e6, "млрд": 1e9, "k": 1e3, "m": 1e6}
@@ -108,7 +115,7 @@ def main():
                         continue
                     if isinstance(want, str) and inner is not None and date_parts(want) and date_parts(want) == date_parts(inner):
                         continue  # та сама дата в іншому записі (15.08.2026 ↔ 2026-08-15)
-                    if isinstance(want, str) and inner is None and want.lower() in l.lower():
+                    if isinstance(want, str) and inner is None and (want.lower() in l.lower() or (date_parts(want) and any(date_parts(m.group(0)) == date_parts(want) for m in DATE_ANY.finditer(l)))):
                         continue
                     if want is None:
                         mism.append(f"{os.path.basename(f)}:{n} {key}: у facts значення не задано (null)"); continue
