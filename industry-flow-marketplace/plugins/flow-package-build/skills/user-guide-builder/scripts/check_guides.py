@@ -370,18 +370,34 @@ def raw_text(node):
         name = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
         if name in ("_", "_lt") and node.args:
             return raw_text(node.args[0])
+        if name == "format" and isinstance(f, ast.Attribute):  # _("…{}").format(x): дослівний довідник = шаблон
+            return raw_text(f.value)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         x, y = raw_text(node.left), raw_text(node.right)
         if x is not None and y is not None:
             return x + y
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):  # _("…%s") % x
         return raw_text(node.left)
+    if isinstance(node, ast.JoinedStr):  # f-рядок: константні частини, підстановки -> {}
+        return "".join(v.value if isinstance(v, ast.Constant) else "{}" for v in node.values)
     return None
+
+
+def raw_texts(node):
+    """Усі можливі тексти виразу: умовний вираз -> обидві гілки. [] = не визначено."""
+    if isinstance(node, ast.IfExp):
+        return raw_texts(node.body) + raw_texts(node.orelse)
+    t = raw_text(node)
+    return [t] if t else []
+
+
+UNRESOLVED = []  # (файл:рядок) raise td_*, текст якого не визначено: перевірити вручну
 
 
 def collect_messages(addons):
     """Тексти UserError/ValidationError/AccessError з td_* (без tests/demo/elearning); (файл:рядок, msgid, uk msgstr)."""
     found, helpers, trees = [], set(), []
+    del UNRESOLVED[:]
     for mod in td_modules(addons):
         po = load_po(os.path.join(addons, mod, "i18n", "uk.po"))
         for path in walk_mod(addons, mod, ".py"):
@@ -407,21 +423,24 @@ def collect_messages(addons):
                 s = raw_text(n.value)
                 if s:
                     assigns.setdefault(n.targets[0].id, []).append((n.lineno, s))
-            msg = None
+            msgs, where = [], None
             if isinstance(n, ast.Call) and n.args:
                 fnm = n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", "")
                 if fnm in helpers:
-                    msg = raw_text(n.args[0])
+                    msgs, where = raw_texts(n.args[0]), n.lineno
             if isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call):
                 fnm = n.exc.func.attr if isinstance(n.exc.func, ast.Attribute) else getattr(n.exc.func, "id", "")
                 if fnm in EXC and n.exc.args:
                     x = n.exc.args[0]
-                    msg = raw_text(x)
-                    if msg is None and isinstance(x, ast.Name):
+                    where = n.lineno
+                    msgs = raw_texts(x)
+                    if not msgs and isinstance(x, ast.Name):
                         prev = [y for y in assigns.get(x.id, []) if y[0] < n.lineno]
-                        msg = prev[-1][1] if prev else None
-            if msg:
-                found.append((f"{os.path.relpath(path, addons)}:{n.lineno}", msg, po.get(msg) or ""))
+                        msgs = [prev[-1][1]] if prev else []
+                    if not msgs and not (isinstance(x, ast.Name) and x.id in {a_.arg for f_ in ast.walk(tree) if isinstance(f_, (ast.FunctionDef, ast.AsyncFunctionDef)) and f_.lineno <= n.lineno <= getattr(f_, "end_lineno", 0) for a_ in f_.args.args}):
+                        UNRESOLVED.append(f"{os.path.relpath(path, addons)}:{n.lineno}")
+            for msg in msgs:
+                found.append((f"{os.path.relpath(path, addons)}:{where}", msg, po.get(msg) or ""))
     return found
 
 
@@ -906,17 +925,18 @@ def main():
                         msg_ = f"{n}:{i} «{nm}» ({k} {it.get('id') or it.get('action')}, {it['mod']}) потребує {', '.join(sorted(set(need_g)))}; групи ролі {role}: {', '.join(sorted(rg[role])) or '—'}"
                         if unmet_g and all(g in feat_g or ".group_feature_" in g for g in unmet_g):
                             warn_feat.append(f"{n}:{i} «{nm}» ({', '.join(sorted(set(unmet_g)))})")
-                        elif role in rg_incomplete or not from_stand:
+                        elif role in rg_incomplete:  # лише рядки plan.md з «…»/«+»; plan.md без «…» — запасне джерело, але порушення = FAIL (0.4.1)
                             warn_inc.append(msg_)
                         elif msg_ not in bad:
                             bad.append(msg_)
-        msg = ([f"крок доручає ролі те, чого роль не бачить ({len(bad)}): " + "; ".join(bad[:10]) + " — дефект у defects.md і повернення A-11/A-12 (код/права), не обхід текстом"] if bad else []) \
+        msg = ([f"крок доручає ролі те, чого роль не бачить (усього {len(bad)}): " + "; ".join(bad) + " — дефект у defects.md і повернення A-11/A-12 (код/права), не обхід текстом"] if bad else []) \
             + ([f"немає груп для ролей: {', '.join(warn_roles)} (додайте в {os.path.basename(rg_src)})"] if warn_roles else []) \
-            + ([f"функції коробки (група вмикається параметром, не роллю; перевірте VP): " + "; ".join(sorted(set(warn_feat))[:5])] if warn_feat else []) \
-            + ([f"перелік груп неповний або джерело не зі стенда (plan.md/«…»/«+»; джерело {rg_src}), можливі пропуски: " + "; ".join(sorted(set(warn_inc))[:5]) + " — зніміть групи зі стенда (shoot.mjs → img/ROLE-GROUPS.json)"] if warn_inc or rg_incomplete else [])
-        add("UG-access", "FAIL" if bad else ("WARN" if (warn_roles or warn_inc or rg_incomplete) else "PASS"), "; ".join(msg))
-        if bad:
-            res[-1]["items"] = bad
+            + ([f"функції коробки (група вмикається параметром, не роллю; перевірте VP; усього {len(set(warn_feat))}): " + "; ".join(sorted(set(warn_feat)))] if warn_feat else []) \
+            + ([f"перелік груп неповний («…»/«+» у plan.md; джерело {rg_src}), можливі пропуски (усього {len(set(warn_inc))}): " + "; ".join(sorted(set(warn_inc))) + " — зніміть групи зі стенда (shoot.mjs → img/ROLE-GROUPS.json)"] if warn_inc or rg_incomplete else []) \
+            + ([f"групи взято не зі стенда ({rg_src}): img/ROLE-GROUPS.json відсутній — зніміть його shoot.mjs, інакше перевірка прав запасна"] if not from_stand else [])
+        add("UG-access", "FAIL" if bad else ("WARN" if (warn_roles or warn_inc or rg_incomplete or not from_stand) else "PASS"), "; ".join(msg))
+        if bad or warn_inc or warn_feat:
+            res[-1]["items"] = bad + sorted(set(warn_inc)) + sorted(set(warn_feat))
 
     # UG-shots: кожен кадр ролі знято, увійшовши під користувачем ролі: не адміністратор, не прямий URL дії (LESSONS §28а)
     plan_p = os.path.join(root, "shoot-plan.json")
@@ -957,7 +977,13 @@ def main():
                 bad.append(f"{f}: у журналі логін {c[5]} не збігається з логіном ролі в shoot-plan.json")
             if plan_roles and role not in plan_roles:
                 bad.append(f"{f}: ролі {role} немає в shoot-plan.json")
-        add("UG-shots", "FAIL" if bad else "PASS", "; ".join(bad[:10]))
+        nolog = [x for x in bad if "немає стовпця «Логін»" in x]
+        rest = [x for x in bad if x not in nolog]
+        if nolog:  # журнал старого формату — одним рядком, щоб не витісняв інші порушення
+            rest.append(f"SHOOT-LOG.md старого формату (немає стовпця «Логін») у {len(nolog)} кадрів, напр. {nolog[0].split(':')[0]}: знімати shoot.mjs 0.4.1")
+        add("UG-shots", "FAIL" if bad else "PASS", (f"усього порушень {len(rest)}: " if rest else "") + "; ".join(rest[:10]) + (f" … (показано 10 з {len(rest)}, повний перелік — items)" if len(rest) > 10 else ""))
+        if rest:
+            res[-1]["items"] = rest
 
     # UG-messages: довідник reference/messages.md — усі UserError/ValidationError/AccessError з td_* дослівно (msgstr uk.po); посібники на нього посилаються
     if not a.addons:
@@ -986,6 +1012,8 @@ def main():
         untr = sorted({f"{src}" for src, m_, uk in found if not uk})
         if untr:
             warn.append(f"повідомлення без перекладу в uk.po ({len(untr)}): дефект перекладу пакета -> defects.md, напр. " + ", ".join(untr[:3]))
+        if UNRESOLVED:
+            warn.append(f"текст raise не визначено автоматично ({len(UNRESOLVED)}): перевірити вручну, чи є в messages.md: " + ", ".join(UNRESOLVED))
         if not found:
             add("UG-messages", "WARN", "у td_* не знайдено raise UserError/ValidationError/AccessError (перевірити шлях --addons)")
         else:
@@ -1008,21 +1036,56 @@ def main():
     for n in role_files:
         for i, line in enumerate(open(os.path.join(root, n), encoding="utf-8").read().splitlines(), 1):
             if ACTION_GEAR.search(line):
-                paths.append((n, i, "«Дія»", "імпорт/архівація в Odoo 19 викликаються значком шестерні (⚙) у списку або формі, не пунктом «Дія»; підпис значка — з uk.po web"))
-            if "«" not in line or not re.search(r"→|›|->|&gt;", line):
+                paths.append((n, i, "«Дія»", "імпорт/архівація в Odoo 19 викликаються значком шестерні (⚙) у списку або формі, не пунктом «Дія»; підпис значка — з uk.po web", None))
+            if not re.search(r"→|›|->|&gt;", line):
                 continue
+            ctx_ = lambda seg: "для пошти підпис — «Ел. пошта» (uk.po mail/base), «Обговорення» — назва застосунку Discuss" if norm_label(seg) == "обговорення" and re.search(r"пошт|лист|smtp", line, re.I) else None
+            seen_ = set()
+            # (а) «A» → «B»: кожен сегмент у власних лапках; (б) «A → B → C»: уся стежка в одній парі лапок (формат шаблону)
             for seg_line in re.findall(r"«[^»]+»(?:\s*(?:→|›|->|>)\s*«[^»]+»)+", line):
                 for seg in re.findall(r"«([^»]+)»", seg_line):
-                    ctx = "для пошти підпис — «Ел. пошта» (uk.po mail/base), «Обговорення» — назва застосунку Discuss" if norm_label(seg) == "обговорення" and re.search(r"пошт|лист|smtp", line, re.I) else None
-                    paths.append((n, i, seg, ctx))
+                    paths.append((n, i, seg, ctx_(seg), None))
+                    seen_.add(seg)
+            for q in re.findall(r"«([^»]+)»|`([^`\n]+)`|\*\*([^*\n]+)\*\*", line):
+                q = next(x for x in q if x)
+                if re.search(r"→|›|->|&gt;", q):
+                    for seg in re.split(r"\s*(?:→|›|->|&gt;|>)\s*", q):
+                        if seg.strip() and seg not in seen_:
+                            paths.append((n, i, seg.strip(), ctx_(seg), None))
+                            seen_.add(seg)
+            # (в) стежка без лапок: відкрийте Налаштування → Технічні → Системні параметри, потім …
+            if not re.search(r"«[^»]*(?:→|›)|[`*][^`*\n]*(?:→|›)", line) and re.search(r"→|›", line):
+                plain = re.sub(r"[«»`*\"]", "", line)
+                parts = re.split(r"\s*(?:→|›)\s*", plain)
+                if len(parts) >= 2:
+                    head = re.split(r"[:;,(|]\s*", parts[0])[-1].strip()
+                    tail = re.split(r"[,;:)|]|\.\s*$|\.\s+(?=[А-ЯІЇЄA-Z])|\s+(?:і|та|потім|далі|щоб)\s", parts[-1])[0].strip()
+                    segs = [head] + [x.strip() for x in parts[1:-1]] + [tail]
+                    for k, seg in enumerate(segs):
+                        if not seg:
+                            continue
+                        w = seg.split()
+                        if k == 0:
+                            vars_ = [" ".join(w[-m:]) for m in range(1, min(4, len(w)) + 1)]
+                        elif k == len(segs) - 1:
+                            vars_ = [" ".join(w[:m]) for m in range(1, min(5, len(w)) + 1)]
+                        else:
+                            vars_ = [seg]
+                        paths.append((n, i, seg, ctx_(seg), vars_))
     bad = []
-    for n, i, seg, why in paths:
+    for n, i, seg, why, vars_ in paths:
         if why:
             bad.append(f"{n}:{i} {seg} — {why}")
             continue
         s = norm_label(seg)
-        if re.search(r"[<{]", seg) or s in extra or s in own or s in stdset or not s:
+        vs = [norm_label(v) for v in (vars_ or [seg])]
+        if vars_:
+            seg = vars_[0]  # у звіті — найкоротший варіант (без дієслова/продовження речення)
+            s = norm_label(seg)
+        if re.search(r"[<{]", seg) or not s or any(v in extra or v in own or v in stdset for v in vs):
             continue
+        if any(v in SUSPECT_LABELS for v in vs) and not a.odoo_src:
+            s = next(v for v in vs if v in SUSPECT_LABELS)
         if s in SUSPECT_LABELS and not a.odoo_src:
             bad.append(f"{n}:{i} «{seg}» — вигаданий переклад? {SUSPECT_LABELS[s]}; без --odoo-src підтвердити не можна")
         elif a.odoo_src:

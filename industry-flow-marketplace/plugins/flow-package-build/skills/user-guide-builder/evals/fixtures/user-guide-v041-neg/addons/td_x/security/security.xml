@@ -1,0 +1,3 @@
+<odoo>
+  <record id="group_td_finance" model="res.groups"><field name="name">Finance TD</field></record>
+</odoo>

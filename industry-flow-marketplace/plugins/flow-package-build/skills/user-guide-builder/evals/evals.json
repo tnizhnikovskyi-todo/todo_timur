@@ -240,7 +240,7 @@
     {
       "id": "v041-full-ok",
       "prompt": "Перевір повний посібник 0.4.1: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-ok/user-guide --spec evals/fixtures/user-guide-v041-ok/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-ok/addons --answers evals/fixtures/user-guide-v041-ok/answers.yaml --config evals/fixtures/user-guide-v041-ok/CONFIG.md --role-groups evals/fixtures/user-guide-v041-ok/plan.md --odoo-src evals/fixtures/user-guide-v041-ok/odoo-src. Що показує кожна нова перевірка?",
-      "expected_output": "Усі UG-* без FAIL: UG-access PASS (група комірника stock.group_stock_manager через implied_ids охоплює меню зі stock.group_stock_user), UG-shots PASS (логіни ролей, без прямих URL), UG-messages PASS (missing 0), UG-std-label PASS (назви з uk.po), UG-cover-admin PASS (розділи з командами, get_param td_x.bas_url, меню BAS лише для групи), UG-cover-buttons PASS.",
+      "expected_output": "Усі UG-* без FAIL: UG-access PASS (група комірника stock.group_stock_manager через implied_ids охоплює меню зі stock.group_stock_user), UG-shots PASS (логіни ролей, без прямих URL), UG-messages PASS (missing 0), UG-std-label PASS (назви з uk.po), UG-cover-admin PASS (розділи з командами, get_param td_x.bas_url, меню BAS лише для групи), UG-cover-buttons PASS. Фікстура містить img/ROLE-GROUPS.json (джерело зі стенда): UG-access без WARN.",
       "assertions": [
         "Код повернення 0",
         "UG-access = PASS завдяки implied_ids зі security вихідників",
@@ -376,16 +376,31 @@
     {
       "id": "v041-parent-menu-and-feature-group",
       "prompt": "Права ролі через стандартного батька й функція коробки: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-parent/user-guide --spec evals/fixtures/user-guide-v041-parent/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-parent/addons --answers evals/fixtures/user-guide-v041-parent/answers.yaml --config evals/fixtures/user-guide-v041-parent/CONFIG.md --role-groups evals/fixtures/user-guide-v041-parent/plan.md --odoo-src evals/fixtures/user-guide-v041-parent/odoo-src. Меню td_x «Price vs history» стоїть під purchase.purchase_report_main (groups purchase.group_purchase_manager з odoo-src), комірник має лише group_purchase_user (img/ROLE-GROUPS.json зі стенда); «Send for signing» потребує td_x.group_sign, яку вмикає implied_group у res.config.settings.",
-      "expected_output": "UG-access FAIL: «Price vs history» (і батько «Reporting») потребує purchase.group_purchase_manager; «Send for signing» не дає FAIL, а WARN «функції коробки». Без img/ROLE-GROUPS.json (лише plan.md) — не FAIL, а WARN «джерело не зі стенда».",
+      "expected_output": "UG-access FAIL: «Price vs history» (і батько «Reporting») потребує purchase.group_purchase_manager; «Send for signing» не дає FAIL, а WARN «функції коробки». Джерело груп тут — plan.md без «…»: порушення = FAIL (не WARN); WARN лишається лише для рядків plan.md з «…»/«+» і для «групи не зі стенда» без порушень.",
       "assertions": [
         "UG-access = FAIL з назвою стандартного батьківського меню й групи",
         "Група з implied_group (res.config.settings td_*) не дає FAIL",
-        "plan.md без ROLE-GROUPS.json = WARN, не FAIL"
+        "plan.md без «…» і без ROLE-GROUPS.json: порушення = FAIL, повна кількість у msg/items"
       ],
       "files": [
         "evals/fixtures/user-guide-v041-parent/user-guide/",
         "evals/fixtures/user-guide-v041-parent/addons/",
         "evals/fixtures/user-guide-v041-parent/odoo-src/"
+      ]
+    },
+    {
+      "id": "v041-neg-forms",
+      "prompt": "Негативні форми 0.4.1: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-neg/user-guide --spec evals/fixtures/user-guide-v041-neg/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-neg/addons --answers evals/fixtures/user-guide-v041-neg/answers.yaml --config evals/fixtures/user-guide-v041-neg/CONFIG.md --role-groups evals/fixtures/user-guide-v041-neg/plan.md --odoo-src evals/fixtures/user-guide-v041-neg/odoo-src. Фікстура = ok + крок комірника з меню «Обмін з BAS» (лише td_x.group_td_finance), хибні шляхи «Налаштування → Технічні → Системні параметри» в одній парі лапок, без лапок і в **жирному**, і raise-форми .format(), f-рядок, умовний вираз, `%` через змінну, динамічний текст.",
+      "expected_output": "UG-access FAIL (джерело лише plan.md, а не WARN, кількість у msg); UG-std-label FAIL на «Технічні» і «Системні параметри» у кожній із трьох форм запису шляху; UG-messages FAIL: усі п'ять текстів із форм .format/f-рядок/IfExp/% у списку відсутніх, а raise із динамічним текстом (self.dyn()) — «текст raise не визначено автоматично» з файл:рядок.",
+      "assertions": [
+        "UG-access = FAIL, код виходу 1",
+        "UG-std-label = FAIL для шляху в одній парі лапок, без лапок і в ** **",
+        "UG-messages показує «Order {} is locked.», «Stock {} is negative.», «Name is required.», «Other.», «No rights for %s»",
+        "raise з невизначеним текстом не пропущено мовчки"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-neg/user-guide/",
+        "evals/fixtures/user-guide-v041-neg/addons/"
       ]
     }
   ]
