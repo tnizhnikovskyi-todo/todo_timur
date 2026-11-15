@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Language: uk\n"
+
+msgid "Settings"
+msgstr "Налаштування"
+
+msgid "Users & Companies"
+msgstr "Користувачі та компанії"
+
+msgid "Users"
+msgstr "Користувачі"
+
+msgid "Technical"
+msgstr "Технічні налаштування"
+
+msgid "System Parameters"
+msgstr "Параметри системи"
+
+msgid "Create"
+msgstr "Створити"
+

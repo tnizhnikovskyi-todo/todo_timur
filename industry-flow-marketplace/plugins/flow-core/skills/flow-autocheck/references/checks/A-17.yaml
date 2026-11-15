@@ -8,8 +8,17 @@
    "prim": "exists",
    "args": {
     "paths": [
-     "package/docs/user-guide/INDEX.md"
+     "package/docs/user-guide/INDEX.md",
+     "package/docs/user-guide/reference/messages.md"
     ]
+   }
+  },
+  {
+   "id": "guide-acceptance-consistent",
+   "prim": "manual",
+   "args": {
+    "text": "Узгодженість посібників A-16b з ACCEPTANCE.md (кут (в) незалежного аудиту A-16b): сценарій «готово» в INDEX не має в ACCEPTANCE статусу «відхилено»; AC зі сценарієм мають розділ; власник тестує стенд за інструкціями, кадри яких зняті під користувачем ролі",
+    "who": "власник / product-decision-drafter"
    }
   },
   {

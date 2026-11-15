@@ -6,7 +6,7 @@ step: A-23
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: outreach
-skill_ref: ["flow-research:demand-test-runner@0.4.0"]
+skill_ref: ["flow-research:demand-test-runner@0.4.1"]
 model: sonnet
 effort: medium
 inputs:

@@ -57,7 +57,7 @@ rejected_ref: <шлях>            # <артефакт>-rejected.md або ро
 completeness: {closed: <n>, risk: <n>}   # A-20 (самоперевірка повноти)/A-20c: лічильники з розділу «Повнота» AI-DECISIONS.md (пункти 1–14: закрито / ризик)
 ai_decisions: <n>                # A-03b/A-03c/A-20: кількість рядків «Рішення» в AI-DECISIONS.md
 vetoed: []                       # A-20 recalc / A-20c: ID рядків AI-NN із вето власника (`flow/decisions.md`)
-review_rounds: <n>              # кругів рецензента (max_rounds 2 + 1 контрольний)
+review_rounds: <n>              # кругів рецензента (max_rounds 2 + 1 контрольний; A-16b: до 5 без контрольного, круг = прохід 3 паралельних рецензентів)
 human_rounds: <n>               # кругів людини (Повернути/правки); human_rounds > 2 -> сигнал C-08R (event)
 sample: true|false              # це зразок (N-18); кроки зі зразком — A-03b, A-20c, A-21, A-21c (за карткою); result зразка — `waiting_human`
 accepted_ref: <шлях|null>       # N-11: ACCEPTED.md, що фіксує прийняте людиною (SHA/дата/хто)

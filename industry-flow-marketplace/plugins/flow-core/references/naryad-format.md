@@ -25,7 +25,7 @@ data_rule: "<посилання на розділ DATA_POLICY>"
 preconditions_confirmed: {crm_deal_stage: discovery_signed|sow_signed, by: <роль>, at: <дата>}   # q10: ознака стадії угоди в CRM; `discovery_signed` — угода дискавері підписана (наряд B-02), `sow_signed` — SOW підписано (B-04/B-06/B-11 і суміжні); назва стадії CRM, що відповідає значенню, — C-00; вписує C-01 з дзеркального поля
 review:                          # лише кроки з рецензентом (К-/N-03): чек-листи й ліміти кругів
   checklists: [<файл з <FC>/references/review-checklists/>]
-  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
+  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3; виняток A-16b: max_rounds 5 без контрольного, 3 паралельні рецензенти = 1 круг, після 5-го waiting_human); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}

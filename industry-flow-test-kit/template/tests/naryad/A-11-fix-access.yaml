@@ -1,0 +1,26 @@
+# ТЕСТОВИЙ наряд A-11 (0.4.1): fix прав ролей / коду після повернення з A-16b (UG-access FAIL або код 3 shoot.mjs MENU-NOT-VISIBLE; дефект D-NN у package/demo/defects.md).
+# Маршрут: UG-access / код 3 -> дефект D-NN -> A-11-fix-access -> A-12-fix (за потреби) -> A-14-N -> A-15-full -> A-16-N -> A-16b. Ставить наряд сесія/людина, яка зафіксувала дефект (в тесті — AI за Кроком 0 TEST-START).
+step: A-11
+scope: {kind: package, id: mebli}
+executor: any
+access_profile: repo
+skill_ref: ["odoo19-mvp-build:code-dev"]
+model: sonnet
+effort: medium
+params: {mode: fix}
+inputs:
+  - {name: defects.md, from: A-16b, path: package/demo/defects.md, sha: HEAD}
+  - {name: CHECKS.md, from: A-14, path: package/CHECKS.md, sha: HEAD}
+where: package/addons/
+template: "немає — форма за SKILL.md"
+done: "дефекти D-NN прав ролей (групи меню/кнопок, ACL, sudo) виправлено в package/addons/ мінімально; тести модулів зелені; версії змінених модулів піднято; рядок AI-NN за потреби"
+check: {mode: both, how: "where-only + тести модулів (tools/odoo/run_tests.sh)", audit_every_n: 10}
+limits: {max_attempts: 2, timeout_min: 90, lease_factor: 1.5, cost_limit_usd: 15, context_budget_tokens: 60000}
+client_data: none
+data_rule: "лише вигадані демо-дані; package/DATA_POLICY.md (none)"
+odoo_connections: []
+repo: {url: origin, base_branch: main, branch: flow/A-11-fix-access-test}
+attempt: 1
+returned_from: A-16b
+git: {base: HEAD, head: null, prev_tag: null}
+date: 2026-11-15

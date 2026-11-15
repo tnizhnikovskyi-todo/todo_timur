@@ -19,9 +19,12 @@ UG-pii (на знімках немає чужих даних), lint.
   --answers / --config: UG-cover-admin («налаштування й експлуатація»): кожен блок VP-NN answers.yaml (ідентифікатор або значення param:; поля схеми не перевіряються) і кожен листовий ключ не-VP блоків (повний шлях через крапку або кінцевий ключ) і кожен
           VP-NN з CONFIG.md згадано в admin.md; INDEX має таблицю «Покриття: налаштування й експлуатація»; без обох = SKIPPED.
 UG-img: зображення = лише png/jpg/jpeg/webp у img/ (SHOOT-LOG.md не зображення); розділ зі «Статус: готово» має >=1 зображення.
+0.4.1: UG-access (--role-groups plan.md|JSON, --odoo-src: groups меню/кнопок з кроків ролі ⊆ групи ролі), UG-shots (shoot-plan.json + SHOOT-LOG: кадр ролі під логіном ролі, не admin, не прямий URL дії),
+  UG-messages (reference/messages.md: усі raise UserError/ValidationError/AccessError з td_* дослівно з uk.po), UG-std-label (назви в шляхах «A → B» лише з uk.po вихідників --odoo-src або td_*),
+  UG-cover-buttons (смарт-кнопки й кнопки заголовка td_*), UG-cover-admin поштучно (розділи admin.md з командами, get_param, меню лише для групи).
 UG-cover: розділ «Статус: заблоковано дефектом» = FAIL (повернення A-14: крок returned, не done).
 Вихід: JSON [{id,status,msg}]. Код повернення 1, якщо є FAIL."""
-import argparse, json, os, re, sys
+import argparse, ast, json, os, re, sys
 import xml.etree.ElementTree as ET
 
 SC = re.compile(r"\bSC-\d{2,}\b")  # перевизначається --id-pattern
@@ -45,6 +48,468 @@ def strip_noise(line):
     return line
 
 
+# ---------- 0.4.1: спільні помічники (UG-access, UG-shots, UG-messages, UG-std-label, UG-cover-admin) ----------
+EXC = {"UserError", "ValidationError", "AccessError"}
+STD_DEFAULT_MODULES = ["base", "web", "mail", "base_setup", "base_import", "account", "sale", "stock", "mrp", "purchase", "crm", "project", "product", "uom", "contacts", "hr"]
+# Вигадані переклади стандартного меню (LESSONS §28а): без --odoo-src це FAIL, із ним — спершу пошук у uk.po
+SUSPECT_LABELS = {
+    "технічні": "у меню розробника вживається підпис із uk.po модуля base (перевірити msgid Technical)",
+    "системні параметри": "підпис із uk.po base (msgid System Parameters); шлях — у режимі розробника, не «Технічні»",
+    "обговорення": "для пошти — «Ел. пошта» (uk.po mail), не «Обговорення»",
+}
+ACTION_GEAR = re.compile(r"«Дія»[^\n|]{0,60}(імпорт|архів)", re.I)
+URL_ACTION = re.compile(r"/odoo/action-|[#?&]action=|/web#")
+NEGATION = re.compile(r"не\s+(бачить|бачать|доступн|видно|показу|мож)|недоступн|лише\s+в\s+режим\w*\s+розробника|режим\w*\s+розробника|скасовує\s+керівник|тільки\s+керівник|лише\s+керівник", re.I)
+ADMIN_LOGIN = re.compile(r"(?i)^(admin|administrator|root|__system__)(@.*)?$")
+
+
+def unq(s):
+    return s.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
+
+
+def load_po(path):
+    d, cur, key = {}, {}, None
+    if not os.path.exists(path):
+        return d
+    for ln in open(path, encoding="utf-8", errors="replace"):
+        ln = ln.strip()
+        m = re.match(r'^(msgid|msgstr)\s+"(.*)"$', ln)
+        if m:
+            if m.group(1) == "msgid" and "msgstr" in cur:
+                if cur.get("msgid") and cur["msgstr"]:
+                    d[unq(cur["msgid"])] = unq(cur["msgstr"])
+                cur = {}
+            key = m.group(1)
+            cur[key] = m.group(2)
+        elif ln.startswith('"') and ln.endswith('"') and key:
+            cur[key] = cur.get(key, "") + ln[1:-1]
+    if cur.get("msgid") and cur.get("msgstr"):
+        d[unq(cur["msgid"])] = unq(cur["msgstr"])
+    return d
+
+
+def td_modules(addons):
+    return sorted(m for m in os.listdir(addons) if m.startswith("td_") and not re.search(r"_(elearning|demo)$", m) and os.path.isdir(os.path.join(addons, m)))
+
+
+def walk_mod(addons, mod, ext):
+    for dp, dirs, fs in os.walk(os.path.join(addons, mod)):
+        dirs.sort()
+        if "tests" in os.path.relpath(dp, os.path.join(addons, mod)).split(os.sep) or "demo" in os.path.relpath(dp, os.path.join(addons, mod)).split(os.sep):
+            continue
+        for f in sorted(fs):
+            if f.endswith(ext):
+                yield os.path.join(dp, f)
+
+
+def qual(mod, ref):
+    return ref if "." in ref else f"{mod}.{ref}"
+
+
+def split_groups(s, mod):
+    return [qual(mod, g.strip()) for g in (s or "").split(",") if g.strip() and not g.strip().startswith(("!", "-"))]  # «-grp» у groups= знімає групу, а не вимагає
+
+
+def parse_security(path, mod, groups):
+    """res.groups з XML: id -> {name, implied}"""
+    try:
+        tree = ET.parse(path)
+    except (ET.ParseError, OSError):
+        return
+    for rec in tree.iter("record"):
+        if rec.get("model") != "res.groups" or not rec.get("id"):
+            continue
+        g = groups.setdefault(qual(mod, rec.get("id")), {"name": "", "implied": []})
+        for fl in rec.findall("field"):
+            if fl.get("name") == "name" and (fl.text or "").strip():
+                g["name"] = fl.text.strip()
+            if fl.get("name") == "implied_ids":
+                g["implied"] += [qual(mod, r_) for r_ in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", fl.get("eval") or "")]
+                if fl.get("ref"):
+                    g["implied"].append(qual(mod, fl.get("ref")))
+
+
+def collect_td_ui(addons):
+    """Меню, кнопки й групи модулів td_* з XML: {menus, buttons, groups}."""
+    menus, buttons, groups = [], [], {}
+    for mod in td_modules(addons):
+        for path in walk_mod(addons, mod, ".xml"):
+            parse_security(path, mod, groups)
+            try:
+                tree = ET.parse(path)
+            except (ET.ParseError, OSError):
+                continue
+            pm = {c: p for p in tree.iter() for c in p}
+            for el in tree.iter():
+                if el.tag == "menuitem" and el.get("name"):
+                    menus.append({"id": qual(mod, el.get("id") or ""), "name": el.get("name"), "parent": qual(mod, el.get("parent")) if el.get("parent") else None,
+                                  "groups": split_groups(el.get("groups"), mod), "mod": mod})
+                elif el.tag == "record" and el.get("model") == "ir.ui.menu":
+                    m = {"id": qual(mod, el.get("id") or ""), "name": None, "parent": None, "groups": [], "mod": mod}
+                    for fl in el.findall("field"):
+                        if fl.get("name") == "name" and (fl.text or "").strip():
+                            m["name"] = fl.text.strip()
+                        elif fl.get("name") == "parent_id" and fl.get("ref"):
+                            m["parent"] = qual(mod, fl.get("ref"))
+                        elif fl.get("name") in ("groups_id", "group_ids"):
+                            m["groups"] = [qual(mod, r_) for r_ in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", fl.get("eval") or "")]
+                    if m["name"] and not m["name"].startswith("%"):
+                        menus.append(m)
+                elif el.tag == "button" and (el.get("string") or el.get("name")):
+                    chain, smart, header = [], False, False
+                    p_ = pm.get(el)
+                    while p_ is not None:
+                        if p_.get("name") == "button_box" or "oe_button_box" in (p_.get("class") or ""):
+                            smart = True
+                        if p_.tag == "header":
+                            header = True
+                        p_ = pm.get(p_)
+                    label = el.get("string")
+                    if not label and smart:
+                        fl = el.find(".//field[@string]")
+                        label = fl.get("string") if fl is not None else None
+                        if not label:
+                            sp = el.find(".//span")
+                            label = (sp.text or "").strip() if sp is not None else None
+                    if label and not label.startswith("%"):
+                        buttons.append({"name": label, "groups": split_groups(el.get("groups"), mod), "smart": smart, "header": header, "mod": mod, "action": el.get("name") or ""})
+    return {"menus": menus, "buttons": buttons, "groups": groups}
+
+
+def std_modules(a):
+    mods = set(STD_DEFAULT_MODULES) | {m for m in a.std_modules.split(",") if m.strip()}
+    if a.addons:
+        for mod in td_modules(a.addons):
+            mp = os.path.join(a.addons, mod, "__manifest__.py")
+            try:
+                d = ast.literal_eval(open(mp, encoding="utf-8").read())
+                mods |= set(d.get("depends", []))
+            except (OSError, ValueError, SyntaxError):
+                pass
+    return sorted(m for m in mods if not m.startswith("td_"))
+
+
+def std_roots(src):
+    return [os.path.join(src, "addons"), os.path.join(src, "odoo", "addons")]
+
+
+def std_po(a):
+    """Усі msgstr uk.po стандартних модулів із --odoo-src (множина підписів у нижньому регістрі) і msgstr -> msgid для підказок."""
+    out = {}
+    if not a.odoo_src:
+        return out
+    for m in std_modules(a):
+        for r_ in std_roots(a.odoo_src):
+            p = os.path.join(r_, m, "i18n", "uk.po")
+            if os.path.exists(p):
+                for k, v in load_po(p).items():
+                    out.setdefault(norm_label(v), v)
+                break
+    return out
+
+
+def std_implied(a, groups):
+    """Доповнює groups імплікаціями зі security/*.xml стандартних модулів (--odoo-src)."""
+    if not a.odoo_src:
+        return
+    for m in std_modules(a):
+        for r_ in std_roots(a.odoo_src):
+            sd = os.path.join(r_, m, "security")
+            if os.path.isdir(sd):
+                for f in sorted(os.listdir(sd)):
+                    if f.endswith(".xml"):
+                        parse_security(os.path.join(sd, f), m, groups)
+                break
+
+
+def demo_implied(a, groups):
+    """Імплікації з демо-шару td_*_demo (напр. base.group_user -> feature-групи): стенд ними користується, UG-access має їх знати."""
+    if not a.addons:
+        return
+    for m in sorted(x for x in os.listdir(a.addons) if re.match(r"td_.*_demo$", x) and os.path.isdir(os.path.join(a.addons, x))):
+        for dp, _d, fs in os.walk(os.path.join(a.addons, m)):
+            for f in sorted(fs):
+                if f.endswith(".xml"):
+                    parse_security(os.path.join(dp, f), m, groups)
+
+
+def collect_std_menus(a):
+    """Меню стандартних модулів із --odoo-src: {id: {id, name, parent, groups, mod}}; для ланцюжка батьків UG-access (LESSONS §28а)."""
+    out = {}
+    if not a.odoo_src:
+        return out
+    for m in std_modules(a):
+        for r_ in std_roots(a.odoo_src):
+            md = os.path.join(r_, m)
+            if not os.path.isdir(md):
+                continue
+            for dp, dirs, fs in os.walk(md):
+                dirs[:] = sorted(d for d in dirs if d not in ("tests", "static", "i18n", "demo"))
+                for f in sorted(fs):
+                    if not f.endswith(".xml"):
+                        continue
+                    fp = os.path.join(dp, f)
+                    try:
+                        if "menu" not in open(fp, encoding="utf-8").read():
+                            continue
+                        tree = ET.parse(fp)
+                    except (ET.ParseError, OSError, UnicodeDecodeError):
+                        continue
+                    for el in tree.iter():
+                        if el.tag == "menuitem" and el.get("id"):
+                            mid = qual(m, el.get("id"))
+                            e = out.setdefault(mid, {"id": mid, "name": None, "parent": None, "groups": [], "mod": m})
+                            e["name"] = el.get("name") or e["name"]
+                            e["parent"] = qual(m, el.get("parent")) if el.get("parent") else e["parent"]
+                            e["groups"] += split_groups(el.get("groups"), m)
+                        elif el.tag == "record" and el.get("model") == "ir.ui.menu" and el.get("id"):
+                            mid = qual(m, el.get("id"))
+                            e = out.setdefault(mid, {"id": mid, "name": None, "parent": None, "groups": [], "mod": m})
+                            for fl in el.findall("field"):
+                                if fl.get("name") == "name" and (fl.text or "").strip():
+                                    e["name"] = fl.text.strip()
+                                elif fl.get("name") == "parent_id" and fl.get("ref"):
+                                    e["parent"] = qual(m, fl.get("ref"))
+                                elif fl.get("name") in ("groups_id", "group_ids"):
+                                    e["groups"] += [qual(m, x) for x in re.findall(r"ref\(['\"]([^'\"]+)['\"]\)", fl.get("eval") or "")]
+            break
+    return out
+
+
+def feature_groups(addons):
+    """Групи, які вмикає параметр коробки (implied_group у res.config.settings td_*): не ролева вимога, залежать від параметра."""
+    out = set()
+    for mod in td_modules(addons):
+        for fp in walk_mod(addons, mod, ".py"):
+            try:
+                txt = open(fp, encoding="utf-8").read()
+            except OSError:
+                continue
+            for g in re.findall(r"implied_group\s*=\s*['\"]([\w.]+)['\"]", txt):
+                out.add(qual(mod, g))
+    return out
+
+
+def closure(gs, groups):
+    seen, stack = set(), list(gs)
+    while stack:
+        g = stack.pop()
+        if g in seen:
+            continue
+        seen.add(g)
+        stack += groups.get(g, {}).get("implied", [])
+    return seen
+
+
+def norm_label(s):
+    s = re.sub(r"\s+", " ", s.strip().lower())
+    return re.sub(r"[\s….:;,!?]+$", "", s)
+
+
+INCOMPLETE = re.compile(r"…|\.\.\.|\s\+\s")
+
+
+def role_groups_map(a, root):
+    """-> (роль -> групи, ролі з неповним переліком, джерело). Перше джерело — img/ROLE-GROUPS.json (shoot.mjs читає групи користувача зі стенда);
+    далі JSON {роль:[групи]} або plan.md (таблиця: логін у `…@…`, групи у `модуль.group_*`; рядок із «…»/«+» = перелік неповний)."""
+    live = os.path.join(root, "img", "ROLE-GROUPS.json")
+    if os.path.exists(live):
+        try:
+            return {k: list(v) for k, v in json.load(open(live, encoding="utf-8")).items()}, set(), "img/ROLE-GROUPS.json (стенд)"
+        except ValueError:
+            pass
+    if not a.role_groups or not os.path.exists(a.role_groups):
+        return None, set(), ""
+    if a.role_groups.endswith(".json"):
+        return {k: list(v) for k, v in json.load(open(a.role_groups, encoding="utf-8")).items()}, set(), os.path.basename(a.role_groups)
+    by_login, incompl_login = {}, set()
+    for ln in open(a.role_groups, encoding="utf-8"):
+        if not ln.strip().startswith("|"):
+            continue
+        logins = re.findall(r"`([^`@\s]+@[^`\s]+)`", ln)
+        gs = [g for g in re.findall(r"`([A-Za-z_0-9]+\.[A-Za-z_0-9]+)`", ln) if "group" in g and "@" not in g]
+        for lg in logins:
+            by_login.setdefault(lg, set()).update(gs)
+            if INCOMPLETE.search(ln):
+                incompl_login.add(lg)
+    out, inc = {}, set()
+    try:
+        plan = json.load(open(os.path.join(root, "shoot-plan.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        plan = {}
+    for r_ in plan.get("roles", []):
+        if r_.get("login") in by_login:
+            out.setdefault(r_["role"], set()).update(by_login[r_["login"]])
+            if r_["login"] in incompl_login:
+                inc.add(r_["role"])
+    return {k: sorted(v) for k, v in out.items()}, inc, os.path.basename(a.role_groups)
+
+
+def section(adm, pat):
+    """Текст розділів admin.md, заголовок яких збігається з pat, разом із підрозділами."""
+    parts = re.split(r"(?m)^(?=#{1,4}\s)", adm)
+    out = []
+    for i, p in enumerate(parts):
+        hm = re.match(r"(#{1,4})\s+(.*)", p)
+        if hm and re.search(pat, hm.group(2), re.I):
+            lvl, body = len(hm.group(1)), p
+            for q in parts[i + 1:]:
+                h2 = re.match(r"(#{1,4})\s", q)
+                if h2 and len(h2.group(1)) <= lvl:
+                    break
+                body += q
+            out.append(body)
+    return "\n".join(out)
+
+
+def raw_text(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Call):
+        f = node.func
+        name = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+        if name in ("_", "_lt") and node.args:
+            return raw_text(node.args[0])
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        x, y = raw_text(node.left), raw_text(node.right)
+        if x is not None and y is not None:
+            return x + y
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):  # _("…%s") % x
+        return raw_text(node.left)
+    return None
+
+
+def collect_messages(addons):
+    """Тексти UserError/ValidationError/AccessError з td_* (без tests/demo/elearning); (файл:рядок, msgid, uk msgstr)."""
+    found, helpers, trees = [], set(), []
+    for mod in td_modules(addons):
+        po = load_po(os.path.join(addons, mod, "i18n", "uk.po"))
+        for path in walk_mod(addons, mod, ".py"):
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read())
+            except (SyntaxError, OSError):
+                continue
+            trees.append((mod, po, path, tree))
+            for fn in ast.walk(tree):  # метод-помічник: приймає текст параметром і сам піднімає виняток
+                if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    args = {x.arg for x in fn.args.args}
+                    for n in ast.walk(fn):
+                        if isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call) and getattr(n.exc.func, "id", getattr(n.exc.func, "attr", "")) in EXC and n.exc.args:
+                            x = n.exc.args[0]
+                            if isinstance(x, ast.Call) and x.args and isinstance(x.args[0], ast.Name) and x.args[0].id in args:
+                                helpers.add(fn.name)
+                            if isinstance(x, ast.Name) and x.id in args:
+                                helpers.add(fn.name)
+    for mod, po, path, tree in trees:
+        assigns = {}
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
+                s = raw_text(n.value)
+                if s:
+                    assigns.setdefault(n.targets[0].id, []).append((n.lineno, s))
+            msg = None
+            if isinstance(n, ast.Call) and n.args:
+                fnm = n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", "")
+                if fnm in helpers:
+                    msg = raw_text(n.args[0])
+            if isinstance(n, ast.Raise) and isinstance(n.exc, ast.Call):
+                fnm = n.exc.func.attr if isinstance(n.exc.func, ast.Attribute) else getattr(n.exc.func, "id", "")
+                if fnm in EXC and n.exc.args:
+                    x = n.exc.args[0]
+                    msg = raw_text(x)
+                    if msg is None and isinstance(x, ast.Name):
+                        prev = [y for y in assigns.get(x.id, []) if y[0] < n.lineno]
+                        msg = prev[-1][1] if prev else None
+            if msg:
+                found.append((f"{os.path.relpath(path, addons)}:{n.lineno}", msg, po.get(msg) or ""))
+    return found
+
+
+def get_param_keys(addons):
+    keys = {}
+    for mod in td_modules(addons):
+        for path in walk_mod(addons, mod, ".py"):
+            for m in re.finditer(r"get_param\(\s*['\"]([^'\"]+)['\"]", open(path, encoding="utf-8", errors="replace").read()):
+                keys.setdefault(m.group(1), mod)
+    return keys
+
+
+def fence_blocks(txt):
+    fenced = re.findall(r"```[^\n]*\n(.*?)```", txt, re.S)
+    inline = re.findall(r"`([^`\n]+)`", re.sub(r"```[^\n]*\n.*?```", " ", txt, flags=re.S))  # команди й параметри в зворотних лапках (0.4.1)
+    return re.sub(r"\\\n\s*", " ", "\n".join(fenced + inline))  # рядки з «\» об'єднано
+
+
+def admin_must(adm_raw, a, ui, config_dir):
+    """Обов'язкові розділи admin.md з виконуваними командами (LESSONS §28/28а). Повертає список пропусків."""
+    miss = []
+    low = adm_raw.lower()
+
+    def need(name, pat, checks):
+        sec = section(adm_raw, pat)
+        if not sec:
+            miss.append(f"admin/{name}: немає розділу (заголовок ~ «{pat}»)")
+            return ""
+        sl, code = sec.lower(), fence_blocks(sec).lower()
+        for label, rx, in_code in checks:
+            hay = code if in_code else sl
+            if not re.search(rx, hay):
+                miss.append(f"admin/{name}: немає {label}" + (" у блоці коду" if in_code else ""))
+        return sec
+
+    sec = need("встановлення", r"встановлен|установк", [
+        ("команди odoo-bin -i", r"odoo-bin[^\n]*\s(-i|--init)\b", True), ("addons_path", r"addons[-_]path", False),
+        ("--load-language", r"--load-language", True), ("посилання на «Модулі до установки»", r"модулі до установки", False),
+        ("межі «конфіг-пакет на базу клієнта застосовує ToDo за B-04»", r"(?s)(?:конфіг-пакет.*todo.*b-04|b-04.*todo.*конфіг-пакет)", False)])
+    if sec and config_dir:  # apply.py обмежений test-/demo-/emu- => потрібен рядок AI-NN
+        cands_ = [os.path.join(config_dir, "apply.py"), os.path.join(config_dir, "..", "..", "tools", "odoo", "apply.py"), os.path.join("tools", "odoo", "apply.py")]
+        ap_ = next((c_ for c_ in cands_ if os.path.exists(c_)), cands_[0])  # скрипт C-00 лежить у tools/odoo/apply.py (0.4.1)
+        if os.path.exists(ap_) and re.search(r"(test|demo|emu)-", open(ap_, encoding="utf-8", errors="replace").read()) and not re.search(r"AI-\d+", sec):
+            miss.append("admin/встановлення: apply.py обмежений test-/demo-/emu-, потрібен рядок AI-NN про межу «на базу клієнта застосовує ToDo»")
+    multi = any(re.search(r"мультикомпан|multi-?company", open(p, encoding="utf-8", errors="replace").read(), re.I) for p in ([a.config] if a.config and os.path.exists(a.config) else [])) \
+        or any(re.search(r":\s*['\"]?multi(company)?['\"]?\s*(#.*)?$", open(p, encoding="utf-8", errors="replace").read(), re.M | re.I) for p in a.answers if os.path.exists(p))
+    if multi:
+        need("мультикомпанія", r"мультикомпан", [("опису компаній", r"компані", False), ("шляху меню або команди", r"→|odoo-bin|```", False)])
+    need("безпека", r"безпек", [("паролів", r"парол", False), ("2FA", r"2fa|дво(?:х)?фактор", False), ("list_db", r"list_db", False),
+                                ("list_db = False", r"list_db\s*=\s*false", True), ("майстер-пароля", r"майстер-парол|admin_passwd", False), ("ключів інтеграцій", r"ключ", False)])
+    sec = need("резервні копії", r"резервн", [("pg_dump", r"pg_dump", True), ("filestore", r"filestore", False), ("відновлення (pg_restore/psql)", r"pg_restore|psql", True),
+                                              ("odoo-bin neutralize", r"odoo-bin[^\n]*neutralize", True)])
+    if sec:
+        t = sec.lower()
+        k = t.find("neutralize")
+        if k >= 0 and "td_" not in t[k:]:
+            miss.append("admin/резервні копії: після neutralize немає ручних кроків td_* (канали обміну, пошта, інтеграції)")
+    need("оновлення", r"оновлен", [("-u … --stop-after-init", r"\s-u\s+\S+[^\n]*--stop-after-init|--stop-after-init[^\n]*\s-u\s", True), ("зупинки сервісу", r"systemctl\s+stop|зупин", False)])
+    need("пошта", r"пошт", [("web.base.url", r"web\.base\.url", False), ("«Ел. пошта»", r"ел\. пошта", False), ("відправника", r"відправник", False)])
+    need("користувачі", r"користувач", [("створення", r"створ", False), ("часового поясу (TZ)", r"\btz\b|часов\w+ пояс", False)])
+    if a.addons:
+        keys = get_param_keys(a.addons)
+        mk = sorted(k for k in keys if k.lower() not in low)
+        if mk:
+            miss.append("admin/системні параметри (get_param у td_*), немає в admin.md: " + ", ".join(f"{k} ({keys[k]})" for k in mk))
+        for m in ui["menus"]:
+            # рішення AI (0.4.1): вимога «меню з groups названо в admin.md» — лише для ролевих груп td_*; feature-групи (group_feature_*, вмикаються
+            # всім через implied_ids/налаштування) і стандартні групи Odoo (їх описують посібники ролей) не вимагаються; «-група» знімає доступ
+            mgroups = [g for g in m["groups"] if g.startswith("td_") and ".group_feature_" not in g]
+            if not mgroups:
+                continue
+            names = {m["name"].lower()}
+            tr_ = load_po(os.path.join(a.addons, m["mod"], "i18n", "uk.po")).get(m["name"])
+            if tr_:
+                names.add(tr_.lower())
+            gnames = set()
+            for g in mgroups:
+                gnames |= {g.lower(), g.split(".")[-1].lower(), (ui["groups"].get(g, {}).get("name") or g).lower()}
+                tg = load_po(os.path.join(a.addons, g.split(".")[0], "i18n", "uk.po")).get(ui["groups"].get(g, {}).get("name") or "")
+                if tg:
+                    gnames.add(tg.lower())
+            blocks = [p for p in re.split(r"\n\s*\n|\n(?=\|)", adm_raw.lower()) if any(n in p for n in names)]
+            if not any(any(g in p for g in gnames) for p in blocks):
+                miss.append(f"admin/меню лише для групи: «{m['name']}» ({m['mod']}) доступне групам {', '.join(mgroups)} — у admin.md немає абзацу чи рядка таблиці з меню і групою")
+    return miss
+
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True)
@@ -55,6 +520,9 @@ def main():
     ap.add_argument("--addons")
     ap.add_argument("--answers", action="append", default=[])
     ap.add_argument("--config")
+    ap.add_argument("--role-groups", help="plan.md стенда (таблиця ролей: логін у `…@…`, групи `модуль.group_*`) або JSON {роль: [групи]}: UG-access")
+    ap.add_argument("--odoo-src", help="корінь вихідників Odoo 19.0 (addons/, odoo/addons/base): uk.po і security стандартних модулів для UG-std-label, UG-access")
+    ap.add_argument("--std-modules", default="", help="додаткові стандартні модулі для UG-std-label (через кому)")
     a = ap.parse_args()
     global SC
     SC = re.compile(r"\b(?:" + a.id_pattern + r")\b")
@@ -344,11 +812,231 @@ def main():
             for vp in sorted(set(re.findall(r"\bVP-\d+\b", open(a.config, encoding="utf-8").read()))):
                 if vp.lower() not in adm_txt:
                     miss.append(vp)
+        adm_pth = os.path.join(root, "admin.md")
+        if os.path.exists(adm_pth):
+            miss += admin_must(open(adm_pth, encoding="utf-8").read(), a, collect_td_ui(a.addons) if a.addons else {"menus": [], "buttons": [], "groups": {}}, os.path.dirname(a.config) if a.config else None)
         msg = ([] if re.search(r"(?mi)^##\s*Покриття:\s*налаштування", index) else ["в INDEX немає таблиці «## Покриття: налаштування й експлуатація»"]) \
             + ([f"немає в admin.md ({len(set(miss))}): {', '.join(sorted(set(miss)))}"] if miss else [])
         add("UG-cover-admin", "FAIL" if msg else "PASS", "; ".join(msg))
         if miss:
             res[-1]["items"] = sorted(set(miss))
+
+    ui_all = collect_td_ui(a.addons) if a.addons else {"menus": [], "buttons": [], "groups": {}}
+
+    # UG-cover-buttons: смарт-кнопки (button_box) і кнопки заголовка форм td_* названо в посібниках (LESSONS §28 п. 3)
+    if not a.addons:
+        add("UG-cover-buttons", "SKIPPED", "немає --addons: смарт-кнопки й кнопки заголовка перевірити вручну")
+    else:
+        po_by = {m: load_po(os.path.join(a.addons, m, "i18n", "uk.po")) for m in td_modules(a.addons)}
+
+        def bnamed(b):
+            for v in {b["name"], po_by.get(b["mod"], {}).get(b["name"]) or b["name"]}:
+                if re.search(r"(?<!\w)" + re.escape(v.lower()) + r"(?!\w)", body):
+                    return True
+            return False
+        sm_miss = sorted({f"{b['mod']}: «{b['name']}»" for b in ui_all["buttons"] if b["smart"] and not bnamed(b)})
+        hd_miss = sorted({f"{b['mod']}: «{b['name']}»" for b in ui_all["buttons"] if b["header"] and not b["smart"] and not bnamed(b)})
+        msg = ([f"смарт-кнопки без опису дії ({len(sm_miss)}): {', '.join(sm_miss)}"] if sm_miss else [])
+        add("UG-cover-buttons", "FAIL" if msg else ("WARN" if hd_miss else "PASS"),
+            "; ".join(msg + ([f"кнопки заголовка форм без згадки ({len(hd_miss)}): {', '.join(hd_miss)}"] if hd_miss else [])))
+
+    # UG-access: groups меню/кнопок, названих у кроках ролі, ⊆ групи ролі (LESSONS §28а). Недоступне = дефект (A-11/A-12), не обхід текстом
+    rg, rg_incomplete, rg_src = role_groups_map(a, root)
+    if not a.role_groups and rg is None:
+        add("UG-access", "SKIPPED", "немає img/ROLE-GROUPS.json (shoot.mjs) і --role-groups (plan.md стенда або JSON): права ролей перевірити вручну")
+    elif rg is None:
+        add("UG-access", "FAIL", f"--role-groups {a.role_groups} не існує")
+    elif not a.addons:
+        add("UG-access", "SKIPPED", "немає --addons: groups меню й кнопок не зібрано")
+    else:
+        groups = dict(ui_all["groups"])
+        std_implied(a, groups)
+        demo_implied(a, groups)
+        po_by = {m: load_po(os.path.join(a.addons, m, "i18n", "uk.po")) for m in td_modules(a.addons)}
+        by_name, menu_by_id = {}, {}
+        feat_g = feature_groups(a.addons)
+        std_menus = collect_std_menus(a)
+        for sm in std_menus.values():  # стандартні меню: батьки td_-меню та назви в шляхах «A → B»
+            menu_by_id.setdefault(sm["id"], sm)
+            if sm["name"]:
+                for v in {sm["name"], load_po(os.path.join(a.odoo_src, "addons", sm["mod"], "i18n", "uk.po")).get(sm["name"]) if os.path.exists(os.path.join(a.odoo_src, "addons", sm["mod"], "i18n", "uk.po")) else None} - {None}:
+                    by_name.setdefault(v.lower(), []).append(("меню", sm))
+        for m in ui_all["menus"]:
+            if m["id"] in std_menus:
+                std_menus[m["id"]]["groups"] += m["groups"]
+            else:
+                menu_by_id[m["id"]] = m
+            for v in {m["name"], po_by.get(m["mod"], {}).get(m["name"]) or m["name"]}:
+                by_name.setdefault(v.lower(), []).append(("меню", m))
+        for b in ui_all["buttons"]:
+            for v in {b["name"], po_by.get(b["mod"], {}).get(b["name"]) or b["name"]}:
+                by_name.setdefault(v.lower(), []).append(("кнопка", b))
+
+        def reach(item, kind, rg_):
+            chain, cur, seen = [], item, set()
+            while cur is not None and id(cur) not in seen:
+                seen.add(id(cur))
+                chain.append(cur)
+                cur = menu_by_id.get(cur.get("parent")) if kind == "меню" else None
+            unmet = [g for c in chain if c["groups"] and not (set(c["groups"]) & rg_) for g in c["groups"]]
+            return not unmet, [g for c in chain for g in c["groups"]], unmet
+        bad, warn_roles, warn_inc, warn_feat = [], [], [], []
+        from_stand = not rg_src.endswith(".md")  # plan.md = джерело не зі стенда
+        for n in role_files:
+            if n == "admin.md":
+                continue
+            role = n[:-3]
+            if role not in rg:
+                warn_roles.append(role)
+                continue
+            # base.group_user (і його implied_ids, зокрема feature-групи демо-шару) мають усі; base.group_no_one — режим розробника, у кроках не доручається
+            rg_ = closure(list(rg[role]) + ["base.group_user", "base.group_no_one"], groups)
+            for i, line in enumerate(open(os.path.join(root, n), encoding="utf-8").read().splitlines(), 1):
+                if not STEP_LINE.match(line):
+                    continue
+                if NEGATION.search(line):  # «не бачить», «лише в режимі розробника», «скасовує керівник»: назва згадана як те, чого роль НЕ робить
+                    continue
+                for nm in re.findall(r"«([^»]+)»", line):
+                    cands = by_name.get(nm.strip().lower())
+                    if not cands:
+                        continue
+                    res_ = [(k, it) + reach(it, k, rg_) for k, it in cands]
+                    if not any(r_[2] for r_ in res_):
+                        k, it, _ok, need_g, unmet_g = res_[0]
+                        msg_ = f"{n}:{i} «{nm}» ({k} {it.get('id') or it.get('action')}, {it['mod']}) потребує {', '.join(sorted(set(need_g)))}; групи ролі {role}: {', '.join(sorted(rg[role])) or '—'}"
+                        if unmet_g and all(g in feat_g or ".group_feature_" in g for g in unmet_g):
+                            warn_feat.append(f"{n}:{i} «{nm}» ({', '.join(sorted(set(unmet_g)))})")
+                        elif role in rg_incomplete or not from_stand:
+                            warn_inc.append(msg_)
+                        elif msg_ not in bad:
+                            bad.append(msg_)
+        msg = ([f"крок доручає ролі те, чого роль не бачить ({len(bad)}): " + "; ".join(bad[:10]) + " — дефект у defects.md і повернення A-11/A-12 (код/права), не обхід текстом"] if bad else []) \
+            + ([f"немає груп для ролей: {', '.join(warn_roles)} (додайте в {os.path.basename(rg_src)})"] if warn_roles else []) \
+            + ([f"функції коробки (група вмикається параметром, не роллю; перевірте VP): " + "; ".join(sorted(set(warn_feat))[:5])] if warn_feat else []) \
+            + ([f"перелік груп неповний або джерело не зі стенда (plan.md/«…»/«+»; джерело {rg_src}), можливі пропуски: " + "; ".join(sorted(set(warn_inc))[:5]) + " — зніміть групи зі стенда (shoot.mjs → img/ROLE-GROUPS.json)"] if warn_inc or rg_incomplete else [])
+        add("UG-access", "FAIL" if bad else ("WARN" if (warn_roles or warn_inc or rg_incomplete) else "PASS"), "; ".join(msg))
+        if bad:
+            res[-1]["items"] = bad
+
+    # UG-shots: кожен кадр ролі знято, увійшовши під користувачем ролі: не адміністратор, не прямий URL дії (LESSONS §28а)
+    plan_p = os.path.join(root, "shoot-plan.json")
+    has_png = bool(on_disk)
+    if not os.path.exists(plan_p):
+        add("UG-shots", "FAIL" if has_png else "SKIPPED", "немає shoot-plan.json: кадри ролей знімає scripts/shoot.mjs під логіном ролі" if has_png else "знімків немає")
+    else:
+        bad = []
+        try:
+            plan = json.load(open(plan_p, encoding="utf-8"))
+        except ValueError as e:
+            plan, bad = {}, [f"shoot-plan.json не JSON: {e}"]
+        plan_roles = {r_.get("role"): r_ for r_ in plan.get("roles", [])}
+        for role, r_ in plan_roles.items():
+            lg = r_.get("login", "")
+            if role != "admin" and (not lg or ADMIN_LOGIN.match(lg)):
+                bad.append(f"роль {role}: логін «{lg}» — кадри ролі не знімаються адміністратором")
+            for s in r_.get("shots", []):
+                if role != "admin" and (s.get("url") or "").split("?")[0].rstrip("/") not in ("", "/odoo", "/web"):  # рішення AI (0.4.1): прямі URL дозволені лише кадрам admin
+                    bad.append(f"{role} {s.get('sc')}-{s.get('step')}: прямий URL дії {s.get('url')} — навігація кліками меню з /odoo (поле menu)")
+        log_p = os.path.join(root, "img", "SHOOT-LOG.md")
+        rows = {}
+        if os.path.exists(log_p):
+            for ln in open(log_p, encoding="utf-8"):
+                c = [x.strip() for x in ln.strip().strip("|").split("|")]
+                if len(c) >= 4 and re.search(r"img/[^/\s]+/[^/\s]+\.(png|jpe?g|webp)$", c[0], re.I):
+                    rows[re.search(r"img/([^/\s]+/[^/\s]+)$", c[0]).group(1)] = c
+        for f in sorted(os.path.relpath(x, os.path.join(root, "img")).replace(os.sep, "/") for x in on_disk):
+            role = f.split("/")[0]
+            c = rows.get(f)
+            if not c:
+                bad.append(f"{f}: немає рядка в SHOOT-LOG.md (знято не shoot.mjs)")
+            elif len(c) < 6:
+                bad.append(f"{f}: у SHOOT-LOG.md немає стовпця «Логін» (журнал старого формату; знімати shoot.mjs 0.4.1)")
+            elif role != "admin" and ADMIN_LOGIN.match(c[5].strip("`")):
+                bad.append(f"{f}: знято під адміністратором ({c[5]})")
+            elif plan_roles.get(role, {}).get("login") and c[5].strip("`") != plan_roles[role]["login"]:
+                bad.append(f"{f}: у журналі логін {c[5]} не збігається з логіном ролі в shoot-plan.json")
+            if plan_roles and role not in plan_roles:
+                bad.append(f"{f}: ролі {role} немає в shoot-plan.json")
+        add("UG-shots", "FAIL" if bad else "PASS", "; ".join(bad[:10]))
+
+    # UG-messages: довідник reference/messages.md — усі UserError/ValidationError/AccessError з td_* дослівно (msgstr uk.po); посібники на нього посилаються
+    if not a.addons:
+        add("UG-messages", "SKIPPED", "немає --addons: довідник повідомлень перевірити вручну")
+    else:
+        found = collect_messages(a.addons)
+        mp = os.path.join(root, "reference", "messages.md")
+        mbody = open(mp, encoding="utf-8").read() if os.path.exists(mp) else ""
+        bad, warn = [], []
+        if found and not mbody:
+            bad.append("немає reference/messages.md")
+        norm = lambda s: re.sub(r"\s+", " ", s.replace("|", "/").replace("\n", " ")).strip()
+        nb = norm(mbody)
+        miss_m = sorted({f"{src}: «{uk or m_}»" for src, m_, uk in found if "«" + norm(uk or m_) + "»" not in nb})
+        if miss_m:
+            bad.append(f"немає в messages.md ({len(miss_m)} з {len(found)}): " + "; ".join(miss_m[:8]))
+        for ln in mbody.splitlines():  # рядок довідника: текст | коли | що робити | хто виправляє (| джерело)
+            if ln.startswith("|") and "«" in ln:
+                c = [x.strip() for x in ln.strip().strip("|").split("|")]
+                if len(c) < 4 or any(not x for x in c[:4]):
+                    bad.append(f"неповний рядок довідника (текст, коли, що робити, хто виправляє): {ln[:60]}")
+                    break
+        nolink = [n for n in role_files if "reference/messages.md" not in open(os.path.join(root, n), encoding="utf-8").read()]
+        if found and nolink:
+            bad.append("немає посилання на reference/messages.md у: " + ", ".join(nolink))
+        untr = sorted({f"{src}" for src, m_, uk in found if not uk})
+        if untr:
+            warn.append(f"повідомлення без перекладу в uk.po ({len(untr)}): дефект перекладу пакета -> defects.md, напр. " + ", ".join(untr[:3]))
+        if not found:
+            add("UG-messages", "WARN", "у td_* не знайдено raise UserError/ValidationError/AccessError (перевірити шлях --addons)")
+        else:
+            add("UG-messages", "FAIL" if bad else ("WARN" if warn else "PASS"), "; ".join(bad + warn))
+
+    # UG-std-label: назви стандартного UI Odoo 19 у шляхах меню — лише з msgstr uk.po вихідників 19.0 (LESSONS §28а)
+    stdset = std_po(a) if a.odoo_src else {}
+    own = set()
+    if a.addons:
+        for m_ in td_modules(a.addons):
+            for k_, v_ in load_po(os.path.join(a.addons, m_, "i18n", "uk.po")).items():
+                own |= {norm_label(k_), norm_label(v_)}
+        own |= {norm_label(x["name"]) for x in ui_all["menus"] + ui_all["buttons"]}
+    extra = set()
+    for ln in index.splitlines():
+        m2 = re.match(r"\s*Дозволені назви UI:\s*(.+)", ln)
+        if m2:
+            extra |= {norm_label(x) for x in re.split(r"[;,]", m2.group(1)) if x.strip()}
+    paths = []
+    for n in role_files:
+        for i, line in enumerate(open(os.path.join(root, n), encoding="utf-8").read().splitlines(), 1):
+            if ACTION_GEAR.search(line):
+                paths.append((n, i, "«Дія»", "імпорт/архівація в Odoo 19 викликаються значком шестерні (⚙) у списку або формі, не пунктом «Дія»; підпис значка — з uk.po web"))
+            if "«" not in line or not re.search(r"→|›|->|&gt;", line):
+                continue
+            for seg_line in re.findall(r"«[^»]+»(?:\s*(?:→|›|->|>)\s*«[^»]+»)+", line):
+                for seg in re.findall(r"«([^»]+)»", seg_line):
+                    ctx = "для пошти підпис — «Ел. пошта» (uk.po mail/base), «Обговорення» — назва застосунку Discuss" if norm_label(seg) == "обговорення" and re.search(r"пошт|лист|smtp", line, re.I) else None
+                    paths.append((n, i, seg, ctx))
+    bad = []
+    for n, i, seg, why in paths:
+        if why:
+            bad.append(f"{n}:{i} {seg} — {why}")
+            continue
+        s = norm_label(seg)
+        if re.search(r"[<{]", seg) or s in extra or s in own or s in stdset or not s:
+            continue
+        if s in SUSPECT_LABELS and not a.odoo_src:
+            bad.append(f"{n}:{i} «{seg}» — вигаданий переклад? {SUSPECT_LABELS[s]}; без --odoo-src підтвердити не можна")
+        elif a.odoo_src:
+            import difflib
+            near = difflib.get_close_matches(s, list(stdset), n=1, cutoff=0.6)
+            bad.append(f"{n}:{i} «{seg}» немає в uk.po вихідників 19.0 і td_*" + (f" (схоже: «{stdset[near[0]]}»)" if near else ""))
+    if not paths:
+        add("UG-std-label", "PASS" if a.odoo_src else "SKIPPED", "шляхів меню «A → B» у посібниках немає")
+    elif bad:
+        add("UG-std-label", "FAIL", "; ".join(sorted(set(bad))[:10]))
+    elif not a.odoo_src:
+        add("UG-std-label", "WARN", "немає --odoo-src: перевірено лише список підозрілих назв, не повну звірку з uk.po 19.0")
+    else:
+        add("UG-std-label", "PASS", f"{len({p[2] for p in paths})} назв у шляхах меню знайдено в uk.po 19.0 / td_*")
 
     for i, why in (("UG-fresh", "знімки на стенді з SHA INDEX — перевіряє агент (журнал зйомки)"),
                    ("UG-ui", "підписи кроків = підписи в UI — агент/рецензент"),

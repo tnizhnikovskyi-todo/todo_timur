@@ -9,7 +9,9 @@
    "args": {
     "paths": [
      "package/docs/user-guide/INDEX.md",
-     "package/docs/user-guide/admin.md"
+     "package/docs/user-guide/admin.md",
+     "package/docs/user-guide/reference/messages.md",
+     "package/docs/user-guide/shoot-plan.json"
     ]
    }
   },
@@ -45,7 +47,7 @@
    "id": "script-check-guides",
    "prim": "manual",
    "args": {
-    "text": "python3 -I <корінь плагіна flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --stand-sha <значення мітки `SHA:` з package/demo/README.md; SHA_STAND — лише назва змінної> --spec <шлях із рядка «Джерело сценаріїв:» INDEX.md; SPEC без SC-NN -> package/demo/scenarios.md або --id-pattern>: UG-cover (кожен сценарій SPEC має розділ), UG-cover-dev (меню, дії, звіти td_* мають розділ), UG-cover-admin (ключі answers.yaml і VP-NN є в admin.md; §26а), UG-img (кожне зображення існує й на нього є посилання, сиріт немає), UG-sha (SHA в INDEX = SHA_STAND). Свіжість окремо: `git diff --quiet <SHA_CHECKS з package/CHECKS.md>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning/*' ':!package/config/manifest.yaml' ':!package/config/CONFIG.md'` (код 0; формула та сама після A-17b), UG-lang (без англійських підписів у тексті кроків). --stand-sha підставляє runner зі stand README (не git.head кроку); UG-sha, UG-cover-dev (без --addons) і UG-cover-admin (без --answers) = SKIPPED означає «не готово» (FAIL кроку), а не PASS; додатково звірку виконує примітив demo-sha. Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
+    "text": "python3 -I <корінь плагіна flow-package-build>/skills/user-guide-builder/scripts/check_guides.py --dir package/docs/user-guide --stand-sha <значення мітки `SHA:` з package/demo/README.md; SHA_STAND — лише назва змінної> --spec <шлях із рядка «Джерело сценаріїв:» INDEX.md; SPEC без SC-NN -> package/demo/scenarios.md або --id-pattern>: UG-cover (кожен сценарій SPEC має розділ), UG-cover-dev (меню, дії, звіти td_* мають розділ), UG-cover-admin (ключі answers.yaml і VP-NN є в admin.md; §26а), UG-img (кожне зображення існує й на нього є посилання, сиріт немає), UG-sha (SHA в INDEX = SHA_STAND). Свіжість окремо: `git diff --quiet <SHA_CHECKS з package/CHECKS.md>..HEAD -- package/addons package/config package/master-data ':!package/addons/td_*_elearning/*' ':!package/config/manifest.yaml' ':!package/config/CONFIG.md'` (код 0; формула та сама після A-17b), UG-lang (без англійських підписів у тексті кроків). --stand-sha підставляє runner зі stand README (не git.head кроку); UG-sha, UG-cover-dev (без --addons) і UG-cover-admin (без --answers) = SKIPPED означає «не готово» (FAIL кроку), а не PASS; додатково звірку виконує примітив demo-sha. 0.4.1 нові перевірки скрипта: UG-access (groups меню/кнопок з кроків ⊆ групи ролі; джерело груп — --role-groups package/demo/plan.md; недоступне -> defects.md і повернення A-11/A-12), UG-shots (кадр ролі знято під логіном ролі, не адміном і не прямим URL дії), UG-messages (reference/messages.md: усі UserError/ValidationError/AccessError з td_* дослівно з uk.po, missing 0), UG-std-label (назви стандартного меню лише з uk.po вихідників 19.0, --odoo-src), UG-cover-buttons, UG-cover-admin поштучно (розділи admin.md з командами, get_param, меню лише для групи). Скрипт autocheck.py його не запускає: має виконати runner (не виконано → ERROR, не PASS), JSON вставляється у checks[] (FAIL скрипта = FAIL кроку). Точний CLI — `--help` скрипта.",
     "cmd": [
      "python3",
      "-I",
@@ -61,7 +63,11 @@
      "--answers",
      "package/templates/answers.yaml",
      "--config",
-     "package/config/CONFIG.md"
+     "package/config/CONFIG.md",
+     "--role-groups",
+     "package/demo/plan.md",
+     "--odoo-src",
+     "<корінь вихідників Odoo 19.0: локальні вихідники стенда A-15 або клон odoo/odoo 19.0>"
     ],
     "who": "runner"
    }
@@ -83,6 +89,14 @@
      "head:package/docs/user-guide/INDEX.md",
      "head:package/demo/README.md"
     ]
+   }
+  },
+  {
+   "id": "independent-audit",
+   "prim": "manual",
+   "args": {
+    "text": "Незалежний аудит покриття (0.4.1, обов'язковий після самоперевірки): 3 рецензенти flow-reviewer з різних кутів і ВЛАСНИМИ переліками з джерел (не з INDEX) — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, поля налаштувань, get_param, raise) + F/AC (SPEC) + узгодженість з ACCEPTANCE лише якщо файл уже є (повтор після A-17); бриф — flow-package-build/skills/user-guide-builder/references/audit-brief.md. Цикл до нуля зауважень; review_rounds у звіті (блок review: наряду, до 5 кругів на день; зауваження лишились -> waiting_human, чекати рішення людини). Без нього крок не done.",
+    "who": "runner (flow-reviewer x3)"
    }
   },
   {

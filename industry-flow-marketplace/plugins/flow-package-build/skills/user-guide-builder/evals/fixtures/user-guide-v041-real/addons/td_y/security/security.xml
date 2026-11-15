@@ -1,0 +1,1 @@
+<odoo><record id="group_cashier" model="res.groups"><field name="name">Cashier</field></record></odoo>

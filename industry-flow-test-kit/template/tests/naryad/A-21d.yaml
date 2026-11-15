@@ -3,7 +3,7 @@ step: A-21d
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-research:completeness-audit@0.4.0"]
+skill_ref: ["flow-research:completeness-audit@0.4.1"]
 model: sonnet
 effort: medium
 params: {mode: slice-coverage}

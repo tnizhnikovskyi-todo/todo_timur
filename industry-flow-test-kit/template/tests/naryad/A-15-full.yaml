@@ -3,7 +3,7 @@ step: A-15
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-build:demo-base-builder@0.4.0"]
+skill_ref: ["flow-package-build:demo-base-builder@0.4.1"]
 model: sonnet
 effort: medium
 params: {}

@@ -19,7 +19,7 @@
 | Модуль ToDo у збірку | `\bREUSE-\d{2}\b` | `research/REUSE.md` (A-03c) |
 | Сторінка бази знань підтримки | `\bKB-\d{3}\b` | `package/support/kb/KB-NNN-*.md`, `package/support/INDEX.md` (A-17c; унікальні в межах `package/support/`; `check_kb.py` KB-ids) |
 | Крок із літерою (0.4.0) | `\b[A-D]-\d{2}[a-d]\b` | A-16b, A-17b, A-17c — той самий «Код кроку»; вихідні теки: `package/docs/user-guide/`, `package/addons/td_<галузь>_elearning/`, `package/support/` |
-| Мітка перевірки скриптів 0.4.0 | `\b(?:UG\|EL\|KB)-[a-z]+\b` | `UG-cover`, `UG-img`, `UG-sha`, `UG-lang`, `UG-cover-dev`, `UG-cover-admin` (`check_guides.py`); `EL-courses`, `EL-quiz`, `EL-source`, `EL-lang` (`check_elearning.py`); `KB-module`, `KB-ids`, `KB-route`, `KB-privacy` (`check_kb.py`) | Повний перелік ID — у таблиці «Автоперевірка» SKILL.md відповідного скіла.
+| Мітка перевірки скриптів 0.4.0 | `\b(?:UG\|EL\|KB)-[a-z]+\b` | `UG-cover`, `UG-img`, `UG-sha`, `UG-lang`, `UG-cover-dev`, `UG-cover-admin`, `UG-cover-buttons`, `UG-access`, `UG-shots`, `UG-messages`, `UG-std-label` (`check_guides.py`); `EL-courses`, `EL-quiz`, `EL-source`, `EL-lang` (`check_elearning.py`); `KB-module`, `KB-ids`, `KB-route`, `KB-privacy` (`check_kb.py`) | Повний перелік ID — у таблиці «Автоперевірка» SKILL.md відповідного скіла.
 | Питання бота | `HB-\d{3,}` | `help-log.md` (client-help-bot); передача в support-desk: `params.handoff` |
 
 Джерела SHA для перевірок:

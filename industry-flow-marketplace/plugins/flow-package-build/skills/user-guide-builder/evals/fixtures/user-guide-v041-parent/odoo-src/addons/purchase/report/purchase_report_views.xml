@@ -1,0 +1,3 @@
+<odoo>
+  <menuitem id="purchase_report_main" name="Reporting" parent="purchase.menu_purchase_root" groups="purchase.group_purchase_manager" sequence="99"/>
+</odoo>

@@ -236,6 +236,157 @@
       "files": [
         "evals/fixtures/user-guide-cover-collision/"
       ]
+    },
+    {
+      "id": "v041-full-ok",
+      "prompt": "Перевір повний посібник 0.4.1: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-ok/user-guide --spec evals/fixtures/user-guide-v041-ok/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-ok/addons --answers evals/fixtures/user-guide-v041-ok/answers.yaml --config evals/fixtures/user-guide-v041-ok/CONFIG.md --role-groups evals/fixtures/user-guide-v041-ok/plan.md --odoo-src evals/fixtures/user-guide-v041-ok/odoo-src. Що показує кожна нова перевірка?",
+      "expected_output": "Усі UG-* без FAIL: UG-access PASS (група комірника stock.group_stock_manager через implied_ids охоплює меню зі stock.group_stock_user), UG-shots PASS (логіни ролей, без прямих URL), UG-messages PASS (missing 0), UG-std-label PASS (назви з uk.po), UG-cover-admin PASS (розділи з командами, get_param td_x.bas_url, меню BAS лише для групи), UG-cover-buttons PASS.",
+      "assertions": [
+        "Код повернення 0",
+        "UG-access = PASS завдяки implied_ids зі security вихідників",
+        "UG-messages = PASS, missing 0",
+        "UG-std-label = PASS з --odoo-src",
+        "UG-cover-admin = PASS (поштучно: встановлення, безпека, резервні копії, оновлення, пошта, користувачі, get_param)"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-ok/SPEC.md",
+        "evals/fixtures/user-guide-v041-ok/user-guide/",
+        "evals/fixtures/user-guide-v041-ok/addons/",
+        "evals/fixtures/user-guide-v041-ok/odoo-src/"
+      ]
+    },
+    {
+      "id": "role-rights-access",
+      "prompt": "Перевір права ролей: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-bad/user-guide --spec evals/fixtures/user-guide-v041-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-bad/addons --answers evals/fixtures/user-guide-v041-bad/answers.yaml --config evals/fixtures/user-guide-v041-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v041-bad/role-groups.json --odoo-src evals/fixtures/user-guide-v041-bad/odoo-src. Крок Комірника називає меню «Обмін з BAS». Що робити?",
+      "expected_output": "UG-access FAIL: komirnyk.md крок 1 «Обмін з BAS» (меню td_x.menu_td_bas) потребує td_x.group_td_finance, а групи ролі — stock.group_stock_manager. Агент записує дефект у package/demo/defects.md і повертає A-11/A-12 (права/код); текстом не обходить («попросіть фінансиста») і не знімає кадр прямим URL.",
+      "assertions": [
+        "UG-access = FAIL з назвою меню, потрібною групою й групами ролі",
+        "Дефект у defects.md, маршрут A-11 або A-12",
+        "Сценарій позначено «заблоковано дефектом», кадрів не вигадано",
+        "Обхід текстом чи адміністратором/прямим URL заборонено"
+      ],
+      "must_not": [
+        "переписати крок так, щоб він обходив недоступне меню",
+        "зняти кадр під адміністратором"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-bad/SPEC.md",
+        "evals/fixtures/user-guide-v041-bad/user-guide/",
+        "evals/fixtures/user-guide-v041-bad/addons/",
+        "evals/fixtures/user-guide-v041-bad/odoo-src/"
+      ]
+    },
+    {
+      "id": "shots-by-role-login",
+      "prompt": "Перевір, як зняті кадри: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-bad/user-guide --spec evals/fixtures/user-guide-v041-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-bad/addons --answers evals/fixtures/user-guide-v041-bad/answers.yaml --config evals/fixtures/user-guide-v041-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v041-bad/role-groups.json --odoo-src evals/fixtures/user-guide-v041-bad/odoo-src (дивись UG-shots). У shoot-plan.json Комірник має логін admin і URL /odoo/action-stock.x/1; журнал без стовпця «Логін».",
+      "expected_output": "UG-shots FAIL: кадри ролі не знімаються адміністратором; прямий URL дії заборонено (навігація кліками меню з /odoo); журнал старого формату без логіну. Виправлення — перезйомка shoot.mjs 0.4.1 під логіном ролі з {\"menu\": [...]}; shoot.mjs відмовляє для role != admin з логіном admin* і для DIRECT-ACTION-URL, перевіряє сесію (get_session_info).",
+      "assertions": [
+        "UG-shots = FAIL з трьома причинами: admin-логін, прямий URL дії, немає стовпця «Логін»",
+        "Агент перезнімає кадри під користувачем ролі, а не правит журнал вручну",
+        "shoot.mjs код 3 (MENU-NOT-VISIBLE), якщо роль не бачить меню -> Крок 5а, не URL"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-bad/SPEC.md",
+        "evals/fixtures/user-guide-v041-bad/user-guide/",
+        "evals/fixtures/user-guide-v041-bad/addons/",
+        "evals/fixtures/user-guide-v041-bad/odoo-src/"
+      ]
+    },
+    {
+      "id": "messages-reference-missing",
+      "prompt": "Перевір довідник повідомлень: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-bad/user-guide --spec evals/fixtures/user-guide-v041-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-bad/addons --answers evals/fixtures/user-guide-v041-bad/answers.yaml --config evals/fixtures/user-guide-v041-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v041-bad/role-groups.json --odoo-src evals/fixtures/user-guide-v041-bad/odoo-src. У коді td_x два raise (UserError, AccessError), у reference/messages.md один.",
+      "expected_output": "UG-messages FAIL: у довіднику немає «Обмін з BAS запускає лише фінансист.» (td_x/models/m.py:13) і немає посилання на reference/messages.md у посібниках. Агент додає рядок (текст дослівно з msgstr uk.po; коли; що робити; хто виправляє) і посилання в «Типових помилках».",
+      "assertions": [
+        "UG-messages = FAIL: missing 1 з 2 і посилання відсутнє",
+        "Текст у довіднику береться з msgstr uk.po, не з англійського msgid",
+        "Рядок має 4 заповнені поля та джерело файл:рядок",
+        "Після виправлення missing 0"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-bad/SPEC.md",
+        "evals/fixtures/user-guide-v041-bad/user-guide/",
+        "evals/fixtures/user-guide-v041-bad/addons/",
+        "evals/fixtures/user-guide-v041-bad/odoo-src/"
+      ]
+    },
+    {
+      "id": "std-label-uk-po",
+      "prompt": "Перевір назви стандартного меню: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-bad/user-guide --spec evals/fixtures/user-guide-v041-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-bad/addons --answers evals/fixtures/user-guide-v041-bad/answers.yaml --config evals/fixtures/user-guide-v041-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v041-bad/role-groups.json --odoo-src evals/fixtures/user-guide-v041-bad/odoo-src (UG-std-label). finansyst.md має «Налаштування» → «Технічні» → «Системні параметри», «Налаштування» → «Обговорення» для пошти, «Дія» → «Архівувати».",
+      "expected_output": "UG-std-label FAIL: «Технічні» і «Системні параметри» немає в uk.po 19.0 (правильно — «Технічні налаштування» / «Параметри системи»); «Обговорення» для пошти — вживати «Ел. пошта»; пункт «Дія» для архівації — у Odoo 19 це значок шестерні. Агент звіряє кожну назву grep msgid у uk.po вихідників 19.0 і виправляє, не вгадує.",
+      "assertions": [
+        "UG-std-label = FAIL з усіма трьома групами помилок",
+        "Правильні назви беруться з msgstr uk.po (файл:рядок у AI-NN, якщо підпис без перекладу — у зворотних лапках)",
+        "Перевірка стосується шляхів стандартного меню, не лише td_*",
+        "Без --odoo-src: WARN/FAIL лише за списком підозрілих, не PASS"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-bad/SPEC.md",
+        "evals/fixtures/user-guide-v041-bad/user-guide/",
+        "evals/fixtures/user-guide-v041-bad/addons/",
+        "evals/fixtures/user-guide-v041-bad/odoo-src/"
+      ]
+    },
+    {
+      "id": "admin-must-sections",
+      "prompt": "Перевір admin.md: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-bad/user-guide --spec evals/fixtures/user-guide-v041-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-bad/addons --answers evals/fixtures/user-guide-v041-bad/answers.yaml --config evals/fixtures/user-guide-v041-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v041-bad/role-groups.json --odoo-src evals/fixtures/user-guide-v041-bad/odoo-src (UG-cover-admin). У admin.md немає розділу «Безпека», ключа td_x.bas_url і абзацу про меню лише для групи.",
+      "expected_output": "UG-cover-admin FAIL поштучно: немає розділу «Безпека» (паролі, 2FA, list_db = False, майстер-пароль, ключі), системного параметра td_x.bas_url (get_param у td_x), меню «Обмін з BAS» і «Склад меблів» з їх групами. Агент дописує розділи з виконуваними командами за admin-template.md.",
+      "assertions": [
+        "Пропуски названо по одному (розділ, ключ get_param, меню+група)",
+        "Команди — з блоками коду (odoo-bin -i, pg_dump, --stop-after-init), не прозою",
+        "Межа «конфіг-пакет на базу клієнта застосовує ToDo за B-04» і рядок AI-NN, якщо apply.py обмежений test-/demo-/emu-",
+        "Параметрів answers.yaml/CONFIG не вигадано"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-bad/SPEC.md",
+        "evals/fixtures/user-guide-v041-bad/user-guide/",
+        "evals/fixtures/user-guide-v041-bad/addons/",
+        "evals/fixtures/user-guide-v041-bad/odoo-src/"
+      ]
+    },
+    {
+      "id": "independent-audit-three-angles",
+      "prompt": "A-16b: самоперевірка дала check_guides.py без FAIL. Чи можна ставити done? Що робити далі?",
+      "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 3 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, до 5 кругів на день; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
+      "assertions": [
+        "done не ставиться лише за самоперевіркою",
+        "Запущено 3 рецензентів з різних кутів (а), (б), (в)",
+        "Кожен рецензент складає власний перелік із джерел, не з INDEX (references/audit-brief.md)",
+        "review_rounds записано у звіт; ліміт 5 кругів",
+        "Зауваження після ліміту -> waiting_human, а не самостійне продовження"
+      ],
+      "files": []
+    },
+    {
+      "id": "v041-real-false-fail-regress",
+      "prompt": "Регрес на хибні FAIL реального посібника: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-real/user-guide --spec evals/fixtures/user-guide-v041-real/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-real/addons --answers evals/fixtures/user-guide-v041-real/answers.yaml --config evals/fixtures/user-guide-v041-real/CONFIG.md --role-groups evals/fixtures/user-guide-v041-real/plan.md --odoo-src evals/fixtures/user-guide-v041-real/odoo-src. Фікстура має feature-групу td_x.group_feature_scan (implied у base.group_user через td_x_demo), крок із запереченням «комірник не бачить», команди admin.md у зворотних лапках, меню з групою іншого модуля td_y (переклад «Касир»), префікс «-» у groups, plan.md із «…». Що показує UG-access, UG-cover-admin?",
+      "expected_output": "UG-cover-admin = PASS (inline-команди, група td_y.group_cashier з uk.po td_y, «-група» не вимога, feature-групи не вимагаються); UG-access = WARN «перелік груп неповний», не FAIL (feature-група — через base.group_user, рядок із запереченням пропущено); якщо покласти ROLE-GROUPS.live.json у user-guide/img/ROLE-GROUPS.json — UG-access = PASS.",
+      "assertions": [
+        "UG-cover-admin = PASS",
+        "UG-access не FAIL: WARN про неповний перелік plan.md",
+        "Рядок із «не бачить» не рахується дорученням ролі",
+        "З img/ROLE-GROUPS.json (стенд) UG-access = PASS без --role-groups"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-real/SPEC.md",
+        "evals/fixtures/user-guide-v041-real/user-guide/",
+        "evals/fixtures/user-guide-v041-real/addons/",
+        "evals/fixtures/user-guide-v041-real/odoo-src/"
+      ]
+    },
+    {
+      "id": "v041-parent-menu-and-feature-group",
+      "prompt": "Права ролі через стандартного батька й функція коробки: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v041-parent/user-guide --spec evals/fixtures/user-guide-v041-parent/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v041-parent/addons --answers evals/fixtures/user-guide-v041-parent/answers.yaml --config evals/fixtures/user-guide-v041-parent/CONFIG.md --role-groups evals/fixtures/user-guide-v041-parent/plan.md --odoo-src evals/fixtures/user-guide-v041-parent/odoo-src. Меню td_x «Price vs history» стоїть під purchase.purchase_report_main (groups purchase.group_purchase_manager з odoo-src), комірник має лише group_purchase_user (img/ROLE-GROUPS.json зі стенда); «Send for signing» потребує td_x.group_sign, яку вмикає implied_group у res.config.settings.",
+      "expected_output": "UG-access FAIL: «Price vs history» (і батько «Reporting») потребує purchase.group_purchase_manager; «Send for signing» не дає FAIL, а WARN «функції коробки». Без img/ROLE-GROUPS.json (лише plan.md) — не FAIL, а WARN «джерело не зі стенда».",
+      "assertions": [
+        "UG-access = FAIL з назвою стандартного батьківського меню й групи",
+        "Група з implied_group (res.config.settings td_*) не дає FAIL",
+        "plan.md без ROLE-GROUPS.json = WARN, не FAIL"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v041-parent/user-guide/",
+        "evals/fixtures/user-guide-v041-parent/addons/",
+        "evals/fixtures/user-guide-v041-parent/odoo-src/"
+      ]
     }
   ]
 }
