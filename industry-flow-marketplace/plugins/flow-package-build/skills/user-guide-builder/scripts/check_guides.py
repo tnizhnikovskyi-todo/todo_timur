@@ -33,6 +33,7 @@ LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
 DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
 STEP_LINE = re.compile(r"^\s*(\|\s*\d+\s*\||\d+[.)]\s)")
 ADMIN_HEADERS = ["параметри", "профілі", "редакції", "перший запуск"]
+ADMIN_OPS = ["майстер-дані", "обмін", "пошта", "оновлення", "резервні копії", "звернення в підтримку", "база знань"]
 CARD_MAX_LINES = 45
 
 
@@ -213,6 +214,10 @@ def main():
     adm = open(ap_, encoding="utf-8").read().lower() if os.path.exists(ap_) else ""
     miss = [h for h in ADMIN_HEADERS if not re.search(r"^#{1,4}\s*" + re.escape(h), adm, re.M)]
     add("UG-admin", "FAIL" if (miss or not adm) else "PASS", "немає розділів: " + ", ".join(miss) if (miss or not adm) else "")
+
+    if adm:
+        miss_ops = [h for h in ADMIN_OPS if not re.search(r"^#{1,4}\s*" + re.escape(h), adm, re.M)]
+        add("UG-admin-ops", "WARN" if miss_ops else "PASS", "немає розділів експлуатації: " + ", ".join(miss_ops) if miss_ops else "")
 
     # UG-cover-dev / UG-cover-admin (§26а)
     all_txt = {n: open(os.path.join(root, n), encoding="utf-8").read().lower() for n in role_files}

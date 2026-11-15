@@ -26,6 +26,7 @@ description: >
 - `memo` починається літерально з «Невпевнений:» (перевіряє runner): «Що змінилось», «Де ризик», «Що перевірити».
 
 ## Інструменти та доступи
+- Засіб запису екрана за замовчуванням (рішення AI) — Playwright, headless Chromium (`scripts/rec_lib.mjs`). Браузер не запускається — `npx playwright install chromium` (виконує runner), не пропускати; `waiting_human` лише після невдалої установки.
 - Профіль `repo` (К-22): читання GitHub-репо модулів із `REUSE.md`, WebFetch лише документації Odoo 19 (≤10 запитів), `Read/Grep/Edit/Write`. **Bash/Odoo/Playwright/ffmpeg — лише команди, які виконує runner за рядками «КОМАНДИ:»** (`build_db.sh`, `node scenario*.mjs`, `rec_clips.mjs`, `check_ui_text.py`, тести модулів, `boost:odoo19-lint`).
 - Середовище — `tools/odoo/` (C-00): `preflight.sh --profile repo --step A-21 --needs odoo,browser,video`, `clean_db.sh`, `install.sh`, `run_tests.sh`; база показу лише `demo-<суфікс>` (guard_db). Немає CE-середовища -> `waiting_human`/`escalated` до витрат бюджету.
 - **Запис:** `package/addons/td_<галузь>_*` і `docs/industries/<галузь>/prototype-real/` (`where` наряду); поза ними не писати (`git diff --stat`). **Єдиний виняток** — `research/DEPENDS.yaml`: лише власний запис `prototype-real` (Крок 9). `research/REJECTED.md` не чіпати.

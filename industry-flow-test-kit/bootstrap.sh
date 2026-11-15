@@ -88,7 +88,7 @@ while IFS= read -r -d '' f; do
 done < <(find "$TEMPLATE" -type f -print0 | sort -z)
 
 # 4a. --upgrade: наряди, що вже є (<крок>.yaml / <крок>-N.yaml) і мають застарілий skill_ref -> <крок>-<N+1>.yaml
-n_att=0; att_list=""
+n_att=0; att_list=""; diff_list=""
 if [ "$UPGRADE" = 1 ]; then
   for f in "$TEMPLATE"/tests/naryad/*.yaml; do
     [ -f "$f" ] || continue
@@ -101,7 +101,17 @@ if [ "$UPGRADE" = 1 ]; then
       [ -f "$e" ] || continue
       if [ -n "$want" ] && grep -qxF "$want" "$e"; then cur=1; fi
     done
-    [ "$cur" = 0 ] || continue                         # чинний наряд цієї версії вже є
+    if [ "$cur" = 1 ]; then                            # чинний наряд цієї версії вже є — але вміст міг змінитись у межах версії
+      norm() { grep -vE '^(attempt:|repo:)' "$1"; }
+      same=0
+      for e in "$tdir/$stem.yaml" "$tdir/$stem"-[0-9]*.yaml; do
+        [ -f "$e" ] || continue
+        grep -qxF "$want" "$e" || continue
+        if [ "$(norm "$e")" = "$(norm "$f")" ]; then same=1; fi
+      done
+      [ "$same" = 1 ] || diff_list="$diff_list $stem"
+      continue
+    fi
     mx=1
     for e in "$tdir/$stem"-[0-9]*.yaml; do
       [ -f "$e" ] || continue
@@ -147,6 +157,7 @@ echo "  скілів:  $n_skills у .claude/skills/"
 echo "  агентів: $n_agents у .claude/agents/"
 if [ "$UPGRADE" = 1 ] && [ -e "$TARGET/START-HERE.md" ]; then echo "  УВАГА: START-HERE.md застарів (не оновлюється --upgrade) — онови або видали"; fi
 echo "  нові спроби нарядів (--upgrade): $n_att$att_list"
+if [ -n "$diff_list" ]; then echo "  УВАГА: наряд відрізняється від шаблону при тому самому skill_ref (змінено в межах версії; звіту ще немає — заміни вручну, є звіт — нова спроба):$diff_list"; fi
 echo "  шаблони: нових $n_new, пропущено наявних $n_skip, перезаписано $n_over"
 if [ -n "$skipped_list" ]; then echo "  пропущені (наявні; --force перезапише):$skipped_list"; fi
 echo "Далі: прочитай TEST-START.md; закоміть результат (git add -A && git commit)."

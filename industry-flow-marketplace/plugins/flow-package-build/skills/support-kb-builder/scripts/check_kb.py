@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Автоперевірки A-17c без бази: KB-ai, KB-module, KB-merge, KB-kinds, KB-ids, KB-route, KB-privacy.
+"""Автоперевірки A-17c без бази: KB-ai, KB-module, KB-merge, KB-kinds, KB-ids, KB-route, KB-privacy, KB-support.
 Агент перевіряє сам (скрипт не робить): KB-facts (твердження про поведінку модулів звірено з кодом/SPEC на SHA, не вигадано),
 KB-risks (ризики й обмеження = рядки AI-DECISIONS), KB-faq (FAQ узято з A-16b).
 Запуск: python3 -I check_kb.py --dir package/support --addons package/addons [--expect-module td_<галузь>_elearning]

@@ -167,7 +167,7 @@
 - `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — три таблиці покриття («заявлене»: сценарій SPEC -> розділ; «розроблене»: меню/дії/звіти td_* -> розділ; «налаштування й експлуатація»: ключі answers.yaml/VP-NN -> розділ) і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
 - гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
 - `review.checklists`: [user-guide.md]; `review.max_rounds: 2` (+1 контрольний)
-- перевірки: `check_guides.py` (UG-cover, UG-cover-dev, UG-cover-admin (§26а: заявлене / розроблене / налаштування й експлуатація), UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
+- перевірки (повний перелік — таблиця «Автоперевірка» SKILL.md скіла): `check_guides.py` (UG-files, UG-card, UG-roles, UG-admin, UG-admin-ops, UG-cover, UG-cover-dev, UG-cover-admin (§26а: заявлене / розроблене / налаштування й експлуатація), UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - примітки: скриншоти зі стенда на поточному SHA; текст кроків українською без англійських підписів
 - ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); стенд недоступний -> A-15; стенд застарів (SHA гейтів змінився лише міткою) -> A-15 refresh окремим нарядом (AI сам, без людини)
@@ -188,7 +188,7 @@
 - гейт: ні; AND-split з A-17c, AND-join в A-18
 - перелік установки: при `elearning.mode: "on"` крок сам дописує `website_slides` і `td_<галузь>_elearning` у `package/config/{manifest.yaml,CONFIG.md}` (обидва профілі)
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний)
-- перевірки: `check_elearning.py` (EL-courses, EL-quiz, EL-source, EL-lang, EL-score, EL-access, EL-content, EL-pass, EL-mode), тести на чистій CE (курсів = ролей, >=5 питань у курсі), lint, CI C-03, security-review (недоступний гейт = рішення AI + MANUAL), `A-17b.yaml`
+- перевірки (повний перелік — таблиця «Автоперевірка» SKILL.md): `check_elearning.py` (EL-deps, EL-tests, EL-blocked, EL-courses, EL-quiz, EL-source, EL-lang, EL-score, EL-access, EL-content, EL-pass, EL-mode), тести на чистій CE (курсів = ролей, >=5 питань у курсі), lint, CI C-03, security-review (недоступний гейт = рішення AI + MANUAL), `A-17b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - ескалація: `website_slides` не встановлюється на CE -> `escalated` з логом; дефект тексту уроку -> A-16b
 
@@ -199,7 +199,7 @@
 - `inArtifacts`: package/addons/td_*; package/docs/user-guide (FAQ); `research/AI-DECISIONS.md` (ризики); package/SPEC.md; `package/demo/defects.md`
 - `outArtifacts`: package/support/{AI-INSTRUCTIONS.md, kb/KB-NNN-*.md, INDEX.md} — **лишається в ToDo, клієнту не передається**; споживачі: flow-client-delivery:support-desk, client-help-bot, odoo19-implementation:hypercare-tracker (зовнішній — лише згадка)
 - гейт: ні; AND-split з A-17b, AND-join в A-18
-- перевірки: `check_kb.py` (KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
+- перевірки (повний перелік — таблиця «Автоперевірка» SKILL.md): `check_kb.py` (KB-ai, KB-kinds, KB-merge, KB-module, KB-ids, KB-route, KB-support (§27: розділ «звернення з td_support»), KB-privacy), `no-client-ids`, `A-17c.yaml`
 - ліміти: sonnet/medium; 3 год; $10; стартова зрілість: 1
 - примітки: режим `params.mode: reconcile` — AI сам після злиття A-17b і A-17c звіряє сторінку `td_<галузь>_elearning`, знімає позначку «звірити після злиття A-17b» (до A-18, без наряду від людини); читання проду лише через `prod-ro-<клієнт>`; маршрути діагностики B-13 / A-19 / D-02; даних клієнтів у KB немає
 - ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27/§27а (`td_home_menu`, `td_support`, `td_knowledge` та будь-який спільний модуль із README): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README

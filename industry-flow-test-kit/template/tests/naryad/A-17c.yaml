@@ -8,7 +8,7 @@ model: sonnet
 effort: medium
 inputs:
   - {name: INDEX.md, from: A-16b, path: package/docs/user-guide/INDEX.md, sha: HEAD}
-  - {name: AI-DECISIONS.md, from: A-20, path: docs/industries/mebli/research/AI-DECISIONS.md, sha: HEAD}
+  - {name: AI-DECISIONS.md, from: A-03b, path: docs/industries/mebli/research/AI-DECISIONS.md, sha: HEAD}
   - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
   - {name: defects.md, from: A-15, path: package/demo/defects.md, sha: HEAD}
   - {name: addons, from: A-11, path: package/addons, sha: HEAD}

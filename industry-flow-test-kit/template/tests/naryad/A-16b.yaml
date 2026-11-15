@@ -10,6 +10,9 @@ inputs:
   - {name: README.md, from: A-15, path: package/demo/README.md, sha: HEAD}
   - {name: scenarios.md, from: A-16, path: package/demo/scenarios.md, sha: HEAD}
   - {name: SPEC.md, from: A-08, path: package/SPEC.md, sha: HEAD}
+  - {name: answers.yaml, from: A-09, path: package/templates/answers.yaml, sha: HEAD}
+  - {name: CONFIG.md, from: A-12, path: package/config/CONFIG.md, sha: HEAD}
+  - {name: addons, from: A-11, path: package/addons, sha: HEAD}
 where: package/docs/user-guide/
 template: "за SKILL.md скіла"
 done: "посібники ролей і адміністратора, картки, INDEX із трьома таблицями покриття (заявлене / розроблене / налаштування й експлуатація, §26а) і SHA; check_guides.py без FAIL (package/demo/defects.md і AI-DECISIONS — через extra_allowed)"

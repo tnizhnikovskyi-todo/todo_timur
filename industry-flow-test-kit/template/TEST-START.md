@@ -25,7 +25,7 @@
 | Fathom | у тесті **не використовується** (DATA_POLICY); якщо є — не вмикати для A-04 | — |
 | Chromium/Playwright | засіб знімків і відео за замовчуванням; немає — `npx playwright install chromium`, не пропускати крок | A-16b, A-21 |
 | Веб-пошук (WebSearch/WebFetch) | ринок рішень, регуляторика | A-01, A-03 |
-| GitHub (відкриття PR у тестовому репо) | PR кроку | усі |
+| GitHub (відкриття PR у тестовому репо) | PR кроку — у гілку старту кроку (для «меблів» `flow/A-12-2-test`, не `main`); зливати merge-комітом, не squash | усі |
 | Каталог організації: плагін `odoo19-discovery-initiation` | скіл `industry-briefing` | A-03 |
 | `odoo-mcp` | **вимкнений / не використовувати** (`odoo_connections: []`) | — |
 
@@ -50,7 +50,7 @@
 | 10 | A-23 `список` | `Виконай крок A-23 за нарядом tests/naryad/A-23-spisok.yaml скілом segment-selector у тестовому режимі CLAUDE.md` | odb-catalog; не запускати режим `адреси` | `demand/mailing-list.csv` + `.md` без адрес і телефонів; розмір 300–500 **або** розділ «Нестача корпоративних адрес» із лічильниками (очікувано для меблів); тег знімка; seed записано |
 | 11 | рішення A-23 | (людина, якщо була «Нестача…») | повідом вибір у чаті (новий список / дзвінок / менший тест); AI вносить рядок A-23, scope mebli, зі словом «досяжн…» у коментарі (E6) | — |
 | 12 | A-23 `prep` | `Виконай крок A-23 за нарядом tests/naryad/A-23.yaml скілом demand-test-runner у тестовому режимі CLAUDE.md` | кроки 8–11 виконано; **нічого не надсилати** | `demand/thresholds.md` (6 розділів, пороги Р3–Р5б, «Тривалість»), `landing.md` (2–3 варіанти за `варіант` у CSV, форма «Заявка на пілот»), `emails.md`, `mailing-plan.md`; DT-honesty/variants/utm/reach/wave PASS; DT-consent = FAIL з плейсхолдером «текст згоди — Юрист» — очікувано (зауваження, не збій) |
-| 12b | контур коду 1 (Крок 0; «меблі») | наряди по черзі, кожен окремою гілкою: `A-11-fix.yaml` -> `A-12-fix.yaml` -> `A-14-N.yaml` (найбільша спроба) -> `A-15-full.yaml` (не `A-15-N` refresh) -> `A-16-N.yaml` | код 1 у Кроці 0 (код змінено після гейтів) | кожен PR змержено перед наступним; далі A-16b |
+| 12b | контур коду 1 (Крок 0; «меблі») | наряди по черзі, кожен окремою гілкою: `A-11-fix.yaml` -> `A-12-fix.yaml` -> `A-14-N.yaml` (найбільша спроба) -> `A-15-full.yaml` (не `A-15-N` refresh) -> `A-16-N.yaml` | код 1 у Кроці 0 (код змінено після гейтів) | кожен PR змержено перед наступним; на A-15-full обов’язково `git rm package/demo/docker/*.zip` за п. 10а demo-base-builder (інакше `no-db-binaries-tree` FAIL повернеться на A-18); далі A-16b |
 | 13 | A-16b | `Виконай крок A-16b за нарядом tests/naryad/A-16b.yaml скілом user-guide-builder у тестовому режимі CLAUDE.md` | Крок 0 вище виконано; стенд піднятий | `package/docs/user-guide/`: INDEX (покриття, ролі, SHA), admin.md, `<роль>.md`, cards; `check_guides.py` без FAIL (UG-roles теж) |
 | 14 | A-17 | `Виконай крок A-17 за нарядом tests/naryad/A-17.yaml скілом product-decision-drafter у тестовому режимі CLAUDE.md` | A-16b змержено | чернетка `package/ACCEPTANCE.md`; рішення власника — його повідомленням у чаті, рядок у `flow/decisions.md` вносить AI (E6) |
 | 15 | A-17b ∥ A-17c | `Виконай крок A-17b за нарядом tests/naryad/A-17b.yaml …` і `… A-17c за нарядом tests/naryad/A-17c.yaml …` | A-17 затверджено; дві гілки від одного SHA | `td_mebli_elearning`, `check_elearning.py` без FAIL; `package/support/`, `check_kb.py` без FAIL |

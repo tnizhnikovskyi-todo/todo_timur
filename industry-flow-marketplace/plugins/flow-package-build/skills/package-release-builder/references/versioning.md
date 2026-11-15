@@ -36,7 +36,7 @@
 14. `docs/industries/<галузь>/research/AI-DECISIONS.md` (рядки AI-NN кроків A-16b/A-17b)
 15. `package/demo/.gitignore`, `package/demo/docker/README.md` (лише заміна кроку Restore на підйом через `up.sh`) і видалення бінарників баз (`*.zip`, `*.dump`, `*.sql.gz`, `*.backup`) з `package/` (A-15 refresh, R-22)
 16. Службові шляхи тестового репо (`.claude/`, `industry-flow-marketplace/`, `CLAUDE.md`, `TEST-START.md`, `START-HERE.md`; `bootstrap --upgrade`) не є вмістом пакета, у R-02 не враховуються
-17. `package/demo/defects.md`, `package/CHECKS.md`, `flow/**`, `tests/**` (журнал дефектів, зведення гейтів, рішення і звіти флоу)
+17. `observations/`, `package/demo/defects.md`, `package/CHECKS.md`, `flow/**`, `tests/**` (журнал дефектів, зведення гейтів, рішення і звіти флоу)
 18. `package/templates/demo-README.md` (A-15 Крок 0 п.4 створює шаблон README після SHA стенда; шлях лише цей)
 
 Єдиний список для R-02 і `diff-allowed-7` в `flow-autocheck/references/checks/A-18.yaml`; змінюється разом.
