@@ -22,6 +22,9 @@ UG-img: зображення = лише png/jpg/jpeg/webp у img/ (SHOOT-LOG.md 
 0.4.1: UG-access (--role-groups plan.md|JSON, --odoo-src: groups меню/кнопок з кроків ролі ⊆ групи ролі), UG-shots (shoot-plan.json + SHOOT-LOG: кадр ролі під логіном ролі, не admin, не прямий URL дії),
   UG-messages (reference/messages.md: усі raise UserError/ValidationError/AccessError з td_* дослівно з uk.po), UG-std-label (назви в шляхах «A → B» лише з uk.po вихідників --odoo-src або td_*),
   UG-cover-buttons (смарт-кнопки й кнопки заголовка td_*), UG-cover-admin поштучно (розділи admin.md з командами, get_param, меню лише для групи).
+0.4.2 §10: UG-cover-setup (--addons: setup.md «Налаштування довідників і товарів» покриває поля td_* на стандартних моделях (models/ + views/; без compute/related/One2many/res.config.settings)
+  і моделі-довідники td.* (act_window, без state/stage_id/status; «Не довідники» з причиною — виняток); у розділі: хто / де в меню / кроки / обов'язкові поля / типова помилка / CSV-шаблон / кадр;
+  INDEX «## Покриття: налаштування довідників»; рядок «описано в цьому рядку» не є покриттям; перелік пропусків — у items).
 UG-cover: розділ «Статус: заблоковано дефектом» = FAIL (повернення A-14: крок returned, не done).
 Вихід: JSON [{id,status,msg}]. Код повернення 1, якщо є FAIL."""
 import argparse, ast, json, os, re, sys
@@ -35,6 +38,7 @@ SHA_LINE = re.compile(r"SHA\s+стенда\W{0,6}([0-9a-f]{7,40})\b", re.I)
 LATIN = re.compile(r"\b[A-Za-z][A-Za-z']{2,}\b")
 DEFAULT_ALLOW = {"Odoo", "ToDo", "PDF", "CSV", "Excel", "QR", "CRM", "SMS", "URL", "ID", "BAS", "Email", "Wi", "Fi", "Enter", "Esc", "Tab", "Ctrl", "Shift"}
 STEP_LINE = re.compile(r"^\s*(\|\s*\d+\s*\||\d+[.)]\s)")
+NON_ROLE_MD = {"INDEX.md", "setup.md"}
 ADMIN_HEADERS = ["параметри", "профілі", "редакції", "перший запуск"]
 ADMIN_OPS = ["майстер-дані", "обмін", "пошта", "оновлення", "резервні копії", "звернення в підтримку", "база знань"]
 CARD_MAX_LINES = 45
@@ -748,6 +752,160 @@ def errors_check(root, role_files, messages_md, index, strict, known_ui=()):
     return bad, warn
 
 
+SETUP_LABELS = [("Хто", r"Хто"), ("Де в меню", r"Де\s+в\s+меню"), ("Кроки", r"Кроки"), ("Обов'язкові поля", r"Обов['’ʼ]язкові\s+поля"),
+                ("Типова помилка", r"Типов(?:а|і)\s+помилк\w*"), ("CSV-шаблон", r"CSV")]
+SETUP_SELF_ROW = re.compile(r"описано\s+в\s+цьому\s+рядку", re.I)
+STATE_FIELDS = {"state", "stage_id", "status"}
+FIELD_TYPES = {"Boolean", "Char", "Text", "Html", "Integer", "Float", "Monetary", "Date", "Datetime", "Selection", "Many2one", "One2many", "Many2many", "Binary", "Image"}
+
+
+def _is_std(model):
+    return bool(model) and not model.startswith(("td.", "td_", "report.td", "report.")) and model not in ("res.config.settings",)
+
+
+def collect_setup_targets(addons):
+    """0.4.2 §10, UG-cover-setup. Повертає {'std': {модель: {поле}}, 'dirs': {td-модель}}.
+    std — поля td_* на СТАНДАРТНИХ моделях (class з _inherit без власного _name у Python; arch ir.ui.view у XML), без compute/related
+    і без res.config.settings (це admin.md). dirs — models.Model з _name td.*, що мають ir.actions.act_window і не мають поля state/stage_id/status
+    (транзакційні документи не довідники); Transient/Abstract/report.* — ні."""
+    std, own_fields, own_models, transient, computed = {}, {}, set(), set(), set()
+    for mod in td_modules(addons):
+        for path in walk_mod(addons, mod, ".py"):
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read())
+            except (SyntaxError, OSError, UnicodeDecodeError):
+                continue
+            for cl in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+                name, inh = None, None
+                for st in cl.body:
+                    if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) and st.targets[0].id in ("_name", "_inherit"):
+                        v = st.value
+                        val = v.value if isinstance(v, ast.Constant) and isinstance(v.value, str) else \
+                            ([e.value for e in v.elts if isinstance(e, ast.Constant)] if isinstance(v, (ast.List, ast.Tuple)) else None)
+                        if st.targets[0].id == "_name":
+                            name = val
+                        else:
+                            inh = val
+                bases = {getattr(b, "attr", getattr(b, "id", "")) for b in cl.bases}
+                model = name or (inh if isinstance(inh, str) else (inh[0] if inh else None))
+                if isinstance(model, list):
+                    model = model[0] if model else None
+                if not model:
+                    continue
+                fl = {}
+                for st in cl.body:
+                    if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) and isinstance(st.value, ast.Call) \
+                            and isinstance(st.value.func, ast.Attribute) and st.value.func.attr in FIELD_TYPES:
+                        kws = {k.arg for k in st.value.keywords}
+                        # compute/related і One2many (зворотні списки вкладок) заповнюють не в довідниках — у вимоги не входять
+                        fl[st.targets[0].id] = bool(kws & {"compute", "related"}) or st.value.func.attr == "One2many"
+                if name and name.startswith("td.") and not (inh and inh != name):
+                    own_models.add(name)
+                    if bases & {"TransientModel", "AbstractModel"}:
+                        transient.add(name)
+                    own_fields.setdefault(name, set()).update(fl)
+                elif _is_std(model) and not (name and name != model):
+                    for f_, comp_ in fl.items():
+                        if f_.startswith("td_") and comp_:
+                            computed.add((model, f_))
+                        elif f_.startswith("td_"):
+                            std.setdefault(model, set()).add(f_)
+                elif model.startswith("td."):
+                    own_fields.setdefault(model, set()).update(fl)
+    for mod in td_modules(addons):
+        for path in walk_mod(addons, mod, ".xml"):
+            try:
+                tree = ET.parse(path)
+            except (ET.ParseError, OSError):
+                continue
+            for rec in tree.iter("record"):
+                if rec.get("model") != "ir.ui.view":
+                    continue
+                mdl = next(((f.text or "").strip() for f in rec.findall("field") if f.get("name") == "model"), "")
+                arch = next((f for f in rec.findall("field") if f.get("name") == "arch"), None)
+                if arch is not None and _is_std(mdl):
+                    for fe in arch.iter("field"):
+                        n_ = fe.get("name") or ""
+                        if n_.startswith("td_") and (mdl, n_) not in computed:
+                            std.setdefault(mdl, set()).add(n_)
+    actions = set()
+    for mod in td_modules(addons):
+        for path in walk_mod(addons, mod, ".xml"):
+            try:
+                tree = ET.parse(path)
+            except (ET.ParseError, OSError):
+                continue
+            for el in tree.iter():
+                if el.tag == "record" and el.get("model") == "ir.actions.act_window":
+                    actions.update((f.text or "").strip() for f in el.findall("field") if f.get("name") == "res_model")
+                elif el.tag == "act_window" and el.get("res_model"):
+                    actions.add(el.get("res_model"))
+    dirs = {m for m in own_models if m in actions and m not in transient and not m.startswith("report.") and not (set(own_fields.get(m, ())) & STATE_FIELDS)}
+    return {"std": {m: fs for m, fs in std.items() if fs}, "dirs": dirs}
+
+
+def setup_sections(txt):
+    """setup.md -> [(заголовок, тіло)]; рядки з «описано в цьому рядку» не рахуються покриттям."""
+    txt = "\n".join(l for l in txt.splitlines() if not SETUP_SELF_ROW.search(l))
+    out = []
+    for part in re.split(r"(?m)^(?=#{2,4}\s)", txt):
+        hm = re.match(r"#{2,4}\s+(.*)", part)
+        if hm:
+            out.append((hm.group(1), part))
+    return out
+
+
+def setup_check(root, index, targets, repo_roots=()):
+    """UG-cover-setup: (FAIL|PASS, [повідомлення], [items]). Порожніх вимог (немає td_* полів/довідників) = PASS."""
+    std, dirs = targets["std"], targets["dirs"]
+    need = sorted(set(std) | dirs)
+    if not need:
+        return "PASS", ["немає полів td_* на стандартних моделях і моделей-довідників td_*"], []
+    p = os.path.join(root, "setup.md")
+    items, msg = [], []
+    if not os.path.isfile(p):
+        for m in need:
+            items.append(f"{m}: немає розділу" + (f" (поля {', '.join(sorted(std[m]))})" if m in std else " (довідник)"))
+        return "FAIL", [f"немає setup.md «Налаштування довідників і товарів»: потрібні розділи для {len(need)} моделей ({len(std)} стандартних форм з полями td_*, {len(dirs)} довідників td_*)"] + items[:10], items
+    secs = setup_sections(open(p, encoding="utf-8").read())
+    for m in need:
+        mine = [b for h, b in secs if re.search(r"`" + re.escape(m) + r"`", h)]
+        if not mine and m in dirs and any(re.search(r"(?i)не\s+довідник", h) and re.search(r"`" + re.escape(m) + r"`[^\n]*\|?[^\n]*\S+\s+\S+\s+\S+", b) for h, b in secs):
+            continue  # явний виняток: розділ «Не довідники» з рядком `модель` і причиною (≥3 слів) — для моделей, що лише схожі на довідник (документ, рядок, журнал)
+        if not mine:
+            items.append(f"{m}: немає розділу в setup.md (заголовок з `{m}`)" + (f"; поля {', '.join(sorted(std[m]))}" if m in std else ""))
+            continue
+        body = "\n".join(mine)
+        nof = [f for f in sorted(std.get(m, ())) if not re.search(r"(?<![\w])" + re.escape(f) + r"(?![\w])", body)]
+        if nof:
+            items.append(f"{m}: поля без опису в розділі: {', '.join(nof)}")
+        lost = [lab for lab, rx in SETUP_LABELS if not re.search(r"(?mi)^[\s>*|\-]*\**\s*" + rx, body)]
+        if not IMG.search(body):
+            lost.append("Кадр (знімок під роллю)")
+        if lost:
+            items.append(f"{m}: немає елементів: {', '.join(lost)}")
+        for line in body.splitlines():
+            if re.match(r"(?i)^[\s>*|\-]*\**\s*CSV", line):
+                pm = re.search(r"([\w./-]+\.csv)", line)
+                if pm:
+                    cands = [os.path.join(root, pm.group(1))] + [os.path.join(r_, pm.group(1)) for r_ in repo_roots]
+                    if not any(os.path.isfile(c) for c in cands):
+                        items.append(f"{m}: CSV-шаблон {pm.group(1)} не знайдено")
+                elif not re.search(r"(?i)\bнемає\b.{3,}", line):
+                    items.append(f"{m}: CSV-шаблон — файл або «немає: <причина>»")
+    gm = re.search(r"(?mi)^##\s*Покриття:\s*налаштування\s+довідників[^\n]*\n(.*?)(?=^##\s|\Z)", index, re.S)
+    if not gm:
+        msg.append("в INDEX немає таблиці «## Покриття: налаштування довідників» (четверта таблиця покриття, г)")
+    else:
+        gtxt = "\n".join(l for l in gm.group(1).splitlines() if not SETUP_SELF_ROW.search(l))
+        nog = [m for m in need if m not in gtxt]
+        if nog:
+            items.append("INDEX (г) не називає: " + ", ".join(nog))
+    if items:
+        return "FAIL", msg + [f"{len(items)} зауважень: " + "; ".join(items[:10]) + (" …" if len(items) > 10 else "")], items
+    return ("FAIL", msg, []) if msg else ("PASS", [f"{len(std)} стандартних форм ({sum(len(v) for v in std.values())} полів td_*) і {len(dirs)} довідників td_* описано в setup.md"], [])
+
+
 def selftest():
     """0.4.2: регрес трьох minor (split на скороченнях/числах, меню після «смарт-кнопк…», mod_installable_ce без --odoo-src)."""
     fr = split_fragments("Відкрийте меню, напр. «Заміри». Роль не бачить «Звіти». Далі 1.5 години; потім ok.")
@@ -793,6 +951,30 @@ def selftest():
     assert len(b) == 1 and "Параметри розкрою" in b[0], b
     b, w = errors_check(d3, ["k.md"], mm3, ix3, False)
     assert not b and len(w) == 1, (b, w)
+    # 0.4.2 §10: UG-cover-setup — поля td_* стандартних форм і довідники td_* -> setup.md
+    d4 = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d4, "addons", "td_y", "models")); os.makedirs(os.path.join(d4, "addons", "td_y", "views")); os.makedirs(os.path.join(d4, "ug"))
+    open(os.path.join(d4, "addons", "td_y", "__manifest__.py"), "w").write(repr({"name": "y", "depends": ["base"]}))
+    open(os.path.join(d4, "addons", "td_y", "models", "m.py"), "w").write(
+        "from odoo import fields, models\nclass P(models.Model):\n    _inherit = 'product.template'\n    td_w = fields.Integer()\n    td_c = fields.Char(compute='_c')\n    td_l = fields.One2many('x', 'y')\n"
+        "class D(models.Model):\n    _name = 'td.y.dir'\n    name = fields.Char()\nclass T(models.Model):\n    _name = 'td.y.doc'\n    state = fields.Selection([])\n"
+        "class S(models.Model):\n    _inherit = 'res.config.settings'\n    td_set = fields.Char()\n")
+    open(os.path.join(d4, "addons", "td_y", "views", "v.xml"), "w").write(
+        "<odoo><record id='a' model='ir.actions.act_window'><field name='res_model'>td.y.dir</field></record>"
+        "<record id='b' model='ir.actions.act_window'><field name='res_model'>td.y.doc</field></record>"
+        "<record id='v' model='ir.ui.view'><field name='model'>res.partner</field><field name='arch' type='xml'><form><field name='td_p'/><field name='name'/></form></field></record></odoo>")
+    tg = collect_setup_targets(os.path.join(d4, "addons"))
+    assert tg == {"std": {"product.template": {"td_w"}, "res.partner": {"td_p"}}, "dirs": {"td.y.dir"}}, tg
+    st, msg, items = setup_check(os.path.join(d4, "ug"), "", tg)
+    assert st == "FAIL" and len(items) == 3 and "немає setup.md" in msg[0], (st, msg, items)
+    sec = ("## 1. Товар (`product.template`)\n- **Хто:** a\n- **Де в меню:** b\n- **Кроки:** c `td_w`\n- **Обов'язкові поля:** d\n- **Типова помилка:** e\n- **CSV-шаблон:** немає: масово не потрібно\n![x](a.png)\n")
+    open(os.path.join(d4, "ug", "setup.md"), "w", encoding="utf-8").write(sec + "\n| `res.partner` td_p | описано в цьому рядку |\n")
+    st, msg, items = setup_check(os.path.join(d4, "ug"), "## Покриття: налаштування довідників\n| `product.template` | s |\n", tg)
+    assert st == "FAIL" and any("res.partner" in i and "немає розділу" in i for i in items) and any("td.y.dir" in i for i in items), items
+    full = sec + "\n## 2. Партнер (`res.partner`)\n" + sec.split("\n", 1)[1].replace("`td_w`", "`td_p`") + "\n## 3. Каталог (`td.y.dir`)\n" + sec.split("\n", 1)[1]
+    open(os.path.join(d4, "ug", "setup.md"), "w", encoding="utf-8").write(full)
+    st, msg, items = setup_check(os.path.join(d4, "ug"), "## Покриття: налаштування довідників\n| `product.template` `res.partner` `td.y.dir` | s |\n", tg)
+    assert st == "PASS", (msg, items)
     print("selftest OK")
     return 0
 
@@ -832,7 +1014,8 @@ def main():
     root = a.dir
     idx_p = os.path.join(root, "INDEX.md")
     index = open(idx_p, encoding="utf-8").read() if os.path.exists(idx_p) else ""
-    role_files = sorted(n for n in os.listdir(root) if n.endswith(".md") and n != "INDEX.md") if os.path.isdir(root) else []
+    role_files = sorted(n for n in os.listdir(root) if n.endswith(".md") and n not in NON_ROLE_MD) if os.path.isdir(root) else []
+    setup_p = os.path.join(root, "setup.md")  # 0.4.2 §10: «Налаштування довідників і товарів» — не посібник ролі (картки/«Ролі» не вимагає)
     cards_dir = os.path.join(root, "cards")
     card_files = sorted(os.listdir(cards_dir)) if os.path.isdir(cards_dir) else []
     card_files = [n for n in card_files if n.endswith(".md")]
@@ -896,6 +1079,8 @@ def main():
     md_files = [(os.path.join(root, n), n) for n in role_files] + [(os.path.join(cards_dir, n), "cards/" + n) for n in card_files]
     if index:
         md_files.append((idx_p, "INDEX.md"))
+    if os.path.isfile(setup_p):
+        md_files.append((setup_p, "setup.md"))
     referenced, broken = set(), []
     for p, label in md_files:
         for ref in IMG.findall(open(p, encoding="utf-8").read()):
@@ -987,6 +1172,8 @@ def main():
 
     # UG-cover-dev / UG-cover-admin (§26а)
     all_txt = {n: open(os.path.join(root, n), encoding="utf-8").read().lower() for n in role_files}
+    if os.path.isfile(setup_p):  # меню/дії довідників названо в setup.md — це покриття «розроблене»
+        all_txt["setup.md"] = open(setup_p, encoding="utf-8").read().lower()
     body = "\n".join(all_txt.values())
     known_ui = set()
     if not a.addons:
@@ -1117,7 +1304,7 @@ def main():
         adm_pth = os.path.join(root, "admin.md")
         if os.path.exists(adm_pth):
             miss += admin_must(open(adm_pth, encoding="utf-8").read(), a, collect_td_ui(a.addons) if a.addons else {"menus": [], "buttons": [], "groups": {}}, os.path.dirname(a.config) if a.config else None)
-        msg = ([] if re.search(r"(?mi)^##\s*Покриття:\s*налаштування", index) else ["в INDEX немає таблиці «## Покриття: налаштування й експлуатація»"]) \
+        msg = ([] if re.search(r"(?mi)^##\s*Покриття:\s*налаштування\s+й\s+експлуатація", index) else ["в INDEX немає таблиці «## Покриття: налаштування й експлуатація»"]) \
             + ([f"немає в admin.md ({len(set(miss))}): {', '.join(sorted(set(miss)))}"] if miss else [])
         add("UG-cover-admin", "FAIL" if msg else "PASS", "; ".join(msg))
         if miss:
@@ -1522,6 +1709,17 @@ def main():
         add("UG-std-label", "WARN", "немає --odoo-src: перевірено лише список підозрілих назв, не повну звірку з uk.po 19.0")
     else:
         add("UG-std-label", "PASS", f"{len({p[2] for p in paths})} назв у шляхах меню знайдено в uk.po 19.0 / td_*")
+
+    # UG-cover-setup (0.4.2 §10): setup.md «Налаштування довідників і товарів» покриває поля td_* на стандартних формах і довідники td_*
+    if not a.addons:
+        add("UG-cover-setup", "SKIPPED", "немає --addons")
+    elif not os.path.isdir(a.addons):
+        add("UG-cover-setup", "ERROR", f"--addons {a.addons}: не каталог")
+    else:
+        st_, msg_, items_ = setup_check(root, index, collect_setup_targets(a.addons), [os.path.dirname(os.path.abspath(a.addons))])
+        add("UG-cover-setup", st_, "; ".join(msg_))
+        if items_:
+            res[-1]["items"] = items_
 
     for i, why in (("UG-fresh", "знімки на стенді з SHA INDEX — перевіряє агент (журнал зйомки)"),
                    ("UG-ui", "підписи кроків = підписи в UI — агент/рецензент"),

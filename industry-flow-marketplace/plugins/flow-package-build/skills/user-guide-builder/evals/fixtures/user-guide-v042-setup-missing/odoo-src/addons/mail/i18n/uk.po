@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: uk\n"
+
+msgid "Email"
+msgstr "Ел. пошта"
+
+msgid "Discuss"
+msgstr "Обговорення"
+

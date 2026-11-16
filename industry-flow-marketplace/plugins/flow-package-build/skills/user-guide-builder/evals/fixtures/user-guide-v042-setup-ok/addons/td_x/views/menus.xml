@@ -1,0 +1,11 @@
+<odoo>
+  <menuitem id="menu_td_stock" name="Furniture Stock" groups="stock.group_stock_user" sequence="10"/>
+  <menuitem id="menu_td_bas" name="BAS Exchange" groups="td_x.group_td_finance" sequence="20"/>
+  <record id="view_td_x_form" model="ir.ui.view">
+    <field name="name">td.x.form</field><field name="model">td.x</field>
+    <field name="arch" type="xml"><form>
+      <header><button name="action_send_bas" string="Send to BAS" type="object" groups="td_x.group_td_finance"/></header>
+      <div name="button_box" class="oe_button_box"><button name="action_open_acts" type="object" string="Acts"/></div>
+    </form></field>
+  </record>
+</odoo>

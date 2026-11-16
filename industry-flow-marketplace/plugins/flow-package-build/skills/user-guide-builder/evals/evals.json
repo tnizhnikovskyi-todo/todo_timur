@@ -346,7 +346,7 @@
     {
       "id": "independent-audit-three-angles",
       "prompt": "A-16b: самоперевірка дала check_guides.py без FAIL. Чи можна ставити done? Що робити далі?",
-      "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 3 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, до 5 кругів на наряд; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
+      "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 3 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, не більше 5 кругів рецензії на день глобально; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
       "assertions": [
         "done не ставиться лише за самоперевіркою",
         "Запущено 3 рецензентів з різних кутів (а), (б), (в)",
@@ -459,6 +459,45 @@
         "evals/fixtures/user-guide-v042-ok/user-guide/",
         "evals/fixtures/user-guide-v042-ok/addons/",
         "evals/fixtures/user-guide-v042-ok/odoo-src/"
+      ]
+    },
+    {
+      "id": "v042-setup-ok",
+      "prompt": "Налаштування довідників і товарів (0.4.2 §10): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-setup-ok/user-guide --spec evals/fixtures/user-guide-v042-setup-ok/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-setup-ok/addons --answers evals/fixtures/user-guide-v042-setup-ok/answers.yaml --config evals/fixtures/user-guide-v042-setup-ok/CONFIG.md --role-groups evals/fixtures/user-guide-v042-setup-ok/plan.md --odoo-src evals/fixtures/user-guide-v042-setup-ok/odoo-src --strict.",
+      "expected_output": "UG-cover-setup PASS (форма sale.order з полями td_width/td_depth і довідник td.x.material описано в setup.md з кадрами SETUP-NN під admin; td.x.repair — у «Не довідники»; compute- і One2many-поля td_* не вимагаються), код повернення 0.",
+      "assertions": [
+        "UG-cover-setup PASS",
+        "код 0",
+        "кадри setup.md мають рядки SHOOT-LOG (UG-shots PASS)"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-setup-ok/"
+      ]
+    },
+    {
+      "id": "v042-setup-bad",
+      "prompt": "Налаштування довідників і товарів (0.4.2 §10): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-setup-bad/user-guide --spec evals/fixtures/user-guide-v042-setup-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-setup-bad/addons --answers evals/fixtures/user-guide-v042-setup-bad/answers.yaml --config evals/fixtures/user-guide-v042-setup-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v042-setup-bad/plan.md --odoo-src evals/fixtures/user-guide-v042-setup-bad/odoo-src --strict.",
+      "expected_output": "UG-cover-setup FAIL з переліком: sale.order — поле td_depth без опису, немає «Типова помилка»; td.x.material — немає розділу (рядок «описано в цьому рядку» не покриття); INDEX (г) не називає td.x.material. Код 1.",
+      "assertions": [
+        "UG-cover-setup FAIL",
+        "items називають td_depth, Типова помилка, td.x.material",
+        "«описано в цьому рядку» не рахується покриттям"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-setup-bad/"
+      ]
+    },
+    {
+      "id": "v042-setup-missing",
+      "prompt": "Налаштування довідників і товарів (0.4.2 §10): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-setup-missing/user-guide --spec evals/fixtures/user-guide-v042-setup-missing/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-setup-missing/addons --answers evals/fixtures/user-guide-v042-setup-missing/answers.yaml --config evals/fixtures/user-guide-v042-setup-missing/CONFIG.md --role-groups evals/fixtures/user-guide-v042-setup-missing/plan.md --odoo-src evals/fixtures/user-guide-v042-setup-missing/odoo-src --strict.",
+      "expected_output": "UG-cover-setup FAIL: немає setup.md; перелік потрібних розділів (sale.order з полями td_depth, td_width; довідник td.x.material). Код 1, без помилок скрипта.",
+      "assertions": [
+        "UG-cover-setup FAIL",
+        "немає setup.md",
+        "перелік моделей у items"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-setup-missing/"
       ]
     }
   ]

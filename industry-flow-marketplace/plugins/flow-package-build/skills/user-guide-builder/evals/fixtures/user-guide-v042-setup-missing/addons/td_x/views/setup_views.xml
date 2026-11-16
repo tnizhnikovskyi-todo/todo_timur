@@ -1,0 +1,12 @@
+<odoo>
+  <record id="action_td_x_material" model="ir.actions.act_window">
+    <field name="name">Матеріали</field><field name="res_model">td.x.material</field>
+  </record>
+  <record id="action_td_x_repair" model="ir.actions.act_window">
+    <field name="name">Ремонти</field><field name="res_model">td.x.repair</field>
+  </record>
+  <record id="view_sale_order_td" model="ir.ui.view">
+    <field name="name">sale.order.td</field><field name="model">sale.order</field>
+    <field name="arch" type="xml"><form><field name="td_width"/><field name="td_depth"/></form></field>
+  </record>
+</odoo>

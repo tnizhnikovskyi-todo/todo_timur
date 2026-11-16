@@ -16,10 +16,11 @@ if [ -n "$nar" ] && grep -Eq '^review:[[:space:]]*(\{|$)' "$nar"; then
 fi
 # 3) (0.4.2, режим менеджера) блок handoff повний; наряд створено менеджером (created_by: manager)
 CH=.claude/skills/flow-autocheck/scripts/check_handoff.py
-# handoff — лише для режиму manager (наряд без `mode: manager` або не передано -> пропуск)
-if [ -f "$CH" ] && [ -n "$nar" ] && grep -Eq '^mode:[[:space:]]*manager' "$nar"; then
-  python3 -I "$CH" --report "$rep" ${nar:+--naryad "$nar"} > /tmp/ch.$$ || rc=1
-  grep -E '"status": "(FAIL|WARN)"' -B1 -A1 /tmp/ch.$$ | grep -E 'id|msg' ; rm -f /tmp/ch.$$
+# handoff — для нарядів менеджера: `mode: manager` або `created_by:` (і не `mode: queue`); наряд без цих ключів / не передано -> пропуск
+if [ -f "$CH" ] && [ -n "$nar" ] && ! grep -Eq '^mode:[[:space:]]*queue' "$nar" && grep -Eq '^(mode:[[:space:]]*manager|created_by:)' "$nar"; then
+  tmp=$(mktemp) || exit 2
+  python3 -I "$CH" --report "$rep" --naryad "$nar" > "$tmp" || rc=1
+  grep -E '"status": "(FAIL|WARN)"' -B1 -A1 "$tmp" | grep -E 'id|msg'; rm -f "$tmp"
 fi
 [ $rc = 0 ] && echo "OK $rep"
 exit $rc

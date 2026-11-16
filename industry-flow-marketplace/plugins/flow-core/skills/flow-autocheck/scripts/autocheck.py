@@ -1248,6 +1248,8 @@ EXTRA_CASES = [  # (скрипт, фікстура, аргументи, очік
     ("check_intake.py", "check_intake-star-keys", ["OWNER-INTAKE.md"], 0),
     ("check_intake.py", "check_intake-star-keys", ["OWNER-INTAKE.md", "--page", "research/owner-page/index.html"], 1),
     ("check_facts.py", "check_facts-nomarkers", ["facts.yaml", "A.md"], 1),
+    ("check_handoff.py", "check_handoff-list", ["--report", "report.md"], 0),  # done/next_hint — YAML-список на рівні ключа
+    ("check_handoff.py", "check_handoff-template", ["--report", "report.md"], 1),  # review_needed: "так|ні" (незаповнений шаблон)
 ]
 
 

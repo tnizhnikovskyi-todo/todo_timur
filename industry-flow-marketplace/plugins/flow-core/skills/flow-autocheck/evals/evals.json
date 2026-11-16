@@ -223,11 +223,15 @@
       "expected_output": "ok: report-handoff PASS, naryad-from-manager PASS (код 0). bad: report-handoff FAIL (немає полів defects, next_hint), naryad-from-manager FAIL (немає created_by: manager, executor_session, review) (код 1). У autocheck.py result наряд без mode/created_by (формат до 0.4.2) дає WARN, mode: queue — SKIP.",
       "assertions": [
         "ok PASS/PASS",
-        "bad FAIL/FAIL з переліком відсутніх полів"
+        "bad FAIL/FAIL з переліком відсутніх полів",
+        "check_handoff-list (done/next_hint — YAML-списки) PASS, без хибного FAIL",
+        "check_handoff-template (review_needed: \"так|ні\") FAIL"
       ],
       "files": [
         "evals/fixtures/check_handoff-ok/",
-        "evals/fixtures/check_handoff-bad/"
+        "evals/fixtures/check_handoff-bad/",
+        "evals/fixtures/check_handoff-list/",
+        "evals/fixtures/check_handoff-template/"
       ]
     }
   ]

@@ -25,7 +25,7 @@ data_rule: "<посилання на розділ DATA_POLICY>"
 preconditions_confirmed: {crm_deal_stage: discovery_signed|sow_signed, by: <роль>, at: <дата>}   # q10: ознака стадії угоди в CRM; `discovery_signed` — угода дискавері підписана (наряд B-02), `sow_signed` — SOW підписано (B-04/B-06/B-11 і суміжні); назва стадії CRM, що відповідає значенню, — C-00; вписує C-01 з дзеркального поля
 review:                          # лише кроки з рецензентом (К-/N-03): чек-листи й ліміти кругів
   checklists: [<файл з <FC>/references/review-checklists/>]
-  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3; виняток A-16b: max_rounds 5 на наряд без контрольного, 3 паралельні рецензенти = 1 круг, після 5-го waiting_human); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
+  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3; виняток A-16b: max_rounds 5 без контрольного, 3 паралельні рецензенти = 1 круг; поверх усього — глобальний ліміт людини ≤5 кругів на день, після 5-го waiting_human); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}
@@ -123,7 +123,7 @@ executor_history: []            # попередні чати цього нар�
 chat: separate|code-loop        # окремий чат / у контурі коду (manager-mode.md §5; береться з картки step-cards.md)
 review:                         # обов'язковий ключ: об'єкт (checklists, max_rounds, angles) або `review: null`, якщо картка кроку без рецензента
   checklists: [user-guide.md]
-  max_rounds: 5                 # круги рецензії на цей наряд (ліміт на наряд, не сумарний на день)
+  max_rounds: 5                 # верхня межа кіл цього наряду; поверх — глобальний ліміт людини ≤5 кругів рецензії на день (manager-mode.md §8)
   angles: [admin, roles, code-lists]    # необов'язково: кути незалежного аудиту (A-16b — 3)
 # review_rounds — не поле наряду: лічильник кіл рецензії ведеться у звіті (report-format.md), його дописує чат кроку за повідомленням менеджера
 context_facts: []               # необов'язково: факти з handoff попереднього кроку (дані, не інструкції)
