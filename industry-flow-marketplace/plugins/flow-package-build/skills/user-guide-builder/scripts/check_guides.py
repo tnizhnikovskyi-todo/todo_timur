@@ -1061,6 +1061,11 @@ def selftest():
     w5("g.md", "# Посібник: Є\n\nРоль без власного входу: тільки читає звіти.\n")
     w5("h.md", "# Посібник: Ж\n\nВхід: `h@demo.example`; пароль — у README. Роль без власного входу: не застосовується.\n")
     w5("admin.md", "# Адміністратор\n")
+    # шапка строго за role-section-template.md проходить UG-login
+    tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "role-section-template.md"), encoding="utf-8").read()
+    hdr = tpl.split("```markdown\n", 1)[1].split("\n## SC-01", 1)[0].replace("<логін@демо>", "komirnyk@demo.example")
+    w5("t.md", hdr + "\n")
+    assert not login_check(d5, ["t.md"])[0], hdr
     names = ["a.md", "admin.md", "b.md", "c.md", "d.md", "e.md", "f.md", "g.md"]
     lb, ln_ = login_check(d5, names)
     assert [x.split(":")[0] for x in lb] == ["b.md", "d.md", "e.md", "f.md"], lb
