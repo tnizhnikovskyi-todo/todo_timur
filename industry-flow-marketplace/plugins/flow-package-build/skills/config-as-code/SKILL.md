@@ -198,7 +198,7 @@ config-log. Даних у базі немає (установка не відб�
 ### Таблиця «контейнер -> довідник, потрібний для роботи» (CFG-container; звірено з вихідниками Odoo 19.0)
 | Контейнер (модель) | Потрібний довідник | Умова WARN | Вихідники 19.0 |
 |---|---|---|---|
-| `project.project` | `project.task.type` (стадії задач) | порожній `type_ids` проєкту (задачі без колонок) | `addons/project/models/project_project.py:107` (`type_ids`) |
+| `project.project` | `project.task.type` (стадії задач) | порожній `type_ids` проєкту за read-back бази після установки всіх модулів (стадії могли створити конфіг або дані модуля `td_*` — рахуються обидва джерела) | `addons/project/models/project_project.py:107` (`type_ids`) |
 | `crm.team` | `crm.stage` (стадії без `team_ids` — спільні) | немає жодної стадії, доступної команді | `addons/crm/models/crm_stage.py:31` (`team_ids`) |
 | `maintenance.team` (модуль maintenance) | `maintenance.stage` (спільний, без зв'язку з командою) | у базі немає жодної стадії | `addons/maintenance/models/maintenance.py:13` (`_name = 'maintenance.stage'`) |
 | `helpdesk.team` (EE) | стадії тікетів команди | у команди немає стадій | не перевірено (EE) |
