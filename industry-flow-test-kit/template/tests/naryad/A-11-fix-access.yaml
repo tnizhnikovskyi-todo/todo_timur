@@ -1,6 +1,11 @@
-# ТЕСТОВИЙ наряд A-11 (0.4.1): fix прав ролей / коду після повернення з A-16b (UG-access FAIL або код 3 shoot.mjs MENU-NOT-VISIBLE; дефект D-NN у package/demo/defects.md).
+# ТЕСТОВИЙ наряд A-11 (0.4.2): fix прав ролей / коду після повернення з A-16b (UG-access FAIL або код 3 shoot.mjs MENU-NOT-VISIBLE; дефект D-NN у package/demo/defects.md).
 # Маршрут: UG-access / код 3 -> дефект D-NN -> A-11-fix-access -> A-12-fix (за потреби) -> A-14-N -> A-15-full -> A-16-N -> A-16b. Ставить наряд сесія/людина, яка зафіксувала дефект (в тесті — AI за Кроком 0 TEST-START).
 step: A-11
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: code-loop               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo

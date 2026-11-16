@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-17 (0.4.0): AI-частина product-decision-drafter: чернетка рішення прийняття (людську частину — власник — вносить AI рядком у flow/decisions.md за його повідомленням у чаті, E6)
 step: A-17
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: null
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-evolution:product-decision-drafter@0.4.1"]
+skill_ref: ["flow-package-evolution:product-decision-drafter@0.4.2"]
 model: sonnet
 effort: medium
 params: {mode: перша}

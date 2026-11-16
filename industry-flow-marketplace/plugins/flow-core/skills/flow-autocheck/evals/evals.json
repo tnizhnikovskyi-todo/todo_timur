@@ -216,6 +216,19 @@
         "«-08» з дати 2026-08 не береться за число",
         "15.08.2026 = 2026-08-15 для дат-фактів"
       ]
+    },
+    {
+      "id": "manager-handoff",
+      "prompt": "Режим manager 0.4.2: python3 -I scripts/check_handoff.py --report evals/fixtures/check_handoff-ok/report.md --naryad evals/fixtures/check_handoff-ok/naryad.yaml, потім те саме з check_handoff-bad.",
+      "expected_output": "ok: report-handoff PASS, naryad-from-manager PASS (код 0). bad: report-handoff FAIL (немає полів defects, next_hint), naryad-from-manager FAIL (немає created_by: manager, executor_session, review) (код 1). У autocheck.py result наряд без mode/created_by (формат до 0.4.2) дає WARN, mode: queue — SKIP.",
+      "assertions": [
+        "ok PASS/PASS",
+        "bad FAIL/FAIL з переліком відсутніх полів"
+      ],
+      "files": [
+        "evals/fixtures/check_handoff-ok/",
+        "evals/fixtures/check_handoff-bad/"
+      ]
     }
   ]
 }

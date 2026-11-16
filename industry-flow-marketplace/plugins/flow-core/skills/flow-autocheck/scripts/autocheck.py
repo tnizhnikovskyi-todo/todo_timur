@@ -12,6 +12,7 @@ import ast
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,6 +36,7 @@ PII = [  # pii-patterns.md; (тип, regex, статус при client_data != n
 class Ctx:
     def __init__(self, a, naryad):
         self.repo, self.n, self.mode = a.repo, naryad, a.mode
+        self.naryad_path = getattr(a, "naryad", None)
         self.params = naryad.get("params") or {}
         g = naryad.get("git") or {}
         self.base = a.base or g.get("base")
@@ -192,7 +194,7 @@ def deprecated(d):
 
 
 # Тестовий режим (test-CLAUDE.md): файли, які сесія змінює поза where кроку; у бойовому репо їх немає
-TEST_MODE_ALLOW = ["tests/reports/", "tests/naryad/", "tests/open-questions.md", "flow/decisions.md"]
+TEST_MODE_ALLOW = ["tests/reports/", "tests/naryad/", "tests/open-questions.md", "flow/decisions.md", "flow/runs/", "flow/state.md"]  # flow/runs/, flow/state.md — облік менеджера (manager-mode.md §2)
 # Службові шляхи тестового репо (bootstrap --upgrade, правила сесії): не є вмістом пакета; лише для diff за SHA (не для where-only)
 TEST_SERVICE_ALLOW = [".claude/", "industry-flow-marketplace/", "CLAUDE.md", "TEST-START.md", "START-HERE.md"]
 
@@ -1115,6 +1117,7 @@ def main(argv):
                 if a.mode == "result":
                     if not a.only or a.only.startswith(("where", "template", "no-pii", "sources", "path")):
                         generic(ctx, (spec or {}).get("extra_allowed"))
+                    manager_checks(ctx, a.only)
                     if spec:
                         run_spec(ctx, spec, a.only)
                     else:
@@ -1126,6 +1129,61 @@ def main(argv):
                     if ctx.rows and all(r["status"] == "MANUAL" for r in ctx.rows):
                         ctx.add("template-missing", "ERROR", "Жодної автоматичної перевірки форми не виконано (немає шаблону й блоку підпису): форму перевіряє людина")
     return finish(ctx, a, step)
+
+
+def report_candidates(n, path):
+    """Ім'я звіту = ім'я наряду (A-17-6.yaml -> tests/reports/A-17-6.md); поле `report:` має пріоритет.
+    Без запасного `<step>.md` для нарядів з іншим іменем (інакше читається чужий звіт)."""
+    step, att = str(n.get("step", "")), n.get("attempt", 1)
+    if n.get("report"):
+        return [str(n["report"])]
+    stem = os.path.splitext(os.path.basename(path or ""))[0]
+    if stem and stem.startswith(step) and step:
+        if isinstance(att, int) and att > 1 and stem == step:
+            return [f"tests/reports/{stem}-{att}.md", f"tests/reports/{stem}.md"]
+        return [f"tests/reports/{stem}.md"]
+    return [f"tests/reports/{step}-{att}.md"] if att != 1 else [f"tests/reports/{step}.md"]
+
+
+def manager_checks(ctx, only):
+    """0.4.2: report-handoff і naryad-from-manager (режим manager за замовчуванням; mode: queue -> SKIP)."""
+    if only and not only.startswith(("report-handoff", "naryad-from-manager")):
+        return
+    import importlib.util
+    sp = importlib.util.spec_from_file_location("check_handoff", os.path.join(HERE, "check_handoff.py"))
+    ch = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(ch)
+    n = ctx.n
+    if n.get("mode") == "queue" or (n.get("mode") != "manager" and "created_by" not in n):
+        if n.get("mode") != "queue":
+            ctx.add("naryad-from-manager", "WARN", "наряд без mode/created_by (формат до 0.4.2); handoff не перевірено")
+            ctx.add("report-handoff", "SKIP", "наряд без mode: manager")
+            return
+        ctx.add("report-handoff", "SKIP", "mode: queue")
+        ctx.add("naryad-from-manager", "SKIP", "mode: queue")
+        return
+    # наряд: перевіряється готовий словник (executor_session/review можуть бути null -> ключ є)
+    bad = []
+    if n.get("created_by") != "manager":
+        bad.append("немає `created_by: manager`")
+    for k in ("executor_session", "review"):
+        if k not in n:
+            bad.append(f"немає ключа `{k}`")
+    legacy = n.get("mode") != "manager" and "created_by" not in n   # наряд 0.4.1 і старіші: без явного mode -> WARN, не FAIL
+    ctx.add("naryad-from-manager", ("WARN" if legacy else "FAIL") if bad else "PASS", ("наряд без mode/created_by (формат до 0.4.2): " if legacy else "") + "; ".join(bad))
+    step, att = n.get("step", ""), n.get("attempt", 1)
+    rep = None
+    cands = report_candidates(n, ctx.naryad_path)
+    for cand in cands:
+        rc, out = git(ctx, "show", f"{ctx.head}:{cand}")
+        if rc == 0:
+            rep = out
+            break
+    if rep is None:
+        ctx.add("report-handoff", "WARN", f"звіт {cands[0]} ще не закомічено на head (запусти після коміту звіту)")
+        return
+    for r in ch.check_report(rep):
+        ctx.add(r["id"], r["status"], r["msg"])
 
 
 def form_mode(ctx, spec):
@@ -1174,6 +1232,7 @@ BRAND_MD = "BRAND.md"
 SELF_SCRIPTS = [  # (скрипт, аргументи для -ok, аргументи для -bad); @FX@ = тека фікстури; cwd = тека фікстури
     ("check_intake.py", ["OWNER-INTAKE.md", "--brief", "QUESTIONS.md"], ["OWNER-INTAKE.md", "--brief", "QUESTIONS.md"]),
     ("check_rejected.py", ["REJECTED.md"], ["REJECTED.md"]),
+    ("check_handoff.py", ["--report", "report.md", "--naryad", "naryad.yaml"], ["--report", "report.md", "--naryad", "naryad.yaml"]),
     ("check_facts.py", ["research/facts.yaml", "research", "concept"], ["research/facts.yaml", "research", "concept"]),
     ("check_brand.py", [".", "--brand", BRAND_MD], [".", "--brand", BRAND_MD]),
     ("check_privacy.py", ["research", "--pages", "research/owner-page", "--materials", "prototype-real"],
@@ -1279,6 +1338,14 @@ def selftest():
     selftest_service_paths()
     selftest_ai_decisions_scope()
     selftest_demo_readme_template()
+    assert report_candidates({"step": "A-17", "attempt": 6}, "tests/naryad/A-17-6.yaml") == ["tests/reports/A-17-6.md"]
+    assert report_candidates({"step": "A-15", "attempt": 4}, "x/A-15-full-4.yaml") == ["tests/reports/A-15-full-4.md"]
+    assert report_candidates({"step": "A-17c", "attempt": 1}, "x/A-17c-reconcile.yaml") == ["tests/reports/A-17c-reconcile.md"]
+    assert report_candidates({"step": "A-11", "attempt": 1}, "x/A-11-fix.yaml") == ["tests/reports/A-11-fix.md"]
+    assert report_candidates({"step": "A-17", "attempt": 1}, "x/A-17.yaml") == ["tests/reports/A-17.md"]
+    assert report_candidates({"step": "A-17", "attempt": 2, "report": "tests/reports/z.md"}, "x/A-17-2.yaml") == ["tests/reports/z.md"]
+    selftest_report_name()
+    selftest_and_join_merge()
     cdir = os.path.join(SKILL, "references", "checks")
     for f in sorted(os.listdir(cdir)):
         for c in load_spec(f[:-5])["checks"]:
@@ -1371,6 +1438,34 @@ def selftest_service_paths():
     assert ctx.rows[0]["status"] == "PASS" and "AC-COVERAGE" not in ctx.rows[0]["msg"], ctx.rows[0]
 
 
+def selftest_and_join_merge():
+    """0.4.2: порядок злиття AND-join з manager-mode.md §6 (стик має власний PR) доводить A-18 до бази; старий порядок (без PR стику) — ні. Облік менеджера flow/runs/ дозволений."""
+    assert any(glob_match("flow/runs/A-17b-3.md", a) for a in TEST_MODE_ALLOW) and "flow/state.md" in TEST_MODE_ALLOW
+    assert report_candidates({"step": "A-04", "attempt": 2}, "tests/naryad/A-04.yaml")[0] == "tests/reports/A-04-2.md"
+    d = tempfile.mkdtemp()
+    def run(*a, ok=True):
+        r = subprocess.run(["git", "-C", d, *a], capture_output=True, text=True)
+        assert r.returncode == 0 or not ok, r.stderr
+        return r.returncode
+    def commit(f):
+        open(os.path.join(d, f), "w").write(f); run("add", "."); run("commit", "-qm", f)
+    def build():
+        run("init", "-q", "-b", "base"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+        commit("base"); run("checkout", "-qb", "a17"); commit("a17")
+        run("checkout", "-qb", "a17b"); commit("a17b"); run("checkout", "-q", "a17"); run("checkout", "-qb", "a17c"); commit("a17c")
+        run("checkout", "-qb", "join"); run("merge", "--no-ff", "-qm", "join", "a17b")
+        run("checkout", "-qb", "rec"); commit("rec"); run("checkout", "-qb", "a18"); commit("a18")
+    build()
+    mg = lambda tgt, src: (run("checkout", "-q", tgt), run("merge", "--no-ff", "-qm", f"{src}->{tgt}", src))
+    # старий порядок: PR A-17b/A-17c у a17, стик без PR -> A-18 у базі немає
+    mg("rec", "a18"); mg("join", "rec"); mg("a17", "a17b"); mg("a17", "a17c"); mg("base", "a17")
+    assert run("merge-base", "--is-ancestor", "a18", "base", ok=False) != 0
+    shutil.rmtree(d); d = tempfile.mkdtemp(); build()
+    # новий порядок §6: PR стику -> a17, PR A-17b/A-17c закрито без злиття
+    mg("rec", "a18"); mg("join", "rec"); mg("a17", "join"); mg("base", "a17")
+    assert run("merge-base", "--is-ancestor", "a18", "base", ok=False) == 0
+
+
 def selftest_demo_readme_template():
     """0.4.0: package/templates/demo-README.md (створює A-15 після SHA стенда) дозволений у diff-checks-acc A-17 і diff-allowed-7 A-18."""
     import types
@@ -1414,6 +1509,22 @@ def selftest_ai_decisions_scope():
     spec = load_spec("A-12")
     sc = [c for c in spec["checks"] if c["id"] == "scope-config-only"][0]
     assert "docs/industries/*/research/AI-DECISIONS.md" in sc["args"]["allow"], sc
+
+
+def selftest_report_name():
+    """Наряд A-17-6 при наявному старому A-17.md -> WARN (звіту ще немає), не FAIL за чужим звітом."""
+    import types
+    d = tempfile.mkdtemp()
+    run = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, text=True, check=True).stdout.strip()
+    run("init", "-q", "-b", "main"); run("config", "user.email", "t@example.test"); run("config", "user.name", "t")
+    os.makedirs(os.path.join(d, "tests/reports"))
+    open(os.path.join(d, "tests/reports/A-17.md"), "w", encoding="utf-8").write("старий звіт без handoff\n")
+    run("add", "."); run("commit", "-qm", "c0"); head = run("rev-parse", "HEAD")
+    a = types.SimpleNamespace(repo=d, mode="result", base=head, head=head, agent_pattern=None, naryad="tests/naryad/A-17-6.yaml")
+    ctx = Ctx(a, {"step": "A-17", "attempt": 6, "mode": "manager", "created_by": "manager", "executor_session": None, "review": None})
+    manager_checks(ctx, "report-handoff")
+    st = [r["status"] for r in ctx.rows if r["id"] == "report-handoff"]
+    assert st == ["WARN"], st
 
 
 def selftest_e3():

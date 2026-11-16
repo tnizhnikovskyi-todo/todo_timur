@@ -74,16 +74,27 @@ def step_text(line):
     return line
 
 
+ABBR = {"напр", "див", "табл", "рис", "пр", "ін", "ім", "грн", "тис", "коп", "ст", "п", "т", "д", "с", "вул", "тел", "прим", "див", "зокр", "англ", "укр", "мін", "год", "шт", "кг", "мм", "см", "м"}
+
+
 def split_fragments(text):
-    """Речення/фрагменти за . ; ! ? поза лапками «…»."""
+    """Речення/фрагменти за . ; ! ? поза лапками «…». Крапка в скороченнях («напр.», «т.д.», «тис.»), у числах («1.5», «12.2025») і перед малою літерою
+    речення не завершує (0.4.2: раніше «напр.» різало речення й губило заперечення -> хибний FAIL)."""
     out, cur, depth = [], "", 0
-    for ch in text:
+    for i, ch in enumerate(text):
         cur += ch
         if ch == "«":
             depth += 1
         elif ch == "»":
             depth = max(0, depth - 1)
         elif ch in ".;!?" and depth == 0:
+            if ch == ".":
+                prev = re.search(r"([A-Za-zА-Яа-яІіЇїЄєҐґ']+|\d+)$", cur[:-1])
+                word = prev.group(1).lower() if prev else ""
+                nxt = text[i + 1:i + 3]
+                rest = text[i + 1:].lstrip()
+                if word in ABBR or (word.isdigit() and rest[:1].isdigit() and not nxt[:1].isspace()) or (rest[:1].islower() and rest[:1].isalpha()):
+                    continue
             out.append(cur)
             cur = ""
     out.append(cur)
@@ -96,9 +107,13 @@ def step_names(line):
     for fr in split_fragments(OTHER_ROLE.sub(" ", step_text(line))):
         if NEGATION.search(fr):  # «не бачить», «лише в режимі розробника», «скасовує керівник»: назва згадана як те, чого роль НЕ робить
             continue
-        sm = re.search(r"смарт-кнопк\w*", fr, re.I)  # назви після «смарт-кнопки …:» — кнопки, не меню (збіг назви зі стандартним меню — не доручення меню)
+        sm = re.search(r"смарт-кнопк\w*", fr, re.I)  # назви після «смарт-кнопки …» — кнопки, КРІМ назв, що в тому ж реченні названі меню/пунктом/розділом/шляхом «A → B» (0.4.2: меню після кнопки раніше не перевірялось)
         head, tail = (fr[:sm.start()], fr[sm.start():]) if sm else (fr, "")
-        names += [(n, False) for n in re.findall(r"«([^»]+)»", head)] + [(n, True) for n in re.findall(r"«([^»]+)»", tail)]
+        names += [(n, False) for n in re.findall(r"«([^»]+)»", head)]
+        for m in re.finditer(r"«([^»]+)»", tail):
+            ctxt = tail[max(0, m.start() - 40):m.start()]
+            is_menu = "→" in m.group(1) or re.search(r"(меню|пункт\w*|розділ\w*|відкрий\w*|перейд\w*|застосунок|застосунк\w*)\W*$", ctxt, re.I)
+            names.append((m.group(1), not is_menu))
     return names
 
 
@@ -307,14 +322,21 @@ def demo_implied(a, groups):
                     parse_security(os.path.join(dp, f), m, groups)
 
 
+EE_DEPS = {"helpdesk", "quality_control", "quality", "mrp_workorder", "mrp_plm", "web_studio", "documents", "approvals", "planning", "sign", "appointment", "marketing_automation",
+           "industry_fsm", "stock_barcode", "account_accountant", "account_reports", "hr_payroll", "mrp_workorder_hr", "sale_subscription", "website_slides_survey_ee", "knowledge", "spreadsheet_dashboard_edition"}
+
+
 def mod_installable_ce(a, mod):
-    """Модуль td_* ставиться на CE: усі depends є в td_-аддонах чи у вихідниках --odoo-src. EE-мости (depends: helpdesk, quality_control, …) на CE-стенді не встановлені — їхні перевизначення меню не діють."""
-    if not a.odoo_src or not a.addons:
+    """Модуль td_* ставиться на CE: усі depends є в td_-аддонах чи у вихідниках --odoo-src. EE-мости (depends: helpdesk, quality_control, …) на CE-стенді не встановлені — їхні перевизначення меню не діють.
+    0.4.2: без --odoo-src модуль з назвою `*_ee` або з залежністю зі списку EE_DEPS вважається НЕ встановленим на CE (раніше завжди True -> перевизначення меню EE-мостів застосовувались до CE-стенда)."""
+    if not a.addons:
         return True
     try:
         deps = ast.literal_eval(open(os.path.join(a.addons, mod, "__manifest__.py"), encoding="utf-8").read()).get("depends", [])
     except (OSError, ValueError, SyntaxError):
         return True
+    if not a.odoo_src:
+        return not (mod.endswith("_ee") or any(d in EE_DEPS or d.endswith("_ee") for d in deps))
     return all(d.startswith("td_") or any(os.path.isdir(os.path.join(r_, d)) for r_ in std_roots(a.odoo_src)) for d in deps)
 
 
@@ -614,7 +636,170 @@ def admin_must(adm_raw, a, ui, config_dir):
 
 
 
+# ---------- 0.4.2: рядок покриття -> конкретний крок (LESSONS §28 п. 1), значки в списках ----------
+ACTION_VERB = re.compile(r"(?i)\b(натисн|відкри|обер|вибер|введ|заповн|перейд|створ|підтверд|позначт|додай|збере|скасу|запуст|клацн|скануй|відскануй|роздрук|зафіксу|вкаж|перегляд|перевір|змін|видал|завантаж|експорт|імпорт|прикріп|передай|постав|знайд|виконай|відправ|надішл|друкуй|налашт|встанов|активу|архівуй|підпиш|признач|оформ)\w*")
+MENU_PATH = re.compile(r"→|(?:меню|застосунк\w*|пункт\w*|розділ\w*|вкладк\w*)\s*«[^»]+»|«[^»]+»\s*(?:→|>|›)")
+STEP_REF = re.compile(r"([\w\-]+\.md)\W{0,20}?(?:крок|кр\.?|step|#\s*крок)\s*[-№ ]?\s*(\d+)", re.I)
+NO_STEP_STATUS = re.compile(r"(?i)відкинут|не\s+розроблен|не\s+робимо|немає\s+в\s+пакеті|ee\s+не\s+перевірено")
+SECTION_ROW = re.compile(r"(?m)^##\s+Покриття:\s*(заявлене|розроблене)[^\n]*\n(.*?)(?=^##\s|\Z)", re.S)
+
+
+def steps_of(md):
+    """[(номер, текст, заголовок розділу)] для кроків (рядок таблиці `| N |` або `N.`) у файлі посібника."""
+    out, head = [], ""
+    for ln in md.splitlines():
+        hm = re.match(r"#{2,4}\s+(.*)", ln)
+        if hm:
+            head = hm.group(1)
+            continue
+        m = STEP_LINE.match(ln)
+        if m:
+            num = re.match(r"\s*\|?\s*(\d+)", ln)
+            out.append((int(num.group(1)), step_text(ln), head))
+    return out
+
+
+def cover_step_check(index, texts, require):
+    """UG-cover-step: рядок таблиці покриття («заявлене», «розроблене») вказує на конкретний крок (`<файл>.md крок N`), у якому є дієслово дії й шлях меню."""
+    bad, warn, n = [], [], 0
+    for kind, block in SECTION_ROW.findall(index):
+        lines = block.splitlines()
+        for i, ln in enumerate(lines):
+            if not ln.strip().startswith("|") or re.match(r"\s*\|[\s\-|:]+\|?\s*$", ln):
+                continue
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            if re.match(r"\s*\|[\s\-|:]+\|?\s*$", nxt):
+                continue  # будь-яка шапка таблиці (за нею іде рядок-роздільник)
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if not cells or cells[0].startswith("<"):
+                continue
+            if kind == "розроблене" and len(cells) > 1 and cells[1].startswith("<"):
+                continue
+            if any(c in ("—", "–", "-") for c in cells[1:]) or NO_STEP_STATUS.search(" ".join(cells[1:])):
+                continue  # свідомо відсутнє в пакеті (відкинуто, не розроблено…) — кроку не потрібно
+            n += 1
+            label = cells[0][:50]
+            refs = STEP_REF.findall(ln)
+            if not refs:
+                (bad if require else warn).append(f"{kind}: «{label}» — немає посилання на крок (`<файл>.md крок N`)")
+                continue
+            ok = False
+            for fn, num in refs:
+                steps = [s for s in steps_of(texts.get(fn, "")) if s[0] == int(num)]
+                sc = re.search(r"SC-\d+", cells[0])
+                if sc:
+                    steps = [s for s in steps if sc.group(0) in s[2]] or steps
+                if any(ACTION_VERB.search(s[1]) and MENU_PATH.search(s[1]) for s in steps):
+                    ok = True
+                elif not steps:
+                    bad.append(f"{kind}: «{label}» — {fn} крок {num} не знайдено")
+                    ok = True
+            if not ok:
+                bad.append(f"{kind}: «{label}» — у кроці немає дієслова дії й шляху меню (лише згадка)")
+    return n, bad, warn
+
+
+
+def errors_check(root, role_files, messages_md, index, strict, known_ui=()):
+    """UG-errors (0.4.2): «Типові помилки» кожної ролі ↔ reference/messages.md. (а) у кожному посібнику ролі є блок «Типові помилки»; (б) тексти повідомлень у «…» блоку є в довіднику дослівно;
+    (в) повідомлення, де «хто виправляє» = ця роль, згадано в її посібнику. Повертає (bad, warn)."""
+    norm = lambda s: re.sub(r"\s+", " ", s.replace("|", "/").replace("\n", " ")).strip()
+    nb = norm(messages_md)
+    tail = lambda t: t.strip().rstrip(".…!?;, ").strip()  # кінцева пунктуація всередині лапок не значуща
+    nbt = tail(nb)
+    nbs = {tail(m) for m in re.findall(r"«([^»]+)»", nb)}
+    kui = {norm(x).lower() for x in known_ui}
+    bad, warn = [], []
+    role_of = {}
+    for ln in index.splitlines():
+        c = [x.strip() for x in ln.strip().strip("|").split("|")]
+        if ln.strip().startswith("|") and len(c) >= 2 and c[1].endswith(".md") and c[1] not in ("admin.md",) and not c[1].startswith("<"):
+            role_of[c[1]] = c[0].lower()
+    rows = []
+    for ln in messages_md.splitlines():
+        if ln.startswith("|") and "«" in ln:
+            c = [x.strip() for x in ln.strip().strip("|").split("|")]
+            if len(c) >= 4:
+                m = re.match(r"«(.+)»", c[0])
+                if m:
+                    rows.append((norm(m.group(1)), c[3].lower()))
+    for n in role_files:
+        if n in ("admin.md",):
+            continue
+        txt = open(os.path.join(root, n), encoding="utf-8").read()
+        blocks = re.findall(r"(?ms)^[#*\s-]*Типові помилки[^\n]*\n?(.*?)(?=^#{1,4}\s|^\s*Питання й відповіді|\Z)", txt)
+        head_inline = re.findall(r"(?m)^[*\s-]*Типові помилки[^\n]*", txt)
+        body = " ".join(blocks + head_inline)
+        if not head_inline and not blocks:
+            (bad if strict else warn).append(f"{n}: немає блока «Типові помилки»")
+            continue
+        for q in re.findall(r"«([^»]{15,})»", body):
+            nq = norm(q)
+            if "«" + nq + "»" in nb or tail(nq) in nbs or re.search(r"→|›", q):
+                continue
+            if tail(nq).lower() in kui or nq.lower() in kui:  # назва меню/дії/кнопки/звіту td_* чи стандартного модуля, не повідомлення
+                continue
+            (bad if strict else warn).append(f"{n}: «{q[:50]}…» у «Типових помилках» немає в messages.md дослівно")
+        nt = norm(txt)
+        role = role_of.get(n, n[:-3].lower())
+        miss = [m for m, who in rows if (role and role in who) and tail(m) not in nt]
+        if miss:
+            (bad if strict else warn).append(f"{n}: повідомлення, які виправляє роль, не згадано ({len(miss)}): " + "; ".join("«" + x[:40] + "»" for x in miss[:4]))
+    return bad, warn
+
+
+def selftest():
+    """0.4.2: регрес трьох minor (split на скороченнях/числах, меню після «смарт-кнопк…», mod_installable_ce без --odoo-src)."""
+    fr = split_fragments("Відкрийте меню, напр. «Заміри». Роль не бачить «Звіти». Далі 1.5 години; потім ok.")
+    assert len(fr) == 4 and "напр." in fr[0], fr
+    fr = split_fragments("Кнопка доступна тощо. Комірник не бачить «Обмін з BAS» у т.д. меню.")
+    assert any(NEGATION.search(f) and "Обмін з BAS" in f for f in fr), fr
+    assert step_names("1. Натисніть смарт-кнопку «Заміри», потім у меню «Журнал» перегляньте.") == [("Заміри", True), ("Журнал", False)]
+    assert step_names("| 1 | Смарт-кнопка «Заміри», далі «Продажі → Замовлення». | кадр |") == [("Заміри", True), ("Продажі → Замовлення", False)]
+    import tempfile, types
+    d = tempfile.mkdtemp()
+    for m, deps in (("td_x_ee", ["base"]), ("td_y", ["helpdesk"]), ("td_z", ["sale", "td_x"])):
+        os.makedirs(os.path.join(d, m))
+        open(os.path.join(d, m, "__manifest__.py"), "w").write(repr({"name": m, "depends": deps}))
+    a = types.SimpleNamespace(addons=d, odoo_src=None)
+    assert not mod_installable_ce(a, "td_x_ee") and not mod_installable_ce(a, "td_y") and mod_installable_ce(a, "td_z")
+    idx = "## Покриття: заявлене\n| Сценарій SPEC | Розділ | Статус |\n|---|---|---|\n| SC-01 | k.md крок 2 | готово |\n| SC-02 | k.md крок 3 | готово |\n| SC-03 | k.md | готово |\n\n## Відкриті дефекти\n"
+    txt = {"k.md": "## SC-01 Замір\n| 1 | Відкрийте меню «Заміри → Замовлення». | кадр |\n| 2 | Натисніть «Створити» у меню «Заміри → Замовлення». | кадр |\n| 3 | Див. розділ про замір. | кадр |\n"}
+    n, bad, warn = cover_step_check(idx, txt, True)
+    assert n == 3 and len(bad) == 2 and any("SC-02" in b and "немає дієслова" in b for b in bad) and any("SC-03" in b for b in bad), (n, bad)
+    n, bad, warn = cover_step_check(idx, txt, False)
+    assert len(bad) == 1 and len(warn) == 1, (bad, warn)
+    # 0.4.2 (рецензія): довільні шапки таблиць і рядки «відкинуто / не розроблено / —» не вимагають кроку
+    idx2 = ("## Покриття: заявлене\n| F-xx | Функція | Розділ |\n|---|---|---|\n| F-01 | Замір | k.md крок 1 |\n| F-13 | Відкинуто | функцію відкинуто, розділу не потрібно |\n\n"
+            "| AC | Назва | Розділ |\n|---|---|---|\n| AC-01 | Замір | k.md крок 1 |\n\n| Пункт BOX | Статус | Розділ |\n|---|---|---|\n| SC-09 | — | не розроблено (коробка B) |\n| §11.2 | не розроблено | — |\n\n## Відкриті дефекти\n")
+    txt2 = {"k.md": "## SC-01 Замір\n| 1 | Відкрийте меню «Заміри → Замовлення». | кадр |\n"}
+    n, bad, warn = cover_step_check(idx2, txt2, True)
+    assert n == 2 and not bad and not warn, (n, bad, warn)
+    d2 = tempfile.mkdtemp()
+    open(os.path.join(d2, "k.md"), "w", encoding="utf-8").write("## SC-01\nТипові помилки: «Не вистачає залишку на складі» -> див. reference/messages.md.\n")
+    mm = "| Повідомлення | Коли | Що робити | Хто виправляє | Джерело |\n|---|---|---|---|---|\n| «Не вистачає залишку на складі» | при списанні | поповнити | комірник | a.py:1 |\n| «Заборонено змінювати підтверджений замір» | при зміні | звернутись | комірник | a.py:2 |\n"
+    b, w = errors_check(d2, ["k.md"], mm, "| Роль | Посібник |\n|---|---|\n| Комірник | k.md |\n", False)
+    assert not b and len(w) == 1 and "Заборонено" in w[0], (b, w)
+    b, w = errors_check(d2, ["k.md"], mm, "| Роль | Посібник |\n|---|---|\n| Комірник | k.md |\n", True)
+    assert len(b) == 1, b
+    # 0.4.2 (рецензія): назва меню в «Типових помилках» — не повідомлення; крапка всередині лапок довідника не значуща
+    d3 = tempfile.mkdtemp()
+    open(os.path.join(d3, "k.md"), "w", encoding="utf-8").write("## SC-01\nТипові помилки: екран «Параметри розкрою» порожній; «Не вистачає залишку на складі» — див. довідник; «Курс не знайдено у джерелі nbu_online» теж.\n")
+    mm3 = "| Повідомлення | Коли | Що робити | Хто виправляє | Джерело |\n|---|---|---|---|---|\n| «Не вистачає залишку на складі» | x | y | технолог | a.py:1 |\n| «Курс не знайдено у джерелі nbu_online.» | x | y | технолог | a.py:2 |\n"
+    ix3 = "| Роль | Посібник |\n|---|---|\n| Технолог | k.md |\n"
+    b, w = errors_check(d3, ["k.md"], mm3, ix3, True, {"Параметри розкрою"})
+    assert not b, b
+    b, w = errors_check(d3, ["k.md"], mm3, ix3, True)
+    assert len(b) == 1 and "Параметри розкрою" in b[0], b
+    b, w = errors_check(d3, ["k.md"], mm3, ix3, False)
+    assert not b and len(w) == 1, (b, w)
+    print("selftest OK")
+    return 0
+
+
 def main():
+    if "--selftest" in sys.argv:
+        return selftest()
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True)
     ap.add_argument("--spec", required=True, action="append")
@@ -626,6 +811,7 @@ def main():
     ap.add_argument("--config")
     ap.add_argument("--role-groups", help="plan.md стенда (таблиця ролей: логін у `…@…`, групи `модуль.group_*`) або JSON {роль: [групи]}: UG-access")
     ap.add_argument("--odoo-src", help="корінь вихідників Odoo 19.0 (addons/, odoo/addons/base): uk.po і security стандартних модулів для UG-std-label, UG-access")
+    ap.add_argument("--strict", "--require-step-refs", dest="require_step_refs", action="store_true", help="0.4.2: UG-cover-step (рядок покриття без посилання на крок), UG-errors (розділ «Типові помилки» ролі ↔ messages.md) і UG-icons (чужа або відсутня іконка) = FAIL; без прапорця — WARN; для A-16b прапорець обов'язковий")
     ap.add_argument("--std-modules", default="", help="додаткові стандартні модулі для UG-std-label (через кому)")
     a = ap.parse_args()
     global SC
@@ -697,6 +883,14 @@ def main():
         elif spec_used and not spec_used.replace("\\", "/").endswith(sm.group(1).lstrip("./")):
             bad.append(f"INDEX називає джерело {sm.group(1)}, а перше з ID — {spec_used}")
         add("UG-cover", "FAIL" if bad else "PASS", "; ".join(bad[:12]))
+
+    # UG-cover-step (0.4.2): рядок покриття -> конкретний крок з дієсловом дії й шляхом меню
+    if not index:
+        add("UG-cover-step", "SKIPPED", "немає INDEX.md")
+    else:
+        texts = {n: open(os.path.join(root, n), encoding="utf-8").read() for n in role_files}
+        n_rows, bad_s, warn_s = cover_step_check(index, texts, a.require_step_refs)
+        add("UG-cover-step", "FAIL" if bad_s else ("WARN" if warn_s else "PASS"), "; ".join((bad_s + warn_s)[:12]) + (f" (рядків покриття: {n_rows})" if bad_s or warn_s else ""))
 
     # UG-img
     md_files = [(os.path.join(root, n), n) for n in role_files] + [(os.path.join(cards_dir, n), "cards/" + n) for n in card_files]
@@ -794,6 +988,7 @@ def main():
     # UG-cover-dev / UG-cover-admin (§26а)
     all_txt = {n: open(os.path.join(root, n), encoding="utf-8").read().lower() for n in role_files}
     body = "\n".join(all_txt.values())
+    known_ui = set()
     if not a.addons:
         add("UG-cover-dev", "SKIPPED", "немає --addons: покриття розробленого (меню, дії, звіти td_*) перевірити вручну")
     else:
@@ -856,6 +1051,9 @@ def main():
             t = (trs(n, m) or [None])[0]
             return f"{m}: «{n}»" + (f" → «{t}»" if t and t != n else "")
         miss = sorted(shown(n, m) for n, m in items.items() if not named(n, m))
+        for nm_, m_ in items.items():
+            known_ui.add(nm_)
+            known_ui.update(trs(nm_, m_))
         noidx = [] if re.search(r"(?mi)^##\s*Покриття:\s*розроблене", index) else ["в INDEX немає таблиці «## Покриття: розроблене»"]
         if not items and any(d.startswith("td_") for d in os.listdir(a.addons)):
             noidx.append("не зібрано жодного меню/дії td_* в --addons (перевір шлях)")
@@ -945,6 +1143,29 @@ def main():
         add("UG-cover-buttons", "FAIL" if msg else ("WARN" if (hd_miss or unres) else "PASS"),
             "; ".join(msg + ([f"кнопки заголовка форм без згадки ({len(hd_miss)}): {', '.join(hd_miss)}"] if hd_miss else [])
                       + ([f"підпис смарт-кнопки не визначено, покриття не перевірено ({len(unres)}): {'; '.join(unres)}"] if unres else [])))
+
+    # UG-cover-badges (0.4.2): значки/бейджі й кольорові індикатори в списках td_* (widget badge/state_selection/boolean_toggle/priority, decoration-* на полі) названо в посібниках
+    if a.addons:
+        bd_miss, bd_n = [], 0
+        po_by2 = {m: load_po(os.path.join(a.addons, m, "i18n", "uk.po")) for m in td_modules(a.addons)}
+        for mod in td_modules(a.addons):
+            for path in walk_mod(a.addons, mod, ".xml"):
+                try:
+                    tree = ET.parse(path)
+                except (ET.ParseError, OSError):
+                    continue
+                for lst in list(tree.iter("list")) + list(tree.iter("tree")):
+                    for f_ in lst.iter("field"):
+                        if f_.get("widget") in ("badge", "state_selection", "boolean_toggle", "priority", "label_selection") or any(k.startswith("decoration-") for k in f_.attrib):
+                            lab = f_.get("string") or f_.get("name")
+                            bd_n += 1
+                            vs = {lab, po_by2.get(mod, {}).get(lab) or lab, f_.get("name") or ""}
+                            if not any(v and re.search(r"(?<!\w)" + re.escape(v.lower()) + r"(?!\w)", body) for v in vs):
+                                bd_miss.append(f"{mod}: «{lab}»")
+        bd_miss = sorted(set(bd_miss))
+        add("UG-cover-badges", "WARN" if bd_miss else "PASS", (f"значки/індикатори у списках без пояснення («що означає колір/значок») ({len(bd_miss)}): " + ", ".join(bd_miss[:15])) if bd_miss else "")
+    else:
+        add("UG-cover-badges", "SKIPPED", "немає --addons: значки у списках перевірити вручну")
 
     # UG-access: groups меню/кнопок, названих у кроках ролі, ⊆ групи ролі (LESSONS §28а). Недоступне = дефект (A-11/A-12), не обхід текстом
     rg, rg_incomplete, rg_src = role_groups_map(a, root)
@@ -1112,6 +1333,73 @@ def main():
             add("UG-messages", "WARN", "у td_* не знайдено raise UserError/ValidationError/AccessError (перевірити шлях --addons)")
         else:
             add("UG-messages", "FAIL" if bad else ("WARN" if warn else "PASS"), "; ".join(bad + warn))
+
+    # UG-errors (0.4.2): «Типові помилки» ролі ↔ reference/messages.md
+    mp2 = os.path.join(root, "reference", "messages.md")
+    if not os.path.exists(mp2):
+        add("UG-errors", "SKIPPED", "немає reference/messages.md (див. UG-messages)")
+    else:
+        known_ui |= {x["name"] for x in ui_all["menus"] + ui_all["buttons"] if x.get("name")}
+        if a.addons:
+            for m_ in td_modules(a.addons):
+                known_ui.update(load_po(os.path.join(a.addons, m_, "i18n", "uk.po")).values())
+        e_bad, e_warn = errors_check(root, role_files, open(mp2, encoding="utf-8").read(), index, a.require_step_refs, known_ui)
+        add("UG-errors", "FAIL" if e_bad else ("WARN" if e_warn else "PASS"), "; ".join((e_bad + e_warn)[:10]))
+
+    # UG-icons / UG-home (0.4.2): іконки кореневих меню td_* — власні, у стилі Odoo 19; td_home_menu — вигляд EE (AC) і кадр головного екрана
+    if not a.addons:
+        add("UG-icons", "SKIPPED", "немає --addons: web_icon кореневих меню td_* перевірити вручну")
+        add("UG-home", "SKIPPED", "немає --addons")
+    else:
+        ic_bad, ic_warn, ic_n = [], [], 0
+        for mod in td_modules(a.addons):
+            for path in walk_mod(a.addons, mod, ".xml"):
+                try:
+                    tree = ET.parse(path)
+                except (ET.ParseError, OSError):
+                    continue
+                for el in tree.iter("menuitem"):
+                    if el.get("parent") or el.get("parent_id"):
+                        continue  # лише кореневі меню (плитки головного екрана)
+                    ic_n += 1
+                    wi = (el.get("web_icon") or "").strip()
+                    nm = el.get("name") or el.get("id")
+                    if not wi:
+                        ic_warn.append(f"{mod}: «{nm}» без web_icon (власна іконка td_*)")
+                        continue
+                    own, _, rel = wi.partition(",")
+                    if own != mod and not (own.startswith("td_") and os.path.isdir(os.path.join(a.addons, own))):
+                        ic_bad.append(f"{mod}: «{nm}» web_icon={wi} — чужа іконка (стандартного модуля), потрібна власна в {mod}/static/description/")
+                    elif rel and not os.path.exists(os.path.join(a.addons, own, rel)):
+                        ic_bad.append(f"{mod}: «{nm}» web_icon={wi} — файлу немає")
+        add("UG-icons", ("FAIL" if a.require_step_refs else "WARN") if ic_bad else ("WARN" if ic_warn else "PASS"), "; ".join((ic_bad + ic_warn)[:8]) + (f" (кореневих меню: {ic_n})" if (ic_bad or ic_warn) else ""))
+        hm = os.path.join(a.addons, "td_home_menu")
+        if not os.path.isdir(hm):
+            add("UG-home", "SKIPPED", "td_home_menu у складі пакета немає")
+        else:
+            blob = ""
+            for dp, _, fs in os.walk(hm):
+                for f in fs:
+                    if f.endswith((".scss", ".css", ".xml", ".js")):
+                        try:
+                            blob += open(os.path.join(dp, f), encoding="utf-8").read() + "\n"
+                        except OSError:
+                            pass
+            need = {"плитка ~88px": r"88\s*px", "підпис в 1 рядок з ellipsis": r"text-overflow:\s*ellipsis", "title на плитці": r"title", "сітка 6 колонок": r"repeat\(\s*6|grid-template-columns[^;]*6|columns?:\s*6", "сітка 4 колонки": r"repeat\(\s*4|columns?:\s*4",
+                    "сітка 3 колонки": r"repeat\(\s*3|columns?:\s*3", "градієнт": r"gradient"}
+            miss = [k for k, rx in need.items() if not re.search(rx, blob)]
+            has_frame = bool(re.search(r"(?mi)^#{2,4}\s+.*(головн\w*\s+екран|домашн\w*\s+екран|home)", "\n".join(open(os.path.join(root, n), encoding="utf-8").read() for n in role_files)))
+            frame_img = False
+            for n in role_files:
+                for part in re.split(r"(?m)^(?=#{2,4}\s)", open(os.path.join(root, n), encoding="utf-8").read()):
+                    if re.match(r"#{2,4}\s+.*(головн\w*\s+екран|домашн\w*\s+екран|home)", part, re.I) and IMG.search(part):
+                        frame_img = True
+            msg = []
+            if miss:
+                msg.append("AC вигляду (еталон EE) у td_home_menu не знайдено ознак: " + ", ".join(miss))
+            if not frame_img:
+                msg.append("у посібниках немає розділу «Головний екран» зі знімком (кадр головного екрана td_home_menu під логіном ролі; пошук видимий, одне виділення)")
+            add("UG-home", "FAIL" if (msg and not has_frame and not frame_img) else ("WARN" if msg else "PASS"), "; ".join(msg))
 
     # UG-std-label: назви стандартного UI Odoo 19 у шляхах меню — лише з msgstr uk.po вихідників 19.0 (LESSONS §28а)
     stdset = std_po(a) if a.odoo_src else {}

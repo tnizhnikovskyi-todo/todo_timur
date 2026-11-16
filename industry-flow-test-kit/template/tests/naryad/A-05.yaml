@@ -1,10 +1,15 @@
 # ТЕСТОВИЙ наряд A-05 phase 1 (етап 1, без Odoo): шортліст еталонних клієнтів. Частина 2 (згоди, дати сесій) — Sales, у тесті не виконується.
 # Очікуваний результат скіла: waiting_human (role Sales, phase 2) — це штатне завершення частини 1.
 step: A-05
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: research
-skill_ref: ["flow-research:segment-selector@0.4.1"]
+skill_ref: ["flow-research:segment-selector@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

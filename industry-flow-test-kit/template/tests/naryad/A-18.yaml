@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-18 (збірка, 0.4.0): реліз пакета (phase: release, потім tag); AND-join A-17b і A-17c.
 step: A-18
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-build:package-release-builder@0.4.1"]
+skill_ref: ["flow-package-build:package-release-builder@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

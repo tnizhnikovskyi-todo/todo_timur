@@ -1,0 +1,62 @@
+{
+ "base": "http://127.0.0.1:8069",
+ "db": "demo",
+ "sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+ "password_env": "DEMO_USERS_PASSWORD",
+ "roles": [
+  {
+   "role": "komirnyk",
+   "login": "store@demo.example",
+   "shots": [
+    {
+     "sc": "SC-01",
+     "step": 1,
+     "url": "/odoo",
+     "actions": [
+      {
+       "menu": [
+        "Склад меблів"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "finansyst",
+   "login": "fin@demo.example",
+   "shots": [
+    {
+     "sc": "SC-02",
+     "step": 1,
+     "url": "/odoo",
+     "actions": [
+      {
+       "menu": [
+        "Обмін з BAS"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "role": "admin",
+   "login": "admin",
+   "shots": [
+    {
+     "sc": "SC-03",
+     "step": 1,
+     "url": "/odoo",
+     "actions": [
+      {
+       "menu": [
+        "Налаштування"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

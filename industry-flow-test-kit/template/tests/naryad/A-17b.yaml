@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-17b (збірка, 0.4.0): електронне навчання; пише також package/config/{manifest.yaml,CONFIG.md} (рядки website_slides і td_<галузь>_elearning).
 step: A-17b
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (картка кроку; `review_needed: ні` від чату кроку його не скасовує); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-build:elearning-builder@0.4.1"]
+skill_ref: ["flow-package-build:elearning-builder@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

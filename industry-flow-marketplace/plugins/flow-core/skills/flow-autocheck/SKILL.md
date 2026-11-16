@@ -86,6 +86,8 @@ SHA `origin/<base_branch>` на момент запуску (фіксуєтьс�
 міткою (`ЄДРПОУ`, `+380`), секретів і ідентифікаторів клієнтів з `clients/REGISTRY.md` у **доданих** рядках при `client_data != none`; голі 10-значні
 номери — `WARN`; при `client_data: none` усе — `WARN`. Значення збігу в таблицю не потрапляє, лише `шлях:рядок`.
 
+**0.4.2, режим manager (за замовчуванням):** у `result` `autocheck.py` додатково виконує `naryad-from-manager` (наряд створено менеджером: `created_by: manager`, ключі `executor_session`, `review`) і `report-handoff` (звіт `tests/reports/<крок>[-<спроба>].md` на head має повний блок `handoff`; звіту ще немає на head -> WARN: запусти після коміту звіту). `mode: queue` у наряді — SKIP; наряд без `mode`/`created_by` (до 0.4.2) — WARN. Скрипт: `scripts/check_handoff.py`; `--only report-handoff|naryad-from-manager` запускає лише їх.
+
 ## Крок 4. Режим `result` — перевірки кроку
 Усі перевірки зі специфікації виконуються, **без зупинки на першому FAIL**. Не вдалося виконати (немає SHA-об'єкта, файл не парситься, немає таблиці) —
 `ERROR`, не `PASS`. Немає мітки SHA в `ACCEPTANCE.md`/`CHECKS.md` — `FAIL missing-sha`. Що потребує людини чи гейта (`pr-review`, `config-review`,

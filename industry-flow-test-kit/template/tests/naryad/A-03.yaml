@@ -1,6 +1,11 @@
 # ТЕСТОВИЙ наряд A-03 (етап 1, без Odoo). Крок закриває скіл ОРГАНІЗАЦІЇ (каталог організації), версія — з claude-methodology-marketplace/.claude-plugin/marketplace.json (odoo19-discovery-initiation 0.12.1).
 # Скіл за замовчуванням пише в outputs/галузь_*.md; у тесті результат кладемо за `where` (сесія переносить/пише прямо туди). Це спостереження для observations/, якщо скіл не вміє `where`.
 step: A-03
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 skill_ref: ["odoo19-discovery-initiation:industry-briefing@0.12.1"]

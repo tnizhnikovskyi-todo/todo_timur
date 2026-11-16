@@ -67,6 +67,7 @@
 |---|---|---|
 | `check_intake.py` | `<OWNER-INTAKE.md> [--brief …] [--page …] [--allow-empty]` (анкета 6 пунктів; блокуючі editions, icp, todo_data, brand, materials) | INT-file, INT-block, INT-dup, INT-legacy (WARN про ключі 0.2.0) |
 | `check_rejected.py` | `<реєстр|артефакт>` (`--intake`/`--k1` застарілі: приймаються й ігноруються з WARN REJ-args) | REJ-exists, REJ-fields (ID, що, чому), REJ-count |
+| `check_handoff.py` | `[--report <tests/reports/….md>] [--naryad <наряд>]` (0.4.2; режим manager) | `report-handoff` (блок `handoff` повний: branch, head_sha, pr, base, stand, done, open, ai_decisions, defects, next_hint, review_needed), `report-handoff-facts` (WARN: next_hint як наказ), `naryad-from-manager` (`created_by: manager`, `executor_session`, `review`); `mode: queue` — SKIP; наряд без `mode`/`created_by` (до 0.4.2) — WARN |
 | `check_facts.py` | `<facts.yaml|json> <файли/теки…> [--require-markers]` (маркер `<!--fact:ключ-->`, `data-fact="ключ"`) | FACT-mismatch, FACT-orphan, FACT-markers, FACT-unmarked |
 | `check_brand.py` | `<файли/теки…> --brand BRAND.md [--exclude <тека>]` (shoot/, screens*/, video/rec/, dom/ пропускаються) | BR-colors, BR-font, BR-logo |
 | `check_privacy.py` | `<research> [--pages …] [--materials …] [--allow BRAND.md]` (контакти бренду; DOM-дампи пропускаються) | PRV-pii, PRV-raw-place, PRV-client-code (FAIL у сторінках і матеріалах), PRV-phone-bare (WARN) |

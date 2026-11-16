@@ -1,10 +1,15 @@
 # ТЕСТОВИЙ наряд A-04 (етап 1, без Odoo). Скіл вимагає executor: central і client_data: personal (Крок 0) — тут виконує сама сесія в ролі центрального агента;
 # у тесті реальних клієнтів немає: режим «лише звіти» AIKB, Fathom не читається (DATA_POLICY). Порожня таблиця в _input/sources.md = штатний waiting_human.
 step: A-04
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: central
 access_profile: research
-skill_ref: ["flow-research:past-projects-analyzer@0.4.1"]
+skill_ref: ["flow-research:past-projects-analyzer@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

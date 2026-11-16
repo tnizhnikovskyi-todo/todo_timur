@@ -1,10 +1,15 @@
 # ТЕСТОВИЙ наряд A-23 `список` (етап 1, без Odoo): попередній крок перед `prep` (flow-map.md: A-23 `список` -> A-23 `prep`). Файл адрес (`адреси`) НЕ запускати: центральний агент, Drive не визначено.
 # Очікувано: меблі корпоративних адрес < 300 -> розділ «Нестача корпоративних адрес» у mailing-list.md (відоме відкрите питання пакета).
 step: A-23
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: research
-skill_ref: ["flow-research:segment-selector@0.4.1"]
+skill_ref: ["flow-research:segment-selector@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

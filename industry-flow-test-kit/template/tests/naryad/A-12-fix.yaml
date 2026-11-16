@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-12 (0.4.0): повернення з A-14 (режим fix): «Модулі до установки» з урахуванням модулів §27 (td_home_menu, td_support, td_knowledge, td_<галузь>_knowledge); виконується ПІСЛЯ A-11-fix.yaml
 step: A-12
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: code-loop               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-build:config-as-code@0.4.1"]
+skill_ref: ["flow-package-build:config-as-code@0.4.2"]
 model: sonnet
 effort: medium
 params: {mode: fix}

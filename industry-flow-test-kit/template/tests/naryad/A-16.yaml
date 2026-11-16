@@ -1,5 +1,10 @@
 # ТЕСТОВИЙ наряд A-16 (0.4.0): тури сценаріїв (скіл організації за карткою A-16; у пакеті скіла немає — виконує сесія за package/demo/scenarios.md, заголовок SHA = SHA стенда)
 step: A-16
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: null
+chat: code-loop               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo

@@ -70,7 +70,7 @@ done
 
 START_BR=""; [ "$UPGRADE" = 1 ] && START_BR="$(git -C "$TARGET" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"; [ "$START_BR" != HEAD ] || START_BR=""
 # 4. Шаблони (без перезапису наявних, якщо немає --force)
-n_new=0; n_skip=0; n_over=0; skipped_list=""
+n_new=0; n_skip=0; n_over=0; skipped_list=""; over_list=""
 while IFS= read -r -d '' f; do
   rel="${f#"$TEMPLATE"/}"
   dst="$TARGET/$rel"
@@ -80,7 +80,7 @@ while IFS= read -r -d '' f; do
       flow/decisions.md|flow/params*|docs/*|package/DATA_POLICY.md) n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; continue ;;
     esac
     if [ "$UPGRADE" = 1 ] && [ "$rel" = "flow/ARTIFACTS.md" ] && ! grep -q "умова" "$dst"; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
-    elif [ "$UPGRADE" = 1 ] && [ "$rel" = "TEST-START.md" ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
+    elif [ "$UPGRADE" = 1 ] && { [ "$rel" = "TEST-START.md" ] || [ "$rel" = "tests/check-report.sh" ]; }; then cp -f "$f" "$dst"; n_over=$((n_over + 1)); over_list="$over_list $rel"   # службові файли, не дані репо
     elif [ "$FORCE" = 1 ]; then cp -f "$f" "$dst"; n_over=$((n_over + 1))
     else n_skip=$((n_skip + 1)); skipped_list="$skipped_list $rel"; fi
   else
@@ -112,7 +112,37 @@ if [ "$UPGRADE" = 1 ]; then
         grep -qxF "$want" "$e" || continue
         if [ "$(norm "$e")" = "$(norm "$f")" ]; then same=1; fi
       done
-      [ "$same" = 1 ] || diff_list="$diff_list $stem"
+      if [ "$same" != 1 ]; then
+        # вміст шаблону змінився в межах версії пакета (skill_ref той самий, напр. odoo19-*): є звіт -> нова спроба; немає -> перезапис
+        has_rep=0
+        for e in "$TARGET/tests/reports/$stem.md" "$TARGET"/tests/reports/"$stem"-[0-9]*.md; do [ -f "$e" ] && has_rep=1; done
+        mx=1; latest="$tdir/$stem.yaml"
+        for e in "$tdir/$stem"-[0-9]*.yaml; do
+          [ -f "$e" ] || continue
+          k="$(basename "$e" .yaml)"; k="${k##*-}"; case "$k" in *[!0-9]*) continue ;; esac
+          [ "$k" -le "$mx" ] || { mx="$k"; latest="$e"; }
+        done
+        for e in "$TARGET"/tests/reports/"$stem"-[0-9]*.md; do
+          [ -f "$e" ] || continue
+          k="$(basename "$e" .md)"; k="${k##*-}"; case "$k" in *[!0-9]*) continue ;; esac
+          [ "$k" -le "$mx" ] || mx="$k"
+        done
+        for e in "$tdir/$stem.yaml" "$tdir/$stem"-[0-9]*.yaml; do
+          [ -f "$e" ] || continue
+          k="$(grep -m1 '^attempt:' "$e" | sed 's/[^0-9]//g')"
+          case "$k" in ''|*[!0-9]*) continue ;; esac
+          [ "$k" -le "$mx" ] || mx="$k"
+        done
+        if [ "$has_rep" = 1 ]; then
+          nx=$((mx + 1))
+          sed -e "s#base_branch: main#base_branch: ${START_BR:-main}#" -e "s/^attempt: .*/attempt: $nx/" -e "s#^\(repo: .*branch: flow/\)$stem-test#\1$stem-$nx-test#" "$f" > "$tdir/$stem-$nx.yaml"
+          n_att=$((n_att + 1)); att_list="$att_list $stem-$nx.yaml"
+        else
+          oa="$(grep -m1 '^attempt:' "$latest" | sed 's/[^0-9]//g')"; [ -n "$oa" ] || oa=1
+          sed -e "s#base_branch: main#base_branch: ${START_BR:-main}#" -e "s/^attempt: .*/attempt: $oa/" "$f" > "$latest"
+          diff_list="$diff_list $(basename "$latest")"
+        fi
+      fi
       continue
     fi
     mx=1
@@ -160,7 +190,8 @@ echo "  скілів:  $n_skills у .claude/skills/"
 echo "  агентів: $n_agents у .claude/agents/"
 if [ "$UPGRADE" = 1 ] && [ -e "$TARGET/START-HERE.md" ]; then echo "  УВАГА: START-HERE.md застарів (не оновлюється --upgrade) — онови або видали"; fi
 echo "  нові спроби нарядів (--upgrade): $n_att$att_list"
-if [ -n "$diff_list" ]; then echo "  УВАГА: наряд відрізняється від шаблону при тому самому skill_ref (змінено в межах версії; звіту ще немає — заміни вручну, є звіт — нова спроба):$diff_list"; fi
-echo "  шаблони: нових $n_new, пропущено наявних $n_skip, перезаписано $n_over"
+if [ -n "$diff_list" ]; then echo "  наряди без звіту, перезаписані шаблоном (skill_ref той самий, вміст змінено в межах версії; якщо наряд правила людина — звір з git diff):$diff_list"; fi
+echo "  шаблони: нових $n_new, пропущено наявних $n_skip, перезаписано $n_over${over_list:+ (службові:$over_list)}"
 if [ -n "$skipped_list" ]; then echo "  пропущені (наявні; --force перезапише):$skipped_list"; fi
+echo "Режим за замовчуванням (0.4.2): менеджер-чат (TEST-START.md розділ в-1; references/manager-mode.md) — людина говорить з менеджером, він пише наряди й відкриває чат на крок."
 echo "Далі: прочитай TEST-START.md; закоміть результат (git add -A && git commit)."

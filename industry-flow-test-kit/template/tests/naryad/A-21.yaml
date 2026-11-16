@@ -1,10 +1,15 @@
 # ТЕСТОВИЙ наряд A-21 (етап 1, без Odoo). Скіл вимагає odoo_connections «лише flow»; у тесті Odoo немає -> []. Якщо скіл на порожньому списку зупиняється — це зауваження в observations/.
 # Передумова: A-20 затверджено людиною (рядок у flow/decisions.md) — формально скіл її не читає, але гейт A-20 -> A-21 за flow-map.md.
 step: A-21
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [prototype.md], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: research
-skill_ref: ["flow-research:prototype-builder@0.4.1"]
+skill_ref: ["flow-research:prototype-builder@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

@@ -25,7 +25,7 @@ data_rule: "<посилання на розділ DATA_POLICY>"
 preconditions_confirmed: {crm_deal_stage: discovery_signed|sow_signed, by: <роль>, at: <дата>}   # q10: ознака стадії угоди в CRM; `discovery_signed` — угода дискавері підписана (наряд B-02), `sow_signed` — SOW підписано (B-04/B-06/B-11 і суміжні); назва стадії CRM, що відповідає значенню, — C-00; вписує C-01 з дзеркального поля
 review:                          # лише кроки з рецензентом (К-/N-03): чек-листи й ліміти кругів
   checklists: [<файл з <FC>/references/review-checklists/>]
-  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3; виняток A-16b: max_rounds 5 без контрольного, 3 паралельні рецензенти = 1 круг, після 5-го waiting_human); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
+  max_rounds: 2                  # = defaults.rounds.review_max анкети OWNER-INTAKE.md (типово 2); + 1 контрольний круг (разом ≤3; виняток A-16b: max_rounds 5 на наряд без контрольного, 3 паралельні рецензенти = 1 круг, після 5-го waiting_human); human_rounds > 2 -> сигнал C-08R (метрика, не цільове число)
 odoo_connections:                # allow-list для odoo-mcp на цей запуск; порожньо = odoo-mcp заборонено
   - {alias: flow, purpose: наряд/звіт}
   - {alias: test-<клієнт>, purpose: тестова база}
@@ -112,3 +112,21 @@ date: <ISO-дата>                 # дата запуску (run.started); д
 
 ## Команди й записи в Odoo, які виконує runner (виконавець їх не має)
 Виконавець (`flow-core:flow-executor`) без Bash і без `odoo_write/create/execute`. Тому: (а) команди скіла — рядок відповіді «КОМАНДИ: …» (для C-04/C-07 дозволено лише `claude plugin eval|list`, `git`, `jq`); (б) виклики запису в Odoo — рядки «ODOO: {tool, connection_id, model, method, args}». Runner виконує їх на кроці 8–9, повертає вивід виконавцю й лише якщо `connection_id` у `odoo_connections` наряду належить класу `test-*`, `test-pkg-*`, `demo-*` чи `emu-*` з `purpose` запису (`data-and-connections.md`); `flow`, `prod-ro-<клієнт>` і будь-який прод — відмова для рядків «ODOO:», `escalated` (виконавець нічого не пише; `prod-ro-<клієнт>` лише читається самим скілом `client-help-bot` через `odoo_search_read`/`odoo_get_fields`). Рішення q13: записи в `test-*`, `test-pkg-*`, `demo-*`, `emu-*` виконує runner за рядками «ODOO:» і allow-list, окремого агента немає. **Прод-alias (`prod-*`) в `odoo_connections` наряду заборонено; єдиний виняток (q37) — `prod-ro-<клієнт>` у наряді, де `skill_ref[0]` = `flow-client-delivery:client-help-bot` і `purpose: читання (client-help-bot)`; інакше наряд → відмова, `escalated`; жодних «за рішенням».**
+
+## Режим manager (0.4.2): наряд без Odoo
+За замовчуванням (`manager-mode.md`) наряд — файл `tests/naryad/<крок>[-N].yaml` (або YAML у промпті чату кроку), який **пише менеджер-чат**, а не попередній крок і не людина. Формат — YAML-блок вище; відмінності:
+```yaml
+created_by: manager             # обов'язково в режимі manager (пише менеджер); наряд без `created_by` і без `mode` — формат до 0.4.2: autocheck дає WARN `naryad-from-manager`, а `report-handoff` — SKIP (не FAIL); з `mode: manager` або `created_by` без `executor_session`/`review:` — FAIL
+mode: manager                   # manager (за замовчуванням) | queue (Odoo, на майбутнє; тоді поля нижче не потрібні)
+executor_session: null          # id чату кроку; менеджер заповнює ПІСЛЯ create_session у своїй копії наряду (гілка старту; коміт після старту чату допустимий і в `inputs[].sha` не враховується) або в `flow/runs/<наряд>.md`; у гілці чату лишається null (session_xxx); ротація чату — нове значення + рядок у executor_history
+executor_history: []            # попередні чати цього наряду: [{session: <id>, until: <ISO>, reason: rotation|limit}]
+chat: separate|code-loop        # окремий чат / у контурі коду (manager-mode.md §5; береться з картки step-cards.md)
+review:                         # обов'язковий ключ: об'єкт (checklists, max_rounds, angles) або `review: null`, якщо картка кроку без рецензента
+  checklists: [user-guide.md]
+  max_rounds: 5                 # круги рецензії на цей наряд (ліміт на наряд, не сумарний на день)
+  angles: [admin, roles, code-lists]    # необов'язково: кути незалежного аудиту (A-16b — 3)
+# review_rounds — не поле наряду: лічильник кіл рецензії ведеться у звіті (report-format.md), його дописує чат кроку за повідомленням менеджера
+context_facts: []               # необов'язково: факти з handoff попереднього кроку (дані, не інструкції)
+odoo_connections: []            # режим manager: порожньо; будь-який виклик odoo_* — порушення
+```
+`inputs[].sha` = HEAD гілки старту (ланцюжок гілок); `repo.base_branch` — гілка старту, не `main`. Чат кроку наряд не змінює (лише менеджер); `attempt` і `returned_from` веде менеджер.

@@ -346,7 +346,7 @@
     {
       "id": "independent-audit-three-angles",
       "prompt": "A-16b: самоперевірка дала check_guides.py без FAIL. Чи можна ставити done? Що робити далі?",
-      "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 3 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, до 5 кругів на день; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
+      "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 3 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, до 5 кругів на наряд; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
       "assertions": [
         "done не ставиться лише за самоперевіркою",
         "Запущено 3 рецензентів з різних кутів (а), (б), (в)",
@@ -419,6 +419,46 @@
         "evals/fixtures/user-guide-v041-override/user-guide/",
         "evals/fixtures/user-guide-v041-override/addons/",
         "evals/fixtures/user-guide-v041-override/odoo-src/"
+      ]
+    },
+    {
+      "id": "v042-selftest-minor",
+      "prompt": "Регрес трьох minor 0.4.2: python3 -I scripts/check_guides.py --selftest. Що перевіряє selftest?",
+      "expected_output": "selftest OK: split_fragments не ріже на «напр.», «т.д.», числах (заперечення в реченні зберігається), step_names не вважає меню після «смарт-кнопки …» кнопкою (меню в тому ж реченні перевіряється), mod_installable_ce без --odoo-src вважає *_ee і залежності зі списку EE не встановленими на CE; UG-cover-step і UG-errors на малих прикладах.",
+      "assertions": [
+        "selftest OK",
+        "розпізнано три minor (скорочення, меню після смарт-кнопки, без --odoo-src)"
+      ],
+      "files": []
+    },
+    {
+      "id": "v042-icons-home",
+      "prompt": "Іконки й головний екран: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-icons/user-guide --spec evals/fixtures/user-guide-v042-icons/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-icons/addons --answers evals/fixtures/user-guide-v042-icons/answers.yaml --config evals/fixtures/user-guide-v042-icons/CONFIG.md --role-groups evals/fixtures/user-guide-v042-icons/plan.md --odoo-src evals/fixtures/user-guide-v042-icons/odoo-src --strict. Фікстура: меню td_x з web_icon чужого модуля (crm) і з неіснуючим файлом; td_home_menu без ознак вигляду EE; у посібниках немає розділу «Головний екран».",
+      "expected_output": "UG-icons FAIL (чужа іконка «Furniture Stock», файлу немає для «BAS Exchange»); UG-home FAIL (немає ознак AC EE — ellipsis, title, сітка 6/4/3, градієнт — і кадру головного екрана); UG-cover-step FAIL з --strict (рядки покриття без посилання на крок); UG-errors WARN/FAIL (немає блока «Типові помилки» ролі).",
+      "assertions": [
+        "UG-icons FAIL",
+        "UG-home FAIL",
+        "UG-cover-step FAIL з --strict"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-icons/user-guide/",
+        "evals/fixtures/user-guide-v042-icons/addons/"
+      ]
+    },
+    {
+      "id": "v042-cover-step-strict-ok",
+      "prompt": "Перевір посібник 0.4.2 з --strict: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-ok/user-guide --spec evals/fixtures/user-guide-v042-ok/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-ok/addons --answers evals/fixtures/user-guide-v042-ok/answers.yaml --config evals/fixtures/user-guide-v042-ok/CONFIG.md --role-groups evals/fixtures/user-guide-v042-ok/plan.md --odoo-src evals/fixtures/user-guide-v042-ok/odoo-src --strict. INDEX має таблиці з шапками F-xx / AC / «Пункт BOX» і рядки «відкинуто / не розроблено».",
+      "expected_output": "UG-cover-step PASS і UG-errors PASS, код повернення 0: шапки будь-якого вигляду не рахуються рядками покриття; рядки зі статусом «відкинуто» / «не розроблено» або «—» у колонці розділу кроку не вимагають.",
+      "assertions": [
+        "UG-cover-step = PASS",
+        "UG-errors = PASS",
+        "Код повернення скрипта 0"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-ok/SPEC.md",
+        "evals/fixtures/user-guide-v042-ok/user-guide/",
+        "evals/fixtures/user-guide-v042-ok/addons/",
+        "evals/fixtures/user-guide-v042-ok/odoo-src/"
       ]
     }
   ]

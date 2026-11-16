@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-21d (0.4.0): огляд покриття зрізу (slice-coverage)
 step: A-21d
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-research:completeness-audit@0.4.1"]
+skill_ref: ["flow-research:completeness-audit@0.4.2"]
 model: sonnet
 effort: medium
 params: {mode: slice-coverage}

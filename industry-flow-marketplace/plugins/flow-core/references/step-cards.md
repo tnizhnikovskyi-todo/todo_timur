@@ -2,6 +2,9 @@
 
 Чернетки для оновлення карток у Odoo після позначки C-00 «картки оновлено» (`c00-checklist.md`); джерело правди для порядку — `flow-map.md`, для `skill_ref`/`access_profile` — `step-skill-map.md`. Поля: `raciR` (виконавець), `executor`, `skillRef`, `access_profile`, `inArtifacts`, `outArtifacts`, гейт, `review.checklists` (`review-checklists/`), `params.sample` (N-18), ліміти (модель/ефорт; години; $) — стартові оцінки до першого прогону, стартова зрілість — 1 для всіх, ескалація. Шляхи — відносно `docs/industries/<галузь>/`, якщо не вказано інше.
 
+## Режим чату (0.4.2)
+Поле `chat` кожної картки: `окремий чат` (один наряд = один чат менеджера) або `у контурі коду` (A-11-fix -> A-12-fix -> A-14 -> A-15 -> A-16 -> A-16b refresh одним чатом, бо стенд живе в контейнері чату; `manager-mode.md` §5). Картки кроків без рядка `chat` (старі) — `окремий чат`, **крім контуру коду: A-11-fix, A-12-fix, A-14, A-15, A-16 (їхніх карток тут немає) — завжди `у контурі коду`**; у шаблонних нарядах поле `chat:` стоїть явно. Менеджер переносить значення в наряд (`chat:`).
+
 ## Ролі
 - **Контент-менеджер (маркетинг)** — людина зі своїм Claude, `executor: any`. Кроки: A-21c, A-23 `prep` (тексти), D-05 (кейси), A-18 (матеріали релізу); рецензент A-16b (чек-лист `user-guide.md`). Працює лише з контентом у репо (клас даних `commercial`), без баз Odoo (читає лише наряд), без `internal-raw`; профіль `content` (`flow-executor-content`).
 - **AI-інженер / агент Ретро** — веде C-04, C-07, C-08R: регрес евалів, розбір помилки AI, зведення уроків `LSN-xxx`; правки скілів — PR, рішення про зрілість кроку — людина.
@@ -11,6 +14,7 @@
 ## Картки
 
 ### A-02b. Анкета власника
+- `chat` (0.4.2): окремий чат
 - `raciR`: власник (R); BA (A)
 - `executor`: any (prepare/validate); human (заповнення)
 - `skillRef`: flow-research:owner-questionnaire
@@ -25,6 +29,7 @@
 - ескалація: власник не відповів за `human_sla` -> активність Тімліду; блокуюче поле порожнє -> `waiting_human`
 
 ### A-03b. Глибокий аналіз галузі й конкурентів
+- `chat` (0.4.2): окремий чат
 - `raciR`: BA (R)
 - `executor`: any
 - `skillRef`: flow-research:industry-deep-dive
@@ -40,6 +45,7 @@
 - ескалація: немає доступу до EE -> «не перевірено» (WARN), не стоп; брак доказів -> «ризик, перевірити на пілоті» (план A-23), не стоп
 
 ### A-03c. Готові модулі ToDo у збірку
+- `chat` (0.4.2): окремий чат
 - `raciR`: Архітектор (R)
 - `executor`: any (один наряд, без режимів)
 - `skillRef`: flow-research:reuse-modules
@@ -54,6 +60,7 @@
 - ескалація: репо/проєкт недоступні -> `waiting_human`; права на код невідомі -> «ні» до уточнення
 
 ### A-20. Концепція + BOX + SALES + REJECTED + AI-DECISIONS
+- `chat` (0.4.2): окремий чат
 - `raciR`: BA (R); Власник продукту (A)
 - `executor`: any
 - `skillRef`: flow-research:concept-mapper
@@ -68,6 +75,7 @@
 - ескалація: рекомендація AI проти анкети -> показати розбіжність, не перемагати анкету (С-01)
 
 ### A-20c. Сторінка для власника (1 Artifact, 3 сторінки) — єдиний гейт концепції
+- `chat` (0.4.2): окремий чат
 - `raciR`: Власник продукту (A, гейт); BA (R)
 - `executor`: any
 - `skillRef`: flow-research:concept-presentation
@@ -82,6 +90,7 @@
 - ескалація: контракт сторінки не виконано -> `returned` на себе (до 2 кругів + 1)
 
 ### A-21. Реальний зріз Odoo 19 `td_*` + живий запис + `facts.json`
+- `chat` (0.4.2): окремий чат
 - `raciR`: BA (R: сценарії й приймання); Архітектор або AI (код `td_*`); власник (приймання зразка)
 - `executor`: any
 - `skillRef`: flow-research:prototype-builder
@@ -96,6 +105,7 @@
 - ескалація: preflight середовища не пройдено -> `waiting_human` до витрат бюджету
 
 ### A-21d. Огляд покриття зрізу (slice-coverage, E3)
+- `chat` (0.4.2): окремий чат
 - `raciR`: AI (R); власник — вето через `veto-batch`
 - `executor`: ai; `skillRef`: flow-research:completeness-audit (`params.mode: slice-coverage`)
 - `access_profile`: research; `client_data: none`
@@ -108,6 +118,7 @@
 - ескалація: немає зрізу A-21 (`ACCEPTED.md`) -> `returned` на A-21
 
 ### A-21c. Продаючі матеріали
+- `chat` (0.4.2): окремий чат
 - `raciR`: Контент-менеджер (R); Власник продукту (A, гейт)
 - `executor`: any (Контент-менеджер)
 - `skillRef`: flow-research:showcase-content
@@ -122,6 +133,7 @@
 - ескалація: потрібна перезйомка -> повернути в A-21 з причиною
 
 ### A-22. База зрізу для гарячого ліда
+- `chat` (0.4.2): окремий чат
 - `raciR`: BA (R)
 - `executor`: any
 - `skillRef`: flow-package-build:demo-base-builder
@@ -136,6 +148,7 @@
 - ескалація: немає зрізу A-21 -> `escalated` до BA
 
 ### A-23. Тест попиту: список / адреси / prep / results
+- `chat` (0.4.2): окремий чат
 - `raciR`: Контент-менеджер (R, prep: тексти); BA (A)
 - `executor`: any; central (адреси)
 - `skillRef`: flow-research:demand-test-runner (prep/results); flow-research:segment-selector (список/адреси)
@@ -150,6 +163,7 @@
 - ескалація: сигнали нижче порогів -> ескалація без автопереходу
 
 ### A-08. SPEC пакета (режим `from-slice`, E2)
+- `chat` (0.4.2): окремий чат
 - `raciR`: BA / Архітектор (R); Власник продукту (A, гейт)
 - `executor`: any; `skillRef`: скіл організації (зовнішній, `odoo19-mvp-build:spec-writer` / `odoo19-tr-authoring:*`; `skill_ref` з картки)
 - `inArtifacts`: режим `from-slice` — `prototype-real/{PLAN.md, complexity.md, facts.json}`, `research/{BOX,SALES,REJECTED,AI-DECISIONS}.md`, `concept/*`; режим `перша` (лише без зрізу) — повний ТР
@@ -160,27 +174,32 @@
 - ескалація: у PLAN/complexity немає даних для AC -> `escalated` до BA з переліком прогалин
 
 ### A-16b. Інструкції користувача
+- `chat` (0.4.2): окремий чат на перший прохід; **у контурі коду** (manager-mode.md §5), коли A-16b — refresh після A-11-fix/A-12-fix/A-14/A-15/A-16: тим самим чатом, що піднімав стенд
+- **0.4.2 (перевірки й вимоги):** `check_guides.py --strict`: UG-cover-step (рядок покриття -> `<файл>.md крок N` з дієсловом дії й шляхом меню), UG-errors («Типові помилки» ролі ↔ `reference/messages.md`), UG-cover-badges (значки в списках), UG-icons (власні `web_icon` кореневих меню `td_*`, стиль Odoo 19, не чужі), UG-home (`td_home_menu`: AC вигляду EE й кадр головного екрана); публікація інструкцій приватним Artifact — необов'язково, лише після рецензії (`params.publish: artifact`); інструкції в `td_<галузь>_knowledge` — не тут, лише після затвердження A-17
 - `raciR`: AI (R, виконавець); Контент-менеджер / власник (рецензія, A)
 - `executor`: any; `skillRef`: flow-package-build:user-guide-builder
 - `access_profile`: repo
 - `inArtifacts`: package/SPEC.md (сценарії за ролями, AC); package/demo/ (стенд, ролі, скрипти, README із SHA); тури A-16 (`package/demo/scenarios.md`); `package/templates/answers.yaml` і профілі
 - `outArtifacts`: package/docs/user-guide/{INDEX.md, admin.md, <роль>.md, cards/<роль>.md, reference/messages.md, img/<роль>/*.png}; `package/demo/defects.md` — лише запис дефекту UI (повернення на A-14); INDEX — три таблиці покриття («заявлене»: сценарій SPEC -> розділ; «розроблене»: меню/дії/звіти td_* -> розділ; «налаштування й експлуатація»: ключі answers.yaml/VP-NN -> розділ) і SHA стенда; `package/docs/user-guide/img/SHOOT-LOG.md`, `shoot-plan.json`; рядок(и) AI-NN в `docs/industries/<галузь>/research/AI-DECISIONS.md` (запасний засіб зйомки, рішення AI)
 - гейт: ні (рецензія — чек-лист; крок закривається `done`, гейт — A-17)
-- `review.checklists`: [user-guide.md]; `review.max_rounds: 5` (без контрольного; цикл до нуля зауважень, ліміт 5 кругів на день, далі `waiting_human`); **незалежний аудит покриття (0.4.1) — обов'язковий після самоперевірки: 3 рецензенти `flow-reviewer` з різних кутів (адмін наскрізно / ролі: цикл замовлення, права, кадри / переліки з коду + F/AC + ACCEPTANCE), кожен із власним переліком із джерел; цикл до нуля зауважень; у тестовому наряді A-16b `review.max_rounds: 5` на день, зауваження лишились -> `waiting_human` і чекати рішення людини**
+- `review.checklists`: [user-guide.md]; `review.max_rounds: 5` (без контрольного; цикл до нуля зауважень, ліміт 5 кругів на наряд, далі `waiting_human`; у `manager` аудит запускає менеджер, чат кроку виправляє зауваження); **незалежний аудит покриття (0.4.1) — обов'язковий після самоперевірки: 3 рецензенти `flow-reviewer` з різних кутів (адмін наскрізно / ролі: цикл замовлення, права, кадри / переліки з коду + F/AC + ACCEPTANCE), кожен із власним переліком із джерел; цикл до нуля зауважень; у тестовому наряді A-16b `review.max_rounds: 5` на наряд, зауваження лишились -> `waiting_human` і чекати рішення людини**
 - перевірки (повний перелік — таблиця «Автоперевірка» SKILL.md скіла): `check_guides.py` (UG-files, UG-card, UG-roles, UG-admin, UG-admin-ops, UG-cover, UG-cover-dev, UG-cover-admin (§26а: заявлене / розроблене / налаштування й експлуатація; 0.4.1 — розділи `admin.md` з командами, `get_param`, меню лише для групи), UG-cover-buttons, UG-access (права ролей; джерело груп — `img/ROLE-GROUPS.json` зі стенда, обов'язковий артефакт, plan.md — запасне: FAIL за plan.md має дві причини, спершу зняти ROLE-GROUPS.json зі стенда (shoot.mjs) і повторити, на A-11/A-12 повертати лише коли FAIL підтверджено групами зі стенда; перевизначення меню записами `ir.ui.menu` без name враховуються; заперечення діє на фрагмент-речення клітинки, не на весь крок), UG-shots (кадри під логіном ролі), UG-messages (`reference/messages.md`), UG-std-label (назви за uk.po 19.0), UG-img, UG-sha, UG-lang) — `flow-autocheck/references/checks/A-16b.yaml`
 - ліміти: sonnet/medium; 4 год; $12; стартова зрілість: 1
 - примітки: скриншоти зі стенда на поточному SHA; текст кроків українською без англійських підписів
 - ескалація: дефект UI під час зйомки -> повернути в A-14 (не правити модулі тут); **права ролей / код** (меню чи кнопка, названі в кроці, недоступні групам ролі; UG-access, код 3 `shoot.mjs`) -> дефект у `defects.md` і повернення в `returned_to: A-11` (конфіг — A-12), далі контур A-11 -> A-12 -> A-14 -> A-15-full -> A-16 -> A-16b, **конфіг** (ролі, «Модулі до установки») -> A-12, не обхід текстом (пунктир A-16b -> A-11 / A-12 у `flow-map.md`); стенд недоступний -> A-15; стенд застарів: код пакета змінено після SHA гейтів (зокрема злито модулі §27: td_home_menu, td_support) -> контур коду 1: A-11-fix -> A-12-fix -> A-14 -> A-15-full -> A-16 -> A-16b; A-15 refresh окремим нарядом (AI сам, без людини) — лише коли `git diff --quiet <SHA_CHECKS>..HEAD` дає код 0 (SHA гейтів змінився лише міткою)
 
 ### A-17. Приймання пакета (змінена картка 0.4.0)
+- `chat` (0.4.2): окремий чат
 - `raciR`: Власник продукту (R, A); AI — чернетка `product-decision-drafter`
 - `skillRef`: flow-package-evolution:product-decision-drafter (AI-частина)
 - `inArtifacts`: package/{ACCEPTANCE.md, CHECKS.md, demo/, docs/user-guide/INDEX.md}
+- **інструкції в «Базу знань» `td_<галузь>_knowledge` (0.4.2): лише після затвердження A-17 (рішення AI-NN: **A-17c лише готує перелік статей** у `package/support/` — модуль після ACCEPTANCE не правиться, R-02; у `td_<галузь>_knowledge` вони потрапляють наступною версією пакета через D-02 / контур коду); A-16b модуль не вантажить**
 - гейт: так: Затвердити -> A-17b ∥ A-17c; Повернути -> A-08 / A-14 (з повтором A-15 -> A-16 -> A-16b -> A-17) / D-03
 - **рядок картки й чек-листа: «власник тестує стенд за інструкціями A-16b»** — власник проходить сценарії своєї ролі за `package/docs/user-guide/<роль>.md`, фіксує зауваження в `package/demo/defects.md`, у `ACCEPTANCE.md` — «власник тестував: дата, SHA». Стенд локальний (`package/demo/up.sh`); рішення про сервер відкрите; окремого наряду немає
 - примітки: сам стенд у карту не входить (відкрите рішення), лише точка «власник тестує»
 
 ### A-17b. Електронне навчання
+- `chat` (0.4.2): окремий чат
 - `raciR`: AI (R); Контент-менеджер / Власник продукту (рецензія, A)
 - `executor`: any; `skillRef`: flow-package-build:elearning-builder; `access_profile`: repo
 - `inArtifacts`: package/docs/user-guide/ (INDEX, розділи ролей, img); package/SPEC.md; `package/templates/answers.yaml` (ключі `elearning.mode: "on"|"off"`, `elearning.pass_score`; за замовчуванням 80); вихідники Odoo 19 (`website_slides`, `website_slides_survey`) — «перевірити файл:рядок»
@@ -193,6 +212,7 @@
 - ескалація: `website_slides` не встановлюється на CE -> `escalated` з логом; дефект тексту уроку -> A-16b
 
 ### A-17c. Інструкції для AI-підтримки
+- `chat` (0.4.2): окремий чат
 - `raciR`: AI (R); Власник продукту (A)
 - `executor`: any; `skillRef`: flow-package-build:support-kb-builder; `access_profile`: repo
 - `review.checklists`: []; `review.max_rounds: 2` (+1 контрольний); рецензент — Власник продукту (Архітектор — KB-facts)
@@ -205,10 +225,12 @@
 - ескалація: модуль td_* без опису поведінки в SPEC -> `escalated` до Архітектора; виняток — спільні модулі §27/§27а (`td_home_menu`, `td_support`, `td_knowledge` та будь-який спільний модуль із README): їх немає в SPEC галузевого пакета, джерело — код і README модуля та сторінка 5а support-kb-builder; ескалація лише якщо немає ні SPEC, ні README
 
 ### A-18. Реліз (змінена картка 0.4.0)
+- `chat` (0.4.2): окремий чат
 - `inArtifacts` додатково: package/docs/user-guide, package/addons/td_<галузь>_elearning, package/support
 - реліз включає A-16b (package/docs/user-guide) і модуль td_<галузь>_elearning; `package/support/` — у репо пакета, з клієнтської передачі виключено (перелік у release-нотатці). B-07 (`user-training-builder`, зовнішній) і client-help-bot беруть пакетні матеріали й лише адаптують під конфіг клієнта
 
 ### C-04. Регрес евалів
+- `chat` (0.4.2): окремий чат
 - `raciR`: AI-інженер (R)
 - `executor`: any
 - `skillRef`: flow-core:eval-builder
@@ -223,6 +245,7 @@
 - ескалація: падіння регресу -> пропозиція пониження зрілості кроку (`maturity_proposals`)
 
 ### C-07. Розбір помилки AI
+- `chat` (0.4.2): окремий чат
 - `raciR`: AI-інженер (R)
 - `executor`: any
 - `skillRef`: flow-core:eval-builder (`incident`)

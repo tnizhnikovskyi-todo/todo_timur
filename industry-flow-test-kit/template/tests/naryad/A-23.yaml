@@ -3,10 +3,15 @@
 # (3) якщо mailing-list.md містить «Нестача корпоративних адрес» — рядок A-23 зі scope mebli і словом «досяжн» у коментарі (рішення людини: новий список / дзвінок / менший тест).
 # Очікувана FAIL-перевірка: DT-consent (у DATA_POLICY немає розділу про згоду/відписку -> плейсхолдер «текст згоди — Юрист») — це відоме відкрите питання, не помилка тесту.
 step: A-23
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: {checklists: [], max_rounds: 2}   # 0.4.2: рецензент обов'язковий (manager-mode.md §2.6); +1 контрольний круг
+chat: separate               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: outreach
-skill_ref: ["flow-research:demand-test-runner@0.4.1"]
+skill_ref: ["flow-research:demand-test-runner@0.4.2"]
 model: sonnet
 effort: medium
 inputs:

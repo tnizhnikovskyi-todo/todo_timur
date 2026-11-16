@@ -1,9 +1,14 @@
 # ТЕСТОВИЙ наряд A-15 (0.4.0): демо-стенд: refresh (мітка SHA, скрипти підйому); окремий наряд і гілка, не в гілці A-16b
 step: A-15
+created_by: manager         # 0.4.2: наряд пише менеджер-чат (manager-mode.md); людина говорить з менеджером
+mode: manager
+executor_session: null          # менеджер заповнює після create_session
+review: null
+chat: code-loop               # manager-mode.md §5
 scope: {kind: package, id: mebli}
 executor: any
 access_profile: repo
-skill_ref: ["flow-package-build:demo-base-builder@0.4.1"]
+skill_ref: ["flow-package-build:demo-base-builder@0.4.2"]
 model: sonnet
 effort: medium
 params: {mode: refresh}
