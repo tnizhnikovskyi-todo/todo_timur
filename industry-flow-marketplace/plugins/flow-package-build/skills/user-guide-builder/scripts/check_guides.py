@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-r"""Автоперевірки A-16b без бази: UG-files, UG-cover, UG-img, UG-sha, UG-lang, UG-card, UG-roles (+ UG-admin, UG-cover-dev, UG-cover-admin).
+r"""Автоперевірки A-16b без бази: UG-files, UG-cover, UG-img, UG-sha, UG-lang, UG-card, UG-roles (+ UG-login 0.4.3, UG-admin, UG-cover-dev, UG-cover-admin).
 Агент перевіряє сам (скрипт не робить): UG-fresh (знімки зроблено на стенді з цим SHA), UG-ui (підписи кроків = підписи в UI),
 UG-pii (на знімках немає чужих даних), lint.
 Запуск: python3 -I check_guides.py --dir package/docs/user-guide --spec package/SPEC.md [--spec package/demo/scenarios.md]
@@ -935,6 +935,19 @@ def setup_check(root, index, targets, repo_roots=()):
     return ("FAIL", msg, []) if msg else ("PASS", [f"{len(std)} стандартних форм ({sum(len(v) for v in std.values())} полів td_*) і {len(dirs)} довідників td_* описано в setup.md"], [])
 
 
+def login_check(root, role_files):
+    """UG-login (0.4.3): у перших 5 рядках кожного посібника ролі (крім admin.md) є логін ролі (email/логін у зворотних лапках) і джерело пароля (слово «пароль»). Повертає список порушень."""
+    bad = []
+    for n in role_files:
+        if n == "admin.md":
+            continue
+        head = "\n".join(open(os.path.join(root, n), encoding="utf-8").read().splitlines()[:5])
+        miss = (["логін ролі у `…`"] if not re.search(r"`[\w.+-]+(@[\w.-]+)?`", head) else []) + (["джерело пароля (слово «пароль»)"] if "пароль" not in head.lower() else [])
+        if miss:
+            bad.append(f"{n}: у перших 5 рядках немає " + " і ".join(miss))
+    return bad
+
+
 def selftest():
     """0.4.2: регрес трьох minor (split на скороченнях/числах, меню після «смарт-кнопк…», mod_installable_ce без --odoo-src)."""
     fr = split_fragments("Відкрийте меню, напр. «Заміри». Роль не бачить «Звіти». Далі 1.5 години; потім ok.")
@@ -1020,6 +1033,14 @@ def selftest():
     open(os.path.join(d4, "ug", "setup.md"), "w", encoding="utf-8").write(full)
     st, msg, items = setup_check(os.path.join(d4, "ug"), "## Покриття: налаштування довідників\n| `product.template` `res.partner` `td.y.dir` | s |\n", tg)
     assert st == "PASS", (msg, items)
+    # 0.4.3: UG-login — логін ролі й джерело пароля в шапці посібника ролі
+    d5 = tempfile.mkdtemp()
+    open(os.path.join(d5, "a.md"), "w", encoding="utf-8").write("# Посібник: А\n\nВхід: `komirnyk@demo.example`; пароль — у README стенда.\n")
+    open(os.path.join(d5, "b.md"), "w", encoding="utf-8").write("# Посібник: Б\n\nДля кого: комірник.\n")
+    open(os.path.join(d5, "c.md"), "w", encoding="utf-8").write("# Посібник: В\n\nЛогін `finansyst`.\n")
+    open(os.path.join(d5, "admin.md"), "w", encoding="utf-8").write("# Адміністратор\n")
+    lb = login_check(d5, ["a.md", "admin.md", "b.md", "c.md"])
+    assert len(lb) == 2 and lb[0].startswith("b.md") and "логін" in lb[0] and lb[1].startswith("c.md") and "пароля" in lb[1] and "логін" not in lb[1], lb
     print("selftest OK")
     return 0
 
@@ -1204,6 +1225,10 @@ def main():
     else:
         m2 = (["файли ролей не існують: " + ", ".join(bad_r)] if bad_r else []) + (["ролі без рядка в таблиці: " + ", ".join(miss_r)] if miss_r else [])
         add("UG-roles", "FAIL" if m2 else "PASS", "; ".join(m2))
+
+    # UG-login (0.4.3): логін ролі й джерело пароля в шапці кожного посібника ролі
+    lg = login_check(root, role_files)
+    add("UG-login", "FAIL" if lg else "PASS", "; ".join(lg[:10]))
 
     # UG-admin
     ap_ = os.path.join(root, "admin.md")

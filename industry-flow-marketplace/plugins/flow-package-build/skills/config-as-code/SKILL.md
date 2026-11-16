@@ -187,6 +187,7 @@ config-log. Даних у базі немає (установка не відб�
 | `CFG-td-isolation` | у даних є моделі/поля `td_*` (дозволено лише `td_param`) |
 | `CFG-vendored` | (не для спільних модулів ToDo §27/§27а -- їм PASS) у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом, або ліцензія поза переліком q42 (MIT, BSD, Apache-2.0, LGPL-3) |
 | `CFG-editions` | немає `edition_profiles`/`format: 2`; ключ `ee` є при `editions: ce` або немає при `both|ee`; `ee` не ⊇ `ce` (поза винятком `td_home_menu`); `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра (маніфест — у `package/addons/` або `ODOO_ADDONS_PATH`; не знайдено й не стандартний — WARN «ліцензія не перевірена»); розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
+| `CFG-container` | **WARN** (0.4.3), не FAIL: у `data/NN_*.yaml` створено запис-контейнер (проєкт, команда, журнал, склад…) без довідника, потрібного для роботи (стадії задач проєкту `project.task.type`, канали, типи), або довідник порожній; перелік контейнерів і потрібних довідників — у CONFIG.md; «Монтажі» без стадій = WARN з рядком у `memo`, виправлення — в наступну правку A-12 |
 | `CFG-checks-closed` | правка A-12 з CHECKS.md без рядка «закрито: файл/пункт» |
 | `CFG-scope` | diff поза `package/config/**` і `package/addons/<готове>/**` |
 | `CFG-secrets` | збіг із шаблоном secret з `pii-patterns.md` у файлах чи лозі |
