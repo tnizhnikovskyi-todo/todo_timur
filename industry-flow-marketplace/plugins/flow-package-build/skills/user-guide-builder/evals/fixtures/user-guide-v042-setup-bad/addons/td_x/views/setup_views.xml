@@ -7,6 +7,6 @@
   </record>
   <record id="view_sale_order_td" model="ir.ui.view">
     <field name="name">sale.order.td</field><field name="model">sale.order</field>
-    <field name="arch" type="xml"><form><field name="td_width"/><field name="td_depth"/></form></field>
+    <field name="arch" type="xml"><form><field name="td_width"/><field name="td_depth"/><field name="td_mix"/><field name="td_mix_c"/></form></field>
   </record>
 </odoo>

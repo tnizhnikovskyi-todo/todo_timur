@@ -770,6 +770,7 @@ def collect_setup_targets(addons):
     (транзакційні документи не довідники); Transient/Abstract/report.* — ні."""
     std, own_fields, own_models, transient, computed = {}, {}, set(), set(), set()
     decl = {}  # {модель: {поле: compute/related/One2many}} з Python — для відсікання полів вкладених під-подань
+    parents = {}  # {модель: {предки}} з _inherit (список/рядок) і _inherits (dict): поля td-міксинів (AbstractModel) діють на кожній моделі, що їх успадковує
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".py"):
             try:
@@ -777,7 +778,7 @@ def collect_setup_targets(addons):
             except (SyntaxError, OSError, UnicodeDecodeError):
                 continue
             for cl in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
-                name, inh = None, None
+                name, inh, inhs = None, None, []
                 for st in cl.body:
                     if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) and st.targets[0].id in ("_name", "_inherit"):
                         v = st.value
@@ -787,6 +788,8 @@ def collect_setup_targets(addons):
                             name = val
                         else:
                             inh = val
+                    elif isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) and st.targets[0].id == "_inherits" and isinstance(st.value, ast.Dict):
+                        inhs.extend(k.value for k in st.value.keys if isinstance(k, ast.Constant) and isinstance(k.value, str))
                 bases = {getattr(b, "attr", getattr(b, "id", "")) for b in cl.bases}
                 model = name or (inh if isinstance(inh, str) else (inh[0] if inh else None))
                 if isinstance(model, list):
@@ -803,6 +806,8 @@ def collect_setup_targets(addons):
                         # compute/related і One2many (зворотні списки вкладок) заповнюють не в довідниках — у вимоги не входять
                         fl[st.targets[0].id] = bool(kws & {"compute", "related"}) or st.value.func.attr == "One2many"
                 decl.setdefault(model, {}).update(fl)
+                plist = ([inh] if isinstance(inh, str) else list(inh or [])) + inhs
+                parents.setdefault(model, set()).update(p_ for p_ in plist if p_ and p_ != model)
                 if name and name.startswith("td.") and not (inh and inh != name):
                     own_models.add(name)
                     if bases & {"TransientModel", "AbstractModel"}:
@@ -816,6 +821,16 @@ def collect_setup_targets(addons):
                             std.setdefault(model, set()).add(f_)
                 elif model.startswith("td."):
                     own_fields.setdefault(model, set()).update(fl)
+    def ancestors(m_):
+        seen, todo = set(), [m_]
+        while todo:
+            for p_ in parents.get(todo.pop(), ()):
+                if p_ not in seen:
+                    seen.add(p_)
+                    todo.append(p_)
+        seen.discard(m_)
+        return seen
+
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".xml"):
             try:
@@ -831,6 +846,12 @@ def collect_setup_targets(addons):
                     for fe in arch.iter("field"):
                         n_ = fe.get("name") or ""
                         if not n_.startswith("td_") or (mdl, n_) in computed:
+                            continue
+                        # поле з td-міксина (або іншого предка за _inherit/_inherits): оголошене на моделі подання; compute/related — не вимога (правило власних полів)
+                        anc = [decl[a_][n_] for a_ in ancestors(mdl) if n_ in decl.get(a_, {})]
+                        if anc and n_ not in decl.get(mdl, {}):
+                            if not all(anc):
+                                std.setdefault(mdl, set()).add(n_)
                             continue
                         # вкладені під-подання й xpath у рядки (order_line/list): поле оголошене не на моделі подання, а на іншій td_-моделі -> не вимога до документа
                         if n_ not in decl.get(mdl, {}) and any(n_ in fs for m_, fs in decl.items() if m_ != mdl):
@@ -981,6 +1002,14 @@ def selftest():
     assert "sale.order" not in tg["std"] and tg["std"].get("sale.order.line") == {"td_lw"}, tg
     del tg["std"]["sale.order.line"]
     assert tg == {"std": {"product.template": {"td_w"}, "res.partner": {"td_p"}}, "dirs": {"td.y.dir"}}, tg
+    # 0.4.2 регрес: поле td-міксина (AbstractModel) на формі стандартної моделі, що його успадковує, вимагається; compute-поле міксина — ні
+    open(os.path.join(d4, "addons", "td_y", "models", "mx.py"), "w").write(
+        "from odoo import fields, models\nclass MX(models.AbstractModel):\n    _name = 'td.y.mixin'\n    td_mx = fields.Char()\n    td_mxc = fields.Char(compute='_c')\n"
+        "class PO(models.Model):\n    _inherit = ['purchase.order', 'td.y.mixin']\n")
+    open(os.path.join(d4, "addons", "td_y", "views", "po.xml"), "w").write(
+        "<odoo><record id='po' model='ir.ui.view'><field name='model'>purchase.order</field><field name='arch' type='xml'><form><field name='td_mx'/><field name='td_mxc'/></form></field></record></odoo>")
+    tg2 = collect_setup_targets(os.path.join(d4, "addons"))
+    assert tg2["std"].get("purchase.order") == {"td_mx"}, tg2
     st, msg, items = setup_check(os.path.join(d4, "ug"), "", tg)
     assert st == "FAIL" and len(items) == 3 and "немає setup.md" in msg[0], (st, msg, items)
     sec = ("## 1. Товар (`product.template`)\n- **Хто:** a\n- **Де в меню:** b\n- **Кроки:** c `td_w`\n- **Обов'язкові поля:** d\n- **Типова помилка:** e\n- **CSV-шаблон:** немає: масово не потрібно\n![x](a.png)\n")

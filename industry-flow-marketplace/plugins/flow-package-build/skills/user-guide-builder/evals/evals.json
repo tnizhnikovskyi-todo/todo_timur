@@ -478,10 +478,10 @@
     {
       "id": "v042-setup-bad",
       "prompt": "Налаштування довідників і товарів (0.4.2 §10): python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-setup-bad/user-guide --spec evals/fixtures/user-guide-v042-setup-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-setup-bad/addons --answers evals/fixtures/user-guide-v042-setup-bad/answers.yaml --config evals/fixtures/user-guide-v042-setup-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v042-setup-bad/plan.md --odoo-src evals/fixtures/user-guide-v042-setup-bad/odoo-src --strict.",
-      "expected_output": "UG-cover-setup FAIL з переліком: sale.order — поле td_depth без опису, немає «Типова помилка»; td.x.material — немає розділу (рядок «описано в цьому рядку» не покриття); INDEX (г) не називає td.x.material. Код 1.",
+      "expected_output": "UG-cover-setup FAIL з переліком: sale.order — поля td_depth і td_mix (з td-міксина td.x.mixin; compute-поле міксина td_mix_c не вимагається) без опису, немає «Типова помилка»; td.x.material — немає розділу (рядок «описано в цьому рядку» не покриття); INDEX (г) не називає td.x.material. Код 1.",
       "assertions": [
         "UG-cover-setup FAIL",
-        "items називають td_depth, Типова помилка, td.x.material",
+        "items називають td_depth, td_mix (поле міксина), Типова помилка, td.x.material; td_mix_c не названо",
         "«описано в цьому рядку» не рахується покриттям"
       ],
       "files": [

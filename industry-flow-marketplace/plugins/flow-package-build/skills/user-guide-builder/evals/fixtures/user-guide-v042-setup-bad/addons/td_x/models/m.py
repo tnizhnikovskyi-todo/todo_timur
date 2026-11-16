@@ -13,8 +13,16 @@ class M(models.Model):
             raise AccessError(_("Only the finance role runs the exchange."))
 
 
+class Mixin(models.AbstractModel):
+    _name = "td.x.mixin"
+    _description = "Mixin"
+
+    td_mix = fields.Char(string="From mixin")
+    td_mix_c = fields.Char(compute="_compute_m")
+
+
 class SaleOrder(models.Model):
-    _inherit = "sale.order"
+    _inherit = ["sale.order", "td.x.mixin"]
 
     td_width = fields.Integer(string="Width, mm")
     td_depth = fields.Integer(string="Depth, mm")
