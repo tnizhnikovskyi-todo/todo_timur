@@ -755,12 +755,35 @@ class TestLive(TransactionCase):
         notes = mos[0].message_ids.mapped("body")
         self.assertTrue(any("Догнати минуле не вдалось" in str(n) for n in notes))
 
-    def test_concurrency_error_is_not_swallowed_by_tick(self):
-        """Конкурентне оновлення піднімається: Odoo повторить запит, крон — наступний такт, крок не губиться."""
-        self.generate()
-        with patch.object(type(self.engine), "_td_wo_start", side_effect=pg_errors.SerializationFailure("x")):
-            with self.assertRaises(pg_errors.SerializationFailure):
-                self.at(5).td_dispatch()
+    def test_concurrency_conflict_skips_mo_until_next_tick(self):
+        """Конфлікт кроку з іншим кроном (16.11): такт не падає, МО цього кроку пропускається до наступного такту
+        без паузи повтору закриття, решта МО йде далі, а пропущений крок виконує наступний такт — крок не губиться."""
+        day = self.generate()
+        victim = day.production_ids.sorted("id")[0]
+        others = day.production_ids - victim
+        orig = type(self.engine)._td_wo_start
+        tried = []
+
+        def conflicting(engine, wo, t, live=True):
+            if wo.production_id == victim:
+                tried.append(wo.id)
+                raise pg_errors.LockNotAvailable("lock timeout")
+            return orig(engine, wo, t, live)
+
+        def busy(mos):
+            return mos.workorder_ids.filtered(lambda w: w.state in ("progress", "done"))
+
+        with patch.object(type(self.engine), "_td_wo_start", new=conflicting):
+            res = self.at(240).td_dispatch(budget_s=60.0)
+        self.assertEqual(len(tried), 1)  # після конфлікту решта кроків цієї МО в такті не пробується
+        self.assertFalse(busy(victim))
+        self.assertTrue(busy(others))
+        self.assertGreater(res["applied"], 0)
+        from odoo.addons.td_live_production.models.td_live_dispatch import _CLOSE_BACKOFF
+
+        self.assertNotIn((self.env.cr.dbname, victim.id), _CLOSE_BACKOFF)
+        self.at(240).td_dispatch()
+        self.assertTrue(busy(victim))
 
     # --- C-LP-01: ціль кожному верстату ---------------------------------------------------------------------
     def add_machines(self, n):

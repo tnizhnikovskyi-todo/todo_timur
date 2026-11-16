@@ -35,6 +35,7 @@ CLOSE_BACKOFF_MAX = timedelta(minutes=60)
 CLOSE_FAILS_PER_TICK = (
     3  # невдалих закриттів МО за такт: далі решту відкладаємо, щоб не з'їсти бюджет сьогоднішніх подій
 )
+LOCK_TIMEOUT_MS = 2000  # порція такту не чекає рядок, який тримає інший крон, довше за це: МО — наступним тактом
 _LAST_WARN = {}  # база → коли востаннє писали про недоступний емулятор (одне попередження на годину)
 _CLOSE_BACKOFF = {}  # (база, id МО) → (невдач, не повторювати раніше за): пам'ять процесу, після рестарту з нуля
 
@@ -157,6 +158,9 @@ class TdLiveEngine(models.AbstractModel):
         # МО в паузі повтору (закриття не вдалось раніше) блокують залежні кроки, як невдача цього такту, але не
         # коштують ні часу, ні місця в черзі: «вічно невдала» МО не повинна з'їдати бюджет сьогоднішніх подій
         failed = {("mo", mid) for mid in self._td_close_backoff(mos, now)}
+        busy = set()  # МО, чий крок цього такту зіткнувся з іншим кроном: повтор наступним тактом, без паузи закриття
+        if budget_s is not None:  # крон / фонова задача: рядок, зайнятий кроном верстатів, не чекаємо до кінця такту
+            self.env.cr.execute("SET LOCAL lock_timeout = %s", ["%dms" % LOCK_TIMEOUT_MS])
         started = time.monotonic()
         processed = close_fails = 0
         stop = len(events)
@@ -170,10 +174,12 @@ class TdLiveEngine(models.AbstractModel):
                 failed.add(("mo", ev["id"]))  # ліміт невдалих закриттів: решту — наступним тактом
                 continue
             processed += 1
-            if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW):
+            if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW, busy=busy):
                 res["applied"] += 1
             if ev["kind"] == "mo_done":
-                if ("mo", ev["id"]) in failed:
+                if ("mo", ev["id"]) in busy:
+                    pass  # конфлікт з іншим кроном — не невдале закриття: паузи повтору не ставимо
+                elif ("mo", ev["id"]) in failed:
                     close_fails += 1
                     self._td_close_failed(ev["id"], now)
                 else:
@@ -236,8 +242,13 @@ class TdLiveEngine(models.AbstractModel):
         _CLOSE_BACKOFF[key] = (fails, now + min(CLOSE_BACKOFF_FIRST * 2 ** (fails - 1), CLOSE_BACKOFF_MAX))
 
     @api.model
-    def _td_apply_event(self, ev, state, failed, res, live=True):
-        """Один крок у savepoint. `failed` — ключі, чиї залежні кроки цього такту пропускаються."""
+    def _td_apply_event(self, ev, state, failed, res, live=True, busy=None):
+        """Один крок у savepoint. `failed` — ключі, чиї залежні кроки цього такту пропускаються.
+
+        Конкурентне оновлення (крон верстатів пише ті самі наряди й верстати) відкочує лише цей крок: МО йде в
+        `failed` і `busy`, такт продовжується, а крок повторить наступний такт (стан береться з бази). Раніше помилка
+        піднімалась і відкочувала всю порцію: прострочені наряди, яких щохвилини торкається крон верстатів, сварились
+        із ним щоразу, і такт падав годинами (16.11: 3 год, 60+ невдач поспіль, виробництво стояло)."""
         env = self.env
         kind, ident, t = ev["kind"], ev["id"], ev["t"]
         key = self._td_event_key(ev, state)
@@ -257,8 +268,18 @@ class TdLiveEngine(models.AbstractModel):
                     res["downtimes"] += bool(self._td_downtime_start(env["td.live.downtime"].browse(ident), t))
                 elif kind == "dt_end":
                     self._td_downtime_end(env["td.live.downtime"].browse(ident), t)
-        except CONCURRENCY:
-            raise  # конкурентне оновлення: Odoo повторить запит, крон — наступний такт
+        except CONCURRENCY as exc:
+            _logger.info(
+                "td_live_production: %s #%s у конфлікті з іншим кроном (%s), повтор наступним тактом",
+                kind,
+                ident,
+                exc.__class__.__name__,
+            )
+            if key:
+                failed.add(key)
+                if busy is not None:
+                    busy.add(key)
+            return False
         except Exception as exc:  # noqa: BLE001 — крок не повинен зупиняти такт; причина в логу, повтор на наступному тику
             # закриття МО, що вже в паузі повтору, пише в лог лише на рівні debug: одне попередження на МО
             repeat = kind == "mo_done" and (env.cr.dbname, ident) in _CLOSE_BACKOFF
