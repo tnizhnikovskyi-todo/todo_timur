@@ -769,6 +769,7 @@ def collect_setup_targets(addons):
     і без res.config.settings (це admin.md). dirs — models.Model з _name td.*, що мають ir.actions.act_window і не мають поля state/stage_id/status
     (транзакційні документи не довідники); Transient/Abstract/report.* — ні."""
     std, own_fields, own_models, transient, computed = {}, {}, set(), set(), set()
+    decl = {}  # {модель: {поле: compute/related/One2many}} з Python — для відсікання полів вкладених під-подань
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".py"):
             try:
@@ -797,8 +798,11 @@ def collect_setup_targets(addons):
                     if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name) and isinstance(st.value, ast.Call) \
                             and isinstance(st.value.func, ast.Attribute) and st.value.func.attr in FIELD_TYPES:
                         kws = {k.arg for k in st.value.keywords}
+                        if "selection_add" in kws:  # розширення Selection іншого модуля, не нове оголошення (compute лишається в оригіналі)
+                            continue
                         # compute/related і One2many (зворотні списки вкладок) заповнюють не в довідниках — у вимоги не входять
                         fl[st.targets[0].id] = bool(kws & {"compute", "related"}) or st.value.func.attr == "One2many"
+                decl.setdefault(model, {}).update(fl)
                 if name and name.startswith("td.") and not (inh and inh != name):
                     own_models.add(name)
                     if bases & {"TransientModel", "AbstractModel"}:
@@ -826,8 +830,12 @@ def collect_setup_targets(addons):
                 if arch is not None and _is_std(mdl):
                     for fe in arch.iter("field"):
                         n_ = fe.get("name") or ""
-                        if n_.startswith("td_") and (mdl, n_) not in computed:
-                            std.setdefault(mdl, set()).add(n_)
+                        if not n_.startswith("td_") or (mdl, n_) in computed:
+                            continue
+                        # вкладені під-подання й xpath у рядки (order_line/list): поле оголошене не на моделі подання, а на іншій td_-моделі -> не вимога до документа
+                        if n_ not in decl.get(mdl, {}) and any(n_ in fs for m_, fs in decl.items() if m_ != mdl):
+                            continue
+                        std.setdefault(mdl, set()).add(n_)
     actions = set()
     for mod in td_modules(addons):
         for path in walk_mod(addons, mod, ".xml"):
@@ -963,7 +971,15 @@ def selftest():
         "<odoo><record id='a' model='ir.actions.act_window'><field name='res_model'>td.y.dir</field></record>"
         "<record id='b' model='ir.actions.act_window'><field name='res_model'>td.y.doc</field></record>"
         "<record id='v' model='ir.ui.view'><field name='model'>res.partner</field><field name='arch' type='xml'><form><field name='td_p'/><field name='name'/></form></field></record></odoo>")
+    # 0.4.2 (рецензія): подання sale.order з xpath у order_line/list — compute-поле рядка не вимагається на документі
+    open(os.path.join(d4, "addons", "td_y", "models", "l.py"), "w").write(
+        "from odoo import fields, models\nclass SL(models.Model):\n    _inherit = 'sale.order.line'\n    td_hist = fields.Float(compute='_h')\n    td_lw = fields.Float()\n")
+    open(os.path.join(d4, "addons", "td_y", "views", "so.xml"), "w").write(
+        "<odoo><record id='so' model='ir.ui.view'><field name='model'>sale.order</field><field name='arch' type='xml'><xpath expr=\"//field[@name='order_line']/list\" position='inside'>"
+        "<field name='td_hist'/><field name='td_lw'/></xpath></field></record></odoo>")
     tg = collect_setup_targets(os.path.join(d4, "addons"))
+    assert "sale.order" not in tg["std"] and tg["std"].get("sale.order.line") == {"td_lw"}, tg
+    del tg["std"]["sale.order.line"]
     assert tg == {"std": {"product.template": {"td_w"}, "res.partner": {"td_p"}}, "dirs": {"td.y.dir"}}, tg
     st, msg, items = setup_check(os.path.join(d4, "ug"), "", tg)
     assert st == "FAIL" and len(items) == 3 and "немає setup.md" in msg[0], (st, msg, items)

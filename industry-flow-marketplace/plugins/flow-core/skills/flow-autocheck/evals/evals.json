@@ -225,13 +225,15 @@
         "ok PASS/PASS",
         "bad FAIL/FAIL з переліком відсутніх полів",
         "check_handoff-list (done/next_hint — YAML-списки) PASS, без хибного FAIL",
-        "check_handoff-template (review_needed: \"так|ні\") FAIL"
+        "check_handoff-template (review_needed: \"так|ні\") FAIL",
+        "check_handoff-empty (done: [] і next_hint: [ ]) FAIL «порожнє обов'язкове handoff.done/next_hint»"
       ],
       "files": [
         "evals/fixtures/check_handoff-ok/",
         "evals/fixtures/check_handoff-bad/",
         "evals/fixtures/check_handoff-list/",
-        "evals/fixtures/check_handoff-template/"
+        "evals/fixtures/check_handoff-template/",
+        "evals/fixtures/check_handoff-empty/"
       ]
     }
   ]

@@ -22,6 +22,12 @@ class SaleOrder(models.Model):
     td_line_ids = fields.One2many("td.x", "id")
 
 
+class SaleOrderLine(models.Model):
+    _inherit = "sale.order.line"
+
+    td_line_cost = fields.Float(compute="_compute_c")  # регрес 0.4.2: поле рядка у xpath order_line/list не вимагається на sale.order
+
+
 class Material(models.Model):
     _name = "td.x.material"
     _description = "Material"

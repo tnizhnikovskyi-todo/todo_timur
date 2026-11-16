@@ -47,7 +47,7 @@ def check_report(text):
     if miss:
         res.append({"id": "report-handoff", "status": "FAIL", "msg": "немає полів handoff: " + ", ".join(miss)})
     for f in ("done", "next_hint", "branch", "head_sha"):
-        if f in vals and vals[f] in ("", '""', "''", "null", "~"):
+        if f in vals and (vals[f] in ("", '""', "''", "null", "~") or re.fullmatch(r"\[\s*\]|\{\s*\}", vals[f].strip("\"' "))):
             res.append({"id": "report-handoff", "status": "FAIL", "msg": f"порожнє обов'язкове handoff.{f}"})
     rn = vals.get("review_needed", "")
     if "review_needed" in vals and not re.fullmatch(r"(так|ні|yes|no)", rn.strip("\"' "), re.I):
