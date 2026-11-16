@@ -345,7 +345,7 @@
       ]
     },
     {
-      "id": "independent-audit-three-angles",
+      "id": "independent-audit-four-angles",
       "prompt": "A-16b: самоперевірка дала check_guides.py без FAIL. Чи можна ставити done? Що робити далі?",
       "expected_output": "Ні. Обов'язковий незалежний аудит покриття: 4 рецензенти flow-reviewer паралельно з власними переліками з джерел — (а) новий адміністратор наскрізно admin.md, (б) працівник кожної ролі, цикл замовлення, права й кадри, (г) власник-новачок (UX ролі на формі, наскрізні дані, передумови), (в) переліки з коду (меню, кнопки/смарт-кнопки, звіти, майстри, налаштування, get_param, raise) + F/AC + ACCEPTANCE. Цикл до нуля зауважень, review_rounds у звіті, не більше 5 кругів рецензії на день глобально; якщо зауваження лишаються — waiting_human з переліком і очікування рішення людини.",
       "assertions": [
@@ -504,7 +504,7 @@
     {
       "id": "v043-login-bad",
       "prompt": "Перевір посібник 0.4.3 з --strict: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v043-login-bad/user-guide --spec evals/fixtures/user-guide-v043-login-bad/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v043-login-bad/addons --answers evals/fixtures/user-guide-v043-login-bad/answers.yaml --config evals/fixtures/user-guide-v043-login-bad/CONFIG.md --role-groups evals/fixtures/user-guide-v043-login-bad/plan.md --odoo-src evals/fixtures/user-guide-v043-login-bad/odoo-src --strict. У komirnyk.md немає логіну ролі, у finansyst.md є логін, але немає джерела пароля.",
-      "expected_output": "UG-login = FAIL для обох посібників ролей (komirnyk.md: немає логіну й джерела пароля; finansyst.md: немає слова «пароль»), код повернення 1; admin.md, setup.md, INDEX, cards і reference не перевіряються.",
+      "expected_output": "UG-login = FAIL для обох посібників ролей (komirnyk.md: немає рядка «Вхід…»; finansyst.md: у рядку «Вхід» немає слова «парол…»), код повернення 1; admin.md, setup.md, INDEX, cards і reference не перевіряються.",
       "assertions": [
         "UG-login = FAIL і називає komirnyk.md та finansyst.md",
         "admin.md не потрапляє у перелік порушень",
@@ -513,6 +513,33 @@
       "files": [
         "evals/fixtures/user-guide-v043-login-bad/user-guide/",
         "evals/fixtures/user-guide-v043-login-bad/addons/"
+      ]
+    },
+    {
+      "id": "v043-login-ok",
+      "prompt": "Перевір посібник 0.4.3 з --strict: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v042-ok/user-guide --spec evals/fixtures/user-guide-v042-ok/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v042-ok/addons --answers evals/fixtures/user-guide-v042-ok/answers.yaml --config evals/fixtures/user-guide-v042-ok/CONFIG.md --role-groups evals/fixtures/user-guide-v042-ok/plan.md --odoo-src evals/fixtures/user-guide-v042-ok/odoo-src --strict. Шапки ролей мають рядок «Вхід: `<логін@демо>`; пароль — у README стенда».",
+      "expected_output": "UG-login = PASS (рядок «Вхід» у перших 8 рядках кожного посібника ролі з логіном у зворотних лапках з @ і словом «пароль»), код повернення 0; UG-limits не заважає (немає setup.md).",
+      "assertions": [
+        "UG-login = PASS",
+        "Код повернення скрипта 0"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v042-ok/user-guide/",
+        "evals/fixtures/user-guide-v042-ok/addons/"
+      ]
+    },
+    {
+      "id": "v043-login-falsepass",
+      "prompt": "Перевір посібник 0.4.3 з --strict: python3 -I scripts/check_guides.py --dir evals/fixtures/user-guide-v043-login-falsepass/user-guide --spec evals/fixtures/user-guide-v043-login-falsepass/SPEC.md --stand-sha a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 --addons evals/fixtures/user-guide-v043-login-falsepass/addons --answers evals/fixtures/user-guide-v043-login-falsepass/answers.yaml --config evals/fixtures/user-guide-v043-login-falsepass/CONFIG.md --role-groups evals/fixtures/user-guide-v043-login-falsepass/plan.md --odoo-src evals/fixtures/user-guide-v043-login-falsepass/odoo-src --strict. У komirnyk.md шапка «Сценарії `SC-01`. Без пароля, `komirnyk@demo.example`.» не починається з «Вхід».",
+      "expected_output": "UG-login = FAIL для komirnyk.md: слова «пароль» і логін у лапках трапляються поза рядком «Вхід», тому не зараховуються; код повернення 1.",
+      "assertions": [
+        "UG-login = FAIL і називає komirnyk.md",
+        "Рядок без «Вхід» на початку не дає PASS",
+        "Код повернення скрипта 1"
+      ],
+      "files": [
+        "evals/fixtures/user-guide-v043-login-falsepass/user-guide/",
+        "evals/fixtures/user-guide-v043-login-falsepass/addons/"
       ]
     }
   ]

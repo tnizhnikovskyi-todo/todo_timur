@@ -156,7 +156,8 @@ settings; потім 2-й прохід-порівняння за xml-id (без 
 фіксуються в `memo`): читає базу за тим самим `connection_id` (тестова база пакета), `Config-log` з `install-log.md` подається як
 config-log. Даних у базі немає (установка не відбулась) -> `config-review` не запускати, `config-review: N/A`, `result` не `done`.
 Режим `validate`: лише читання бази й статичні перевірки (`CFG-modules`, `CFG-vp-coverage`, `CFG-ac-trace`, `CFG-xmlid`,
-`CFG-schema`, `CFG-secrets`), файли не змінюються.
+`CFG-schema`, `CFG-secrets`, `CFG-container`), файли не змінюються.
+**Чек-лист рецензента конфігу (0.4.3):** `config-review` і чат-рецензент додатково звіряють таблицю «контейнер -> довідник» (CFG-container): кожен контейнер у конфігу має потрібний довідник або рядок AI-NN із ризиком.
 
 ## Крок 9. Здача
 `git diff --stat` -- лише `package/config/**` і `package/addons/<готове>/**`. Передати runner `checks`, `data_sources`
@@ -187,12 +188,22 @@ config-log. Даних у базі немає (установка не відб�
 | `CFG-td-isolation` | у даних є моделі/поля `td_*` (дозволено лише `td_param`) |
 | `CFG-vendored` | (не для спільних модулів ToDo §27/§27а -- їм PASS) у готового немає `19.0.*`, LICENSE чи README з джерелом/комітом, або ліцензія поза переліком q42 (MIT, BSD, Apache-2.0, LGPL-3) |
 | `CFG-editions` | немає `edition_profiles`/`format: 2`; ключ `ee` є при `editions: ce` або немає при `both|ee`; `ee` не ⊇ `ce` (поза винятком `td_home_menu`); `std-ee`/`td_*_ee` у `ce`; немає `edition`/`contract_mode` у `vp-map.yaml`; модуль без `origin`; AGPL у `license` залежності ядра (маніфест — у `package/addons/` або `ODOO_ADDONS_PATH`; не знайдено й не стандартний — WARN «ліцензія не перевірена»); розділ `ee` в `install-log.md` відсутній (при `editions: both`) або без позначки «не перевірено» при недоступній EE (`WARN`, не PASS) |
-| `CFG-container` | **WARN** (0.4.3), не FAIL: у `data/NN_*.yaml` створено запис-контейнер (проєкт, команда, журнал, склад…) без довідника, потрібного для роботи (стадії задач проєкту `project.task.type`, канали, типи), або довідник порожній; перелік контейнерів і потрібних довідників — у CONFIG.md; «Монтажі» без стадій = WARN з рядком у `memo`, виправлення — в наступну правку A-12 |
+| `CFG-container` | (0.4.3) для кожного запису-контейнера з таблиці нижче в `data/NN_*.yaml` немає записів потрібного довідника, а в базі (read-back) їх теж немає -> **WARN** з рядком у `memo`; WARN **без** рядка AI-NN із ризиком (в `AI-DECISIONS.md` пакета) = **FAIL**. Виправлення — довідник у цьому ж конфігу |
 | `CFG-checks-closed` | правка A-12 з CHECKS.md без рядка «закрито: файл/пункт» |
 | `CFG-scope` | diff поза `package/config/**` і `package/addons/<готове>/**` |
 | `CFG-secrets` | збіг із шаблоном secret з `pii-patterns.md` у файлах чи лозі |
 | `lint`, `config-review` | знахідки 18->19; вердикт не APPROVE; `config-review: N/A` |
 | `ED-edition` | PASS — `edition_profiles` відповідають `editions`; `ee ⊇ ce`, крім `td_home_menu` (лише `ce`, §27); `std-ee` і `td_*_ee` лише в `ee`; `edition`/`contract_mode` у `vp-map.yaml` із `default`; `install-log.md` — розділ на кожну редакцію; FAIL — порушено будь-яке з правил профілів або AGPL у ядрі; WARN — розділ `ee` без EE-бази — «не перевірено», не PASS |
+
+### Таблиця «контейнер -> довідник, потрібний для роботи» (CFG-container; звірено з вихідниками Odoo 19.0)
+| Контейнер (модель) | Потрібний довідник | Умова WARN |
+|---|---|---|
+| `project.project` | `project.task.type` (стадії задач; зв'язок `type_ids` проєкту) | у проєкта порожній `type_ids` (задачі без колонок) |
+| `crm.team` | `crm.stage` (стадії; без `team_ids` = спільні для всіх команд) | у базі немає жодної стадії, доступної команді |
+| `maintenance.team` (модуль maintenance) | `maintenance.stage` (спільний, без зв'язку з командою) | у базі немає жодної стадії |
+| `helpdesk.team` (EE; лише при `editions: ee`/`both`) | стадії тікетів команди | у команди немає стадій; EE-базу не перевірено -> «не перевірено» |
+| `stock.warehouse` | маршрут MTO («Replenish on Order (MTO)», `stock.route`, у 19.0 створюється зі складом, але архівний) | лише якщо концепція/CONFIG.md декларує виріб на замовлення, а MTO-маршрут архівний/не вказано на товарах |
+Інші контейнери таблиця не вимагає; додати рядок можна лише з посиланням на вихідники 19.0 (файл:рядок).
 
 ### Статуси checks -> result
 | Стан | result |

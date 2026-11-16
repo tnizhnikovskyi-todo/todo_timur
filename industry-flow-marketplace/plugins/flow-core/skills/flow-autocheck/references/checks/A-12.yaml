@@ -73,7 +73,7 @@
    "id": "cfg-static",
    "prim": "manual",
    "args": {
-    "text": "CFG-modules, CFG-order, CFG-vp-coverage, CFG-no-const, CFG-ac-trace, CFG-xmlid, CFG-schema, CFG-secrets, CFG-td-isolation, CFG-vendored — статичні перевірки за таблицею «Автоперевірка» config-as-code (скрипта немає)",
+    "text": "CFG-modules, CFG-order, CFG-vp-coverage, CFG-no-const, CFG-ac-trace, CFG-xmlid, CFG-schema, CFG-secrets, CFG-td-isolation, CFG-container (WARN; WARN без рядка AI-NN з ризиком = FAIL), CFG-vendored — статичні перевірки за таблицею «Автоперевірка» config-as-code (скрипта немає)",
     "who": "runner"
    }
   },
